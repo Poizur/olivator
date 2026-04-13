@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getProducts, getProductBySlug, getOffersForProduct } from '@/lib/mock-data'
 import { countryFlag, countryName, typeLabel, certLabel, formatPrice, formatPricePer100ml } from '@/lib/utils'
+import { productSchema, breadcrumbSchema } from '@/lib/schema'
 import { ScoreSection } from '@/components/score-section'
 import { FlavorWheel } from '@/components/flavor-wheel'
 import { PriceTable } from '@/components/price-table'
@@ -41,7 +42,24 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   ]
 
   return (
-    <div className="max-w-[1040px] mx-auto px-10 py-10">
+    <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(productSchema(product, offers)),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbSchema([
+            { name: 'Olivator', url: '/' },
+            { name: 'Srovnávač', url: '/srovnavac' },
+            { name: product.name, url: `/olej/${product.slug}` },
+          ])),
+        }}
+      />
+      <div className="max-w-[1040px] mx-auto px-10 py-10">
       <div className="text-xs text-text3 mb-7">
         <Link href="/" className="text-olive cursor-pointer">Olivator</Link>
         {' › '}
@@ -126,6 +144,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             ))}
           </div>
         </div>
+      </div>
       </div>
     </div>
   )
