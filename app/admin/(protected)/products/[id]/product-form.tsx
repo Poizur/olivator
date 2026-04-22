@@ -11,8 +11,27 @@ const TYPE_OPTIONS = [
   { value: 'olive_oil', label: 'Olivový olej' },
   { value: 'pomace', label: 'Pokrutinový' },
 ]
-const CERT_OPTIONS = ['dop', 'pgp', 'bio', 'organic', 'nyiooc', 'demeter', 'kosher', 'halal', 'vegan']
-const USE_OPTIONS = ['salad', 'cooking', 'frying', 'dipping', 'fish', 'meat', 'health', 'gift']
+const CERT_OPTIONS: { value: string; label: string }[] = [
+  { value: 'dop', label: 'DOP' },                // Chráněné označení původu
+  { value: 'pgp', label: 'PGP' },                // Chráněné zeměpisné ozn.
+  { value: 'bio', label: 'BIO' },
+  { value: 'organic', label: 'Organické' },
+  { value: 'nyiooc', label: 'NYIOOC' },          // New York Oil Competition
+  { value: 'demeter', label: 'Demeter' },        // Biodynamické
+  { value: 'kosher', label: 'Košer' },
+  { value: 'halal', label: 'Halal' },
+  { value: 'vegan', label: 'Vegan' },
+]
+const USE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'salad', label: 'Salát' },
+  { value: 'cooking', label: 'Vaření' },
+  { value: 'frying', label: 'Smažení' },
+  { value: 'dipping', label: 'Máčení / dipping' },
+  { value: 'fish', label: 'Ryby' },
+  { value: 'meat', label: 'Maso' },
+  { value: 'health', label: 'Zdraví' },
+  { value: 'gift', label: 'Dárek' },
+]
 const FLAVOR_AXES = ['fruity', 'herbal', 'bitter', 'spicy', 'mild', 'nutty', 'buttery'] as const
 const FLAVOR_LABELS: Record<typeof FLAVOR_AXES[number], string> = {
   fruity: 'Ovocnost',
@@ -241,8 +260,12 @@ export function ProductForm({ productRow }: { productRow: Record<string, unknown
         <Field label="Certifikace">
           <div className="flex flex-wrap gap-2">
             {CERT_OPTIONS.map(c => (
-              <Chip key={c} active={certs.includes(c)} onClick={() => toggle(certs, setCerts, c)}>
-                {c.toUpperCase()}
+              <Chip
+                key={c.value}
+                active={certs.includes(c.value)}
+                onClick={() => toggle(certs, setCerts, c.value)}
+              >
+                {c.label}
               </Chip>
             ))}
           </div>
@@ -250,8 +273,12 @@ export function ProductForm({ productRow }: { productRow: Record<string, unknown
         <Field label="Použití">
           <div className="flex flex-wrap gap-2">
             {USE_OPTIONS.map(u => (
-              <Chip key={u} active={uses.includes(u)} onClick={() => toggle(uses, setUses, u)}>
-                {u}
+              <Chip
+                key={u.value}
+                active={uses.includes(u.value)}
+                onClick={() => toggle(uses, setUses, u.value)}
+              >
+                {u.label}
               </Chip>
             ))}
           </div>
