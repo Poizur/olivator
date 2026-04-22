@@ -1,14 +1,16 @@
 import type { ProductOffer } from '@/lib/types'
 import { formatPrice, formatPricePer100ml } from '@/lib/utils'
+import { AffiliateLink } from './affiliate-link'
 
 interface PriceTableProps {
   offers: ProductOffer[]
   volumeMl: number
+  productSlug: string
+  productName: string
 }
 
-export function PriceTable({ offers, volumeMl }: PriceTableProps) {
+export function PriceTable({ offers, volumeMl, productSlug, productName }: PriceTableProps) {
   if (offers.length === 0) return null
-  const cheapest = offers[0]
 
   return (
     <div className="mt-5 mb-5">
@@ -16,8 +18,16 @@ export function PriceTable({ offers, volumeMl }: PriceTableProps) {
         Kde koupit nejlevněji
       </div>
       {offers.map((offer, i) => (
-        <div
+        <AffiliateLink
           key={offer.id}
+          data={{
+            productSlug,
+            productName,
+            retailerSlug: offer.retailer.slug,
+            retailerName: offer.retailer.name,
+            price: offer.price,
+            source: 'product_page',
+          }}
           className={`flex items-center justify-between px-3.5 py-3 rounded-xl border mb-2 cursor-pointer transition-all ${
             i === 0
               ? 'border-olive bg-olive-bg hover:border-olive-dark'
@@ -41,7 +51,7 @@ export function PriceTable({ offers, volumeMl }: PriceTableProps) {
             <div className="text-base font-semibold text-text">{formatPrice(offer.price)}</div>
             <div className="text-[11px] text-text3">{formatPricePer100ml(offer.price, volumeMl)}</div>
           </div>
-        </div>
+        </AffiliateLink>
       ))}
     </div>
   )

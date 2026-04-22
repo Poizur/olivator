@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import type { Product } from './types'
+import { trackCompareAdd, trackCompareRemove } from './analytics'
 
 interface CompareContextType {
   items: Product[]
@@ -36,12 +37,17 @@ export function CompareProvider({ children }: { children: ReactNode }) {
     setItems(prev => {
       if (prev.length >= MAX_ITEMS) return prev
       if (prev.some(p => p.id === product.id)) return prev
+      trackCompareAdd(product.slug, product.name)
       return [...prev, product]
     })
   }, [])
 
   const removeItem = useCallback((productId: string) => {
-    setItems(prev => prev.filter(p => p.id !== productId))
+    setItems(prev => {
+      const removed = prev.find(p => p.id === productId)
+      if (removed) trackCompareRemove(removed.slug, removed.name)
+      return prev.filter(p => p.id !== productId)
+    })
   }, [])
 
   const clearAll = useCallback(() => setItems([]), [])

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { Playfair_Display, Inter } from 'next/font/google'
+import { GoogleAnalytics } from '@next/third-parties/google'
 import { Nav } from '@/components/nav'
 import { Footer } from '@/components/footer'
 import { CompareProvider } from '@/lib/compare-context'
@@ -33,6 +34,7 @@ export default function RootLayout({
 }: {
   children: ReactNode
 }) {
+  const gaId = process.env.NEXT_PUBLIC_GA4_ID
   return (
     <html lang="cs" className={`${playfair.variable} ${inter.variable}`}>
       <body className="min-h-screen flex flex-col antialiased">
@@ -42,6 +44,7 @@ export default function RootLayout({
           <Footer />
           <CompareBar />
         </CompareProvider>
+        {gaId && <GoogleAnalytics gaId={gaId} />}
       </body>
     </html>
   )

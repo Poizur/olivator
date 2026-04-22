@@ -6,6 +6,7 @@ import { productSchema, breadcrumbSchema } from '@/lib/schema'
 import { ScoreSection } from '@/components/score-section'
 import { FlavorWheel } from '@/components/flavor-wheel'
 import { PriceTable } from '@/components/price-table'
+import { AffiliateLink } from '@/components/affiliate-link'
 import { ProductActions } from './product-actions'
 
 export async function generateStaticParams() {
@@ -124,12 +125,27 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
           <ScoreSection product={product} />
           <FlavorWheel profile={product.flavorProfile} />
-          <PriceTable offers={offers} volumeMl={product.volumeMl} />
+          <PriceTable
+            offers={offers}
+            volumeMl={product.volumeMl}
+            productSlug={product.slug}
+            productName={product.name}
+          />
 
           {cheapest && (
-            <button className="w-full bg-olive text-white border-none rounded-xl py-3.5 text-[15px] font-medium cursor-pointer transition-colors hover:bg-olive-dark mb-2.5">
+            <AffiliateLink
+              data={{
+                productSlug: product.slug,
+                productName: product.name,
+                retailerSlug: cheapest.retailer.slug,
+                retailerName: cheapest.retailer.name,
+                price: cheapest.price,
+                source: 'product_page',
+              }}
+              className="block w-full bg-olive text-white border-none rounded-xl py-3.5 text-[15px] font-medium cursor-pointer text-center transition-colors hover:bg-olive-dark mb-2.5"
+            >
               Koupit u {cheapest.retailer.name} — {formatPrice(cheapest.price)}
-            </button>
+            </AffiliateLink>
           )}
 
           <ProductActions product={product} />

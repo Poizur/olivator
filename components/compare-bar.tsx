@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useCompare } from '@/lib/compare-context'
+import { trackCompareOpen } from '@/lib/analytics'
 
 export function CompareBar() {
   const { items, removeItem, clearAll } = useCompare()
@@ -47,6 +48,7 @@ export function CompareBar() {
 
       <Link
         href={`/porovnani?ids=${items.map(i => i.id).join(',')}`}
+        onClick={() => trackCompareOpen(items.length)}
         className={`bg-olive text-white border-none rounded-full px-5 py-2.5 text-[13px] font-medium cursor-pointer whitespace-nowrap transition-colors hover:bg-olive-dark ${
           items.length < 2 ? 'opacity-40 pointer-events-none' : ''
         }`}
