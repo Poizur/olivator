@@ -39,7 +39,10 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
       </h1>
 
       <div className="space-y-6">
-        <ProductForm productRow={productRow} />
+        <ProductForm
+          productRow={productRow}
+          cheapestOfferPrice={offers[0]?.price ?? null}
+        />
         <OffersManager
           productId={id}
           productSlug={productRow.slug as string}

@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
+import { calculateScore } from '@/lib/score'
 
 const ORIGIN_OPTIONS = ['GR', 'IT', 'ES', 'HR', 'PT', 'TR', 'MA', 'TN', 'IL', 'US']
 const TYPE_OPTIONS = [
@@ -40,7 +41,13 @@ const FLAVOR_LABELS: Record<typeof FLAVOR_AXES[number], string> = {
   buttery: 'Máslový',
 }
 
-export function ProductForm({ productRow }: { productRow: Record<string, unknown> }) {
+export function ProductForm({
+  productRow,
+  cheapestOfferPrice,
+}: {
+  productRow: Record<string, unknown>
+  cheapestOfferPrice?: number | null
+}) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -285,8 +292,38 @@ export function ProductForm({ productRow }: { productRow: Record<string, unknown
       {/* Score breakdown */}
       <Section
         title="Rozložení Score"
-        subtitle="Součet by měl dát celkové Score (0–100)"
+        subtitle="Součet dá celkové Score (0–100). Můžeš nechat spočítat automaticky z vyplněných parametrů."
       >
+        <div className="flex items-center gap-3 mb-2">
+          <button
+            type="button"
+            onClick={() => {
+              const pricePer100ml =
+                cheapestOfferPrice && volumeMl
+                  ? (cheapestOfferPrice / Number(volumeMl)) * 100
+                  : null
+              const result = calculateScore({
+                acidity: acidity ? Number(acidity) : null,
+                certifications: certs,
+                polyphenols: polyphenols ? Number(polyphenols) : null,
+                peroxideValue: peroxideValue ? Number(peroxideValue) : null,
+                pricePer100ml,
+              })
+              setSbA(String(result.breakdown.acidity))
+              setSbC(String(result.breakdown.certifications))
+              setSbQ(String(result.breakdown.quality))
+              setSbV(String(result.breakdown.value))
+              setScore(String(result.total))
+            }}
+            className="bg-olive text-white rounded-full px-4 py-1.5 text-[13px] font-medium hover:bg-olive-dark transition-colors"
+          >
+            ✨ Spočítat automaticky
+          </button>
+          <span className="text-[11px] text-text3 leading-tight">
+            Použije kyselost, certifikace, polyfenoly + peroxidové číslo a cenu
+            z nejlevnější nabídky ({cheapestOfferPrice ? `${cheapestOfferPrice} Kč` : 'chybí'}).
+          </span>
+        </div>
         <div className="grid grid-cols-4 gap-4">
           <Field label="Kyselost (max 35)">
             <Input value={scoreAcidity} onChange={setSbA} type="number" />
