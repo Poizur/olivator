@@ -3,12 +3,12 @@
 import { useSearchParams } from 'next/navigation'
 import { useMemo } from 'react'
 import { ListCard } from '@/components/list-card'
-import { FilterPanel } from '@/components/filter-panel'
+import { FilterPanel, type FilterCounts } from '@/components/filter-panel'
 import type { Product, ProductOffer } from '@/lib/types'
 
 type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
 
-export function ListingContent({ products }: { products: ProductWithOffer[] }) {
+export function ListingContent({ products, counts }: { products: ProductWithOffer[]; counts: FilterCounts }) {
   const searchParams = useSearchParams()
 
   const activeTypes = searchParams.get('type')?.split(',').filter(Boolean) || []
@@ -66,7 +66,7 @@ export function ListingContent({ products }: { products: ProductWithOffer[] }) {
       </div>
 
       <div className="grid grid-cols-[220px_1fr] gap-7 items-start">
-        <FilterPanel />
+        <FilterPanel counts={counts} />
 
         <div>
           <div className="flex items-center justify-between mb-4">

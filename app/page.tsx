@@ -1,21 +1,24 @@
 import Link from 'next/link'
-import { getProductsWithOffers } from '@/lib/data'
+import { getProductsWithOffers, getSiteStats } from '@/lib/data'
 import { getArticles } from '@/lib/static-content'
 import { OilCard } from '@/components/oil-card'
 
-const CATEGORIES = [
-  { emoji: '🇬🇷', name: 'Řecké oleje', count: 3, href: '/srovnavac?origin=GR' },
-  { emoji: '🇮🇹', name: 'Italské oleje', count: 2, href: '/srovnavac?origin=IT' },
-  { emoji: '🇪🇸', name: 'Španělské oleje', count: 2, href: '/srovnavac?origin=ES' },
-  { emoji: '🌿', name: 'Bio & organické', count: 4, href: '/srovnavac?cert=bio' },
-  { emoji: '🏆', name: 'Oceněné oleje', count: 3, href: '/srovnavac?cert=nyiooc' },
-  { emoji: '💰', name: 'Do 200 Kč', count: 3, href: '/srovnavac?maxPrice=200' },
-]
-
 export default async function Home() {
-  const allProducts = await getProductsWithOffers()
+  const [allProducts, stats] = await Promise.all([
+    getProductsWithOffers(),
+    getSiteStats(),
+  ])
   const products = allProducts.slice(0, 3)
   const articles = getArticles().slice(0, 4)
+
+  const CATEGORIES = [
+    { emoji: '🇬🇷', name: 'Řecké oleje', count: stats.byOrigin['GR'] ?? 0, href: '/srovnavac?origin=GR' },
+    { emoji: '🇮🇹', name: 'Italské oleje', count: stats.byOrigin['IT'] ?? 0, href: '/srovnavac?origin=IT' },
+    { emoji: '🇪🇸', name: 'Španělské oleje', count: stats.byOrigin['ES'] ?? 0, href: '/srovnavac?origin=ES' },
+    { emoji: '🌿', name: 'Bio & organické', count: stats.byCertification['bio'] ?? 0, href: '/srovnavac?cert=bio' },
+    { emoji: '🏆', name: 'Oceněné oleje', count: stats.byCertification['nyiooc'] ?? 0, href: '/srovnavac?cert=nyiooc' },
+    { emoji: '💰', name: 'Do 200 Kč', count: stats.under200Kc, href: '/srovnavac?maxPrice=200' },
+  ].filter(c => c.count > 0)
 
   return (
     <>
@@ -25,7 +28,7 @@ export default async function Home() {
           <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
           </svg>
-          {products.length * 100}+ olejů &middot; 18 prodejců &middot; aktualizováno dnes
+          {stats.totalProducts} olejů &middot; {stats.activeRetailers} prodejců &middot; aktualizováno dnes
         </div>
         <h1 className="font-[family-name:var(--font-display)] text-5xl md:text-[64px] font-normal leading-[1.05] tracking-tight text-text mb-5">
           Najdi svůj dokonalý<br />
@@ -70,8 +73,8 @@ export default async function Home() {
       {/* Stats */}
       <div className="bg-off px-10 py-5 flex justify-center gap-14">
         {[
-          { n: '582', l: 'olejů v databázi' },
-          { n: '18', l: 'srovnaných prodejců' },
+          { n: String(stats.totalProducts), l: 'olejů v databázi' },
+          { n: String(stats.activeRetailers), l: 'srovnaných prodejců' },
           { n: '24h', l: 'aktualizace cen' },
           { n: '100%', l: 'nezávislé hodnocení' },
         ].map(s => (
@@ -134,7 +137,7 @@ export default async function Home() {
               <span className="text-[26px] shrink-0">{cat.emoji}</span>
               <div>
                 <div className="text-sm font-medium text-text">{cat.name}</div>
-                <div className="text-xs text-text3 mt-0.5">{cat.count * 47} produktů</div>
+                <div className="text-xs text-text3 mt-0.5">{cat.count} {cat.count === 1 ? 'produkt' : cat.count < 5 ? 'produkty' : 'produktů'}</div>
               </div>
             </Link>
           ))}

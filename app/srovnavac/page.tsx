@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { getProductsWithOffers } from '@/lib/data'
+import { getProductsWithOffers, getSiteStats } from '@/lib/data'
 import { ListingContent } from './listing-content'
 
 export const metadata = {
@@ -8,10 +8,18 @@ export const metadata = {
 }
 
 export default async function SrovnavacPage() {
-  const products = await getProductsWithOffers()
+  const [products, stats] = await Promise.all([
+    getProductsWithOffers(),
+    getSiteStats(),
+  ])
+  const counts = {
+    types: stats.byType,
+    origins: stats.byOrigin,
+    certifications: stats.byCertification,
+  }
   return (
     <Suspense fallback={<div className="p-10 text-center text-text3">Načítání...</div>}>
-      <ListingContent products={products} />
+      <ListingContent products={products} counts={counts} />
     </Suspense>
   )
 }

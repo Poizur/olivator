@@ -3,26 +3,38 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useCallback } from 'react'
 
-const TYPES = [
-  { value: 'evoo', label: 'Extra panenský', count: 5 },
-  { value: 'virgin', label: 'Panenský', count: 1 },
-  { value: 'refined', label: 'Rafinovaný', count: 1 },
-]
+export interface FilterCounts {
+  types: Record<string, number>
+  origins: Record<string, number>
+  certifications: Record<string, number>
+}
 
-const ORIGINS = [
-  { value: 'GR', label: '🇬🇷 Řecko', count: 3 },
-  { value: 'IT', label: '🇮🇹 Itálie', count: 2 },
-  { value: 'ES', label: '🇪🇸 Španělsko', count: 2 },
-  { value: 'HR', label: '🇭🇷 Chorvatsko', count: 1 },
-]
+const TYPE_LABELS: Record<string, string> = {
+  evoo: 'Extra panenský',
+  virgin: 'Panenský',
+  refined: 'Rafinovaný',
+  olive_oil: 'Olivový olej',
+  pomace: 'Pokrutinový',
+}
 
-const CERTS = [
-  { value: 'bio', label: 'BIO / Organic', count: 4 },
-  { value: 'dop', label: 'DOP / CHOP', count: 3 },
-  { value: 'nyiooc', label: 'Oceněný NYIOOC', count: 2 },
-]
+const ORIGIN_LABELS: Record<string, string> = {
+  GR: '🇬🇷 Řecko',
+  IT: '🇮🇹 Itálie',
+  ES: '🇪🇸 Španělsko',
+  HR: '🇭🇷 Chorvatsko',
+  PT: '🇵🇹 Portugalsko',
+  TR: '🇹🇷 Turecko',
+}
 
-export function FilterPanel() {
+const CERT_LABELS: Record<string, string> = {
+  bio: 'BIO / Organic',
+  dop: 'DOP / CHOP',
+  pgp: 'PGP',
+  nyiooc: 'Oceněný NYIOOC',
+  organic: 'Organic',
+}
+
+export function FilterPanel({ counts }: { counts: FilterCounts }) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -47,27 +59,48 @@ export function FilterPanel() {
     router.push(`/srovnavac?${params.toString()}`)
   }, [searchParams, router])
 
+  const typeItems = Object.entries(counts.types)
+    .filter(([, n]) => n > 0)
+    .map(([v, n]) => ({ value: v, label: TYPE_LABELS[v] ?? v, count: n }))
+    .sort((a, b) => b.count - a.count)
+
+  const originItems = Object.entries(counts.origins)
+    .filter(([, n]) => n > 0)
+    .map(([v, n]) => ({ value: v, label: ORIGIN_LABELS[v] ?? v, count: n }))
+    .sort((a, b) => b.count - a.count)
+
+  const certItems = Object.entries(counts.certifications)
+    .filter(([, n]) => n > 0)
+    .map(([v, n]) => ({ value: v, label: CERT_LABELS[v] ?? v.toUpperCase(), count: n }))
+    .sort((a, b) => b.count - a.count)
+
   return (
     <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-4 sticky top-[72px]">
-      <FilterSection
-        label="Typ"
-        items={TYPES}
-        active={activeTypes}
-        onToggle={(v) => toggleFilter('type', v)}
-      />
-      <FilterSection
-        label="Původ"
-        items={ORIGINS}
-        active={activeOrigins}
-        onToggle={(v) => toggleFilter('origin', v)}
-      />
-      <FilterSection
-        label="Certifikace"
-        items={CERTS}
-        active={activeCerts}
-        onToggle={(v) => toggleFilter('cert', v)}
-        isLast
-      />
+      {typeItems.length > 0 && (
+        <FilterSection
+          label="Typ"
+          items={typeItems}
+          active={activeTypes}
+          onToggle={(v) => toggleFilter('type', v)}
+        />
+      )}
+      {originItems.length > 0 && (
+        <FilterSection
+          label="Původ"
+          items={originItems}
+          active={activeOrigins}
+          onToggle={(v) => toggleFilter('origin', v)}
+        />
+      )}
+      {certItems.length > 0 && (
+        <FilterSection
+          label="Certifikace"
+          items={certItems}
+          active={activeCerts}
+          onToggle={(v) => toggleFilter('cert', v)}
+          isLast
+        />
+      )}
     </div>
   )
 }

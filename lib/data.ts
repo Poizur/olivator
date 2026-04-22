@@ -191,5 +191,47 @@ export async function getCheapestOffer(productId: string): Promise<ProductOffer 
   return offers[0] ?? null
 }
 
+// Aggregate stats for homepage and listings
+export interface SiteStats {
+  totalProducts: number
+  activeRetailers: number
+  byOrigin: Record<string, number>
+  byCertification: Record<string, number>
+  byType: Record<string, number>
+  under200Kc: number
+}
+
+export async function getSiteStats(): Promise<SiteStats> {
+  const products = await getProductsWithOffers()
+
+  const byOrigin: Record<string, number> = {}
+  const byCertification: Record<string, number> = {}
+  const byType: Record<string, number> = {}
+  let under200Kc = 0
+
+  for (const p of products) {
+    byOrigin[p.originCountry] = (byOrigin[p.originCountry] ?? 0) + 1
+    byType[p.type] = (byType[p.type] ?? 0) + 1
+    for (const c of p.certifications) {
+      byCertification[c] = (byCertification[c] ?? 0) + 1
+    }
+    if (p.cheapestOffer && p.cheapestOffer.price <= 200) under200Kc++
+  }
+
+  const { count } = await supabaseAdmin
+    .from('retailers')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_active', true)
+
+  return {
+    totalProducts: products.length,
+    activeRetailers: count ?? 0,
+    byOrigin,
+    byCertification,
+    byType,
+    under200Kc,
+  }
+}
+
 // ── Articles, Rankings — still from static data (no CMS yet) ──────────
 export { ARTICLES, RANKINGS, getArticles, getArticleBySlug, getRankings, getRankingBySlug } from './static-content'
