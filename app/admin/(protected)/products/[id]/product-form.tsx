@@ -205,6 +205,14 @@ export function ProductForm({
             className={inputCls}
           />
         </Field>
+        <RewriteButton
+          productId={productRow.id as string}
+          onResult={(short, long) => {
+            setDescShort(short)
+            setDescLong(long)
+          }}
+          rawSource={descriptionShort || descriptionLong}
+        />
       </Section>
 
       {/* Origin */}
@@ -446,5 +454,62 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
     >
       {children}
     </button>
+  )
+}
+
+function RewriteButton({
+  productId,
+  rawSource,
+  onResult,
+}: {
+  productId: string
+  rawSource: string
+  onResult: (short: string, long: string) => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function onClick() {
+    if (!confirm(
+      'AI přepíše popisy v Olivator tónu (~300 slov, unikátní pro SEO). Uloží se teprve po tvém Save. Pokračovat?'
+    )) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/products/${productId}/rewrite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rawDescription: rawSource }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'AI rewrite failed')
+      onResult(data.shortDescription, data.longDescription)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Chyba')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-3 pt-1">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={loading}
+        className="bg-olive-bg text-olive-dark border border-olive-border rounded-full px-4 py-1.5 text-[13px] font-medium hover:bg-olive-border disabled:opacity-40 transition-colors"
+      >
+        {loading ? '✨ Přepisuji... (~5-10s)' : '✨ Přepsat AI'}
+      </button>
+      <span className="text-[11px] text-text3 leading-tight">
+        Claude API vygeneruje unikátní SEO popis z vyplněných dat + zdrojového popisu.
+        Cca 0,3 Kč per přepis.
+      </span>
+      {error && (
+        <span className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded px-2 py-0.5">
+          ⚠ {error}
+        </span>
+      )}
+    </div>
   )
 }

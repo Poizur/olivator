@@ -61,6 +61,14 @@ export default async function AdminProductsPage({
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-[family-name:var(--font-display)] text-3xl text-text">Produkty</h1>
+        <div className="flex gap-2">
+          <Link
+            href="/admin/products/import"
+            className="bg-olive text-white rounded-full px-4 py-2 text-[13px] font-medium hover:bg-olive-dark transition-colors"
+          >
+            📥 Import z URL
+          </Link>
+        </div>
       </div>
 
       {/* Status filter row */}

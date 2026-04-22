@@ -363,6 +363,41 @@ export interface ProductInput {
   status: string
 }
 
+export async function createProduct(input: ProductInput): Promise<{ id: string }> {
+  const payload = {
+    ean: input.ean,
+    name: input.name,
+    slug: input.slug,
+    name_short: input.nameShort ?? null,
+    origin_country: input.originCountry ?? null,
+    origin_region: input.originRegion ?? null,
+    type: input.type,
+    acidity: input.acidity ?? null,
+    polyphenols: input.polyphenols ?? null,
+    peroxide_value: input.peroxideValue ?? null,
+    oleic_acid_pct: input.oleicAcidPct ?? null,
+    harvest_year: input.harvestYear ?? null,
+    processing: input.processing ?? null,
+    flavor_profile: input.flavorProfile ?? {},
+    certifications: input.certifications ?? [],
+    use_cases: input.useCases ?? [],
+    volume_ml: input.volumeMl ?? null,
+    packaging: input.packaging ?? null,
+    olivator_score: input.olivatorScore ?? null,
+    score_breakdown: input.scoreBreakdown ?? {},
+    description_short: input.descriptionShort ?? null,
+    description_long: input.descriptionLong ?? null,
+    status: input.status,
+  }
+  const { data, error } = await supabaseAdmin
+    .from('products')
+    .upsert(payload, { onConflict: 'ean' })
+    .select('id')
+    .single()
+  if (error) throw error
+  return { id: data.id as string }
+}
+
 export async function updateProduct(id: string, input: ProductInput) {
   const payload = {
     ean: input.ean,
