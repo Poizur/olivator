@@ -233,5 +233,95 @@ export async function getSiteStats(): Promise<SiteStats> {
   }
 }
 
+// ── Admin: Retailers ──────────────────────────────────────────────────
+
+export async function getAllRetailers(): Promise<Retailer[]> {
+  const { data, error } = await supabaseAdmin
+    .from('retailers')
+    .select('*')
+    .order('default_commission_pct', { ascending: false })
+  if (error) throw error
+  return (data ?? []).map((r: Record<string, unknown>) => mapRetailer(r))
+}
+
+export async function getRetailerById(id: string): Promise<Retailer | null> {
+  const { data, error } = await supabaseAdmin
+    .from('retailers')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw error
+  return data ? mapRetailer(data as Record<string, unknown>) : null
+}
+
+// Extended retailer with affiliate template for admin editing
+export interface RetailerFull extends Retailer {
+  baseTrackingUrl: string | null
+}
+
+export async function getRetailerFullById(id: string): Promise<RetailerFull | null> {
+  const { data, error } = await supabaseAdmin
+    .from('retailers')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return null
+  return {
+    ...mapRetailer(data as Record<string, unknown>),
+    baseTrackingUrl: (data.base_tracking_url as string) ?? null,
+  }
+}
+
+export interface RetailerInput {
+  name: string
+  slug: string
+  domain: string
+  affiliateNetwork: string
+  baseTrackingUrl: string | null
+  defaultCommissionPct: number
+  isActive: boolean
+  market: string
+}
+
+export async function upsertRetailer(input: RetailerInput, id?: string) {
+  const payload = {
+    name: input.name,
+    slug: input.slug,
+    domain: input.domain,
+    affiliate_network: input.affiliateNetwork,
+    base_tracking_url: input.baseTrackingUrl || null,
+    default_commission_pct: input.defaultCommissionPct,
+    is_active: input.isActive,
+    market: input.market,
+  }
+
+  if (id) {
+    const { error } = await supabaseAdmin.from('retailers').update(payload).eq('id', id)
+    if (error) throw error
+  } else {
+    const { error } = await supabaseAdmin.from('retailers').insert(payload)
+    if (error) throw error
+  }
+}
+
+export async function deleteRetailer(id: string) {
+  const { error } = await supabaseAdmin.from('retailers').delete().eq('id', id)
+  if (error) throw error
+}
+
+// Count of active offers per retailer — shown in admin list
+export async function getRetailerOfferCounts(): Promise<Record<string, number>> {
+  const { data, error } = await supabaseAdmin
+    .from('product_offers')
+    .select('retailer_id')
+  if (error) throw error
+  const counts: Record<string, number> = {}
+  for (const row of (data ?? []) as { retailer_id: string }[]) {
+    counts[row.retailer_id] = (counts[row.retailer_id] ?? 0) + 1
+  }
+  return counts
+}
+
 // ── Articles, Rankings — still from static data (no CMS yet) ──────────
 export { ARTICLES, RANKINGS, getArticles, getArticleBySlug, getRankings, getRankingBySlug } from './static-content'
