@@ -3,11 +3,41 @@ import { isAdminAuthenticated } from '@/lib/admin-auth'
 import {
   ensureProductsBucket,
   fetchAndStoreProductImage,
+  fetchOpenFoodFactsImage,
   storeManualImage,
   clearProductImage,
 } from '@/lib/product-image'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export const maxDuration = 30
+
+/** GET — peek at the OFF image URL without committing. For admin preview. */
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!(await isAdminAuthenticated())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  try {
+    const { id } = await params
+    const { data: product } = await supabaseAdmin
+      .from('products')
+      .select('ean')
+      .eq('id', id)
+      .maybeSingle()
+    if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 404 })
+
+    const url = await fetchOpenFoodFactsImage(product.ean as string)
+    if (!url) {
+      return NextResponse.json({ ok: false, reason: 'Open Food Facts nemá fotku pro tento EAN' })
+    }
+    return NextResponse.json({ ok: true, previewUrl: url, source: 'open_food_facts' })
+  } catch (err) {
+    console.error('[fetch-image GET]', err)
+    return NextResponse.json({ error: 'Server error' }, { status: 500 })
+  }
+}
 
 export async function POST(
   request: NextRequest,
