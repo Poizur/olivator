@@ -1,23 +1,56 @@
 import Link from 'next/link'
 import { getAllProductsAdmin } from '@/lib/data'
-import { countryFlag, typeLabel } from '@/lib/utils'
+import { countryFlag, typeLabel, extractBrand } from '@/lib/utils'
 
 export default async function AdminProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>
+  searchParams: Promise<{ status?: string; brand?: string }>
 }) {
-  const { status } = await searchParams
-  const products = await getAllProductsAdmin(status)
+  const { status, brand } = await searchParams
+
+  // Fetch all products (no status filter) for global brand list + counts
+  const allProducts = await getAllProductsAdmin()
+
+  // Apply filters client-side using single DB fetch
+  let filtered = [...allProducts]
+  if (status) filtered = filtered.filter(p => p.status === status)
+  if (brand) filtered = filtered.filter(p => extractBrand(p.name) === brand)
 
   const statusCounts = {
-    all: (await getAllProductsAdmin()).length,
-    active: (await getAllProductsAdmin('active')).length,
-    draft: (await getAllProductsAdmin('draft')).length,
-    inactive: (await getAllProductsAdmin('inactive')).length,
+    all: allProducts.length,
+    active: allProducts.filter(p => p.status === 'active').length,
+    draft: allProducts.filter(p => p.status === 'draft').length,
+    inactive: allProducts.filter(p => p.status === 'inactive').length,
   }
 
-  const filters = [
+  // Brand list with counts (respecting current status filter)
+  const brandSource = status
+    ? allProducts.filter(p => p.status === status)
+    : allProducts
+  const brandCounts = new Map<string, number>()
+  for (const p of brandSource) {
+    const b = extractBrand(p.name)
+    brandCounts.set(b, (brandCounts.get(b) ?? 0) + 1)
+  }
+  const brands = [...brandCounts.entries()].sort((a, b) => b[1] - a[1])
+
+  function statusHref(value?: string) {
+    const p = new URLSearchParams()
+    if (value) p.set('status', value)
+    if (brand) p.set('brand', brand)
+    const qs = p.toString()
+    return qs ? `/admin/products?${qs}` : '/admin/products'
+  }
+  function brandHref(value?: string) {
+    const p = new URLSearchParams()
+    if (status) p.set('status', status)
+    if (value) p.set('brand', value)
+    const qs = p.toString()
+    return qs ? `/admin/products?${qs}` : '/admin/products'
+  }
+
+  const statusFilters = [
     { value: undefined, label: `Vše (${statusCounts.all})` },
     { value: 'active', label: `Aktivní (${statusCounts.active})` },
     { value: 'draft', label: `Drafty (${statusCounts.draft})` },
@@ -30,24 +63,57 @@ export default async function AdminProductsPage({
         <h1 className="font-[family-name:var(--font-display)] text-3xl text-text">Produkty</h1>
       </div>
 
-      <div className="flex gap-2 mb-5">
-        {filters.map(f => {
-          const active = status === f.value || (!status && !f.value)
-          const href = f.value ? `/admin/products?status=${f.value}` : '/admin/products'
-          return (
+      {/* Status filter row */}
+      <div className="mb-3">
+        <div className="text-[11px] font-semibold tracking-wider uppercase text-text3 mb-1.5">Stav</div>
+        <div className="flex gap-2 flex-wrap">
+          {statusFilters.map(f => {
+            const active = status === f.value || (!status && !f.value)
+            return (
+              <Link
+                key={f.label}
+                href={statusHref(f.value)}
+                className={`text-[13px] px-3 py-1.5 rounded-full transition-colors ${
+                  active
+                    ? 'bg-olive text-white'
+                    : 'bg-white border border-off2 text-text2 hover:border-olive-light hover:text-olive'
+                }`}
+              >
+                {f.label}
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Brand filter row */}
+      <div className="mb-5">
+        <div className="text-[11px] font-semibold tracking-wider uppercase text-text3 mb-1.5">Výrobce</div>
+        <div className="flex gap-2 flex-wrap">
+          <Link
+            href={brandHref(undefined)}
+            className={`text-[13px] px-3 py-1.5 rounded-full transition-colors ${
+              !brand
+                ? 'bg-olive text-white'
+                : 'bg-white border border-off2 text-text2 hover:border-olive-light hover:text-olive'
+            }`}
+          >
+            Všichni
+          </Link>
+          {brands.map(([b, count]) => (
             <Link
-              key={f.label}
-              href={href}
+              key={b}
+              href={brandHref(b)}
               className={`text-[13px] px-3 py-1.5 rounded-full transition-colors ${
-                active
+                brand === b
                   ? 'bg-olive text-white'
                   : 'bg-white border border-off2 text-text2 hover:border-olive-light hover:text-olive'
               }`}
             >
-              {f.label}
+              {b} ({count})
             </Link>
-          )
-        })}
+          ))}
+        </div>
       </div>
 
       <div className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden">
@@ -55,6 +121,7 @@ export default async function AdminProductsPage({
           <thead className="bg-off">
             <tr>
               <th className="text-left px-4 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Produkt</th>
+              <th className="text-left px-4 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Výrobce</th>
               <th className="text-left px-4 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">EAN</th>
               <th className="text-left px-4 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Typ</th>
               <th className="text-right px-4 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Score</th>
@@ -64,14 +131,14 @@ export default async function AdminProductsPage({
             </tr>
           </thead>
           <tbody>
-            {products.length === 0 && (
+            {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-text3 text-sm">
-                  Žádné produkty
+                <td colSpan={8} className="px-4 py-10 text-center text-text3 text-sm">
+                  Žádné produkty neodpovídají vybraným filtrům
                 </td>
               </tr>
             )}
-            {products.map(p => (
+            {filtered.map(p => (
               <tr key={p.id} className="border-t border-off hover:bg-off/50">
                 <td className="px-4 py-3">
                   <div className="text-sm font-medium text-text">
@@ -80,6 +147,9 @@ export default async function AdminProductsPage({
                   <div className="text-xs text-text3">
                     {p.originRegion}{p.volumeMl ? ` · ${p.volumeMl} ml` : ''}
                   </div>
+                </td>
+                <td className="px-4 py-3 text-xs text-text2">
+                  {extractBrand(p.name)}
                 </td>
                 <td className="px-4 py-3 text-xs text-text2 font-mono">{p.ean}</td>
                 <td className="px-4 py-3 text-xs text-text2">{typeLabel(p.type)}</td>
@@ -106,6 +176,11 @@ export default async function AdminProductsPage({
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="mt-3 text-xs text-text3">
+        Zobrazeno {filtered.length} z {allProducts.length} produktů
+        {brand && <> &middot; výrobce: <strong>{brand}</strong></>}
       </div>
     </div>
   )

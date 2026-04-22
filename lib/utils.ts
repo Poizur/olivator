@@ -73,3 +73,20 @@ export function certLabel(cert: string): string {
   }
   return labels[cert] || cert.toUpperCase()
 }
+
+// Extract brand from product name. Most olive oil brands are 1-2 words at
+// the start of the product name (Gaea Fresh, Terra Creta Estate, etc).
+// Known multi-word brands are hardcoded; everything else falls back to
+// first word.
+const MULTI_WORD_BRANDS: readonly string[] = [
+  'Terra Creta',
+  'Frantoio Franci',
+  'Olival Selection',
+]
+
+export function extractBrand(name: string): string {
+  for (const brand of MULTI_WORD_BRANDS) {
+    if (name.startsWith(brand)) return brand
+  }
+  return name.split(/\s+/)[0] ?? name
+}
