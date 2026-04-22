@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
 import { Playfair_Display, Inter } from 'next/font/google'
 import { Nav } from '@/components/nav'
 import { Footer } from '@/components/footer'
@@ -30,7 +31,7 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: ReactNode
 }) {
   return (
     <html lang="cs" className={`${playfair.variable} ${inter.variable}`}>

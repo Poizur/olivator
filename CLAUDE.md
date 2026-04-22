@@ -857,6 +857,86 @@ async function callClaude(params, retries = 4) {
 
 ---
 
+### BUG-018: `useSearchParams()` bez `<Suspense>` → build selže
+**Problém:** Next.js 14+ vyžaduje `<Suspense>` wrapper kolem komponent používajících `useSearchParams()`. Bez něj build selže bez jasné error hlášky.
+
+```tsx
+// ❌ ŠPATNĚ
+export default function Page() {
+  const params = useSearchParams()
+}
+
+// ✅ SPRÁVNĚ
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PageContent />
+    </Suspense>
+  )
+}
+```
+
+**Pro Olivator:** Stránky `/srovnavac` a `/porovnani` tento pattern používají — nutné zachovat.
+
+---
+
+### BUG-019: MDX props přes RSC boundary — array/number nefungují
+**Problém:** V next-mdx-remote RSC se přes boundary spolehlivě přenášejí pouze **string props**. Čísla a pole se promění v `undefined` bez chybové hlášky.
+
+```tsx
+// ❌ ŠPATNĚ
+<ScoreCard rating={8.4} pros={["a","b"]} />
+
+// ✅ SPRÁVNĚ — stringify přes boundary, parse uvnitř
+<ScoreCard dataJson={JSON.stringify({ rating: 8.4, pros: ["a","b"] })} />
+```
+
+**Pro Olivator:** Articles (průvodce, recepty) — structured data do YAML frontmatteru, ne do JSX props.
+
+---
+
+### BUG-020: Deploy platform build failure je tichý
+**Problém:** Railway/Vercel tiše servírují starou verzi při build failure. Žádný webhook, žádný email bez explicitní konfigurace.
+
+**Pravidlo:**
+> Po každém `git push` čekat 90s, pak ověřit `/api/health` + `version`. Pokud se `version` nezměnilo → jít rovnou do Railway dashboardu, neztrácet čas.
+
+---
+
+### BUG-021: `React.ReactNode` bez importu → TypeScript strict error
+```tsx
+// ❌ ŠPATNĚ
+interface Props { children: React.ReactNode }
+
+// ✅ SPRÁVNĚ
+import type { ReactNode } from 'react'
+interface Props { children: ReactNode }
+```
+
+---
+
+### BUG-022: Supabase anon key místo service role key → RLS blokuje zápis
+**Závažnost:** VYSOKÁ — INSERT/UPDATE selže tiše nebo s 403.
+
+```typescript
+// ❌ Pro agenty / API routes ŠPATNĚ
+const supabase = createClient(url, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+
+// ✅ Pro agenty / API routes SPRÁVNĚ
+const supabase = createClient(url, process.env.SUPABASE_SERVICE_KEY!)
+```
+
+**Pravidlo pro Olivator:**
+> Server-side (API routes, scraper, admin) VŽDY `SUPABASE_SERVICE_KEY`. Frontend klient může použít `NEXT_PUBLIC_SUPABASE_ANON_KEY`, ale pro náš MVP všechny DB operace jdou přes API routes → anon key nepotřebujeme vůbec.
+
+---
+
+### BUG-023: GitHub batch commit — každý commit spouští Railway/Vercel rebuild
+**Pravidlo:**
+> Commituj celý batch najednou. 3 produkty = 1 commit = 1 rebuild. Ne 3 commity = 3 rebuildy.
+
+---
+
 ### SOUHRN PRAVIDEL (quick reference)
 
 | # | Pravidlo | Oblast |
@@ -875,6 +955,11 @@ async function callClaude(params, retries = 4) {
 | 12 | Po přidání env proměnné otestovat endpoint a zkontrolovat logy | Deploy |
 | 13 | Anthropic 529 jsou normální → retry + graceful degradation | APIs |
 | 14 | Unsplash query = topic-specific per článek (ne generický název) | Content |
+| 15 | `useSearchParams()` v Next.js vždy uvnitř `<Suspense>` | Next.js |
+| 16 | MDX/RSC boundary — pouze string props; array/number → YAML frontmatter | Next.js |
+| 17 | `React.ReactNode` → `import type { ReactNode } from 'react'` | TypeScript |
+| 18 | Server-side Supabase VŽDY `SUPABASE_SERVICE_KEY`, ne anon | Database |
+| 19 | Batch commits — 1 commit na feature, ne série commitů | Deploy |
 
 ---
 
