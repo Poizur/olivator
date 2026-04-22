@@ -1,12 +1,34 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { Product } from '@/lib/types'
 
 export function ScoreSection({ product }: { product: Product }) {
   const [tooltipOpen, setTooltipOpen] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const { scoreBreakdown } = product
   const total = product.olivatorScore
+
+  // Close on click outside + Escape key
+  useEffect(() => {
+    if (!tooltipOpen) return
+
+    function onPointerDown(e: PointerEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setTooltipOpen(false)
+      }
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setTooltipOpen(false)
+    }
+
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [tooltipOpen])
 
   const items = [
     { label: 'Kyselost', value: `${product.acidity} %`, weight: '35 %' },
@@ -19,17 +41,33 @@ export function ScoreSection({ product }: { product: Product }) {
     <div className="bg-off rounded-xl p-5 mb-5">
       <div className="flex items-center justify-between mb-2">
         <div className="text-[13px] font-medium text-text">Olivator Score</div>
-        <div className="flex items-center gap-1.5 relative">
+        <div ref={wrapperRef} className="flex items-center gap-1.5 relative">
           <span className="text-[22px] font-bold text-terra tracking-tight">{total} / 100</span>
           <button
-            onClick={() => setTooltipOpen(!tooltipOpen)}
+            type="button"
+            onClick={() => setTooltipOpen(v => !v)}
+            aria-expanded={tooltipOpen}
+            aria-label="Jak počítáme Score"
             className="w-4 h-4 rounded-full bg-off2 border-none cursor-pointer text-[10px] text-text2 flex items-center justify-center font-semibold shrink-0 transition-colors hover:bg-olive-bg hover:text-olive"
           >
             ?
           </button>
           {tooltipOpen && (
-            <div className="absolute bottom-6 right-0 bg-white border border-off2 rounded-[var(--radius-card)] p-3.5 w-60 z-50 shadow-[0_8px_24px_rgba(0,0,0,.1)]">
-              <div className="text-xs font-semibold text-text mb-2">Jak počítáme Score</div>
+            <div
+              role="dialog"
+              className="absolute bottom-6 right-0 bg-white border border-off2 rounded-[var(--radius-card)] p-3.5 w-60 z-50 shadow-[0_8px_24px_rgba(0,0,0,.1)]"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs font-semibold text-text">Jak počítáme Score</div>
+                <button
+                  type="button"
+                  onClick={() => setTooltipOpen(false)}
+                  aria-label="Zavřít"
+                  className="w-5 h-5 rounded-full hover:bg-off text-text3 text-xs flex items-center justify-center cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
               {[
                 { label: 'Kyselost', pct: '35 %' },
                 { label: 'Certifikace', pct: '25 %' },
