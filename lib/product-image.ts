@@ -53,11 +53,11 @@ export async function fetchOpenFoodFactsImage(ean: string): Promise<string | nul
   }
 }
 
-/** Download image bytes, convert to 800×800 WebP, upload to Supabase Storage.
- *  Returns the public URL stored in the bucket. */
+/** Download image, normalize to 800×800 on white background (consistent e-commerce look),
+ *  save as {slug}.webp in Supabase Storage. Returns a cache-busted public URL. */
 export async function downloadAndStoreImage(
   sourceUrl: string,
-  productEan: string
+  productSlug: string
 ): Promise<string> {
   const res = await fetch(sourceUrl, {
     signal: AbortSignal.timeout(15_000),
@@ -65,18 +65,27 @@ export async function downloadAndStoreImage(
   if (!res.ok) throw new Error(`Download failed: HTTP ${res.status}`)
   const buffer = Buffer.from(await res.arrayBuffer())
 
-  // Resize + compress to WebP. Keep aspect ratio, max 800×800.
+  // Normalize:
+  //  1. Fit inside 800×800 keeping aspect ratio
+  //  2. Pad to exact 800×800 canvas with white background
+  //  3. Export WebP 82% quality
+  // Result: consistent grid dimensions regardless of source aspect ratio.
   const webp = await sharp(buffer)
-    .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+    .resize(800, 800, {
+      fit: 'contain',
+      background: { r: 255, g: 255, b: 255, alpha: 1 },
+      withoutEnlargement: false,
+    })
+    .flatten({ background: { r: 255, g: 255, b: 255 } }) // flatten any alpha to white
     .webp({ quality: 82 })
     .toBuffer()
 
-  const filename = `${productEan}.webp`
+  const filename = `${productSlug}.webp`
   const { error: uploadErr } = await supabaseAdmin.storage
     .from(STORAGE_BUCKET)
     .upload(filename, webp, {
       contentType: 'image/webp',
-      cacheControl: '31536000', // 1 year — files are versioned by EAN
+      cacheControl: '31536000', // 1 year at the CDN
       upsert: true,
     })
   if (uploadErr) throw new Error(`Upload failed: ${uploadErr.message}`)
@@ -85,7 +94,8 @@ export async function downloadAndStoreImage(
     .from(STORAGE_BUCKET)
     .getPublicUrl(filename)
 
-  return urlData.publicUrl
+  // Cache-bust on every upload so browsers/CDN pick up the new version.
+  return `${urlData.publicUrl}?v=${Date.now()}`
 }
 
 /** End-to-end: for a product id, fetch from OFF and update products.image_url. */
@@ -94,7 +104,7 @@ export async function fetchAndStoreProductImage(
 ): Promise<{ ok: true; imageUrl: string; source: string } | { ok: false; reason: string }> {
   const { data: product, error } = await supabaseAdmin
     .from('products')
-    .select('id, ean, name')
+    .select('id, ean, slug, name')
     .eq('id', productId)
     .maybeSingle()
   if (error || !product) return { ok: false, reason: 'Product not found' }
@@ -102,7 +112,7 @@ export async function fetchAndStoreProductImage(
   const offUrl = await fetchOpenFoodFactsImage(product.ean as string)
   if (!offUrl) return { ok: false, reason: 'No image in Open Food Facts for this EAN' }
 
-  const storedUrl = await downloadAndStoreImage(offUrl, product.ean as string)
+  const storedUrl = await downloadAndStoreImage(offUrl, product.slug as string)
 
   const { error: updateErr } = await supabaseAdmin
     .from('products')
@@ -130,13 +140,13 @@ export async function storeManualImage(
 
   const { data: product, error } = await supabaseAdmin
     .from('products')
-    .select('id, ean')
+    .select('id, slug')
     .eq('id', productId)
     .maybeSingle()
   if (error || !product) return { ok: false, reason: 'Product not found' }
 
   try {
-    const storedUrl = await downloadAndStoreImage(sourceUrl, product.ean as string)
+    const storedUrl = await downloadAndStoreImage(sourceUrl, product.slug as string)
     const { error: updateErr } = await supabaseAdmin
       .from('products')
       .update({
@@ -156,15 +166,18 @@ export async function storeManualImage(
 export async function clearProductImage(productId: string): Promise<{ ok: boolean; reason?: string }> {
   const { data: product } = await supabaseAdmin
     .from('products')
-    .select('id, ean')
+    .select('id, ean, slug')
     .eq('id', productId)
     .maybeSingle()
   if (!product) return { ok: false, reason: 'Product not found' }
 
-  // Delete from storage (ignore errors — file may not exist)
+  // Delete possible files (both new slug-based and legacy EAN-based naming)
   await supabaseAdmin.storage
     .from(STORAGE_BUCKET)
-    .remove([`${product.ean as string}.webp`])
+    .remove([
+      `${product.slug as string}.webp`,
+      `${product.ean as string}.webp`,
+    ])
 
   const { error } = await supabaseAdmin
     .from('products')
