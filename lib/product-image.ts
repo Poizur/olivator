@@ -117,6 +117,63 @@ export async function fetchAndStoreProductImage(
   return { ok: true, imageUrl: storedUrl, source: 'open_food_facts' }
 }
 
+/** Store a manually-provided image URL. */
+export async function storeManualImage(
+  productId: string,
+  sourceUrl: string
+): Promise<{ ok: true; imageUrl: string; source: string } | { ok: false; reason: string }> {
+  try {
+    new URL(sourceUrl) // validate
+  } catch {
+    return { ok: false, reason: 'Neplatná URL' }
+  }
+
+  const { data: product, error } = await supabaseAdmin
+    .from('products')
+    .select('id, ean')
+    .eq('id', productId)
+    .maybeSingle()
+  if (error || !product) return { ok: false, reason: 'Product not found' }
+
+  try {
+    const storedUrl = await downloadAndStoreImage(sourceUrl, product.ean as string)
+    const { error: updateErr } = await supabaseAdmin
+      .from('products')
+      .update({
+        image_url: storedUrl,
+        image_source: 'manual',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', productId)
+    if (updateErr) return { ok: false, reason: `DB update failed: ${updateErr.message}` }
+    return { ok: true, imageUrl: storedUrl, source: 'manual' }
+  } catch (err) {
+    return { ok: false, reason: err instanceof Error ? err.message : 'Download failed' }
+  }
+}
+
+/** Clear image from a product (and delete storage file). */
+export async function clearProductImage(productId: string): Promise<{ ok: boolean; reason?: string }> {
+  const { data: product } = await supabaseAdmin
+    .from('products')
+    .select('id, ean')
+    .eq('id', productId)
+    .maybeSingle()
+  if (!product) return { ok: false, reason: 'Product not found' }
+
+  // Delete from storage (ignore errors — file may not exist)
+  await supabaseAdmin.storage
+    .from(STORAGE_BUCKET)
+    .remove([`${product.ean as string}.webp`])
+
+  const { error } = await supabaseAdmin
+    .from('products')
+    .update({ image_url: null, image_source: null, updated_at: new Date().toISOString() })
+    .eq('id', productId)
+  if (error) return { ok: false, reason: error.message }
+  return { ok: true }
+}
+
 /** Ensure the 'products' storage bucket exists. Safe to call repeatedly. */
 export async function ensureProductsBucket() {
   const { data: buckets } = await supabaseAdmin.storage.listBuckets()
