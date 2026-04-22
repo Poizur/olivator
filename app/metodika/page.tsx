@@ -107,6 +107,92 @@ export default function MetodikaPage() {
         ))}
       </div>
 
+      {/* Certifications glossary */}
+      <div className="mt-12" id="certifikace">
+        <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-2">
+          Co znamenají certifikace
+        </h2>
+        <p className="text-[14px] text-text2 leading-relaxed mb-6 font-light">
+          Certifikace tvoří <strong>25 % Olivator Score</strong>. Nejsou rovnocenné — některé
+          garantují chuť a původ (DOP), jiné způsob produkce (BIO), další jsou soutěžní ocenění (NYIOOC).
+          Tady je co stojí za každou zkratkou.
+        </p>
+
+        <div className="space-y-4">
+          {/* EU regulations */}
+          <div className="border border-off2 rounded-[var(--radius-card)] p-5">
+            <div className="text-[11px] font-semibold tracking-wider uppercase text-olive mb-2">
+              EU regulační značky
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <CertCard
+                code="DOP / CHOP"
+                fullName="Chráněné označení původu"
+                summary="Nejpřísnější EU značka. Celá produkce v regionu, místní odrůdy, dlouhá tradice."
+                examples="DOP Kalamata (Řecko), DOP Terra di Bari (Itálie)"
+                tier="Zlatý standard"
+              />
+              <CertCard
+                code="PGP / CHZO / IGP"
+                fullName="Chráněné zeměpisné označení"
+                summary="Mírnější než DOP. Alespoň jedna fáze produkce (pěstování NEBO lisování) v regionu."
+                examples="IGP Toscano, IGP Sicilia"
+                tier="Premium regional"
+              />
+            </div>
+          </div>
+
+          {/* Bio / organic */}
+          <div className="border border-off2 rounded-[var(--radius-card)] p-5">
+            <div className="text-[11px] font-semibold tracking-wider uppercase text-olive mb-2">
+              Bio a organické
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <CertCard
+                code="BIO"
+                fullName="EU bio certifikace"
+                summary="Zelený lístek na etiketě. Bez syntetických pesticidů, umělých hnojiv, GMO. Roční kontrola certifikační autoritou."
+                tier="EU standard"
+              />
+              <CertCard
+                code="Organické"
+                fullName="Non-EU bio ekvivalent"
+                summary="Stejné principy jako BIO, ale ze zemí mimo EU. Například USDA Organic z USA nebo JAS z Japonska."
+                tier="Equivalent k BIO"
+              />
+              <CertCard
+                code="Demeter"
+                fullName="Biodynamické pěstování"
+                summary="Přísnější než BIO. Podle principů Rudolfa Steinera — zohledňuje lunární cykly, rostlinné preparáty místo chemie."
+                tier="Nad BIO"
+              />
+            </div>
+          </div>
+
+          {/* Competitions */}
+          <div className="border border-off2 rounded-[var(--radius-card)] p-5">
+            <div className="text-[11px] font-semibold tracking-wider uppercase text-olive mb-2">
+              Mezinárodní ocenění kvality
+            </div>
+            <div>
+              <CertCard
+                code="NYIOOC"
+                fullName="New York International Olive Oil Competition"
+                summary="Nejprestižnější světová soutěž. Slepé hodnocení panelem expertů. Udělují zlatou, stříbrnou a bronzovou medaili. Zlatá = top 5 % světové produkce."
+                tier="Soutěžní ocenění (ne certifikace)"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 bg-off rounded-lg p-4 text-[13px] text-text2 leading-relaxed">
+          <strong className="text-text">💡 Pro tip:</strong> Kombinace <strong>DOP + BIO</strong> dává
+          maximum 25 bodů z 25 ve složce "Certifikace" Olivator Score. Pokud má olej k tomu ještě
+          NYIOOC Gold, je to v top kategorii světové produkce.
+        </div>
+      </div>
+
       {/* Trust section */}
       <div className="mt-12 bg-olive-bg rounded-[var(--radius-card)] p-6">
         <h2 className="font-[family-name:var(--font-display)] text-xl font-normal text-text mb-3">
@@ -119,6 +205,34 @@ export default function MetodikaPage() {
           <li>• <strong>Aktualizace:</strong> Score se přepočítává při každé změně ceny nebo certifikace</li>
         </ul>
       </div>
+    </div>
+  )
+}
+
+function CertCard({
+  code,
+  fullName,
+  summary,
+  examples,
+  tier,
+}: {
+  code: string
+  fullName: string
+  summary: string
+  examples?: string
+  tier?: string
+}) {
+  return (
+    <div className="bg-off rounded-lg p-4">
+      <div className="flex items-baseline justify-between gap-2 mb-1">
+        <span className="text-[15px] font-semibold text-olive-dark">{code}</span>
+        {tier && <span className="text-[10px] text-text3 uppercase tracking-wider">{tier}</span>}
+      </div>
+      <div className="text-xs text-text3 mb-2">{fullName}</div>
+      <p className="text-[13px] text-text2 leading-relaxed">{summary}</p>
+      {examples && (
+        <div className="text-[11px] text-text3 mt-2 italic">Př.: {examples}</div>
+      )}
     </div>
   )
 }

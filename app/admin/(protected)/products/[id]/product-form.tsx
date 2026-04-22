@@ -15,12 +15,9 @@ const CERT_OPTIONS: { value: string; label: string }[] = [
   { value: 'dop', label: 'DOP' },                // Chráněné označení původu
   { value: 'pgp', label: 'PGP' },                // Chráněné zeměpisné ozn.
   { value: 'bio', label: 'BIO' },
-  { value: 'organic', label: 'Organické' },
+  { value: 'organic', label: 'Organické' },      // Non-EU ekvivalent BIO
   { value: 'nyiooc', label: 'NYIOOC' },          // New York Oil Competition
   { value: 'demeter', label: 'Demeter' },        // Biodynamické
-  { value: 'kosher', label: 'Košer' },
-  { value: 'halal', label: 'Halal' },
-  { value: 'vegan', label: 'Vegan' },
 ]
 const USE_OPTIONS: { value: string; label: string }[] = [
   { value: 'salad', label: 'Salát' },
