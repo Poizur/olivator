@@ -1,7 +1,8 @@
 import type { MetadataRoute } from 'next'
-import { getProducts, getArticles, getRankings } from '@/lib/mock-data'
+import { getProducts } from '@/lib/data'
+import { getArticles, getRankings } from '@/lib/static-content'
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://olivator.cz'
 
   const staticPages: MetadataRoute.Sitemap = [
@@ -14,7 +15,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${baseUrl}/metodika`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.6 },
   ]
 
-  const productPages: MetadataRoute.Sitemap = getProducts().map(p => ({
+  const products = await getProducts()
+  const productPages: MetadataRoute.Sitemap = products.map(p => ({
     url: `${baseUrl}/olej/${p.slug}`,
     lastModified: new Date(),
     changeFrequency: 'daily' as const,

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getArticles, getArticleBySlug } from '@/lib/mock-data'
+import { getArticles, getArticleBySlug } from '@/lib/static-content'
 
 export function generateStaticParams() {
   return getArticles().filter(a => a.category !== 'recept').map(a => ({ slug: a.slug }))

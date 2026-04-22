@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getRankings, getRankingBySlug, getProductsByIds, getCheapestOffer } from '@/lib/mock-data'
+import { getRankings, getRankingBySlug } from '@/lib/static-content'
+import { getProductsBySlugs, getCheapestOffer } from '@/lib/data'
 import { ListCard } from '@/components/list-card'
 
 export function generateStaticParams() {
@@ -12,7 +13,8 @@ export default async function RankingDetailPage({ params }: { params: Promise<{ 
   const ranking = getRankingBySlug(slug)
   if (!ranking) notFound()
 
-  const products = getProductsByIds(ranking.productIds)
+  const products = await getProductsBySlugs(ranking.productIds)
+  const offers = await Promise.all(products.map(p => getCheapestOffer(p.id)))
 
   return (
     <div className="max-w-[1080px] mx-auto px-10 py-10">
@@ -37,7 +39,7 @@ export default async function RankingDetailPage({ params }: { params: Promise<{ 
           <ListCard
             key={p.id}
             product={p}
-            offer={getCheapestOffer(p.id)}
+            offer={offers[i] ?? undefined}
             rank={i + 1}
           />
         ))}

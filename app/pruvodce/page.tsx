@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { getArticles } from '@/lib/mock-data'
+import { getArticles } from '@/lib/static-content'
 
 export const metadata = {
   title: 'Průvodce olivovými oleji',

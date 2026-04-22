@@ -2,14 +2,16 @@
 
 import Link from 'next/link'
 import { useCompare } from '@/lib/compare-context'
-import { getCheapestOffer, getProducts } from '@/lib/mock-data'
 import { countryFlag, formatPrice, formatPricePer100ml, certLabel } from '@/lib/utils'
-import type { Product } from '@/lib/types'
+import type { Product, ProductOffer } from '@/lib/types'
 
-export function ComparatorContent() {
+type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
+
+export function ComparatorContent({ allProducts }: { allProducts: ProductWithOffer[] }) {
   const { items, removeItem, addItem } = useCompare()
   const empty = 5 - items.length
-  const allProducts = getProducts()
+  const offerByProductId = new Map(allProducts.map(p => [p.id, p.cheapestOffer]))
+  const getCheapestOffer = (pid: string) => offerByProductId.get(pid) ?? null
   const notInCompare = allProducts.filter(p => !items.some(i => i.id === p.id))
 
   const winner = items.length >= 2

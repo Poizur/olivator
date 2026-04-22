@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { getProducts, getCheapestOffer, getArticles } from '@/lib/mock-data'
+import { getProductsWithOffers } from '@/lib/data'
+import { getArticles } from '@/lib/static-content'
 import { OilCard } from '@/components/oil-card'
 
 const CATEGORIES = [
@@ -11,8 +12,9 @@ const CATEGORIES = [
   { emoji: '💰', name: 'Do 200 Kč', count: 3, href: '/srovnavac?maxPrice=200' },
 ]
 
-export default function Home() {
-  const products = getProducts().slice(0, 3)
+export default async function Home() {
+  const allProducts = await getProductsWithOffers()
+  const products = allProducts.slice(0, 3)
   const articles = getArticles().slice(0, 4)
 
   return (
@@ -100,7 +102,7 @@ export default function Home() {
             <OilCard
               key={p.id}
               product={p}
-              offer={getCheapestOffer(p.id)}
+              offer={p.cheapestOffer ?? undefined}
               isTop={i === 0}
             />
           ))}

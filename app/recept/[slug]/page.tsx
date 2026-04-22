@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getArticles, getArticleBySlug, getProducts, getCheapestOffer } from '@/lib/mock-data'
+import { getArticles, getArticleBySlug } from '@/lib/static-content'
+import { getProductsWithOffers } from '@/lib/data'
 import { formatPrice } from '@/lib/utils'
 
 export function generateStaticParams() {
@@ -12,7 +13,8 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
   const article = getArticleBySlug(slug)
   if (!article || article.category !== 'recept') notFound()
 
-  const recommended = getProducts().slice(0, 2)
+  const allProducts = await getProductsWithOffers()
+  const recommended = allProducts.slice(0, 2)
 
   return (
     <div className="max-w-[720px] mx-auto px-10 py-10">
@@ -51,7 +53,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
           Doporučené oleje pro tento recept
         </div>
         {recommended.map(p => {
-          const offer = getCheapestOffer(p.id)
+          const offer = p.cheapestOffer
           return (
             <Link
               key={p.id}

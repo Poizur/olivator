@@ -2,12 +2,13 @@
 
 import { useSearchParams } from 'next/navigation'
 import { useMemo } from 'react'
-import { getProducts, getCheapestOffer } from '@/lib/mock-data'
 import { ListCard } from '@/components/list-card'
 import { FilterPanel } from '@/components/filter-panel'
-import type { Product } from '@/lib/types'
+import type { Product, ProductOffer } from '@/lib/types'
 
-export function ListingContent() {
+type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
+
+export function ListingContent({ products }: { products: ProductWithOffer[] }) {
   const searchParams = useSearchParams()
 
   const activeTypes = searchParams.get('type')?.split(',').filter(Boolean) || []
@@ -16,40 +17,36 @@ export function ListingContent() {
   const sort = searchParams.get('sort') || 'score'
 
   const filtered = useMemo(() => {
-    let products = getProducts()
+    let list = [...products]
 
     if (activeTypes.length > 0) {
-      products = products.filter(p => activeTypes.includes(p.type))
+      list = list.filter(p => activeTypes.includes(p.type))
     }
     if (activeOrigins.length > 0) {
-      products = products.filter(p => activeOrigins.includes(p.originCountry))
+      list = list.filter(p => activeOrigins.includes(p.originCountry))
     }
     if (activeCerts.length > 0) {
-      products = products.filter(p =>
+      list = list.filter(p =>
         activeCerts.some(c => p.certifications.includes(c))
       )
     }
 
     switch (sort) {
       case 'price_asc':
-        products.sort((a, b) => {
-          const oa = getCheapestOffer(a.id)
-          const ob = getCheapestOffer(b.id)
-          return (oa?.price || 9999) - (ob?.price || 9999)
-        })
+        list.sort((a, b) => (a.cheapestOffer?.price ?? 9999) - (b.cheapestOffer?.price ?? 9999))
         break
       case 'acidity':
-        products.sort((a, b) => a.acidity - b.acidity)
+        list.sort((a, b) => a.acidity - b.acidity)
         break
       case 'polyphenols':
-        products.sort((a, b) => b.polyphenols - a.polyphenols)
+        list.sort((a, b) => b.polyphenols - a.polyphenols)
         break
       default:
-        products.sort((a, b) => b.olivatorScore - a.olivatorScore)
+        list.sort((a, b) => b.olivatorScore - a.olivatorScore)
     }
 
-    return products
-  }, [activeTypes, activeOrigins, activeCerts, sort])
+    return list
+  }, [products, activeTypes, activeOrigins, activeCerts, sort])
 
   const filterDesc = [
     activeTypes.length > 0 ? activeTypes.join(', ') : null,
@@ -98,7 +95,7 @@ export function ListingContent() {
               <ListCard
                 key={p.id}
                 product={p}
-                offer={getCheapestOffer(p.id)}
+                offer={p.cheapestOffer ?? undefined}
                 rank={i + 1}
               />
             ))}

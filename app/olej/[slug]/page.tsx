@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getProducts, getProductBySlug, getOffersForProduct } from '@/lib/mock-data'
+import { getProducts, getProductBySlug, getOffersForProduct } from '@/lib/data'
 import { countryFlag, countryName, typeLabel, certLabel, formatPrice, formatPricePer100ml } from '@/lib/utils'
 import { productSchema, breadcrumbSchema } from '@/lib/schema'
 import { ScoreSection } from '@/components/score-section'
@@ -8,12 +8,14 @@ import { FlavorWheel } from '@/components/flavor-wheel'
 import { PriceTable } from '@/components/price-table'
 import { ProductActions } from './product-actions'
 
-export function generateStaticParams() {
-  return getProducts().map(p => ({ slug: p.slug }))
+export async function generateStaticParams() {
+  const products = await getProducts()
+  return products.map(p => ({ slug: p.slug }))
 }
 
-export function generateMetadata({ params }: { params: { slug: string } }) {
-  const product = getProductBySlug(params.slug)
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const product = await getProductBySlug(slug)
   if (!product) return { title: 'Nenalezeno' }
   return {
     title: `${product.name} — Score ${product.olivatorScore}`,
@@ -23,10 +25,10 @@ export function generateMetadata({ params }: { params: { slug: string } }) {
 
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const product = getProductBySlug(slug)
+  const product = await getProductBySlug(slug)
   if (!product) notFound()
 
-  const offers = getOffersForProduct(product.id)
+  const offers = await getOffersForProduct(product.id)
   const cheapest = offers[0]
 
   const specs = [
