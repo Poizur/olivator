@@ -4,6 +4,7 @@ import Link from 'next/link'
 import type { Product, ProductOffer } from '@/lib/types'
 import { countryFlag, formatPrice, formatPricePer100ml, certLabel } from '@/lib/utils'
 import { useCompare } from '@/lib/compare-context'
+import { ProductImage } from './product-image'
 
 interface OilCardProps {
   product: Product
@@ -25,8 +26,8 @@ export function OilCard({ product, offer, isTop }: OilCardProps) {
         </div>
       )}
       <Link href={`/olej/${product.slug}`}>
-        <div className="h-[180px] bg-gradient-to-br from-off to-white flex items-center justify-center text-[80px] relative">
-          🫒
+        <div className="h-[180px] bg-gradient-to-br from-off to-white flex items-center justify-center relative">
+          <ProductImage product={product} fallbackSize="text-[80px]" sizes="(max-width: 768px) 50vw, 300px" />
           <div className="absolute bottom-3 right-3 bg-terra text-white text-[11px] font-semibold px-2.5 py-1 rounded-full">
             Score {product.olivatorScore}
           </div>

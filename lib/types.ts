@@ -23,7 +23,8 @@ export interface Product {
   descriptionShort: string
   descriptionLong: string
   status: 'draft' | 'active' | 'inactive'
-  imageUrl?: string
+  imageUrl?: string | null
+  imageSource?: string | null
 }
 
 export interface FlavorProfile {

@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { getAllRetailers, getOffersForProduct } from '@/lib/data'
 import { ProductForm } from './product-form'
 import { OffersManager } from './offers-manager'
+import { ImagePanel } from './image-panel'
 
 async function getProductRow(id: string) {
   const { data, error } = await supabaseAdmin
@@ -39,6 +40,12 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
       </h1>
 
       <div className="space-y-6">
+        <ImagePanel
+          productId={id}
+          currentImageUrl={(productRow.image_url as string) ?? null}
+          currentSource={(productRow.image_source as string) ?? null}
+          ean={productRow.ean as string}
+        />
         <ProductForm
           productRow={productRow}
           cheapestOfferPrice={offers[0]?.price ?? null}

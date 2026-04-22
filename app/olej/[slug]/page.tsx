@@ -7,6 +7,7 @@ import { ScoreSection } from '@/components/score-section'
 import { FlavorWheel } from '@/components/flavor-wheel'
 import { PriceTable } from '@/components/price-table'
 import { AffiliateLink } from '@/components/affiliate-link'
+import { ProductImage } from '@/components/product-image'
 import { ProductActions } from './product-actions'
 
 export async function generateStaticParams() {
@@ -74,8 +75,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-14 items-start mb-14">
         {/* Left — image */}
         <div className="sticky top-[72px]">
-          <div className="bg-off rounded-[var(--radius-card)] h-[380px] flex items-center justify-center text-[120px] relative mb-4">
-            🫒
+          <div className="bg-off rounded-[var(--radius-card)] h-[380px] flex items-center justify-center relative mb-4 overflow-hidden p-8">
+            <ProductImage product={product} fallbackSize="text-[120px]" sizes="(max-width: 768px) 100vw, 500px" />
             <div className="absolute top-4 right-4 bg-terra text-white text-sm font-bold px-4 py-2 rounded-full flex items-center gap-1.5">
               <svg width="13" height="13" fill="#fff" viewBox="0 0 24 24">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />

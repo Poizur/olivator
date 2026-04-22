@@ -30,6 +30,8 @@ interface ProductRow {
   description_short: string | null
   description_long: string | null
   status: string
+  image_url: string | null
+  image_source: string | null
 }
 
 function mapProduct(row: ProductRow): Product {
@@ -71,6 +73,8 @@ function mapProduct(row: ProductRow): Product {
     descriptionShort: row.description_short ?? '',
     descriptionLong: row.description_long ?? '',
     status: row.status as Product['status'],
+    imageUrl: row.image_url ?? null,
+    imageSource: row.image_source ?? null,
   }
 }
 

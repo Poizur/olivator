@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import type { Product, ProductOffer } from '@/lib/types'
 import { countryFlag, countryName, formatPrice, formatPricePer100ml, certLabel } from '@/lib/utils'
+import { ProductImage } from './product-image'
 
 interface ListCardProps {
   product: Product
@@ -20,8 +21,8 @@ export function ListCard({ product, offer, rank }: ListCardProps) {
           {rank}
         </div>
 
-        <div className="w-16 h-20 bg-off rounded-lg flex items-center justify-center text-4xl shrink-0">
-          🫒
+        <div className="w-16 h-20 bg-off rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+          <ProductImage product={product} fallbackSize="text-4xl" sizes="80px" />
         </div>
 
         <div className="flex-1 min-w-0">

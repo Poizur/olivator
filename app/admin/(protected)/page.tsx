@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getSiteStats, getAllRetailers } from '@/lib/data'
 import { supabaseAdmin } from '@/lib/supabase'
+import { BulkFetchImagesButton } from './bulk-fetch-images'
 
 export default async function AdminDashboardPage() {
   const [stats, retailers] = await Promise.all([
@@ -95,6 +96,7 @@ export default async function AdminDashboardPage() {
           >
             Schválit drafty
           </Link>
+          <BulkFetchImagesButton />
         </div>
       </div>
     </div>
