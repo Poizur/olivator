@@ -22,11 +22,38 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://olivator.cz'),
   title: {
     default: 'Olivator — Největší srovnávač olivových olejů v ČR',
     template: '%s | Olivator',
   },
   description: 'Objektivní Olivator Score, aktuální ceny ze 18 prodejců a expertní průvodce olivovými oleji.',
+  openGraph: {
+    type: 'website',
+    locale: 'cs_CZ',
+    url: 'https://olivator.cz',
+    siteName: 'Olivator',
+    title: 'Olivator — Největší srovnávač olivových olejů v ČR',
+    description: 'Objektivní Olivator Score, aktuální ceny ze 18 prodejců a expertní průvodce olivovými oleji.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Olivator — Největší srovnávač olivových olejů v ČR',
+    description: 'Objektivní Olivator Score, aktuální ceny ze 18 prodejců a expertní průvodce olivovými oleji.',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  alternates: {
+    canonical: 'https://olivator.cz',
+  },
 }
 
 export default function RootLayout({
