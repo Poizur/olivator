@@ -323,5 +323,116 @@ export async function getRetailerOfferCounts(): Promise<Record<string, number>> 
   return counts
 }
 
+// ── Admin: Products ───────────────────────────────────────────────────
+
+export async function getAllProductsAdmin(statusFilter?: string): Promise<Product[]> {
+  let query = supabaseAdmin.from('products').select('*')
+  if (statusFilter) query = query.eq('status', statusFilter)
+  const { data, error } = await query.order('created_at', { ascending: false })
+  if (error) throw error
+  return (data as ProductRow[]).map(mapProduct)
+}
+
+export interface ProductInput {
+  ean: string
+  name: string
+  slug: string
+  nameShort?: string
+  originCountry?: string
+  originRegion?: string
+  type: string
+  acidity?: number
+  polyphenols?: number
+  peroxideValue?: number
+  oleicAcidPct?: number
+  harvestYear?: number
+  processing?: string
+  flavorProfile?: Record<string, number>
+  certifications?: string[]
+  useCases?: string[]
+  volumeMl?: number
+  packaging?: string
+  olivatorScore?: number
+  scoreBreakdown?: Record<string, number>
+  descriptionShort?: string
+  descriptionLong?: string
+  status: string
+}
+
+export async function updateProduct(id: string, input: ProductInput) {
+  const payload = {
+    ean: input.ean,
+    name: input.name,
+    slug: input.slug,
+    name_short: input.nameShort ?? null,
+    origin_country: input.originCountry ?? null,
+    origin_region: input.originRegion ?? null,
+    type: input.type,
+    acidity: input.acidity ?? null,
+    polyphenols: input.polyphenols ?? null,
+    peroxide_value: input.peroxideValue ?? null,
+    oleic_acid_pct: input.oleicAcidPct ?? null,
+    harvest_year: input.harvestYear ?? null,
+    processing: input.processing ?? null,
+    flavor_profile: input.flavorProfile ?? {},
+    certifications: input.certifications ?? [],
+    use_cases: input.useCases ?? [],
+    volume_ml: input.volumeMl ?? null,
+    packaging: input.packaging ?? null,
+    olivator_score: input.olivatorScore ?? null,
+    score_breakdown: input.scoreBreakdown ?? {},
+    description_short: input.descriptionShort ?? null,
+    description_long: input.descriptionLong ?? null,
+    status: input.status,
+    updated_at: new Date().toISOString(),
+  }
+  const { error } = await supabaseAdmin.from('products').update(payload).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteProduct(id: string) {
+  const { error } = await supabaseAdmin.from('products').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ── Admin: Offers ─────────────────────────────────────────────────────
+
+export interface OfferInput {
+  productId: string
+  retailerId: string
+  price: number
+  inStock: boolean
+  productUrl: string
+  affiliateUrl?: string | null
+  commissionPct?: number | null
+}
+
+export async function upsertOffer(input: OfferInput, id?: string) {
+  const payload = {
+    product_id: input.productId,
+    retailer_id: input.retailerId,
+    price: input.price,
+    in_stock: input.inStock,
+    product_url: input.productUrl || null,
+    affiliate_url: input.affiliateUrl || null,
+    commission_pct: input.commissionPct ?? null,
+    last_checked: new Date().toISOString(),
+  }
+  if (id) {
+    const { error } = await supabaseAdmin.from('product_offers').update(payload).eq('id', id)
+    if (error) throw error
+  } else {
+    const { error } = await supabaseAdmin
+      .from('product_offers')
+      .upsert(payload, { onConflict: 'product_id,retailer_id' })
+    if (error) throw error
+  }
+}
+
+export async function deleteOffer(id: string) {
+  const { error } = await supabaseAdmin.from('product_offers').delete().eq('id', id)
+  if (error) throw error
+}
+
 // ── Articles, Rankings — still from static data (no CMS yet) ──────────
 export { ARTICLES, RANKINGS, getArticles, getArticleBySlug, getRankings, getRankingBySlug } from './static-content'

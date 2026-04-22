@@ -1,11 +1,11 @@
 // Admin authentication helpers.
-// Uses httpOnly cookie with HMAC signature to avoid needing a session store.
+// Uses httpOnly cookie with HMAC signature. Uses Web Crypto API so the
+// signing format is identical to what middleware.ts verifies on Edge.
 
 import { cookies } from 'next/headers'
-import { createHmac, timingSafeEqual } from 'node:crypto'
 
 const COOKIE_NAME = 'olivator_admin'
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 7 // 7 days, seconds
 
 function getSecret(): string {
   const secret = process.env.ADMIN_SECRET_KEY
@@ -15,20 +15,35 @@ function getSecret(): string {
   return secret
 }
 
-function sign(payload: string, secret: string): string {
-  return createHmac('sha256', secret).update(payload).digest('base64url')
-}
-
 function safeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b))
+  let result = 0
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  }
+  return result === 0
 }
 
-/** Called after successful login — mints a signed cookie. */
+async function hmacSign(payload: string, secret: string): Promise<string> {
+  const enc = new TextEncoder()
+  const key = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  )
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(payload))
+  const bytes = new Uint8Array(sig)
+  let binary = ''
+  for (const b of bytes) binary += String.fromCharCode(b)
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
 export async function createAdminSession() {
   const secret = getSecret()
   const issued = Date.now().toString()
-  const signature = sign(issued, secret)
+  const signature = await hmacSign(issued, secret)
   const value = `${issued}.${signature}`
 
   const store = await cookies()
@@ -46,7 +61,6 @@ export async function clearAdminSession() {
   store.delete(COOKIE_NAME)
 }
 
-/** Returns true if the request has a valid admin cookie. */
 export async function isAdminAuthenticated(): Promise<boolean> {
   try {
     const secret = getSecret()
@@ -55,7 +69,7 @@ export async function isAdminAuthenticated(): Promise<boolean> {
     if (!cookie) return false
     const [issued, signature] = cookie.value.split('.')
     if (!issued || !signature) return false
-    const expected = sign(issued, secret)
+    const expected = await hmacSign(issued, secret)
     if (!safeEqual(signature, expected)) return false
     const age = Date.now() - Number(issued)
     if (isNaN(age) || age < 0 || age > COOKIE_MAX_AGE * 1000) return false
@@ -65,12 +79,10 @@ export async function isAdminAuthenticated(): Promise<boolean> {
   }
 }
 
-/** Check credentials: password from form vs ADMIN_SECRET_KEY. */
 export function verifyPassword(password: string): boolean {
   try {
     const secret = getSecret()
-    if (password.length !== secret.length) return false
-    return timingSafeEqual(Buffer.from(password), Buffer.from(secret))
+    return safeEqual(password, secret)
   } catch {
     return false
   }
