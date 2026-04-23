@@ -33,16 +33,60 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const offers = await getOffersForProduct(product.id)
   const cheapest = offers[0]
 
+  // Transparent spec table — missing data shown as "— nezveřejněno" in italics
   const specs = [
-    { key: 'Typ', value: typeLabel(product.type) },
-    { key: 'Původ', value: `${product.originRegion}, ${countryName(product.originCountry)}` },
-    { key: 'Kyselost', value: `${product.acidity} %` },
-    { key: 'Polyfenoly', value: `${product.polyphenols} mg/kg` },
-    { key: 'Rok sklizně', value: String(product.harvestYear) },
-    { key: 'Zpracování', value: product.processing === 'cold_pressed' ? 'Za studena lisovaný' : product.processing },
-    { key: 'Certifikace', value: product.certifications.length > 0 ? product.certifications.map(certLabel).join(', ') : 'Žádné' },
-    { key: 'Objem', value: `${product.volumeMl} ml` },
-    { key: 'Obal', value: product.packaging === 'dark_glass' ? 'Tmavé sklo' : product.packaging === 'tin' ? 'Plech' : product.packaging },
+    { key: 'Typ', value: typeLabel(product.type), missing: false },
+    {
+      key: 'Původ',
+      value: product.originRegion
+        ? `${product.originRegion}, ${countryName(product.originCountry)}`
+        : countryName(product.originCountry) || '— nezveřejněno',
+      missing: !product.originCountry,
+    },
+    {
+      key: 'Kyselost',
+      value: product.acidity != null ? `${product.acidity} %` : '— data chybí',
+      missing: product.acidity == null,
+    },
+    {
+      key: 'Polyfenoly',
+      value: product.polyphenols != null ? `${product.polyphenols} mg/kg` : '— data chybí',
+      missing: product.polyphenols == null,
+    },
+    {
+      key: 'Rok sklizně',
+      value: product.harvestYear ? String(product.harvestYear) : '— nezveřejněno',
+      missing: !product.harvestYear,
+    },
+    {
+      key: 'Zpracování',
+      value: product.processing === 'cold_pressed' ? 'Za studena lisovaný' : (product.processing || '— nezveřejněno'),
+      missing: !product.processing,
+    },
+    {
+      key: 'Certifikace',
+      value: product.certifications.length > 0
+        ? product.certifications.map(certLabel).join(', ')
+        : 'Žádné',
+      missing: false,
+    },
+    {
+      key: 'Objem',
+      value: product.volumeMl ? `${product.volumeMl} ml` : '— nezveřejněno',
+      missing: !product.volumeMl,
+    },
+    {
+      key: 'Obal',
+      value: product.packaging === 'dark_glass'
+        ? 'Tmavé sklo'
+        : product.packaging === 'tin'
+        ? 'Plech'
+        : (product.packaging || '— nezveřejněno'),
+      missing: !product.packaging,
+    },
+    ...(product.ean
+      ? [{ key: 'EAN', value: product.ean, missing: false }]
+      : [{ key: 'Původ', value: '🌾 Přímo od výrobce', missing: false }]),
   ]
 
   return (
@@ -116,12 +160,21 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 {certLabel(c)}
               </span>
             ))}
-            <span className="text-[11px] px-2.5 py-1 rounded-lg font-medium bg-off text-text2">
-              Sklizeň {product.harvestYear}
-            </span>
-            <span className="text-[11px] px-2.5 py-1 rounded-lg font-medium bg-off text-text2">
-              Za studena lisovaný
-            </span>
+            {product.harvestYear && (
+              <span className="text-[11px] px-2.5 py-1 rounded-lg font-medium bg-off text-text2">
+                Sklizeň {product.harvestYear}
+              </span>
+            )}
+            {product.processing === 'cold_pressed' && (
+              <span className="text-[11px] px-2.5 py-1 rounded-lg font-medium bg-off text-text2">
+                Za studena lisovaný
+              </span>
+            )}
+            {!product.ean && (
+              <span className="text-[11px] px-2.5 py-1 rounded-lg font-medium bg-terra-bg text-terra">
+                🌾 Přímo od výrobce
+              </span>
+            )}
           </div>
 
           <ScoreSection product={product} />
@@ -158,7 +211,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             {specs.map(s => (
               <div key={s.key} className="flex justify-between py-2.5 border-b border-off last:border-b-0">
                 <span className="text-[13px] text-text3">{s.key}</span>
-                <span className="text-[13px] font-medium text-text">{s.value}</span>
+                <span className={`text-[13px] ${s.missing ? 'text-text3 italic' : 'font-medium text-text'}`}>
+                  {s.value}
+                </span>
               </div>
             ))}
           </div>

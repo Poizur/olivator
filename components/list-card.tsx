@@ -33,19 +33,31 @@ export function ListCard({ product, offer, rank }: ListCardProps) {
             {product.name}
           </div>
           <div className="flex gap-1 flex-wrap">
-            <span className={`text-[10px] px-[7px] py-0.5 rounded-md ${
-              product.acidity <= 0.3 ? 'bg-olive-bg text-olive-dark' : 'bg-off text-text2'
-            }`}>
-              Kyselost {product.acidity} %
-            </span>
-            <span className="text-[10px] px-[7px] py-0.5 rounded-md bg-off text-text2">
-              Polyfenoly {product.polyphenols}
-            </span>
+            {product.acidity != null && (
+              <span className={`text-[10px] px-[7px] py-0.5 rounded-md ${
+                product.acidity <= 0.3 ? 'bg-olive-bg text-olive-dark' : 'bg-off text-text2'
+              }`}>
+                Kyselost {product.acidity} %
+              </span>
+            )}
+            {product.polyphenols != null && (
+              <span className="text-[10px] px-[7px] py-0.5 rounded-md bg-off text-text2">
+                Polyfenoly {product.polyphenols}
+              </span>
+            )}
             {product.certifications.map(c => (
               <span key={c} className="text-[10px] px-[7px] py-0.5 rounded-md bg-off text-text2">
                 {certLabel(c)}
               </span>
             ))}
+            {!product.ean && (
+              <span
+                className="text-[10px] px-[7px] py-0.5 rounded-md bg-terra-bg text-terra"
+                title="Přímo od výrobce"
+              >
+                🌾 Od výrobce
+              </span>
+            )}
           </div>
         </div>
 

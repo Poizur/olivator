@@ -8,9 +8,10 @@ export async function POST(request: NextRequest) {
   }
   try {
     const body = await request.json()
-    if (!body.ean || !body.name || !body.slug) {
-      return NextResponse.json({ error: 'EAN, název a slug jsou povinné' }, { status: 400 })
+    if (!body.name || !body.slug) {
+      return NextResponse.json({ error: 'Název a slug jsou povinné' }, { status: 400 })
     }
+    // EAN is optional — farm-direct products often don't have one
     const result = await createProduct({ ...body, status: body.status ?? 'draft' })
     return NextResponse.json({ ok: true, id: result.id })
   } catch (err) {

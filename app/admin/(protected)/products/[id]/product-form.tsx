@@ -164,8 +164,11 @@ export function ProductForm({
       {/* Basic */}
       <Section title="Základní údaje">
         <div className="grid grid-cols-3 gap-4">
-          <Field label="EAN" required>
-            <Input value={ean} onChange={setEan} required />
+          <Field label="EAN (volitelné)">
+            <Input value={ean} onChange={setEan} placeholder="8012345678901 nebo prázdné" />
+            <div className="text-[10px] text-text3 mt-0.5">
+              Nemají ho malí farmáři a boutique produkty — nech prázdné
+            </div>
           </Field>
           <Field label="Status">
             <select value={status} onChange={e => setStatus(e.target.value)} className={inputCls}>

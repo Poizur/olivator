@@ -40,10 +40,12 @@ export function OilCard({ product, offer, isTop }: OilCardProps) {
             {product.name}
           </div>
           <div className="flex gap-1 flex-wrap mb-3">
-            <span className="text-[10px] px-2 py-0.5 rounded-lg bg-olive-bg text-olive-dark">
-              Kyselost {product.acidity} %
-            </span>
-            {product.polyphenols > 0 && (
+            {product.acidity != null && (
+              <span className="text-[10px] px-2 py-0.5 rounded-lg bg-olive-bg text-olive-dark">
+                Kyselost {product.acidity} %
+              </span>
+            )}
+            {product.polyphenols != null && product.polyphenols > 0 && (
               <span className="text-[10px] px-2 py-0.5 rounded-lg bg-olive-bg text-olive-dark">
                 Polyfenoly {product.polyphenols}
               </span>
@@ -53,6 +55,14 @@ export function OilCard({ product, offer, isTop }: OilCardProps) {
                 {certLabel(c)}
               </span>
             ))}
+            {!product.ean && (
+              <span
+                className="text-[10px] px-2 py-0.5 rounded-lg bg-terra-bg text-terra"
+                title="Produkt přímo od výrobce / farmy — nemá EAN z GS1"
+              >
+                🌾 Od výrobce
+              </span>
+            )}
           </div>
           {offer && (
             <div className="flex items-center justify-between pt-3 border-t border-off">

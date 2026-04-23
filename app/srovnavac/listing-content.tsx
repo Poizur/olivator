@@ -36,10 +36,12 @@ export function ListingContent({ products, counts }: { products: ProductWithOffe
         list.sort((a, b) => (a.cheapestOffer?.price ?? 9999) - (b.cheapestOffer?.price ?? 9999))
         break
       case 'acidity':
-        list.sort((a, b) => a.acidity - b.acidity)
+        // Null acidity sorted last (we treat missing data as worst for lower-better)
+        list.sort((a, b) => (a.acidity ?? 999) - (b.acidity ?? 999))
         break
       case 'polyphenols':
-        list.sort((a, b) => b.polyphenols - a.polyphenols)
+        // Null polyphenols sorted last (higher is better)
+        list.sort((a, b) => (b.polyphenols ?? 0) - (a.polyphenols ?? 0))
         break
       default:
         list.sort((a, b) => b.olivatorScore - a.olivatorScore)

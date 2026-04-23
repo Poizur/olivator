@@ -31,10 +31,28 @@ export function ScoreSection({ product }: { product: Product }) {
   }, [tooltipOpen])
 
   const items = [
-    { label: 'Kyselost', value: `${product.acidity} %`, weight: '35 %' },
-    { label: 'Polyfenoly', value: `${product.polyphenols} mg/kg`, weight: '25 %' },
-    { label: 'Certifikace', value: product.certifications.length > 0 ? product.certifications.map(c => c.toUpperCase()).join(' + ') : 'Žádné', weight: '25 %' },
-    { label: 'Hodnota', value: scoreBreakdown.value >= 20 ? 'Výborná' : scoreBreakdown.value >= 10 ? 'Dobrá' : 'Průměrná', weight: '15 %' },
+    {
+      label: 'Kyselost',
+      value: product.acidity != null ? `${product.acidity} %` : '— data chybí',
+      missing: product.acidity == null,
+    },
+    {
+      label: 'Polyfenoly',
+      value: product.polyphenols != null ? `${product.polyphenols} mg/kg` : '— data chybí',
+      missing: product.polyphenols == null,
+    },
+    {
+      label: 'Certifikace',
+      value: product.certifications.length > 0
+        ? product.certifications.map(c => c.toUpperCase()).join(' + ')
+        : 'Žádné',
+      missing: false,
+    },
+    {
+      label: 'Hodnota',
+      value: scoreBreakdown.value >= 20 ? 'Výborná' : scoreBreakdown.value >= 10 ? 'Dobrá' : 'Průměrná',
+      missing: false,
+    },
   ]
 
   return (
@@ -100,7 +118,7 @@ export function ScoreSection({ product }: { product: Product }) {
             <div className="text-[10px] text-text3 uppercase tracking-wider mb-0.5">
               {item.label}
             </div>
-            <div className="text-sm font-semibold text-text">
+            <div className={`text-sm font-semibold ${item.missing ? 'text-text3 italic' : 'text-text'}`}>
               {item.value}
             </div>
           </div>

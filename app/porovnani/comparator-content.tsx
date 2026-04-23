@@ -18,6 +18,8 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
     ? items.reduce((best, p) => p.olivatorScore > best.olivatorScore ? p : best)
     : null
 
+  // Null-safe metric: getValue always returns a number (0 = "missing" sentinel),
+  // format checks the original Product for true nullability.
   const metrics = [
     {
       label: 'Olivator Score',
@@ -26,21 +28,31 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
       higherBetter: true,
       showBar: true,
     },
-    { label: 'Kyselost', getValue: (p: Product) => p.acidity, format: (v: number) => `${v} %`, higherBetter: false },
-    { label: 'Polyfenoly', getValue: (p: Product) => p.polyphenols, format: (v: number) => `${v} mg/kg`, higherBetter: true },
+    {
+      label: 'Kyselost',
+      getValue: (p: Product) => p.acidity ?? 999, // null = "worst" for lower-better
+      format: (_v: number, p: Product) => p.acidity != null ? `${p.acidity} %` : '—',
+      higherBetter: false,
+    },
+    {
+      label: 'Polyfenoly',
+      getValue: (p: Product) => p.polyphenols ?? 0,
+      format: (_v: number, p: Product) => p.polyphenols != null ? `${p.polyphenols} mg/kg` : '—',
+      higherBetter: true,
+    },
     {
       label: 'Cena / 100 ml',
       getValue: (p: Product) => {
         const offer = getCheapestOffer(p.id)
-        return offer ? Math.round((offer.price / p.volumeMl) * 100) : 0
+        return offer ? Math.round((offer.price / p.volumeMl) * 100) : 9999
       },
-      format: (v: number) => `${v} Kč`,
+      format: (v: number) => v === 9999 ? '—' : `${v} Kč`,
       higherBetter: false,
     },
     {
       label: 'Cena lahve',
-      getValue: (p: Product) => getCheapestOffer(p.id)?.price || 0,
-      format: (v: number) => `${v} Kč`,
+      getValue: (p: Product) => getCheapestOffer(p.id)?.price || 9999,
+      format: (v: number) => v === 9999 ? '—' : `${v} Kč`,
       higherBetter: false,
     },
     {
@@ -51,8 +63,8 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
     },
     {
       label: 'Rok sklizně',
-      getValue: (p: Product) => p.harvestYear,
-      format: (v: number) => String(v),
+      getValue: (p: Product) => p.harvestYear ?? 0,
+      format: (_v: number, p: Product) => p.harvestYear ? String(p.harvestYear) : '—',
       higherBetter: true,
     },
   ]
@@ -150,7 +162,19 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
               {winner.name} — Score {winner.olivatorScore}
             </div>
             <div className="text-xs text-text2 mt-0.5">
-              {winner.acidity <= 0.25 ? 'Nejlepší kyselost' : 'Nízká kyselost'} ({winner.acidity} %), {winner.polyphenols} mg/kg polyfenolů{winner.certifications.length > 0 ? `, certifikace ${winner.certifications.map(certLabel).join(' + ')}` : ''}.
+              {(() => {
+                const parts: string[] = []
+                if (winner.acidity != null) {
+                  parts.push(`${winner.acidity <= 0.25 ? 'Nejlepší kyselost' : 'Nízká kyselost'} (${winner.acidity} %)`)
+                }
+                if (winner.polyphenols != null) {
+                  parts.push(`${winner.polyphenols} mg/kg polyfenolů`)
+                }
+                if (winner.certifications.length > 0) {
+                  parts.push(`certifikace ${winner.certifications.map(certLabel).join(' + ')}`)
+                }
+                return parts.length > 0 ? parts.join(', ') + '.' : `Celkové skóre ${winner.olivatorScore}/100.`
+              })()}
             </div>
           </div>
         </div>

@@ -7,7 +7,7 @@ import type { Product, ProductOffer, Retailer } from './types'
 // ── Product row mapping (snake_case DB → camelCase TS) ────────────────
 interface ProductRow {
   id: string
-  ean: string
+  ean: string | null
   name: string
   slug: string
   name_short: string | null
@@ -37,18 +37,18 @@ interface ProductRow {
 function mapProduct(row: ProductRow): Product {
   return {
     id: row.id,
-    ean: row.ean,
+    ean: row.ean,                                       // may be null for farm-direct
     name: row.name,
     slug: row.slug,
     nameShort: row.name_short ?? row.name,
     originCountry: row.origin_country ?? '',
     originRegion: row.origin_region ?? '',
     type: (row.type ?? 'evoo') as Product['type'],
-    acidity: Number(row.acidity ?? 0),
-    polyphenols: row.polyphenols ?? 0,
-    peroxideValue: Number(row.peroxide_value ?? 0),
-    oleicAcidPct: Number(row.oleic_acid_pct ?? 0),
-    harvestYear: row.harvest_year ?? new Date().getFullYear(),
+    acidity: row.acidity != null ? Number(row.acidity) : null,
+    polyphenols: row.polyphenols,                       // preserve null — common for small producers
+    peroxideValue: row.peroxide_value != null ? Number(row.peroxide_value) : null,
+    oleicAcidPct: row.oleic_acid_pct != null ? Number(row.oleic_acid_pct) : null,
+    harvestYear: row.harvest_year,
     processing: row.processing ?? '',
     flavorProfile: {
       fruity: row.flavor_profile?.fruity ?? 0,
@@ -338,7 +338,7 @@ export async function getAllProductsAdmin(statusFilter?: string): Promise<Produc
 }
 
 export interface ProductInput {
-  ean: string
+  ean: string | null
   name: string
   slug: string
   nameShort?: string
@@ -365,7 +365,7 @@ export interface ProductInput {
 
 export async function createProduct(input: ProductInput): Promise<{ id: string }> {
   const payload = {
-    ean: input.ean,
+    ean: input.ean || null,
     name: input.name,
     slug: input.slug,
     name_short: input.nameShort ?? null,
@@ -389,9 +389,12 @@ export async function createProduct(input: ProductInput): Promise<{ id: string }
     description_long: input.descriptionLong ?? null,
     status: input.status,
   }
+
+  // Use slug as conflict resolution (always unique + present).
+  // Upserting on ean would fail when ean is null since UNIQUE allows many NULLs.
   const { data, error } = await supabaseAdmin
     .from('products')
-    .upsert(payload, { onConflict: 'ean' })
+    .upsert(payload, { onConflict: 'slug' })
     .select('id')
     .single()
   if (error) throw error

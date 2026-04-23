@@ -1,17 +1,17 @@
 export interface Product {
   id: string
-  ean: string
+  ean: string | null               // null for farm-direct / boutique products
   name: string
   slug: string
   nameShort: string
   originCountry: string
   originRegion: string
   type: 'evoo' | 'virgin' | 'refined' | 'olive_oil' | 'pomace'
-  acidity: number
-  polyphenols: number
-  peroxideValue: number
-  oleicAcidPct: number
-  harvestYear: number
+  acidity: number | null           // null when not tested / not published
+  polyphenols: number | null       // null is common — lab analysis is expensive
+  peroxideValue: number | null
+  oleicAcidPct: number | null
+  harvestYear: number | null
   processing: string
   flavorProfile: FlavorProfile
   certifications: string[]

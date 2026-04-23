@@ -9,8 +9,7 @@ export function productSchema(product: Product, offers: ProductOffer[]) {
     '@type': 'Product',
     name: product.name,
     description: product.descriptionShort,
-    sku: product.ean,
-    gtin13: product.ean,
+    ...(product.ean ? { sku: product.ean, gtin13: product.ean } : {}),
     brand: {
       '@type': 'Brand',
       name: product.name.split(' ')[0],
@@ -20,8 +19,8 @@ export function productSchema(product: Product, offers: ProductOffer[]) {
       name: countryName(product.originCountry),
     },
     additionalProperty: [
-      { '@type': 'PropertyValue', name: 'Kyselost', value: `${product.acidity}%` },
-      { '@type': 'PropertyValue', name: 'Polyfenoly', value: `${product.polyphenols} mg/kg` },
+      ...(product.acidity != null ? [{ '@type': 'PropertyValue', name: 'Kyselost', value: `${product.acidity}%` }] : []),
+      ...(product.polyphenols != null ? [{ '@type': 'PropertyValue', name: 'Polyfenoly', value: `${product.polyphenols} mg/kg` }] : []),
       { '@type': 'PropertyValue', name: 'Typ', value: typeLabel(product.type) },
     ],
     review: {

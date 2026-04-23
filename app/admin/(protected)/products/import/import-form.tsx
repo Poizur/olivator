@@ -59,16 +59,8 @@ export function ImportForm() {
       setError('Chybí název nebo slug — oprav a spusť znovu')
       return
     }
-    if (!data.ean) {
-      const manualEan = prompt(
-        'Scraper nenašel EAN. Zadej ho manuálně (13 číslic z etikety / obalu):'
-      )
-      if (!manualEan || !/^\d{8,14}$/.test(manualEan.trim())) {
-        setError('Neplatný EAN — musí mít 8-14 číslic')
-        return
-      }
-      data.ean = manualEan.trim()
-    }
+    // EAN is optional — farm-direct / boutique products often don't have one.
+    // Admin can fill it in later if needed.
 
     setSaving(true)
     setError(null)
@@ -170,7 +162,7 @@ export function ImportForm() {
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-5">
-            <Cell label="EAN" value={data.ean} missing="chybí (doplníš ručně)" />
+            <Cell label="EAN" value={data.ean} missing="chybí (OK — farm direct)" />
             <Cell label="Typ" value={data.type} />
             <Cell label="Kyselost" value={data.acidity ? `${data.acidity}%` : null} />
             <Cell label="Polyfenoly" value={data.polyphenols ? `${data.polyphenols} mg/kg` : null} />
