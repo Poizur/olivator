@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { generateProductDescriptions } from '@/lib/content-agent'
+import { validateContent } from '@/lib/content-validator'
 import { countryName } from '@/lib/utils'
 
 export const maxDuration = 60
@@ -27,9 +28,9 @@ export async function POST(
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
-    const result = await generateProductDescriptions({
+    const generated = await generateProductDescriptions({
       name: product.name as string,
-      brand: null, // extracted from name inside content agent if needed
+      brand: null,
       origin: product.origin_country ? countryName(product.origin_country as string) : null,
       region: (product.origin_region as string) ?? null,
       type: (product.type as string) ?? null,
@@ -41,7 +42,18 @@ export async function POST(
       rawDescription: rawDescription ?? (product.description_long as string) ?? (product.description_short as string) ?? null,
     })
 
-    return NextResponse.json({ ok: true, ...result })
+    // Run automated QA — catches banned phrases, hallucinations, missing data
+    const validation = validateContent({
+      shortDescription: generated.shortDescription,
+      longDescription: generated.longDescription,
+      acidity: (product.acidity as number) ?? null,
+      polyphenols: (product.polyphenols as number) ?? null,
+      region: (product.origin_region as string) ?? null,
+      country: (product.origin_country as string) ?? null,
+      certifications: (product.certifications as string[]) ?? [],
+    })
+
+    return NextResponse.json({ ok: true, ...generated, validation })
   } catch (err) {
     console.error('[rewrite]', err)
     const message = err instanceof Error ? err.message : 'Server error'

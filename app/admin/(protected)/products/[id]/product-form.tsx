@@ -460,6 +460,22 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
   )
 }
 
+interface ValidationIssue {
+  severity: 'error' | 'warning' | 'info'
+  category: string
+  message: string
+  matched?: string
+}
+interface ValidationResult {
+  ok: boolean
+  errors: number
+  warnings: number
+  infos: number
+  wordCount: number
+  charCount: number
+  issues: ValidationIssue[]
+}
+
 function RewriteButton({
   productId,
   rawSource,
@@ -471,6 +487,7 @@ function RewriteButton({
 }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [validation, setValidation] = useState<ValidationResult | null>(null)
 
   async function onClick() {
     if (!confirm(
@@ -478,6 +495,7 @@ function RewriteButton({
     )) return
     setLoading(true)
     setError(null)
+    setValidation(null)
     try {
       const res = await fetch(`/api/admin/products/${productId}/rewrite`, {
         method: 'POST',
@@ -487,6 +505,7 @@ function RewriteButton({
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'AI rewrite failed')
       onResult(data.shortDescription, data.longDescription)
+      if (data.validation) setValidation(data.validation)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Chyba')
     } finally {
@@ -494,24 +513,76 @@ function RewriteButton({
     }
   }
 
+  const badgeClass = (() => {
+    if (!validation) return ''
+    if (validation.errors > 0) return 'bg-red-50 border-red-200 text-red-700'
+    if (validation.warnings > 0) return 'bg-terra-bg border-terra/30 text-terra'
+    return 'bg-olive-bg border-olive-border text-olive-dark'
+  })()
+
   return (
-    <div className="flex items-center gap-3 pt-1">
-      <button
-        type="button"
-        onClick={onClick}
-        disabled={loading}
-        className="bg-olive-bg text-olive-dark border border-olive-border rounded-full px-4 py-1.5 text-[13px] font-medium hover:bg-olive-border disabled:opacity-40 transition-colors"
-      >
-        {loading ? '✨ Přepisuji... (~5-10s)' : '✨ Přepsat AI'}
-      </button>
-      <span className="text-[11px] text-text3 leading-tight">
-        Claude API vygeneruje unikátní SEO popis z vyplněných dat + zdrojového popisu.
-        Cca 0,3 Kč per přepis.
-      </span>
-      {error && (
-        <span className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded px-2 py-0.5">
-          ⚠ {error}
+    <div className="pt-1 space-y-2">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onClick}
+          disabled={loading}
+          className="bg-olive-bg text-olive-dark border border-olive-border rounded-full px-4 py-1.5 text-[13px] font-medium hover:bg-olive-border disabled:opacity-40 transition-colors"
+        >
+          {loading ? '✨ Přepisuji... (~5-10s)' : '✨ Přepsat AI'}
+        </button>
+        <span className="text-[11px] text-text3 leading-tight flex-1">
+          Claude vygeneruje unikátní SEO popis. Po generování systém automaticky
+          zkontroluje banned fráze a halucinace.
         </span>
+        {error && (
+          <span className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded px-2 py-0.5">
+            ⚠ {error}
+          </span>
+        )}
+      </div>
+
+      {validation && (
+        <div className={`border rounded-lg p-3 ${badgeClass}`}>
+          <div className="flex items-center gap-3 mb-2 text-[13px] font-medium">
+            {validation.errors > 0 ? (
+              <span>🔴 {validation.errors} chyb — text je nutné přepsat</span>
+            ) : validation.warnings > 0 ? (
+              <span>🟡 {validation.warnings} varování — zkontroluj</span>
+            ) : (
+              <span>🟢 Text prošel všemi kontrolami</span>
+            )}
+            <span className="text-[11px] font-normal opacity-70">
+              {validation.wordCount} slov &middot; krátký popis {validation.charCount} znaků
+            </span>
+          </div>
+
+          {validation.issues.length > 0 && (
+            <ul className="space-y-1">
+              {validation.issues.map((issue, i) => (
+                <li key={i} className="text-[12px] flex items-start gap-2">
+                  <span className="shrink-0 mt-0.5">
+                    {issue.severity === 'error' ? '🔴' : issue.severity === 'warning' ? '🟡' : '🔵'}
+                  </span>
+                  <span>
+                    {issue.message}
+                    {issue.matched && (
+                      <span className="opacity-70 italic"> — &ldquo;{issue.matched}&rdquo;</span>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {validation.errors > 0 && (
+            <div className="mt-2 pt-2 border-t border-current/20 text-[11px]">
+              <strong>Doporučení:</strong> klikni znovu na &ldquo;✨ Přepsat AI&rdquo;.
+              Claude občas vrátí zakázané fráze — druhý pokus je často lepší.
+              Nebo uprav text ručně před uložením.
+            </div>
+          )}
+        </div>
       )}
     </div>
   )
