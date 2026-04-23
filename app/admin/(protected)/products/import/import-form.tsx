@@ -30,6 +30,7 @@ export function ImportForm() {
   const [scraping, setScraping] = useState(false)
   const [data, setData] = useState<Scraped | null>(null)
   const [saving, setSaving] = useState(false)
+  const [savingStage, setSavingStage] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
 
   async function onScrape(e: FormEvent) {
@@ -64,6 +65,7 @@ export function ImportForm() {
 
     setSaving(true)
     setError(null)
+    setSavingStage('Vytvářím produkt v databázi...')
     try {
       const body = {
         ean: data.ean,
@@ -89,19 +91,34 @@ export function ImportForm() {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Uložení selhalo')
 
-      // If we have image URL, try to store it for this product (async, don't block)
+      // Await image download so the user lands on a page with the image already set.
       if (data.imageUrl && json.id) {
-        fetch(`/api/admin/products/${json.id}/fetch-image`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ manualUrl: data.imageUrl }),
-        }).catch(e => console.warn('Image download failed:', e))
+        setSavingStage('Stahuji a konvertuji fotku (10-20s)...')
+        try {
+          const controller = new AbortController()
+          const timeout = setTimeout(() => controller.abort(), 25_000)
+          const imgRes = await fetch(`/api/admin/products/${json.id}/fetch-image`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ manualUrl: data.imageUrl }),
+            signal: controller.signal,
+          })
+          clearTimeout(timeout)
+          if (!imgRes.ok) {
+            const imgData = await imgRes.json().catch(() => ({}))
+            console.warn('Image download failed:', imgData.error)
+          }
+        } catch (err) {
+          console.warn('Image fetch aborted or failed:', err)
+        }
       }
 
+      setSavingStage('Přesměrovávám...')
       router.push(`/admin/products/${json.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Chyba sítě')
       setSaving(false)
+      setSavingStage('')
     }
   }
 
@@ -190,7 +207,7 @@ export function ImportForm() {
               disabled={saving}
               className="bg-olive text-white rounded-full px-5 py-2.5 text-sm font-medium hover:bg-olive-dark disabled:opacity-40 transition-colors whitespace-nowrap"
             >
-              {saving ? 'Ukládám...' : '✓ Použít a vytvořit produkt'}
+              {saving ? (savingStage || 'Ukládám...') : '✓ Použít a vytvořit produkt'}
             </button>
           </div>
         </div>
