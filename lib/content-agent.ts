@@ -52,7 +52,7 @@ Pokud jsou v kontextu, ZMIŇ je:
 
 shortDescription — PŘESNĚ 1-2 věty, max 180 znaků. Hook pro kartu — CO, ODKUD, JAKÁ KEY DATA.
 
-longDescription — 220-340 slov. 4 odstavce:
+longDescription — 280-400 slov. 4 odstavce:
   1. Co to je a odkud (fakta, ne superlativy)
   2. Chemický profil + interpretace pro spotřebitele
   3. Chuťový profil + konkrétní doporučení použití

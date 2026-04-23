@@ -58,7 +58,7 @@ export function ScoreSection({ product }: { product: Product }) {
   return (
     <div className="bg-off rounded-xl p-5 mb-5">
       <div className="flex items-center justify-between mb-2">
-        <div className="text-[13px] font-medium text-text">Olivator Score</div>
+        <h2 className="text-[13px] font-medium text-text">Olivator Score</h2>
         <div ref={wrapperRef} className="flex items-center gap-1.5 relative">
           <span className="text-[22px] font-bold text-terra tracking-tight">{total} / 100</span>
           <button

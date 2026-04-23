@@ -63,6 +63,20 @@ export function typeLabel(type: string): string {
   return labels[type] || type
 }
 
+export function useCaseLabel(use: string): string {
+  const labels: Record<string, string> = {
+    salad: 'salát',
+    cooking: 'vaření',
+    frying: 'smažení',
+    dipping: 'dipping',
+    fish: 'ryby',
+    meat: 'maso',
+    health: 'zdraví',
+    gift: 'dárek',
+  }
+  return labels[use] || use
+}
+
 export function certLabel(cert: string): string {
   const labels: Record<string, string> = {
     dop: 'DOP',

@@ -14,9 +14,9 @@ export function PriceTable({ offers, volumeMl, productSlug, productName }: Price
 
   return (
     <div className="mt-5 mb-5">
-      <div className="text-[11px] font-semibold tracking-wider uppercase text-text3 mb-2.5">
+      <h2 className="text-[11px] font-semibold tracking-wider uppercase text-text3 mb-2.5">
         Kde koupit nejlevněji
-      </div>
+      </h2>
       {offers.map((offer, i) => (
         <AffiliateLink
           key={offer.id}

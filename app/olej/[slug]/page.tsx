@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getProducts, getProductBySlug, getOffersForProduct } from '@/lib/data'
 import { countryFlag, countryName, typeLabel, certLabel, formatPrice, formatPricePer100ml } from '@/lib/utils'
-import { productSchema, breadcrumbSchema } from '@/lib/schema'
+import { productSchema, breadcrumbSchema, faqSchema } from '@/lib/schema'
+import { generateProductFAQ } from '@/lib/product-faq'
 import { ScoreSection } from '@/components/score-section'
 import { FlavorWheel } from '@/components/flavor-wheel'
 import { PriceTable } from '@/components/price-table'
@@ -15,13 +16,46 @@ export async function generateStaticParams() {
   return products.map(p => ({ slug: p.slug }))
 }
 
+function trimMeta(text: string | null | undefined, max = 155): string {
+  const clean = (text ?? '').replace(/\s+/g, ' ').trim()
+  if (clean.length <= max) return clean
+  return clean.slice(0, max - 1).trim() + '…'
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const product = await getProductBySlug(slug)
   if (!product) return { title: 'Nenalezeno' }
+
+  const title = `${product.name} — Score ${product.olivatorScore}/100 · ceny, recenze`
+  const description = trimMeta(
+    product.descriptionShort ||
+      `${product.name} — Olivator Score ${product.olivatorScore}/100. Srovnání cen z 18 prodejců.`
+  )
+  const url = `https://olivator.cz/olej/${product.slug}`
+
   return {
-    title: `${product.name} — Score ${product.olivatorScore}`,
-    description: product.descriptionShort,
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: 'website',
+      locale: 'cs_CZ',
+      url,
+      siteName: 'Olivator',
+      title,
+      description,
+      // Use product photo for social sharing preview; fallback to site-wide OG
+      images: product.imageUrl
+        ? [{ url: product.imageUrl, width: 800, height: 800, alt: product.name }]
+        : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: product.imageUrl ? [product.imageUrl] : undefined,
+    },
   }
 }
 
@@ -89,6 +123,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       : [{ key: 'Původ', value: '🌾 Přímo od výrobce', missing: false }]),
   ]
 
+  const faqs = generateProductFAQ(product, cheapest ?? null)
+
   return (
     <div>
       <script
@@ -105,6 +141,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             { name: 'Srovnávač', url: '/srovnavac' },
             { name: product.name, url: `/olej/${product.slug}` },
           ])),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(faqSchema(faqs)),
         }}
       />
       <div className="max-w-[1040px] mx-auto px-10 py-10">
@@ -205,9 +247,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <ProductActions product={product} />
 
           <div className="mt-6">
-            <div className="text-[13px] font-semibold text-text mb-3 tracking-wide">
+            <h2 className="text-[13px] font-semibold text-text mb-3 tracking-wide">
               Specifikace
-            </div>
+            </h2>
             {specs.map(s => (
               <div key={s.key} className="flex justify-between py-2.5 border-b border-off last:border-b-0">
                 <span className="text-[13px] text-text3">{s.key}</span>
@@ -219,6 +261,47 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </div>
         </div>
       </div>
+
+      {/* Long description — SEO content */}
+      {product.descriptionLong && (
+        <section className="mt-14 max-w-[720px] mx-auto">
+          <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-4">
+            O tomto oleji
+          </h2>
+          <div className="text-[15px] text-text2 leading-relaxed whitespace-pre-line">
+            {product.descriptionLong}
+          </div>
+        </section>
+      )}
+
+      {/* FAQ — rich snippets in Google */}
+      {faqs.length > 0 && (
+        <section className="mt-14 max-w-[720px] mx-auto mb-8">
+          <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-6">
+            Často kladené otázky
+          </h2>
+          <div className="space-y-3">
+            {faqs.map((faq, i) => (
+              <details
+                key={i}
+                className="bg-white border border-off2 rounded-[var(--radius-card)] p-5 group"
+              >
+                <summary className="cursor-pointer list-none flex items-start justify-between gap-4">
+                  <h3 className="text-[15px] font-medium text-text leading-tight">
+                    {faq.question}
+                  </h3>
+                  <span className="text-text3 text-xl shrink-0 group-open:rotate-180 transition-transform">
+                    ⌄
+                  </span>
+                </summary>
+                <div className="mt-3 text-[14px] text-text2 leading-relaxed">
+                  {faq.answer}
+                </div>
+              </details>
+            ))}
+          </div>
+        </section>
+      )}
       </div>
     </div>
   )

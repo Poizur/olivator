@@ -177,17 +177,17 @@ export function validateContent(input: ValidationInput): ValidationResult {
     })
   }
 
-  if (wordCount < 180) {
+  if (wordCount < 150) {
     issues.push({
       severity: 'warning',
       category: 'length',
-      message: `Dlouhý popis je krátký (${wordCount} slov) — doporučeno 220-340`,
+      message: `Dlouhý popis je krátký (${wordCount} slov) — doporučeno 200-350 pro long-tail SEO`,
     })
-  } else if (wordCount > 400) {
+  } else if (wordCount > 450) {
     issues.push({
       severity: 'info',
       category: 'length',
-      message: `Dlouhý popis je delší (${wordCount} slov) — doporučeno 220-340`,
+      message: `Dlouhý popis je delší (${wordCount} slov) — doporučeno 200-350`,
     })
   }
 

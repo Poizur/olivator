@@ -16,7 +16,7 @@ export function FlavorWheel({ profile }: { profile: FlavorProfile }) {
 
   return (
     <div className="bg-off rounded-xl p-5 mt-5">
-      <div className="text-[13px] font-semibold text-text mb-3.5">Chuťový profil</div>
+      <h2 className="text-[13px] font-semibold text-text mb-3.5">Chuťový profil</h2>
       <div className="flex flex-col gap-2">
         {entries.map(([key, label]) => (
           <div key={key} className="flex items-center gap-2.5">
