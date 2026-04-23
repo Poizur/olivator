@@ -1,9 +1,11 @@
 // Claude-backed Content Agent for product descriptions.
-// Implements the system prompt from CLAUDE.md section 16.
+// Implements the system prompt from CLAUDE.md section 16 with stricter
+// constraints + auto-retry when output is too short.
 
 import Anthropic from '@anthropic-ai/sdk'
 
 const MODEL = 'claude-sonnet-4-20250514'
+const MIN_LONG_WORDS = 250 // below this we auto-retry once with feedback
 
 function getClient(): Anthropic {
   const key = process.env.ANTHROPIC_API_KEY
@@ -21,9 +23,9 @@ Smíš psát POUZE o údajích, které máš explicitně v kontextu.
 
 NIKDY nespekuluj ani nevyplňuj mezery následujícími tématy:
 - Geologie: "vulkanické/sopečné půdy", "vápencové", "jílovité" ← pokud NENÍ v kontextu
-- Klima: "mikroklima", "slunečné léto", "deštivá zima", "ionské větry" ← pokud NENÍ v kontextu
-- Historie: "stoletá tradice", "rodinná firma od r. XXXX", "tradiční metody z dob Říma" ← pokud NENÍ
-- Medaile/ocenění: "zlatá medaile", "uznávaný výběr", "oceněný na soutěžích" ← pokud certifikace NENÍ NYIOOC
+- Klima: "mikroklima", "slunečné léto", "deštivá zima", "ionské větry" ← pokud NENÍ
+- Historie: "stoletá tradice", "rodinná firma od r. XXXX", "tradiční metody z dob Říma" ← NENÍ
+- Medaile/ocenění: "zlatá medaile", "uznávaný výběr" ← pokud certifikace NENÍ NYIOOC
 - Odrůdy oliv: "Koroneiki", "Arbequina", "Frantoio" ← pokud NENÍ v kontextu
 - Roční sklizeň, výtěžnost, hektary plantáží ← pokud NENÍ v kontextu
 
@@ -32,33 +34,51 @@ Pokud pro oblast nevíš faktickou informaci, NEPIŠ ji. Mlčení > smyšlenka.
 ══ BANNED FRÁZE (v textu se NESMÍ objevit) ══
 
 - "perfektní volba" / "ideální volba"
-- "patří mezi nejlepší" / "mezi nejkvalitnější" / "jedny z nej... vůbec"
-- "mimořádná kvalita" / "výjimečná chuť" / "prémiový zážitek" / "prémiová kvalita"
+- "patří mezi nejlepší" / "mezi nejkvalitnější" / "jedny z nej… vůbec"
+- "mimořádná kvalita" / "výjimečná chuť" / "prémiový zážitek"
 - "nejcennější ve Středomoří" / "top ve světě"
 - "KLIKNI ZDE!", "Neváhejte", "kupte hned"
-- "Náš olej / naše olivy / u nás" (znaky raw e-shop textu — NEpřepisuj je)
-- Pasivní hlas ("je oceněn" → "získal ocenění")
+- "Náš olej / naše olivy / u nás" (znaky raw e-shop textu)
 
-══ POVINNÉ ELEMENTY ══
+══ DÉLKA — tvrdý požadavek ══
 
-Pokud jsou v kontextu, ZMIŇ je:
-- Kyselost v % + interpretace ("0,3% při maximu 0,8% pro extra panenský")
-- Polyfenoly mg/kg + interpretace ("312 mg/kg znamená vysoký obsah antioxidantů")
-- Země + region původu
-- Certifikace (DOP, BIO, NYIOOC — jen to, co je v kontextu)
-- Doporučení použití (salát / dipping / finishing / vaření) s odůvodněním
+longDescription musí mít **minimálně 280 a ideálně 320–380 slov**.
+Kratší texty jsou REJECTED a budou znovu generovány.
 
-══ STRUKTURA ══
+Pokud máš pocit, že dochází téma — vrať se k datům a rozveď je.
+NEŠETŘI slovy. Čtenář chce detail, ne shrnutí.
 
-shortDescription — PŘESNĚ 1-2 věty, max 180 znaků. Hook pro kartu — CO, ODKUD, JAKÁ KEY DATA.
+══ STRUKTURA longDescription — 4 odstavce s počty slov ══
 
-longDescription — 280-400 slov. 4 odstavce:
-  1. Co to je a odkud (fakta, ne superlativy)
-  2. Chemický profil + interpretace pro spotřebitele
-  3. Chuťový profil + konkrétní doporučení použití
-  4. Pro koho se hodí (bez "perfektní volba" — konkrétní persona)
+**1. odstavec (70–90 slov) — Co to je a odkud**
+- Název, typ oleje, země + region
+- Obal (tmavé sklo / plech), objem
+- Jak byl zpracován (pokud víš: za studena, ruční sběr, datum sklizně)
+- Neexistují-li tato data, rozveď co víš konkrétního — bez výmyslů
 
-Používej konkrétní čísla > obecné chvály. Čtenář ocení fakta, ne marketing.`
+**2. odstavec (80–100 slov) — Chemie + co to znamená**
+- Kyselost v % s kontextem: "EU norma pro extra panenský je max 0,8%"
+- Polyfenoly mg/kg s kontextem: "EU health claim pro antioxidanty vyžaduje min 250 mg/kg"
+- Pokud některý údaj chybí, přeskoč ho (nevymýšlej si)
+- Vysvětli, co čísla znamenají pro chuť a zdravotní benefit
+
+**3. odstavec (90–110 slov) — Chuť a použití**
+- Jaké chuťové vlastnosti očekávat (jemný/intenzivní, pálivý/sladký)
+- Konkrétní příklady použití: který typ salátu, jaké jídlo polévat, co se nehodí
+- Proč právě tenhle — vazba na data ("díky nízké pálivosti se hodí na jemné ryby")
+- 3-5 konkrétních pokrmů/aplikací
+
+**4. odstavec (60–80 slov) — Pro koho se hodí**
+- Konkrétní persona (NE "pro milovníky kvality" — moc obecné)
+- Např: "pro toho, kdo vaří středomořskou kuchyni denně a hledá spolehlivý olej na dresinky"
+- Jemný hint na cenu/hodnotu (pokud je to smysluplné)
+
+Celkem: 300–380 slov. Kontroluj si počet před odesláním.
+
+══ shortDescription ══
+
+PŘESNĚ 1-2 věty, 100–180 znaků. Hook pro kartu.
+Musí obsahovat: země/region + jedno klíčové data (kyselost nebo certifikace).`
 
 export interface ContentInput {
   name: string
@@ -79,7 +99,7 @@ export interface ContentOutput {
   longDescription: string
 }
 
-function buildUserPrompt(p: ContentInput): string {
+function buildUserPrompt(p: ContentInput, retryFeedback?: string): string {
   const lines: string[] = []
   lines.push(`Napiš krátký a dlouhý popis pro produkt:`)
   lines.push('')
@@ -97,21 +117,30 @@ function buildUserPrompt(p: ContentInput): string {
   if (p.olivatorScore != null) lines.push(`Olivator Score: ${p.olivatorScore}/100`)
   if (p.rawDescription) {
     lines.push('')
-    lines.push(`Zdrojový popis z retailera (použij jen jako inspiraci, nepřepisuj doslova — ať je to unikátní pro SEO):`)
+    lines.push(`Zdrojový popis z retailera (použij jen jako inspiraci, nepřepisuj doslova):`)
     lines.push(p.rawDescription)
   }
   lines.push('')
+  if (retryFeedback) {
+    lines.push('══ FEEDBACK NA PŘEDCHOZÍ POKUS ══')
+    lines.push(retryFeedback)
+    lines.push('')
+  }
   lines.push('Odpověz JEN jako validní JSON:')
   lines.push('{ "shortDescription": "...", "longDescription": "..." }')
-  lines.push('Žádný další text před ani po JSONu.')
+  lines.push('Žádný další text před ani po JSONu. Dodrž délky (long 300-380 slov).')
   return lines.join('\n')
 }
 
-export async function generateProductDescriptions(
-  input: ContentInput
-): Promise<ContentOutput> {
-  const client = getClient()
+function countWords(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length
+}
 
+async function callClaude(
+  client: Anthropic,
+  input: ContentInput,
+  retryFeedback?: string
+): Promise<ContentOutput> {
   // Retry wrapper for 529 Overloaded (per CLAUDE.md BUG-017)
   const retries = [5000, 15000, 30000, 60000]
   let lastErr: unknown = null
@@ -121,14 +150,12 @@ export async function generateProductDescriptions(
         model: MODEL,
         max_tokens: 2048,
         system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: buildUserPrompt(input) }],
+        messages: [{ role: 'user', content: buildUserPrompt(input, retryFeedback) }],
       })
-      // Extract text
       const text = res.content
         .filter(b => b.type === 'text')
         .map(b => (b as { type: 'text'; text: string }).text)
         .join('')
-      // Parse JSON — Claude sometimes wraps in ```json``` fences
       const cleaned = text
         .replace(/^```(?:json)?\s*/, '')
         .replace(/\s*```\s*$/, '')
@@ -140,7 +167,6 @@ export async function generateProductDescriptions(
       return parsed
     } catch (err) {
       lastErr = err
-      // Only retry on 529 Overloaded
       const isOverloaded =
         err instanceof Anthropic.APIError && (err.status === 529 || err.status === 503)
       if (!isOverloaded || attempt >= retries.length) break
@@ -148,4 +174,28 @@ export async function generateProductDescriptions(
     }
   }
   throw lastErr instanceof Error ? lastErr : new Error('Claude API failed')
+}
+
+export async function generateProductDescriptions(
+  input: ContentInput
+): Promise<ContentOutput> {
+  const client = getClient()
+
+  // First attempt
+  let result = await callClaude(client, input)
+  let wordCount = countWords(result.longDescription)
+
+  // Auto-retry ONCE if too short — Claude consistently underdelivers
+  if (wordCount < MIN_LONG_WORDS) {
+    const feedback = `Tvůj předchozí pokus měl pouze ${wordCount} slov v longDescription, ale minimum je ${MIN_LONG_WORDS} (ideál 300-380). Napiš znovu DELŠÍ verzi. Rozveď:
+- 1. odstavec: přidej detail o obalu, zpracování, sklizni
+- 2. odstavec: vysvětli co kyselost a polyfenoly znamenají pro spotřebitele
+- 3. odstavec: přidej 3-5 konkrétních pokrmů s tímto olejem
+- 4. odstavec: popiš specifickou personu kdo ocení právě tento olej
+Nerozvolňuj floskulemi — přidej konkrétní informace.`
+    result = await callClaude(client, input, feedback)
+    wordCount = countWords(result.longDescription)
+  }
+
+  return result
 }
