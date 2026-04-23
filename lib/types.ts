@@ -1,3 +1,11 @@
+export interface ExtractedFact {
+  key: string
+  label: string
+  value: string
+  importance: 'high' | 'medium' | 'low'
+  source: 'scraped' | 'manual' | 'ai'
+}
+
 export interface Product {
   id: string
   ean: string | null               // null for farm-direct / boutique products
@@ -25,6 +33,7 @@ export interface Product {
   status: 'draft' | 'active' | 'inactive'
   imageUrl?: string | null
   imageSource?: string | null
+  extractedFacts?: ExtractedFact[]
 }
 
 export interface FlavorProfile {

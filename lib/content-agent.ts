@@ -108,6 +108,7 @@ export interface ContentInput {
   certifications?: string[]
   rawDescription?: string | null
   olivatorScore?: number | null
+  factsPromptContext?: string | null // pre-formatted text from factsToPromptContext()
 }
 
 export interface ContentOutput {
@@ -135,6 +136,10 @@ function buildUserPrompt(p: ContentInput, retryFeedback?: string): string {
     lines.push('')
     lines.push(`Zdrojový popis z retailera (použij jen jako inspiraci, nepřepisuj doslova):`)
     lines.push(p.rawDescription)
+  }
+  if (p.factsPromptContext) {
+    lines.push('')
+    lines.push(p.factsPromptContext)
   }
   lines.push('')
   if (retryFeedback) {

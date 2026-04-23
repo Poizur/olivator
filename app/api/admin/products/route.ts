@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
-import { createProduct } from '@/lib/data'
+import { createProduct, updateProductFacts } from '@/lib/data'
+import { extractFactsFromText } from '@/lib/fact-extractor'
+
+export const maxDuration = 45 // fact extraction adds ~5s
 
 export async function POST(request: NextRequest) {
   if (!(await isAdminAuthenticated())) {
@@ -11,8 +14,24 @@ export async function POST(request: NextRequest) {
     if (!body.name || !body.slug) {
       return NextResponse.json({ error: 'Název a slug jsou povinné' }, { status: 400 })
     }
-    // EAN is optional — farm-direct products often don't have one
+
     const result = await createProduct({ ...body, status: body.status ?? 'draft' })
+
+    // Fact extraction (fire-and-await): when creating from import with
+    // raw description, extract specific technical facts for later use
+    // by AI rewrite. Uses Claude Haiku (~$0.005/call).
+    const rawText = body.descriptionLong || body.descriptionShort || ''
+    if (rawText && rawText.length > 30) {
+      try {
+        const facts = await extractFactsFromText(rawText)
+        if (facts.length > 0) {
+          await updateProductFacts(result.id, facts)
+        }
+      } catch (err) {
+        console.warn('[fact extraction at import] non-fatal:', err)
+      }
+    }
+
     return NextResponse.json({ ok: true, id: result.id })
   } catch (err) {
     console.error('[products POST]', err)

@@ -5,6 +5,7 @@ import { getAllRetailers, getOffersForProduct } from '@/lib/data'
 import { ProductForm } from './product-form'
 import { OffersManager } from './offers-manager'
 import { ImagePanel } from './image-panel'
+import { FactsPanel, type ExtractedFact } from './facts-panel'
 
 async function getProductRow(id: string) {
   const { data, error } = await supabaseAdmin
@@ -45,6 +46,14 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
           currentImageUrl={(productRow.image_url as string) ?? null}
           currentSource={(productRow.image_source as string) ?? null}
           ean={productRow.ean as string}
+        />
+        <FactsPanel
+          productId={id}
+          initialFacts={
+            Array.isArray(productRow.extracted_facts)
+              ? (productRow.extracted_facts as ExtractedFact[])
+              : []
+          }
         />
         <ProductForm
           productRow={productRow}

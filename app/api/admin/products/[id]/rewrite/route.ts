@@ -3,9 +3,10 @@ import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { generateProductDescriptions } from '@/lib/content-agent'
 import { validateContent } from '@/lib/content-validator'
+import { factsToPromptContext, type ExtractedFact } from '@/lib/fact-extractor'
 import { countryName } from '@/lib/utils'
 
-export const maxDuration = 60
+export const maxDuration = 90
 
 export async function POST(
   request: NextRequest,
@@ -28,6 +29,10 @@ export async function POST(
       return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     }
 
+    const facts: ExtractedFact[] = Array.isArray(product.extracted_facts)
+      ? (product.extracted_facts as ExtractedFact[])
+      : []
+
     const generated = await generateProductDescriptions({
       name: product.name as string,
       brand: null,
@@ -40,9 +45,10 @@ export async function POST(
       certifications: (product.certifications as string[]) ?? [],
       olivatorScore: (product.olivator_score as number) ?? null,
       rawDescription: rawDescription ?? (product.description_long as string) ?? (product.description_short as string) ?? null,
+      factsPromptContext: facts.length > 0 ? factsToPromptContext(facts) : null,
     })
 
-    // Run automated QA — catches banned phrases, hallucinations, missing data
+    // Validate + also check that all HIGH-importance facts appear in long text
     const validation = validateContent({
       shortDescription: generated.shortDescription,
       longDescription: generated.longDescription,
@@ -52,6 +58,26 @@ export async function POST(
       country: (product.origin_country as string) ?? null,
       certifications: (product.certifications as string[]) ?? [],
     })
+
+    // Extra check — each HIGH fact should be referenced
+    const fullText = `${generated.shortDescription} ${generated.longDescription}`.toLowerCase()
+    for (const fact of facts.filter(f => f.importance === 'high')) {
+      // Heuristic: check if value OR key or part of value appears
+      const valueTokens = fact.value
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(t => t.length > 3 && !/^(pro|od|do|bez|s|v|na)$/.test(t))
+      const mentioned = valueTokens.some(t => fullText.includes(t))
+      if (!mentioned) {
+        validation.issues.push({
+          severity: 'warning',
+          category: 'missing_required',
+          message: `Text nezmiňuje fakt "${fact.label}: ${fact.value}" (vysoká důležitost)`,
+        })
+        validation.warnings++
+      }
+    }
+    validation.ok = validation.errors === 0
 
     return NextResponse.json({ ok: true, ...generated, validation })
   } catch (err) {

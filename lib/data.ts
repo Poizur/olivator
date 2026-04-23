@@ -32,6 +32,7 @@ interface ProductRow {
   status: string
   image_url: string | null
   image_source: string | null
+  extracted_facts: unknown
 }
 
 function mapProduct(row: ProductRow): Product {
@@ -75,6 +76,9 @@ function mapProduct(row: ProductRow): Product {
     status: row.status as Product['status'],
     imageUrl: row.image_url ?? null,
     imageSource: row.image_source ?? null,
+    extractedFacts: Array.isArray(row.extracted_facts)
+      ? (row.extracted_facts as Product['extractedFacts'])
+      : [],
   }
 }
 
@@ -434,6 +438,22 @@ export async function updateProduct(id: string, input: ProductInput) {
 
 export async function deleteProduct(id: string) {
   const { error } = await supabaseAdmin.from('products').delete().eq('id', id)
+  if (error) throw error
+}
+
+// ── Extracted facts ──────────────────────────────────────────────────
+
+export async function updateProductFacts(
+  id: string,
+  facts: Array<{ key: string; label: string; value: string; importance: string; source: string }>
+) {
+  const { error } = await supabaseAdmin
+    .from('products')
+    .update({
+      extracted_facts: facts,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
   if (error) throw error
 }
 
