@@ -44,7 +44,15 @@ export async function POST(
       polyphenols: (product.polyphenols as number) ?? null,
       certifications: (product.certifications as string[]) ?? [],
       olivatorScore: (product.olivator_score as number) ?? null,
-      rawDescription: rawDescription ?? (product.description_long as string) ?? (product.description_short as string) ?? null,
+      // IMPORTANT: Prefer raw_description (untouched scrape) to avoid feedback loop
+      // where Claude reads its own previous output. Only fall back to description_long
+      // for legacy products that were imported before the raw_description column existed.
+      rawDescription:
+        rawDescription
+        ?? (product.raw_description as string)
+        ?? (product.description_long as string)
+        ?? (product.description_short as string)
+        ?? null,
       factsPromptContext: facts.length > 0 ? factsToPromptContext(facts) : null,
     })
 

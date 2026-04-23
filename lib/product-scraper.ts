@@ -9,6 +9,11 @@
 import * as cheerio from 'cheerio'
 import { extractBrand } from './utils'
 
+export interface ScrapedImage {
+  url: string
+  alt: string | null
+}
+
 export interface ScrapedProduct {
   url: string
   domain: string
@@ -29,6 +34,7 @@ export interface ScrapedProduct {
   // Chemistry (from description if mentioned)
   acidity: number | null
   polyphenols: number | null
+  peroxideValue: number | null
 
   // Commerce
   price: number | null
@@ -36,7 +42,8 @@ export interface ScrapedProduct {
   inStock: boolean | null
 
   // Media
-  imageUrl: string | null
+  imageUrl: string | null       // primary image (backwards compat)
+  galleryImages: ScrapedImage[] // all product images (primary + gallery)
 
   // Content
   descriptionShort: string | null
@@ -213,6 +220,42 @@ function extractPolyphenols(text: string | null): number | null {
   return parseInt(m[1], 10)
 }
 
+/** Extract peroxide value — "peroxidové číslo: ≤ 20 mEq" / "peroxid 8,5 mEq/kg". */
+function extractPeroxide(text: string | null): number | null {
+  if (!text) return null
+  const m = text.match(/peroxid(?:ov[ée]? číslo)?[:\s]*(?:≤|<=?|max)?\s*(\d+[.,]?\d*)\s*m?Eq/i)
+  if (!m) return null
+  return parseFloat(m[1].replace(',', '.'))
+}
+
+/** Resolve a possibly-relative URL against a base. */
+function resolveUrl(href: string, base: string): string | null {
+  if (!href) return null
+  if (/^data:/.test(href)) return null
+  try {
+    return new URL(href, base).toString()
+  } catch {
+    return null
+  }
+}
+
+/** Upgrade Shoptet thumbnail URL to full-size by dropping "_small" suffix. */
+function upgradeShoptetImage(url: string): string {
+  return url.replace(/_small\.(jpe?g|png|webp)(\?|$)/i, '.$1$2')
+}
+
+/** Dedupe by URL, keep first occurrence (preserves order). */
+function dedupeImages(images: ScrapedImage[]): ScrapedImage[] {
+  const seen = new Set<string>()
+  const out: ScrapedImage[] = []
+  for (const img of images) {
+    if (seen.has(img.url)) continue
+    seen.add(img.url)
+    out.push(img)
+  }
+  return out
+}
+
 /** Main entrypoint. Fetches the URL and extracts as much as possible. */
 export async function scrapeProductPage(url: string): Promise<ScrapedProduct> {
   const res = await fetch(url, {
@@ -288,24 +331,71 @@ export async function scrapeProductPage(url: string): Promise<ScrapedProduct> {
     if (m) price = parseFloat(m[1].replace(',', '.'))
   }
 
-  // --- image ---
-  let imageUrl: string | null = null
+  // --- images: primary + gallery ---
+  const galleryImages: ScrapedImage[] = []
+
+  // 1. JSON-LD primary image
+  let primaryImage: string | null = null
   if (product?.image) {
     const img = Array.isArray(product.image) ? product.image[0] : product.image
-    if (typeof img === 'string') imageUrl = img
+    if (typeof img === 'string') primaryImage = img
     else if (typeof img === 'object' && img !== null) {
-      imageUrl = (img as Record<string, unknown>).url as string | null
+      primaryImage = (img as Record<string, unknown>).url as string | null
     }
   }
-  imageUrl ||= cleanText($('meta[property="og:image"]').attr('content'))
+  primaryImage ||= cleanText($('meta[property="og:image"]').attr('content'))
+
+  // 2. Shoptet main image (.p-image img)
+  if (!primaryImage) {
+    const mainImg = $('.p-image img').first().attr('src')
+    if (mainImg) primaryImage = resolveUrl(mainImg, url)
+  }
+
+  if (primaryImage) {
+    galleryImages.push({ url: primaryImage, alt: name })
+  }
+
+  // 3. Shoptet gallery (a[data-gallery] wraps full-size images)
+  $('a[data-gallery]').each((_, el) => {
+    const href = $(el).attr('href')
+    if (!href) return
+    const full = resolveUrl(href, url)
+    if (full) galleryImages.push({ url: full, alt: cleanText($(el).find('img').attr('alt')) })
+  })
+
+  // 4. Generic gallery selectors (fallback for other platforms)
+  const genericGallerySels = [
+    '.product-gallery img',
+    '.gallery img',
+    '.image-gallery img',
+    '.swiper-slide img',
+  ]
+  for (const sel of genericGallerySels) {
+    $(sel).each((_, el) => {
+      const src = $(el).attr('data-src') || $(el).attr('src')
+      if (!src || /^data:/.test(src)) return
+      const full = resolveUrl(src, url)
+      if (full) galleryImages.push({ url: full, alt: cleanText($(el).attr('alt')) })
+    })
+  }
+
+  // Shoptet thumbnails: upgrade _small to full size
+  for (const img of galleryImages) {
+    img.url = upgradeShoptetImage(img.url)
+  }
+  const dedupedGallery = dedupeImages(galleryImages)
+  const imageUrl = dedupedGallery[0]?.url ?? null
 
   // --- description ---
   const shortDesc =
+    cleanText($('.p-short-description').text()) ||
     cleanText(product?.description as string | undefined) ||
     cleanText($('meta[property="og:description"]').attr('content')) ||
     cleanText($('meta[name="description"]').attr('content'))
 
+  // Long description — Shoptet uses #description, fallback to common platforms
   const longDescSelectors = [
+    '#description',                  // Shoptet
     '.product-description',
     '.woocommerce-product-details__short-description',
     '.product__description',
@@ -318,19 +408,28 @@ export async function scrapeProductPage(url: string): Promise<ScrapedProduct> {
     const el = $(sel).first()
     if (el.length) {
       rawDescription = cleanText(el.text())
-      if (rawDescription && rawDescription.length > 50) break
+      if (rawDescription && rawDescription.length > 100) break
     }
   }
   if (!rawDescription) rawDescription = shortDesc
 
+  // Shoptet parameters table — extract EAN, packaging, peroxide, bitterness
+  // Table rows are in .product-parameters or free-text tables; fall back to full body search
+  const paramsText = cleanText(
+    $('.product-parameters').text() ||
+    $('.p-full-description table').text() ||
+    $('table').text()
+  ) ?? ''
+
   // --- inferred fields ---
-  const nameForInfer = [name, rawDescription].filter(Boolean).join(' ')
-  const type = inferType(nameForInfer)
-  const origin = inferOrigin(nameForInfer)
-  const volumeMl = inferVolumeMl(nameForInfer)
-  const packaging = inferPackaging(nameForInfer)
-  const acidity = extractAcidity(rawDescription) ?? extractAcidity(shortDesc)
-  const polyphenols = extractPolyphenols(rawDescription) ?? extractPolyphenols(shortDesc)
+  const allText = [name, shortDesc, rawDescription, paramsText].filter(Boolean).join(' ')
+  const type = inferType(allText)
+  const origin = inferOrigin(allText)
+  const volumeMl = inferVolumeMl(allText)
+  const packaging = inferPackaging(allText)
+  const acidity = extractAcidity(rawDescription) ?? extractAcidity(shortDesc) ?? extractAcidity(paramsText)
+  const polyphenols = extractPolyphenols(rawDescription) ?? extractPolyphenols(shortDesc) ?? extractPolyphenols(paramsText)
+  const peroxideValue = extractPeroxide(rawDescription) ?? extractPeroxide(paramsText)
   const slug = name ? slugify(name) : null
 
   return {
@@ -347,10 +446,12 @@ export async function scrapeProductPage(url: string): Promise<ScrapedProduct> {
     packaging,
     acidity,
     polyphenols,
+    peroxideValue,
     price,
     currency: currency ?? 'CZK',
     inStock: null,
     imageUrl,
+    galleryImages: dedupedGallery,
     descriptionShort: shortDesc,
     rawDescription,
   }

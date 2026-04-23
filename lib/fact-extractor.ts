@@ -63,10 +63,64 @@ Klíče (key) používej v snake_case z této palette:
 - estate_name, family_farm
 - storage_note
 
-Hodnoty (value) piš v češtině, zachovej původní formulaci pokud je výstižná.
+Hodnoty (value) piš v češtině, ale MUSÍ to být KONKRÉTNÍ ČÍSLO, TEPLOTA, JMÉNO ODRŮDY, DATUM nebo JEDNOZNAČNÝ TECHNICKÝ POSTUP.
 Labels v češtině pro uživatele.
 
-Pokud v textu nenajdeš žádná HIGH nebo MEDIUM fakta, vrať: []`
+══ ZAKÁZANÉ VATOVÉ FORMULACE (nedávej do outputu) ══
+
+Nikdy neextrahuj fact s těmito hodnotami (i kdyby v textu byly):
+- "šetrně", "šetrné zpracování", "s ohledem na kvalitu"
+- "rychle po sklizni" (bez konkrétního času v hodinách)
+- "za správné teploty" (bez konkrétního čísla)
+- "tradiční metody", "prastará tradice"
+- "nejvyšší kvalita", "prémiová kvalita"
+- "pečlivě", "s láskou", "s péčí"
+- "z našich olivovníků" / "naše olivy" (marketing bez konkrétního jména farmy)
+- jakékoli duplikáty DB sloupců:
+  * Kyselost — už máme acidity
+  * Země/region — už máme origin_country, origin_region
+  * Volume/obal — už máme volume_ml, packaging
+  * Polyfenoly — už máme polyphenols
+
+Pravidlo: pokud value nepřežije test "mohl bych to použít pro libovolný jiný olej?" — NEZAŘAZUJ.
+"do 40 °C" konkrétní ✓ | "šetrně" generické ✗
+"Koroneiki" konkrétní ✓ | "místní odrůdy" generické ✗
+"do 4 hodin od sběru" konkrétní ✓ | "rychle po sklizni" generické ✗
+
+Pokud v textu nenajdeš žádná HIGH nebo MEDIUM fakta s KONKRÉTNÍ hodnotou, vrať: []`
+
+// Server-side backup filter — even if Claude ignores the prompt.
+// Values matching these patterns are dropped before storing.
+const GENERIC_VALUE_PATTERNS: RegExp[] = [
+  /^šetrně?\b/i,
+  /\bšetrné zpracování\b/i,
+  /^rychle po sklizni$/i,
+  /^za správné teploty$/i,
+  /^tradiční metod/i,
+  /^prastará/i,
+  /^nejvyšší kvalit/i,
+  /^prémiová? kvalit/i,
+  /^pečlivě\b/i,
+  /^s láskou\b/i,
+  /^s péčí\b/i,
+  /^ruční$/i, // "ruční" alone is too generic; "ruční sběr" is fine
+  /^bez vysokých teplot$/i,
+  /^velmi rychle/i,
+  /^kvalitn/i,
+]
+// Keys that duplicate structured DB columns — always drop.
+const DUPLICATE_KEYS: string[] = ['acidity', 'volume', 'volume_ml', 'packaging', 'polyphenols', 'origin', 'country', 'region']
+
+function isGenericValue(value: string): boolean {
+  const trimmed = value.trim()
+  if (trimmed.length < 3) return true
+  // Strings that are just "high/low/medium quality" + nothing concrete
+  if (/^(vysoká|nízká|střední|dobrá) kvalita$/i.test(trimmed)) return true
+  for (const re of GENERIC_VALUE_PATTERNS) {
+    if (re.test(trimmed)) return true
+  }
+  return false
+}
 
 export async function extractFactsFromText(
   rawText: string
@@ -103,6 +157,8 @@ export async function extractFactsFromText(
 
     return parsed
       .filter(f => f.key && f.label && f.value && f.importance)
+      .filter(f => !DUPLICATE_KEYS.includes(f.key.toLowerCase()))
+      .filter(f => !isGenericValue(f.value))
       .map(f => ({
         ...f,
         source: 'scraped' as const,

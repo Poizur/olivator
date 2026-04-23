@@ -33,6 +33,8 @@ interface ProductRow {
   image_url: string | null
   image_source: string | null
   extracted_facts: unknown
+  source_url: string | null
+  raw_description: string | null
 }
 
 function mapProduct(row: ProductRow): Product {
@@ -364,6 +366,8 @@ export interface ProductInput {
   scoreBreakdown?: Record<string, number>
   descriptionShort?: string
   descriptionLong?: string
+  sourceUrl?: string | null
+  rawDescription?: string | null
   status: string
 }
 
@@ -391,6 +395,8 @@ export async function createProduct(input: ProductInput): Promise<{ id: string }
     score_breakdown: input.scoreBreakdown ?? {},
     description_short: input.descriptionShort ?? null,
     description_long: input.descriptionLong ?? null,
+    source_url: input.sourceUrl ?? null,
+    raw_description: input.rawDescription ?? null,
     status: input.status,
   }
 
@@ -406,7 +412,7 @@ export async function createProduct(input: ProductInput): Promise<{ id: string }
 }
 
 export async function updateProduct(id: string, input: ProductInput) {
-  const payload = {
+  const payload: Record<string, unknown> = {
     ean: input.ean,
     name: input.name,
     slug: input.slug,
@@ -432,6 +438,10 @@ export async function updateProduct(id: string, input: ProductInput) {
     status: input.status,
     updated_at: new Date().toISOString(),
   }
+  // Only update source_url / raw_description when explicitly provided —
+  // admin form doesn't expose them, so omitting keeps existing values.
+  if (input.sourceUrl !== undefined) payload.source_url = input.sourceUrl
+  if (input.rawDescription !== undefined) payload.raw_description = input.rawDescription
   const { error } = await supabaseAdmin.from('products').update(payload).eq('id', id)
   if (error) throw error
 }
@@ -439,6 +449,66 @@ export async function updateProduct(id: string, input: ProductInput) {
 export async function deleteProduct(id: string) {
   const { error } = await supabaseAdmin.from('products').delete().eq('id', id)
   if (error) throw error
+}
+
+// ── Rescrape: partial update from scraper (fills only NULL fields + refreshes source) ──
+
+export interface RescrapePatch {
+  sourceUrl: string
+  rawDescription: string | null
+  ean: string | null
+  acidity: number | null
+  polyphenols: number | null
+  peroxideValue: number | null
+  volumeMl: number | null
+  packaging: string | null
+}
+
+/** Updates only fields that are currently NULL in DB, always refreshes source_url + raw_description. */
+export async function applyRescrapePatch(id: string, patch: RescrapePatch): Promise<{ filled: string[] }> {
+  const { data: existing, error: readErr } = await supabaseAdmin
+    .from('products')
+    .select('ean, acidity, polyphenols, peroxide_value, volume_ml, packaging')
+    .eq('id', id)
+    .maybeSingle()
+  if (readErr) throw readErr
+  if (!existing) throw new Error('Product not found')
+
+  const filled: string[] = []
+  const payload: Record<string, unknown> = {
+    source_url: patch.sourceUrl,
+    raw_description: patch.rawDescription,
+    updated_at: new Date().toISOString(),
+  }
+  // Only fill NULL/empty fields — never overwrite data the admin set manually
+  if ((!existing.ean || existing.ean === '') && patch.ean) {
+    payload.ean = patch.ean
+    filled.push('EAN')
+  }
+  if (existing.acidity == null && patch.acidity != null) {
+    payload.acidity = patch.acidity
+    filled.push('kyselost')
+  }
+  if (existing.polyphenols == null && patch.polyphenols != null) {
+    payload.polyphenols = patch.polyphenols
+    filled.push('polyfenoly')
+  }
+  if (existing.peroxide_value == null && patch.peroxideValue != null) {
+    payload.peroxide_value = patch.peroxideValue
+    filled.push('peroxidové číslo')
+  }
+  if (existing.volume_ml == null && patch.volumeMl != null) {
+    payload.volume_ml = patch.volumeMl
+    filled.push('objem')
+  }
+  if (!existing.packaging && patch.packaging) {
+    payload.packaging = patch.packaging
+    filled.push('obal')
+  }
+
+  const { error } = await supabaseAdmin.from('products').update(payload).eq('id', id)
+  if (error) throw error
+  return { filled }
 }
 
 // ── Extracted facts ──────────────────────────────────────────────────

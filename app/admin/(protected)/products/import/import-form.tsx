@@ -3,6 +3,10 @@
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 
+interface ScrapedImage {
+  url: string
+  alt: string | null
+}
 interface Scraped {
   url: string
   domain: string
@@ -17,9 +21,11 @@ interface Scraped {
   packaging: string | null
   acidity: number | null
   polyphenols: number | null
+  peroxideValue: number | null
   price: number | null
   currency: string | null
   imageUrl: string | null
+  galleryImages: ScrapedImage[]
   descriptionShort: string | null
   rawDescription: string | null
 }
@@ -79,8 +85,13 @@ export function ImportForm() {
         packaging: data.packaging,
         acidity: data.acidity,
         polyphenols: data.polyphenols,
+        peroxideValue: data.peroxideValue,
         descriptionShort: data.descriptionShort,
-        descriptionLong: data.rawDescription,
+        // descriptionLong is intentionally EMPTY — admin runs AI rewrite to populate it.
+        // Raw source stays in raw_description (never overwritten) for rewrite fallback.
+        descriptionLong: null,
+        sourceUrl: data.url,
+        rawDescription: data.rawDescription,
         status: 'draft',
       }
       const res = await fetch('/api/admin/products', {
@@ -183,9 +194,33 @@ export function ImportForm() {
             <Cell label="Typ" value={data.type} />
             <Cell label="Kyselost" value={data.acidity ? `${data.acidity}%` : null} />
             <Cell label="Polyfenoly" value={data.polyphenols ? `${data.polyphenols} mg/kg` : null} />
+            <Cell label="Peroxidové číslo" value={data.peroxideValue ? `${data.peroxideValue} mEq` : null} />
             <Cell label="Obal" value={data.packaging} />
             <Cell label="Slug" value={data.slug} mono />
+            <Cell label="Galerie" value={data.galleryImages.length ? `${data.galleryImages.length} obrázků` : null} />
           </div>
+
+          {data.galleryImages.length > 1 && (
+            <div className="mb-5">
+              <div className="text-xs font-medium text-text2 mb-2">Další fotky z galerie</div>
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {data.galleryImages.slice(1, 10).map((img, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={i}
+                    src={img.url}
+                    alt={img.alt ?? ''}
+                    className="w-20 h-20 object-contain bg-off rounded shrink-0"
+                  />
+                ))}
+                {data.galleryImages.length > 10 && (
+                  <div className="w-20 h-20 bg-off rounded flex items-center justify-center text-xs text-text3 shrink-0">
+                    +{data.galleryImages.length - 10}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {data.descriptionShort && (
             <div className="mb-3">

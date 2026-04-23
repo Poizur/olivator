@@ -43,12 +43,14 @@ export async function POST(
     const { id } = await params
     const { data: product } = await supabaseAdmin
       .from('products')
-      .select('description_long, description_short')
+      .select('raw_description, description_long, description_short')
       .eq('id', id)
       .maybeSingle()
     if (!product) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
+    // Prefer raw_description (scraped source). Only fall back to AI text for legacy products.
     const rawText =
+      (product.raw_description as string) ||
       (product.description_long as string) ||
       (product.description_short as string) ||
       ''

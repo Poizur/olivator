@@ -6,6 +6,7 @@ import { ProductForm } from './product-form'
 import { OffersManager } from './offers-manager'
 import { ImagePanel } from './image-panel'
 import { FactsPanel, type ExtractedFact } from './facts-panel'
+import { SourcePanel } from './source-panel'
 
 async function getProductRow(id: string) {
   const { data, error } = await supabaseAdmin
@@ -41,6 +42,11 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
       </h1>
 
       <div className="space-y-6">
+        <SourcePanel
+          productId={id}
+          sourceUrl={(productRow.source_url as string | null) ?? null}
+          rawDescriptionLength={((productRow.raw_description as string | null) ?? '').length}
+        />
         <ImagePanel
           productId={id}
           currentImageUrl={(productRow.image_url as string) ?? null}

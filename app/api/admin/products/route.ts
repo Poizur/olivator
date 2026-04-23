@@ -20,7 +20,8 @@ export async function POST(request: NextRequest) {
     // Fact extraction (fire-and-await): when creating from import with
     // raw description, extract specific technical facts for later use
     // by AI rewrite. Uses Claude Haiku (~$0.005/call).
-    const rawText = body.descriptionLong || body.descriptionShort || ''
+    // Prefer rawDescription (untouched scrape) over AI-generated text.
+    const rawText = body.rawDescription || body.descriptionLong || body.descriptionShort || ''
     if (rawText && rawText.length > 30) {
       try {
         const facts = await extractFactsFromText(rawText)
