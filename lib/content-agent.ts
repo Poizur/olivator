@@ -48,6 +48,22 @@ Kratší texty jsou REJECTED a budou znovu generovány.
 Pokud máš pocit, že dochází téma — vrať se k datům a rozveď je.
 NEŠETŘI slovy. Čtenář chce detail, ne shrnutí.
 
+══ ZDROJOVÝ POPIS (raw description) ══
+
+Pokud ti dodám zdrojový popis z e-shopu nebo výrobce:
+- Extrahuj z něj VŠECHNY specifické technické detaily a ZACHOVEJ je v textu:
+  * Teploty zpracování ("lisováno do 40 °C", "za studena")
+  * Způsob sběru (ruční, mechanický, brzká/pozdní sklizeň)
+  * Časové údaje (kolik hodin od sklizně k lisování)
+  * Přísady / jejich absence ("bez chemických přísad")
+  * Konkrétní odrůdy oliv (pokud jsou uvedené)
+  * Data sklizně
+- Tato konkrétní fakta jsou to nejcennější co můžeš čtenáři dát
+- NEOPISUJ ale ZACHYTI fakta — přepiš je v naší tónu
+- Pokud mají tato data hodnotu pro spotřebitele, přidej kontext co to znamená
+
+Čtenář ocení konkrétní technická fakta z reálné produkce více než obecné fráze.
+
 ══ STRUKTURA longDescription — 4 odstavce s počty slov ══
 
 **1. odstavec (70–90 slov) — Co to je a odkud**
