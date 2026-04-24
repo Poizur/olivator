@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { looksLikeLabReport } from '@/lib/lab-report-agent'
 
 interface GalleryImage {
   id: string
@@ -21,6 +22,8 @@ export function GalleryManager({ productId }: { productId: string }) {
   const [primaryId, setPrimaryId] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [scanningId, setScanningId] = useState<string | null>(null)
+  const [scanResult, setScanResult] = useState<{ filled: string[]; message: string; newScore: number | null; confidence: string } | null>(null)
 
   useEffect(() => {
     void loadImages()
@@ -63,6 +66,35 @@ export function GalleryManager({ productId }: { productId: string }) {
     })
     // If removing primary, unset it
     if (primaryId === id && keep.has(id)) setPrimaryId(null)
+  }
+
+  async function onScanLabReport(img: GalleryImage) {
+    setScanningId(img.id)
+    setScanResult(null)
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/products/${productId}/scan-lab-report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl: img.url }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Scan selhal')
+      setScanResult({
+        filled: data.filled ?? [],
+        message: data.message ?? '',
+        newScore: data.newScore ?? null,
+        confidence: data.lab?.confidence ?? 'low',
+      })
+      if ((data.filled?.length ?? 0) > 0) {
+        // Trigger full page reload so ProductForm updates with new values
+        setTimeout(() => window.location.reload(), 2500)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Chyba')
+    } finally {
+      setScanningId(null)
+    }
   }
 
   async function onSave() {
@@ -160,8 +192,10 @@ export function GalleryManager({ productId }: { productId: string }) {
                 img={img}
                 checked={keep.has(img.id)}
                 isPrimary={primaryId === img.id}
+                scanning={scanningId === img.id}
                 onToggle={() => toggleKeep(img.id)}
                 onMakePrimary={() => setPrimaryId(img.id)}
+                onScanLab={() => onScanLabReport(img)}
               />
             ))}
           </div>
@@ -180,12 +214,32 @@ export function GalleryManager({ productId }: { productId: string }) {
                 img={img}
                 checked={keep.has(img.id)}
                 isPrimary={primaryId === img.id}
+                scanning={scanningId === img.id}
                 onToggle={() => toggleKeep(img.id)}
                 onMakePrimary={() => setPrimaryId(img.id)}
+                onScanLab={() => onScanLabReport(img)}
               />
             ))}
           </div>
         </>
+      )}
+
+      {scanResult && (
+        <div className={`mt-4 rounded-lg p-3 text-[12px] border ${
+          scanResult.filled.length > 0 ? 'bg-olive-bg border-olive-border text-olive-dark' :
+          scanResult.confidence === 'low' ? 'bg-off border-off2 text-text2' :
+          'bg-terra-bg border-terra/30 text-terra'
+        }`}>
+          <div className="font-medium mb-1">
+            {scanResult.filled.length > 0 ? '🧪 Lab report naskenován — data doplněna' :
+             scanResult.confidence === 'low' ? '🧪 Obrázek není lab report' :
+             '🧪 Lab report přečten, ale vše už bylo vyplněno'}
+          </div>
+          <div>{scanResult.message}</div>
+          {scanResult.filled.length > 0 && (
+            <div className="mt-1 text-[11px] opacity-70">Za 2s se stránka automaticky aktualizuje...</div>
+          )}
+        </div>
       )}
 
       <div className="mt-6 flex items-center gap-3 flex-wrap">
@@ -219,19 +273,24 @@ function ImageTile({
   img,
   checked,
   isPrimary,
+  scanning,
   onToggle,
   onMakePrimary,
+  onScanLab,
 }: {
   img: GalleryImage
   checked: boolean
   isPrimary: boolean
+  scanning: boolean
   onToggle: () => void
   onMakePrimary: () => void
+  onScanLab: () => void
 }) {
+  const isLabCandidate = looksLikeLabReport(img.url, img.alt_text)
   return (
     <div className={`relative rounded-lg overflow-hidden border-2 transition-all ${
       checked ? (isPrimary ? 'border-olive ring-2 ring-olive/30' : 'border-olive') : 'border-off2 opacity-50'
-    }`}>
+    } ${isLabCandidate ? 'ring-1 ring-terra/40' : ''}`}>
       <button
         type="button"
         onClick={onToggle}
@@ -266,6 +325,28 @@ function ImageTile({
         >
           ★
         </button>
+      )}
+
+      {/* Lab report scan button bottom-right */}
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); if (!scanning) onScanLab() }}
+        disabled={scanning}
+        className={`absolute bottom-1.5 right-1.5 px-2 py-1 rounded-full text-[10px] font-medium transition-colors ${
+          scanning ? 'bg-terra text-white animate-pulse' :
+          isLabCandidate ? 'bg-terra text-white hover:bg-terra/80' :
+          'bg-white/90 text-text2 hover:bg-terra hover:text-white'
+        }`}
+        title={isLabCandidate ? 'Vypadá jako lab report — klikni pro scan' : 'Naskenovat jako lab report'}
+      >
+        {scanning ? '⏳ Čtu...' : '🧪 Scan'}
+      </button>
+
+      {/* Lab report badge — suggestion */}
+      {isLabCandidate && !scanning && (
+        <div className="absolute bottom-1.5 left-1.5 bg-terra text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+          LAB?
+        </div>
       )}
     </div>
   )
