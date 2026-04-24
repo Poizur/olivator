@@ -3,6 +3,7 @@ import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { generateProductDescriptions } from '@/lib/content-agent'
 import { validateContent } from '@/lib/content-validator'
+import { validateCzechStyle } from '@/lib/czech-style'
 import { factsToPromptContext, type ExtractedFact } from '@/lib/fact-extractor'
 import { countryName } from '@/lib/utils'
 
@@ -103,6 +104,21 @@ export async function POST(
         message: `Text nezmiňuje fakt "${fact.label}: ${fact.value}" (vysoká důležitost)`,
       })
       validation.warnings++
+    }
+    // Czech style check (grammar, typography, EN-translated phrases)
+    const combinedForStyle = `${generated.shortDescription}\n\n${generated.longDescription}`
+    const styleIssues = validateCzechStyle(combinedForStyle)
+    for (const s of styleIssues) {
+      validation.issues.push({
+        severity: s.severity,
+        category: s.category === 'wrong_word' ? 'banned_phrase' :
+                  s.category === 'typography' ? 'style' :
+                  s.category === 'awkward' ? 'style' : 'style',
+        message: s.message + (s.suggestion ? ` (návrh: ${s.suggestion})` : ''),
+        matched: s.matched,
+      })
+      if (s.severity === 'error') validation.errors++
+      else validation.warnings++
     }
     validation.ok = validation.errors === 0
 

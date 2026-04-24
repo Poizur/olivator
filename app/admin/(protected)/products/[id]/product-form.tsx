@@ -20,16 +20,16 @@ const CERT_OPTIONS: { value: string; label: string }[] = [
   { value: 'nyiooc', label: 'NYIOOC' },          // New York Oil Competition
   { value: 'demeter', label: 'Demeter' },        // Biodynamické
 ]
-const USE_OPTIONS: { value: string; label: string }[] = [
-  { value: 'salad', label: 'Salát' },
-  { value: 'cooking', label: 'Vaření' },
-  { value: 'frying', label: 'Smažení' },
-  { value: 'dipping', label: 'Máčení / dipping' },
-  { value: 'fish', label: 'Ryby' },
-  { value: 'meat', label: 'Maso' },
-  { value: 'health', label: 'Zdraví' },
-  { value: 'gift', label: 'Dárek' },
-]
+const USE_LABELS: Record<string, string> = {
+  salad: 'Salát',
+  cooking: 'Vaření',
+  frying: 'Smažení',
+  dipping: 'Máčení / dipping',
+  fish: 'Ryby',
+  meat: 'Maso',
+  health: 'Zdraví',
+  gift: 'Dárek',
+}
 const FLAVOR_AXES = ['fruity', 'herbal', 'bitter', 'spicy', 'mild', 'nutty', 'buttery'] as const
 const FLAVOR_LABELS: Record<typeof FLAVOR_AXES[number], string> = {
   fruity: 'Ovocnost',
@@ -290,17 +290,28 @@ export function ProductForm({
             ))}
           </div>
         </Field>
-        <Field label="Použití">
-          <div className="flex flex-wrap gap-2">
-            {USE_OPTIONS.map(u => (
-              <Chip
-                key={u.value}
-                active={uses.includes(u.value)}
-                onClick={() => toggle(uses, setUses, u.value)}
-              >
-                {u.label}
-              </Chip>
-            ))}
+        <Field label="Použití (odvozené automaticky)">
+          {uses.length === 0 ? (
+            <div className="text-[12px] text-text3 italic bg-off rounded-lg px-3 py-2">
+              Zatím nic. Klikni <strong>🔄 Rescrape</strong> nahoře — systém odvodí použití
+              z chuťového profilu, polyfenolů, typu oleje a ceny.
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {uses.map(u => (
+                <span
+                  key={u}
+                  className="bg-olive-bg text-olive-dark border border-olive-border rounded-full px-3 py-1 text-xs"
+                >
+                  {USE_LABELS[u] ?? u}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="text-[11px] text-text3 mt-1.5">
+            Každý kvalitní EVOO je „na všechno" — proto ručně nezaškrtáváme. Odvozeno z dat:
+            rafinované = smažení, jemné = ryby/salát, výrazné = maso, polyfenoly ≥ 250 mg/kg = zdraví,
+            cena + obal = dárek.
           </div>
         </Field>
       </Section>

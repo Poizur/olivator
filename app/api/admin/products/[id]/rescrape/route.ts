@@ -7,6 +7,7 @@ import { extractFactsFromText } from '@/lib/fact-extractor'
 import { estimateFlavorProfile } from '@/lib/flavor-agent'
 import { generateProductDescriptions } from '@/lib/content-agent'
 import { calculateScore } from '@/lib/score'
+import { deriveUseCases } from '@/lib/use-case-deriver'
 import { countryName } from '@/lib/utils'
 
 export const maxDuration = 90 // full pipeline: scrape + facts + flavor + rewrite + score
@@ -156,6 +157,29 @@ export async function POST(
       })
       .eq('id', id)
     steps.push(`Score ${score.total}/100`)
+
+    // ── 6b. Derive use cases from data (rule-based, no LLM) ─────────────
+    // Read fresh flavor profile for derivation
+    const { data: flavorRow } = await supabaseAdmin
+      .from('products')
+      .select('flavor_profile')
+      .eq('id', id)
+      .maybeSingle()
+    const pricePerLiter = cheapestPrice && volumeMl ? (cheapestPrice / volumeMl) * 1000 : null
+    const derived = deriveUseCases({
+      type: scraped.type,
+      acidity: freshProduct?.acidity != null ? Number(freshProduct.acidity) : null,
+      polyphenols: freshProduct?.polyphenols ?? null,
+      flavorProfile: (flavorRow?.flavor_profile as Record<string, number>) ?? null,
+      pricePerLiter,
+      packaging: scraped.packaging,
+      certifications: (freshProduct?.certifications as string[]) ?? [],
+    })
+    await supabaseAdmin
+      .from('products')
+      .update({ use_cases: derived.useCases })
+      .eq('id', id)
+    steps.push(`použití: ${derived.useCases.join(', ')}`)
 
     // ── 7. AI rewrite (Sonnet) — with fresh raw_description + facts ─────
     let descriptionsGenerated = false

@@ -3,6 +3,7 @@
 // constraints + auto-retry when output is too short.
 
 import Anthropic from '@anthropic-ai/sdk'
+import { applyCzechTypographyFixes } from './czech-style'
 
 const MODEL = 'claude-sonnet-4-20250514'
 const MIN_LONG_WORDS = 250 // below this we auto-retry once with feedback
@@ -99,6 +100,35 @@ Pokud ti dodám zdrojový popis z e-shopu nebo výrobce:
 
 Celkem: 300–380 slov. Kontroluj si počet před odesláním.
 
+══ ČESKÁ GRAMATIKA A TYPOGRAFIE — hlídej vždy ══
+
+**Typografie (ČSN 01 6910):**
+- Pevná mezera před jednotkou: "40 °C" (ne 40°C), "0,32 %" (ne 0,32%), "500 ml", "250 mg/kg"
+- Desetinná čárka v češtině: 0,32 (ne 0.32)
+- Procento piš jako " %" se svislou mezerou: "100 %"
+- Rozsahy čísel en-dashem bez mezer: "200–300" (ne "200 - 300")
+
+**Zakázané neohebné/EN-přeložené fráze:**
+- "za hlídání teploty" → místo toho "při kontrolované teplotě", "za hlídané teploty do 40 °C"
+- "olej se pohybuje pod limitem" → olej se nepohybuje; použij "je výrazně pod limitem", "drží se pod"
+- "olej vydrží přípravu" → olej není trpělivý; použij "snese", "hodí se na"
+- "obsah signalizuje" → suše technické; použij "znamená", "ukazuje"
+- "oxidační stres" → medicínský termín; použij "oxidace", "oxidační poškození"
+- "neřeže chuť" → doslovný překlad z EN; použij "nepřebíjí chuť"
+- "filosofie výrobce" → těžkopádné; použij "přístup výrobce", "styl výroby"
+- "balí se do" → zní jako výroba; použij "dodává se v", "přichází v"
+
+**Zakázaná nesprávná slova:**
+- "litové / litová lahev" — NENÍ české slovo. Správně "litrová láhev" (od "litr")
+- "skleněnice" — nenápadné; použij "skleněná láhev" nebo "sklenice"
+
+**Čtivost:**
+- Věty 12–20 slov (max 30). Dlouhé rozbij.
+- Střídej délku — krátká věta, pak delší. Rytmus.
+- Aktivní hlas > pasivní: "Rodinná firma lisuje olej" > "Olej je lisován rodinnou firmou"
+- Konkrétní sloveso > obecné: "olej chutná po zelených jablcích" > "olej má ovocnou chuť"
+- Nepoužívej "zmíněný", "výše uvedený", "daný produkt" — web není akademický text
+
 ══ shortDescription ══
 
 PŘESNĚ 1-2 věty, 100–180 znaků. Hook pro kartu.
@@ -193,7 +223,14 @@ async function callClaude(
       if (!parsed.shortDescription || !parsed.longDescription) {
         throw new Error('Claude vrátil neúplný JSON')
       }
-      return parsed
+      // Apply safe Czech typography autofixes (non-breaking spaces before units, etc.)
+      // These are corrections Claude frequently misses. Applied silently before returning.
+      const shortFix = applyCzechTypographyFixes(parsed.shortDescription)
+      const longFix = applyCzechTypographyFixes(parsed.longDescription)
+      return {
+        shortDescription: shortFix.fixed,
+        longDescription: longFix.fixed,
+      }
     } catch (err) {
       lastErr = err
       const isOverloaded =
