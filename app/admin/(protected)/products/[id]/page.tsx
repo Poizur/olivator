@@ -7,6 +7,7 @@ import { OffersManager } from './offers-manager'
 import { ImagePanel } from './image-panel'
 import { FactsPanel, type ExtractedFact } from './facts-panel'
 import { SourcePanel } from './source-panel'
+import { GalleryManager } from './gallery-manager'
 
 async function getProductRow(id: string) {
   const { data, error } = await supabaseAdmin
@@ -53,6 +54,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
           currentSource={(productRow.image_source as string) ?? null}
           ean={productRow.ean as string}
         />
+        <GalleryManager productId={id} />
         <FactsPanel
           productId={id}
           initialFacts={

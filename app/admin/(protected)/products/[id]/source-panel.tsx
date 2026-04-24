@@ -3,14 +3,21 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-interface ScrapedImage {
-  url: string
-  alt: string | null
-}
-
 interface SourcePanelProps {
   productId: string
   sourceUrl: string | null
+  rawDescriptionLength: number
+}
+
+interface RescrapeResult {
+  steps: string[]
+  failures: string[]
+  scoreTotal: number
+  descriptionsGenerated: boolean
+  validationWarnings: number
+  galleryCount: number
+  flavorReasoning: string | null
+  factsCount: number
   rawDescriptionLength: number
 }
 
@@ -20,7 +27,7 @@ export function SourcePanel({ productId, sourceUrl, rawDescriptionLength }: Sour
   const [overrideUrl, setOverrideUrl] = useState('')
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [gallery, setGallery] = useState<ScrapedImage[]>([])
+  const [result, setResult] = useState<RescrapeResult | null>(null)
 
   const effectiveUrl = sourceUrl ?? null
 
@@ -32,6 +39,7 @@ export function SourcePanel({ productId, sourceUrl, rawDescriptionLength }: Sour
     setRescraping(true)
     setError(null)
     setStatus(null)
+    setResult(null)
     try {
       const res = await fetch(`/api/admin/products/${productId}/rescrape`, {
         method: 'POST',
@@ -40,15 +48,17 @@ export function SourcePanel({ productId, sourceUrl, rawDescriptionLength }: Sour
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Rescrape selhal')
-      const filledMsg =
-        data.filled.length > 0
-          ? `Doplněno: ${data.filled.join(', ')}`
-          : 'Žádná nová data — existující záznam je kompletní'
-      const flavorMsg = data.flavorReasoning ? ` | chuť: ${data.flavorReasoning}` : ''
-      setStatus(
-        `✓ ${filledMsg} | raw_description ${data.rawDescriptionLength} znaků | ${data.factsCount} faktů | galerie ${data.galleryCount}${flavorMsg}`
-      )
-      setGallery(data.galleryImages ?? [])
+      setResult({
+        steps: data.steps ?? [],
+        failures: data.failures ?? [],
+        scoreTotal: data.scoreTotal ?? 0,
+        descriptionsGenerated: !!data.descriptionsGenerated,
+        validationWarnings: data.validationWarnings ?? 0,
+        galleryCount: data.galleryCount ?? 0,
+        flavorReasoning: data.flavorReasoning ?? null,
+        factsCount: data.factsCount ?? 0,
+        rawDescriptionLength: data.rawDescriptionLength ?? 0,
+      })
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Chyba')
@@ -115,13 +125,13 @@ export function SourcePanel({ productId, sourceUrl, rawDescriptionLength }: Sour
           type="button"
           onClick={onRescrape}
           disabled={rescraping}
-          className="bg-olive-bg text-olive-dark border border-olive-border rounded-full px-4 py-1.5 text-[13px] font-medium hover:bg-olive-border disabled:opacity-40 transition-colors"
+          className="bg-olive text-white rounded-full px-5 py-2 text-[13px] font-medium hover:bg-olive-dark disabled:opacity-40 transition-colors"
         >
-          {rescraping ? '🔄 Scrapuji...' : '🔄 Rescrape ze zdroje'}
+          {rescraping ? '🔄 Zpracovávám... (30-45s)' : '🔄 Rescrape — zaktualizuj vše'}
         </button>
         <span className="text-[11px] text-text3 leading-tight flex-1">
-          raw_description: <strong>{rawDescriptionLength}</strong> znaků
-          {rawDescriptionLength === 0 && ' — chybí! AI bude mít málo podkladů'}
+          <strong>Stáhne text, fakta, Score, chuť, popisy i galerii</strong> — jedním kliknutím.
+          Poté si jen vybereš fotky z galerie. Trvá ~30-45 s.
         </span>
       </div>
 
@@ -130,43 +140,81 @@ export function SourcePanel({ productId, sourceUrl, rawDescriptionLength }: Sour
           {status}
         </div>
       )}
+
+      {result && (
+        <div className="mt-4 border border-olive-border bg-olive-bg/50 rounded-lg p-4 space-y-3">
+          <div className="flex items-center justify-between gap-4">
+            <div className="text-[13px] font-semibold text-olive-dark">
+              ✓ Rescrape dokončen
+            </div>
+            <div className="text-[11px] text-text3">
+              Score: <strong className="text-text">{result.scoreTotal}/100</strong>
+              {' · '}
+              raw: <strong className="text-text">{result.rawDescriptionLength}</strong> znaků
+              {' · '}
+              fakta: <strong className="text-text">{result.factsCount}</strong>
+              {' · '}
+              galerie: <strong className="text-text">{result.galleryCount}</strong>
+            </div>
+          </div>
+
+          {result.steps.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {result.steps.map((step, i) => (
+                <span
+                  key={i}
+                  className="text-[11px] bg-white border border-olive-border text-olive-dark rounded px-2 py-0.5"
+                >
+                  ✓ {step}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {result.flavorReasoning && (
+            <div className="text-[12px] text-text2 bg-white rounded border border-off2 px-3 py-2">
+              <strong className="text-text">Chuť (AI odhad):</strong> {result.flavorReasoning}
+            </div>
+          )}
+
+          {result.descriptionsGenerated && (
+            <div className="text-[12px]">
+              {result.validationWarnings === 0 ? (
+                <span className="text-olive-dark">
+                  ✓ AI popisy vygenerovány čistě (žádné vata-fráze)
+                </span>
+              ) : (
+                <span className="text-terra">
+                  ⚠ AI popisy vygenerovány, ale obsahují {result.validationWarnings} vata-frází —
+                  zkontroluj v sekci &ldquo;Základní údaje&rdquo; níže.
+                </span>
+              )}
+            </div>
+          )}
+
+          {result.failures.length > 0 && (
+            <div className="text-[12px] text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
+              <strong>Některé kroky selhaly:</strong>
+              <ul className="mt-1 list-disc list-inside">
+                {result.failures.map((f, i) => (
+                  <li key={i}>{f}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="text-[11px] text-text3 pt-2 border-t border-olive-border">
+            <strong>Další krok:</strong> sjeď dolů do sekce &ldquo;Galerie fotek&rdquo;
+            a zaškrtni které fotky chceš zachovat. Nezaškrtnuté se po uložení smažou.
+          </div>
+        </div>
+      )}
       {error && (
         <div className="mt-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
           ⚠ {error}
         </div>
       )}
 
-      {gallery.length > 0 && (
-        <div className="mt-4">
-          <div className="text-xs font-medium text-text2 mb-2">
-            Galerie z zdroje ({gallery.length}) — klikni pro kopírování URL
-          </div>
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {gallery.map((img, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => copyToClipboard(img.url)}
-                className="shrink-0 group relative"
-                title={img.alt ?? img.url}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={img.url}
-                  alt={img.alt ?? ''}
-                  className="w-20 h-20 object-contain bg-off rounded border border-off2 group-hover:border-olive"
-                />
-                <div className="absolute inset-0 bg-olive/60 text-white text-[10px] font-medium flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded">
-                  📋 Zkopírovat URL
-                </div>
-              </button>
-            ))}
-          </div>
-          <div className="text-[11px] text-text3 mt-1">
-            Tip: zkopíruj URL a vlož do &ldquo;Manuální URL&rdquo; v panelu fotka nahoře pro změnu hlavního obrázku.
-          </div>
-        </div>
-      )}
     </div>
   )
 }
