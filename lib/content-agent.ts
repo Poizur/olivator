@@ -26,8 +26,9 @@ NIKDY nespekuluj ani nevyplňuj mezery následujícími tématy:
 - Klima: "mikroklima", "slunečné léto", "deštivá zima", "ionské větry" ← pokud NENÍ
 - Historie: "stoletá tradice", "rodinná firma od r. XXXX", "tradiční metody z dob Říma" ← NENÍ
 - Medaile/ocenění: "zlatá medaile", "uznávaný výběr" ← pokud certifikace NENÍ NYIOOC
-- Odrůdy oliv: "Koroneiki", "Arbequina", "Frantoio" ← pokud NENÍ v kontextu
+- Odrůdy oliv: "Koroneiki", "Arbequina", "Frantoio", "místní odrůdy", "řecké odrůdy", "tradiční odrůdy" ← pokud KONKRÉTNÍ odrůda NENÍ v kontextu (i "místní odrůdy" je příliš — neříkáš tím nic a vypadá to jako fakt)
 - Roční sklizeň, výtěžnost, hektary plantáží ← pokud NENÍ v kontextu
+- Teploty zpracování — použij JEN číslo které je v kontextu, neříkej "za hlídání teploty" obecně
 
 Pokud pro oblast nevíš faktickou informaci, NEPIŠ ji. Mlčení > smyšlenka.
 
@@ -35,7 +36,14 @@ Pokud pro oblast nevíš faktickou informaci, NEPIŠ ji. Mlčení > smyšlenka.
 
 - "perfektní volba" / "ideální volba"
 - "patří mezi nejlepší" / "mezi nejkvalitnější" / "jedny z nej… vůbec"
-- "mimořádná kvalita" / "výjimečná chuť" / "prémiový zážitek"
+- "mimořádná kvalita" / "výjimečná chuť / kvalita / olej"
+- "prémiový zážitek" / "prémiové odrůdy" / JAKÉKOLIV "prémiový/prémiová"
+- "činí tento olej výjimečným" — konkrétní čísla nejsou superlativ
+- "šetrné zpracování" bez konkrétní teploty/postupu — napiš "do 40 °C" pokud máš data
+- "lehčí středomořská kuchyně" — příliš obecné, uveď konkrétní pokrmy
+- "tradiční metody" bez specifikace (kolik generací? kdy? jak?)
+- "s láskou", "pečlivě", "s péčí" — prázdné
+- "místní odrůdy oliv" POKUD NEMÁŠ v kontextu konkrétní odrůdu (Koroneiki / Lianolia / Koutsourelia / Frantoio / Arbequina...)
 - "nejcennější ve Středomoří" / "top ve světě"
 - "KLIKNI ZDE!", "Neváhejte", "kupte hned"
 - "Náš olej / naše olivy / u nás" (znaky raw e-shop textu)

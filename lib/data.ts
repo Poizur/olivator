@@ -485,9 +485,22 @@ export async function applyRescrapePatch(id: string, patch: RescrapePatch): Prom
     payload.ean = patch.ean
     filled.push('EAN')
   }
-  if (existing.acidity == null && patch.acidity != null) {
-    payload.acidity = patch.acidity
-    filled.push('kyselost')
+  if (patch.acidity != null) {
+    // Overwrite if NULL, or if scraped value is MORE PRECISE than existing
+    // (e.g. DB has 0.3 rounded, scraper reads 0.32 — use 0.32). Tolerance: diff < 0.1 and
+    // scraped has more decimal digits.
+    const existingAcidity = existing.acidity != null ? Number(existing.acidity) : null
+    if (existingAcidity == null) {
+      payload.acidity = patch.acidity
+      filled.push('kyselost')
+    } else {
+      const diff = Math.abs(existingAcidity - patch.acidity)
+      const scrapedHasMorePrecision = String(patch.acidity).length > String(existingAcidity).length
+      if (diff > 0 && diff < 0.1 && scrapedHasMorePrecision) {
+        payload.acidity = patch.acidity
+        filled.push(`kyselost (${existingAcidity} → ${patch.acidity})`)
+      }
+    }
   }
   if (existing.polyphenols == null && patch.polyphenols != null) {
     payload.polyphenols = patch.polyphenols

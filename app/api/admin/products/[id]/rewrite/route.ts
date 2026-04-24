@@ -67,23 +67,42 @@ export async function POST(
       certifications: (product.certifications as string[]) ?? [],
     })
 
-    // Extra check — each HIGH fact should be referenced
+    // Extra check — each HIGH fact should be referenced.
+    // Matching strategy (any of these is enough):
+    //  1. Contiguous fact value appears literally (normalized — "do 40 °C" matches "do 40 °C" in any casing/spacing)
+    //  2. The KEY NUMBER in the value appears (e.g. "40" for temperature, "4" for hours)
+    //  3. A content-word token (>3 chars, not a stopword) appears
     const fullText = `${generated.shortDescription} ${generated.longDescription}`.toLowerCase()
+    const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim()
+    const normalizedFull = normalize(fullText)
+    const stopwords = /^(pro|od|do|bez|bez chem|s|v|na|za|ve|či|dle)$/
     for (const fact of facts.filter(f => f.importance === 'high')) {
-      // Heuristic: check if value OR key or part of value appears
-      const valueTokens = fact.value
-        .toLowerCase()
-        .split(/\s+/)
-        .filter(t => t.length > 3 && !/^(pro|od|do|bez|s|v|na)$/.test(t))
-      const mentioned = valueTokens.some(t => fullText.includes(t))
-      if (!mentioned) {
-        validation.issues.push({
-          severity: 'warning',
-          category: 'missing_required',
-          message: `Text nezmiňuje fakt "${fact.label}: ${fact.value}" (vysoká důležitost)`,
+      const value = normalize(fact.value)
+      // 1. contiguous phrase match
+      if (normalizedFull.includes(value)) continue
+      // 2. numeric match (temperatures, hours, percentages)
+      const numbers = value.match(/\d+/g) ?? []
+      if (numbers.length > 0) {
+        const allNumbersPresent = numbers.every(n => {
+          // require digit to appear adjacent to a recognized unit or boundary
+          const re = new RegExp(`\\b${n}\\b\\s*(?:°c|hodin|mez|mg|%|ks|ml|l)?`, 'i')
+          return re.test(fullText)
         })
-        validation.warnings++
+        if (allNumbersPresent) continue
       }
+      // 3. content-word token fallback
+      const valueTokens = value
+        .split(/\s+/)
+        .filter(t => t.length > 3 && !stopwords.test(t))
+      const hasContentToken = valueTokens.some(t => fullText.includes(t))
+      if (hasContentToken) continue
+
+      validation.issues.push({
+        severity: 'warning',
+        category: 'missing_required',
+        message: `Text nezmiňuje fakt "${fact.label}: ${fact.value}" (vysoká důležitost)`,
+      })
+      validation.warnings++
     }
     validation.ok = validation.errors === 0
 
