@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 interface SourcePanelProps {
   productId: string
@@ -22,7 +21,6 @@ interface RescrapeResult {
 }
 
 export function SourcePanel({ productId, sourceUrl, rawDescriptionLength }: SourcePanelProps) {
-  const router = useRouter()
   const [rescraping, setRescraping] = useState(false)
   const [overrideUrl, setOverrideUrl] = useState('')
   const [status, setStatus] = useState<string | null>(null)
@@ -59,7 +57,12 @@ export function SourcePanel({ productId, sourceUrl, rawDescriptionLength }: Sour
         factsCount: data.factsCount ?? 0,
         rawDescriptionLength: data.rawDescriptionLength ?? 0,
       })
-      router.refresh()
+      // Hard reload — client-side components (ProductForm, GalleryManager) cache
+      // their initial props in useState, so router.refresh() alone doesn't update them.
+      // Wait 2s so the result panel is visible with Score/steps before reload.
+      setTimeout(() => {
+        window.location.reload()
+      }, 2000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Chyba')
     } finally {
