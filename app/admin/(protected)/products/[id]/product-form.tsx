@@ -272,6 +272,11 @@ export function ProductForm({
 
       {/* Certifications + Use cases */}
       <Section title="Certifikace a použití">
+        <CertDetectorPanel
+          productId={productRow.id as string}
+          currentCerts={certs}
+          onAdd={(cert) => setCerts([...certs, cert])}
+        />
         <Field label="Certifikace">
           <div className="flex flex-wrap gap-2">
             {CERT_OPTIONS.map(c => (
@@ -647,6 +652,161 @@ function FlavorAiButton({
       {reasoning && (
         <div className="basis-full text-[12px] text-olive-dark bg-olive-bg border border-olive-border rounded-lg px-3 py-2">
           <strong>AI vysvětlení:</strong> {reasoning}
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface CertCandidate {
+  cert: string
+  label: string
+  confidence: 'high' | 'medium' | 'low'
+  evidence: string
+  reasoning: string
+}
+
+function CertDetectorPanel({
+  productId,
+  currentCerts,
+  onAdd,
+}: {
+  productId: string
+  currentCerts: string[]
+  onAdd: (cert: string) => void
+}) {
+  const [candidates, setCandidates] = useState<CertCandidate[] | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set())
+
+  async function onDetect() {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/products/${productId}/detect-certifications`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Detekce selhala')
+      setCandidates(data.candidates ?? [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Chyba')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function onAddCert(cert: string) {
+    try {
+      const res = await fetch(`/api/admin/products/${productId}/detect-certifications`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cert }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error)
+      }
+      onAdd(cert)
+      setDismissed(prev => new Set(prev).add(cert))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Chyba')
+    }
+  }
+
+  const visibleCandidates = (candidates ?? []).filter(
+    c => !currentCerts.includes(c.cert) && !dismissed.has(c.cert)
+  )
+
+  return (
+    <div className="mb-4 pb-4 border-b border-off">
+      <div className="flex items-center gap-3 mb-2 flex-wrap">
+        <button
+          type="button"
+          onClick={onDetect}
+          disabled={loading}
+          className="bg-olive text-white rounded-full px-4 py-1.5 text-[13px] font-medium hover:bg-olive-dark disabled:opacity-40 transition-colors"
+        >
+          {loading ? '🔍 Hledám...' : '🔍 Detekovat z popisu'}
+        </button>
+        <span className="text-[11px] text-text3 leading-tight flex-1">
+          AI naskenuje raw_description a extrahovaná fakta — najde zmínky DOP / BIO / NYIOOC /
+          Demeter s úrovní jistoty. Ty potvrdíš co přidat.
+        </span>
+        {error && (
+          <span className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded px-2 py-0.5">
+            ⚠ {error}
+          </span>
+        )}
+      </div>
+
+      {candidates !== null && visibleCandidates.length === 0 && (
+        <div className="text-[12px] text-text3 italic bg-off rounded-lg px-3 py-2 mt-2">
+          {candidates.length === 0
+            ? 'V textu nebyla nalezena žádná zmínka certifikace.'
+            : 'Všechny nalezené certifikace už jsou přidané nebo zahozené.'}
+        </div>
+      )}
+
+      {visibleCandidates.length > 0 && (
+        <div className="space-y-2 mt-3">
+          {visibleCandidates.map((c) => (
+            <div
+              key={c.cert}
+              className={`flex items-start gap-3 rounded-lg border px-3 py-2 ${
+                c.confidence === 'high'
+                  ? 'bg-olive-bg border-olive-border'
+                  : c.confidence === 'medium'
+                  ? 'bg-terra-bg border-terra/30'
+                  : 'bg-off border-off2'
+              }`}
+            >
+              <span
+                className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded shrink-0 mt-0.5 ${
+                  c.confidence === 'high'
+                    ? 'bg-olive-dark text-white'
+                    : c.confidence === 'medium'
+                    ? 'bg-terra text-white'
+                    : 'bg-text3 text-white'
+                }`}
+              >
+                {c.confidence}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-medium text-text">
+                  {c.label}{' '}
+                  <span className="text-[11px] text-text2 font-normal">
+                    — nalezeno: &ldquo;{c.evidence}&rdquo;
+                  </span>
+                </div>
+                <div className="text-[11px] text-text3 mt-0.5">{c.reasoning}</div>
+              </div>
+              <div className="flex gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => onAddCert(c.cert)}
+                  className="bg-olive text-white rounded-full px-3 py-1 text-[11px] font-medium hover:bg-olive-dark transition-colors"
+                >
+                  + Přidat
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDismissed(prev => new Set(prev).add(c.cert))}
+                  className="text-text3 hover:text-terra text-[11px] px-2"
+                  title="Zahodit návrh"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {visibleCandidates.some(c => c.confidence === 'low') && (
+        <div className="text-[11px] text-text3 mt-2 bg-off rounded px-3 py-2">
+          <strong>⚠ Upozornění:</strong> <span className="bg-text3 text-white px-1 rounded">LOW</span> kandidáti
+          jsou jen tvrzení výrobce (např. &ldquo;chemicky neošetřovaný&rdquo;), ne oficiální certifikace.
+          Před přidáním do BIO ověř papíry u výrobce — jinak hrozí pokuta za klamavou reklamu.
         </div>
       )}
     </div>
