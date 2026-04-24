@@ -51,7 +51,7 @@ const BANNED_PHRASES: { phrase: RegExp; message: string }[] = [
   { phrase: /mimoř[áa]dn[áaáuéy]\s+kvalit/i, message: 'Prázdná fráze "mimořádná kvalita"' },
   { phrase: /v[yý]jime[čc]n[áaáuéyí]\s+(chut|kvalit|olej)/i, message: 'Prázdná fráze "výjimečná chuť/kvalita/olej"' },
   { phrase: /[čc]in[ií]\s+(?:tento\s+)?olej\s+v[yý]jime[čc]n[ýíéa]/i, message: 'Prázdná fráze "činí olej výjimečným"' },
-  { phrase: /pr[ée]miov[áaéyýmuh]\w*/i, message: 'Vata "prémiový/prémiová" — bez konkrétního údaje' },
+  { phrase: /\bpr[ée]miov\w*/i, message: 'Vata "prémiový/prémiovou/prémiové" — bez konkrétního údaje' },
   { phrase: /šetrn[ěéáýíému]\s+zpracov/i, message: 'Vata "šetrné zpracování" — bez konkrétního čísla/teploty' },
   { phrase: /lehč[ší][íiíí]?\s+st[řr]edomo[řr]sk/i, message: 'Vata "lehčí středomořská" — generická' },
   { phrase: /tradi[čc]n[ií]\s+metod/i, message: 'Vata "tradiční metody" — bez specifikace' },
@@ -123,7 +123,32 @@ export function validateContent(input: ValidationInput): ValidationResult {
     }
   }
 
-  // 3. Award claims without NYIOOC → ERROR
+  // 3a. BIO / Organic claim without certification in DB → ERROR (legal risk)
+  // In CZ only certified products can claim "bio" (EU 2018/848, CZ law 110/1997)
+  const hasBioCert = (input.certifications ?? []).some(c => c === 'bio' || c === 'organic')
+  if (!hasBioCert) {
+    const bioPatterns: Array<{ re: RegExp; msg: string }> = [
+      { re: /\b(?:bio|organic)\s+(?:extra\s+panensk|olivov|olej|certif)/i, msg: '"Bio olej / Bio certifikace" ale v DB NENÍ bio certifikace — KLAMAVÁ REKLAMA' },
+      { re: /\bbio\s+certifika[cč]/i, msg: 'Zmiňuje "Bio certifikaci" ale produkt ji nemá v DB' },
+      { re: /\bekologick[áéýěí][mh]?\s+(?:zem[eě]d[eě]l|olej|prod)/i, msg: '"Ekologické zemědělství" / "ekologický olej" bez BIO certifikátu v DB' },
+      { re: /\borganic\s+(?:certif|oil|product)/i, msg: '"Organic certification/oil" bez cert v DB' },
+      { re: /\bjde\s+o\s+bio\b/i, msg: '"Jde o bio" — bez certifikace' },
+      { re: /\bcertifikovan[éýáuho]{1,3}\s+bio\b/i, msg: 'Claim "certifikované bio" bez cert v DB' },
+    ]
+    for (const { re, msg } of bioPatterns) {
+      const m = full.match(re)
+      if (m) {
+        issues.push({
+          severity: 'error',
+          category: 'hallucination',
+          message: msg + ' — ODSTRAŇ, jinak hrozí pokuta (EU 2018/848, CZ 110/1997)',
+          matched: m[0],
+        })
+      }
+    }
+  }
+
+  // 3b. Award claims without NYIOOC → ERROR
   const hasNYIOOC = (input.certifications ?? []).includes('nyiooc')
   if (!hasNYIOOC) {
     for (const pattern of AWARD_PATTERNS) {

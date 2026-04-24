@@ -29,6 +29,10 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
   const offers = await getOffersForProduct(id)
 
+  const status = productRow.status as string
+  const isPublic = status === 'active'
+  const publicUrl = `/olej/${productRow.slug as string}`
+
   return (
     <div>
       <div className="text-xs text-text3 mb-4">
@@ -38,9 +42,43 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
         {' › '}
         {productRow.name as string}
       </div>
-      <h1 className="font-[family-name:var(--font-display)] text-3xl text-text mb-6">
-        {productRow.name as string}
-      </h1>
+      <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
+        <div>
+          <h1 className="font-[family-name:var(--font-display)] text-3xl text-text">
+            {productRow.name as string}
+          </h1>
+          <div className="mt-1 flex items-center gap-2 text-xs">
+            <span
+              className={`inline-block px-2 py-0.5 rounded-full font-medium ${
+                status === 'active'
+                  ? 'bg-olive-bg text-olive-dark border border-olive-border'
+                  : status === 'draft'
+                  ? 'bg-terra-bg text-terra border border-terra/30'
+                  : 'bg-off border border-off2 text-text2'
+              }`}
+            >
+              {status === 'active' ? '● Aktivní na webu' : status === 'draft' ? '○ Draft' : '◌ Neaktivní'}
+            </span>
+            {!isPublic && (
+              <span className="text-text3 text-[11px]">
+                {status === 'draft'
+                  ? '— přepni status na "Aktivní" aby byl produkt na webu'
+                  : '— není zobrazen na webu'}
+              </span>
+            )}
+          </div>
+        </div>
+        <a
+          href={publicUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 bg-olive text-white rounded-full px-5 py-2.5 text-sm font-medium hover:bg-olive-dark transition-colors"
+          title={isPublic ? 'Otevřít produkt na webu (nové okno)' : 'Produkt není aktivní — uvidíš náhled, ale pro veřejnost není dostupný'}
+        >
+          👁 Zobrazit na webu
+          <span className="text-[11px] opacity-70">↗</span>
+        </a>
+      </div>
 
       <div className="space-y-6">
         <SourcePanel

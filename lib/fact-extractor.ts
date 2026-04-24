@@ -107,6 +107,13 @@ const GENERIC_VALUE_PATTERNS: RegExp[] = [
   /^bez vysokých teplot$/i,
   /^velmi rychle/i,
   /^kvalitn/i,
+  // "Bez chemie" claims — these should NOT land as HIGH facts because AI will then
+  // extrapolate to "bio". Producer claim → content agent should write the exact
+  // producer words, not promote them to structured facts.
+  /^bez\s+chemick/i,
+  /^chemicky\s+neošetřovan/i,
+  /^nejsou\s+chemicky/i,
+  /^bez\s+pesticid/i,
 ]
 // Keys that duplicate structured DB columns — always drop.
 const DUPLICATE_KEYS: string[] = ['acidity', 'volume', 'volume_ml', 'packaging', 'polyphenols', 'origin', 'country', 'region']
