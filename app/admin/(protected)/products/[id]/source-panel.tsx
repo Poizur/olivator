@@ -44,8 +44,9 @@ export function SourcePanel({ productId, sourceUrl, rawDescriptionLength }: Sour
         data.filled.length > 0
           ? `Doplněno: ${data.filled.join(', ')}`
           : 'Žádná nová data — existující záznam je kompletní'
+      const flavorMsg = data.flavorReasoning ? ` | chuť: ${data.flavorReasoning}` : ''
       setStatus(
-        `✓ ${filledMsg} | raw_description ${data.rawDescriptionLength} znaků | ${data.factsCount} faktů | galerie ${data.galleryCount}`
+        `✓ ${filledMsg} | raw_description ${data.rawDescriptionLength} znaků | ${data.factsCount} faktů | galerie ${data.galleryCount}${flavorMsg}`
       )
       setGallery(data.galleryImages ?? [])
       router.refresh()

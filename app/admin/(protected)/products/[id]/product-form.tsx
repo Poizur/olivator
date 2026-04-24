@@ -352,7 +352,14 @@ export function ProductForm({
       </Section>
 
       {/* Flavor profile */}
-      <Section title="Chuťový profil (0–100)">
+      <Section
+        title="Chuťový profil (0–100)"
+        subtitle="Claude přečte popis produktu a odhadne 7 chuťových os. Můžeš potom ručně dorovnat."
+      >
+        <FlavorAiButton
+          productId={productRow.id as string}
+          onResult={(profile) => setFlavorState({ ...flavorState, ...profile })}
+        />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {FLAVOR_AXES.map(axis => (
             <Field key={axis} label={FLAVOR_LABELS[axis]}>
@@ -582,6 +589,64 @@ function RewriteButton({
               Nebo uprav text ručně před uložením.
             </div>
           )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function FlavorAiButton({
+  productId,
+  onResult,
+}: {
+  productId: string
+  onResult: (profile: Record<string, number>) => void
+}) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [reasoning, setReasoning] = useState<string | null>(null)
+
+  async function onClick() {
+    setLoading(true)
+    setError(null)
+    setReasoning(null)
+    try {
+      const res = await fetch(`/api/admin/products/${productId}/flavor-profile`, {
+        method: 'POST',
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'AI flavor selhal')
+      onResult(data.flavorProfile)
+      setReasoning(data.reasoning || null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Chyba')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-3 mb-4 flex-wrap">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={loading}
+        className="bg-olive text-white rounded-full px-4 py-1.5 text-[13px] font-medium hover:bg-olive-dark disabled:opacity-40 transition-colors"
+      >
+        {loading ? '✨ Odhaduji chuť...' : '✨ Spočítat automaticky'}
+      </button>
+      <span className="text-[11px] text-text3 leading-tight flex-1">
+        Claude přečte popis produktu z e-shopu + parametry (odrůda, polyfenoly, původ) a odhadne
+        7 chuťových os. Uloží se hned do DB.
+      </span>
+      {error && (
+        <span className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded px-2 py-0.5">
+          ⚠ {error}
+        </span>
+      )}
+      {reasoning && (
+        <div className="basis-full text-[12px] text-olive-dark bg-olive-bg border border-olive-border rounded-lg px-3 py-2">
+          <strong>AI vysvětlení:</strong> {reasoning}
         </div>
       )}
     </div>

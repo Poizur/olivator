@@ -4,8 +4,9 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { scrapeProductPage } from '@/lib/product-scraper'
 import { applyRescrapePatch, updateProductFacts } from '@/lib/data'
 import { extractFactsFromText } from '@/lib/fact-extractor'
+import { estimateFlavorProfile } from '@/lib/flavor-agent'
 
-export const maxDuration = 45
+export const maxDuration = 60 // adds ~5-8s for flavor estimation
 
 /** Re-scrape product from stored source_url. Fills only NULL fields (preserves manual edits).
  *  Also refreshes extracted_facts from fresh raw_description. */
@@ -64,10 +65,38 @@ export async function POST(
       }
     }
 
+    // Auto-estimate flavor profile from fresh raw text (best moment — user just got specific data)
+    let flavorReasoning: string | null = null
+    if (scraped.rawDescription && scraped.rawDescription.length > 30) {
+      try {
+        const flavor = await estimateFlavorProfile({
+          name: scraped.name ?? '',
+          rawDescription: scraped.rawDescription,
+          acidity: scraped.acidity,
+          polyphenols: scraped.polyphenols,
+          originCountry: scraped.originCountry,
+          originRegion: scraped.originRegion,
+          type: scraped.type,
+        })
+        const { fruity, herbal, bitter, spicy, mild, nutty, buttery } = flavor
+        await supabaseAdmin
+          .from('products')
+          .update({
+            flavor_profile: { fruity, herbal, bitter, spicy, mild, nutty, buttery },
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id)
+        flavorReasoning = flavor.reasoning
+      } catch (err) {
+        console.warn('[rescrape] flavor estimation failed:', err)
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       filled,
       factsCount,
+      flavorReasoning,
       galleryCount: scraped.galleryImages.length,
       primaryImage: scraped.imageUrl,
       galleryImages: scraped.galleryImages,
