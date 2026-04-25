@@ -260,6 +260,34 @@ async function callClaude(
   throw lastErr instanceof Error ? lastErr : new Error('Claude API failed')
 }
 
+// Banned phrases Claude refuses to let go of. Detected in output for auto-retry.
+// These MUST match the patterns in content-validator.ts ERROR-level rules.
+const CRITICAL_BANNED_PATTERNS: Array<{ re: RegExp; name: string; suggestion: string }> = [
+  { re: /\bpr[ée]miov\w*/i, name: 'prémiový/prémiové/prémiovou', suggestion: 'použij "dražší", "výrazně dražší", "luxusnější" nebo úplně vypusť' },
+  { re: /mimoř[áa]dn[áaáuéy]\s+kvalit/i, name: 'mimořádná kvalita', suggestion: 'použij konkrétní číslo (polyfenoly, score)' },
+  { re: /v[yý]jime[čc]n[áaéyýí]\s+(chut|kvalit|olej)/i, name: 'výjimečná chuť/olej', suggestion: 'vypusť nebo popiš KONKRÉTNÍ chuť' },
+  { re: /[čc]in[ií]\s+(?:tento\s+)?olej\s+v[yý]jime[čc]n[ýíéa]/i, name: 'činí olej výjimečným', suggestion: 'vypusť — data mluví za sebe' },
+  { re: /šetrn[ěéáýíému]\s+zpracov/i, name: 'šetrné zpracování', suggestion: 'použij "při teplotě do X °C" s konkrétním číslem' },
+  { re: /lehč[ší][íiíí]?\s+st[řr]edomo[řr]sk/i, name: 'lehčí středomořská', suggestion: 'jmenuj konkrétní pokrmy (carpaccio, bruschetta, …)' },
+  { re: /m[íi]stn[íi]ch?\s+(?:řeckých\s+|italských\s+|španělských\s+)?odr[ůu]d/i, name: 'místní odrůdy', suggestion: 'pokud konkrétní odrůdu neznáš, NEzmiňuj' },
+  { re: /\b(?:bio|organic)\s+(?:extra\s+panensk|olivov|olej|certif)/i, name: 'bio olej bez certifikace', suggestion: 'produkt NEMÁ bio certifikát — nikdy "bio"' },
+  { re: /\bbio\s+certifika[cč]/i, name: 'bio certifikace (bez cert v DB)', suggestion: 'ODSTRAŇ úplně, nesmíš psát o bio' },
+]
+
+function detectBannedPhrases(text: string, certifications: string[]): Array<{ name: string; matched: string; suggestion: string }> {
+  const lower = text.toLowerCase()
+  const hits: Array<{ name: string; matched: string; suggestion: string }> = []
+  const hasBio = certifications.some(c => c === 'bio' || c === 'organic')
+
+  for (const { re, name, suggestion } of CRITICAL_BANNED_PATTERNS) {
+    // Skip bio checks if product has bio cert
+    if (name.includes('bio') && hasBio) continue
+    const m = lower.match(re)
+    if (m) hits.push({ name, matched: m[0], suggestion })
+  }
+  return hits
+}
+
 export async function generateProductDescriptions(
   input: ContentInput
 ): Promise<ContentOutput> {
@@ -268,17 +296,37 @@ export async function generateProductDescriptions(
   // First attempt
   let result = await callClaude(client, input)
   let wordCount = countWords(result.longDescription)
+  let bannedHits = detectBannedPhrases(
+    `${result.shortDescription}\n${result.longDescription}`,
+    input.certifications ?? []
+  )
 
-  // Auto-retry ONCE if too short — Claude consistently underdelivers
-  if (wordCount < MIN_LONG_WORDS) {
-    const feedback = `Tvůj předchozí pokus měl pouze ${wordCount} slov v longDescription, ale minimum je ${MIN_LONG_WORDS} (ideál 300-380). Napiš znovu DELŠÍ verzi. Rozveď:
-- 1. odstavec: přidej detail o obalu, zpracování, sklizni
-- 2. odstavec: vysvětli co kyselost a polyfenoly znamenají pro spotřebitele
-- 3. odstavec: přidej 3-5 konkrétních pokrmů s tímto olejem
-- 4. odstavec: popiš specifickou personu kdo ocení právě tento olej
-Nerozvolňuj floskulemi — přidej konkrétní informace.`
-    result = await callClaude(client, input, feedback)
+  // Retry loop: up to 3 attempts if output has banned phrases or too short
+  const maxAttempts = 3
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const needsRetry = wordCount < MIN_LONG_WORDS || bannedHits.length > 0
+    if (!needsRetry) break
+
+    const feedbackParts: string[] = []
+    if (bannedHits.length > 0) {
+      feedbackParts.push('══ TVŮJ PŘEDCHOZÍ POKUS OBSAHUJE ZAKÁZANÉ FRÁZE ══')
+      feedbackParts.push('Nesmíš je ZNOVU použít v novém pokusu:')
+      for (const h of bannedHits) {
+        feedbackParts.push(`❌ "${h.matched}" — problém: ${h.name}. Oprava: ${h.suggestion}`)
+      }
+      feedbackParts.push('')
+      feedbackParts.push('Přepiš CELÝ text bez těchto frází. Ani v parafrázi.')
+    }
+    if (wordCount < MIN_LONG_WORDS) {
+      feedbackParts.push(`Délka: měl jsi ${wordCount} slov, minimum je ${MIN_LONG_WORDS}. Rozveď konkrétními daty, ne vatou.`)
+    }
+
+    result = await callClaude(client, input, feedbackParts.join('\n'))
     wordCount = countWords(result.longDescription)
+    bannedHits = detectBannedPhrases(
+      `${result.shortDescription}\n${result.longDescription}`,
+      input.certifications ?? []
+    )
   }
 
   return result

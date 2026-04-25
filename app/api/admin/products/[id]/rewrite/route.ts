@@ -77,6 +77,24 @@ export async function POST(
     const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim()
     const normalizedFull = normalize(fullText)
     const stopwords = /^(pro|od|do|bez|bez chem|s|v|na|za|ve|či|dle)$/
+
+    // Czech stem match: "mechanický" matches "mechanicky" / "mechanického" / "mechanickou"
+    // Strategy: for each content word, strip common Czech inflection endings (ý/í/á/é/ou/ího/…)
+    // to get a stem, then check if that stem is a prefix of any word in the text.
+    const stemOf = (word: string): string => {
+      const w = word.toLowerCase()
+      // Strip longest-matching suffix first
+      const suffixes = ['ního', 'ními', 'ějším', 'ěmi', 'ého', 'ému', 'ými', 'ím', 'ích', 'ými', 'ou', 'ý', 'á', 'é', 'í', 'ě', 'y', 'a', 'e', 'u', 'i', 'o']
+      for (const sfx of suffixes) {
+        if (w.length - sfx.length >= 4 && w.endsWith(sfx)) {
+          return w.slice(0, -sfx.length)
+        }
+      }
+      return w
+    }
+    const textTokens = fullText.split(/[\s,.\-:;!?"“”()]+/).filter(t => t.length > 2)
+    const textStems = new Set(textTokens.map(stemOf))
+
     for (const fact of facts.filter(f => f.importance === 'high')) {
       const value = normalize(fact.value)
       // 1. contiguous phrase match
@@ -85,18 +103,22 @@ export async function POST(
       const numbers = value.match(/\d+/g) ?? []
       if (numbers.length > 0) {
         const allNumbersPresent = numbers.every(n => {
-          // require digit to appear adjacent to a recognized unit or boundary
           const re = new RegExp(`\\b${n}\\b\\s*(?:°c|hodin|mez|mg|%|ks|ml|l)?`, 'i')
           return re.test(fullText)
         })
         if (allNumbersPresent) continue
       }
-      // 3. content-word token fallback
+      // 3. stem-based content-word matching (handles Czech inflection)
       const valueTokens = value
         .split(/\s+/)
         .filter(t => t.length > 3 && !stopwords.test(t))
-      const hasContentToken = valueTokens.some(t => fullText.includes(t))
-      if (hasContentToken) continue
+      const hasStemMatch = valueTokens.some(t => {
+        const stem = stemOf(t)
+        if (stem.length < 4) return false
+        // Check if any text word shares this stem prefix
+        return textStems.has(stem) || textTokens.some(tt => tt.startsWith(stem))
+      })
+      if (hasStemMatch) continue
 
       validation.issues.push({
         severity: 'warning',

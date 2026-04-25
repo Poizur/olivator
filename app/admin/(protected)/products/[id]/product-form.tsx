@@ -401,7 +401,7 @@ export function ProductForm({
         </div>
       )}
 
-      <div className="flex gap-2 sticky bottom-4 bg-white border border-off2 rounded-[var(--radius-card)] p-4 shadow-sm">
+      <div className="flex items-center gap-2 sticky bottom-4 bg-white border border-off2 rounded-[var(--radius-card)] p-4 shadow-sm flex-wrap">
         <button
           type="submit"
           disabled={saving}
@@ -409,14 +409,38 @@ export function ProductForm({
         >
           {saving ? 'Ukládám...' : 'Uložit změny'}
         </button>
+        {status !== 'active' && (
+          <button
+            type="button"
+            disabled={saving}
+            onClick={async () => {
+              if (!confirm('Uložit a okamžitě publikovat na webu (status → Aktivní)?')) return
+              setStatus('active')
+              // Submit form after state update
+              setTimeout(() => {
+                const form = document.querySelector('form')
+                if (form) form.requestSubmit()
+              }, 0)
+            }}
+            className="bg-terra text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+          >
+            ⚡ Uložit & publikovat
+          </button>
+        )}
         <button
           type="button"
           onClick={() => router.push('/admin/products')}
-          className="bg-off text-text rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-off2 transition-colors"
+          className="bg-off text-text rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-off2 transition-colors ml-auto"
         >
           Zpět na seznam
         </button>
       </div>
+      {status === 'draft' && success && (
+        <div className="text-[12px] text-terra bg-terra-bg border border-terra/30 rounded-lg px-3 py-2 mt-2">
+          ⚠ Uloženo jako <strong>Draft</strong> — produkt zatím NENÍ na webu.
+          Pro zveřejnění klikni výše na <strong>⚡ Uložit & publikovat</strong>.
+        </div>
+      )}
     </form>
   )
 }
