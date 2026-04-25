@@ -409,38 +409,10 @@ export function ProductForm({
         >
           {saving ? 'Ukládám...' : 'Uložit změny'}
         </button>
-        {status !== 'active' && (
-          <button
-            type="button"
-            disabled={saving}
-            onClick={async () => {
-              if (!confirm('Uložit a okamžitě publikovat na webu (status → Aktivní)?')) return
-              setStatus('active')
-              // Submit form after state update
-              setTimeout(() => {
-                const form = document.querySelector('form')
-                if (form) form.requestSubmit()
-              }, 0)
-            }}
-            className="bg-terra text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
-          >
-            ⚡ Uložit & publikovat
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => router.push('/admin/products')}
-          className="bg-off text-text rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-off2 transition-colors ml-auto"
-        >
-          Zpět na seznam
-        </button>
+        <span className="text-[11px] text-text3 ml-2">
+          Akce <strong>⚡ Publikovat</strong> / <strong>👁 Zobrazit</strong> / <strong>← Zpět</strong> najdeš nahoře vpravo
+        </span>
       </div>
-      {status === 'draft' && success && (
-        <div className="text-[12px] text-terra bg-terra-bg border border-terra/30 rounded-lg px-3 py-2 mt-2">
-          ⚠ Uloženo jako <strong>Draft</strong> — produkt zatím NENÍ na webu.
-          Pro zveřejnění klikni výše na <strong>⚡ Uložit & publikovat</strong>.
-        </div>
-      )}
     </form>
   )
 }

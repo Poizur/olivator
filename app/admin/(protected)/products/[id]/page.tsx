@@ -8,6 +8,7 @@ import { ImagePanel } from './image-panel'
 import { FactsPanel, type ExtractedFact } from './facts-panel'
 import { SourcePanel } from './source-panel'
 import { GalleryManager } from './gallery-manager'
+import { StatusActions } from './status-actions'
 
 async function getProductRow(id: string) {
   const { data, error } = await supabaseAdmin
@@ -62,22 +63,17 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
             {!isPublic && (
               <span className="text-text3 text-[11px]">
                 {status === 'draft'
-                  ? '— přepni status na "Aktivní" aby byl produkt na webu'
-                  : '— není zobrazen na webu'}
+                  ? '— produkt zatím není na webu, klikni "⚡ Publikovat" vpravo'
+                  : '— produkt byl stažen z webu'}
               </span>
             )}
           </div>
         </div>
-        <a
-          href={publicUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 bg-olive text-white rounded-full px-5 py-2.5 text-sm font-medium hover:bg-olive-dark transition-colors"
-          title={isPublic ? 'Otevřít produkt na webu (nové okno)' : 'Produkt není aktivní — uvidíš náhled, ale pro veřejnost není dostupný'}
-        >
-          👁 Zobrazit na webu
-          <span className="text-[11px] opacity-70">↗</span>
-        </a>
+        <StatusActions
+          productId={id}
+          currentStatus={status}
+          publicUrl={publicUrl}
+        />
       </div>
 
       <div className="space-y-6">
