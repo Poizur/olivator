@@ -58,7 +58,9 @@ export function ProductForm({
   const [name, setName] = useState(String(productRow.name ?? ''))
   const [slug, setSlug] = useState(String(productRow.slug ?? ''))
   const [nameShort, setNameShort] = useState(String(productRow.name_short ?? ''))
-  const [status, setStatus] = useState(String(productRow.status ?? 'draft'))
+  // Status is NOT tracked in form state — it's managed by StatusActions component (top right)
+  // via PATCH endpoint. Form save would otherwise overwrite status changes made there.
+  const currentStatus = String(productRow.status ?? 'draft')
   const [descriptionShort, setDescShort] = useState(String(productRow.description_short ?? ''))
   const [descriptionLong, setDescLong] = useState(String(productRow.description_long ?? ''))
 
@@ -115,7 +117,7 @@ export function ProductForm({
         name,
         slug,
         nameShort: nameShort || undefined,
-        status,
+        status: currentStatus,
         descriptionShort: descriptionShort || undefined,
         descriptionLong: descriptionLong || undefined,
         originCountry: originCountry || undefined,
@@ -170,25 +172,16 @@ export function ProductForm({
               Nemají ho malí farmáři a boutique produkty — nech prázdné
             </div>
           </Field>
-          <Field label="Status">
-            <select value={status} onChange={e => setStatus(e.target.value)} className={inputCls}>
-              <option value="draft">Draft (ke schválení)</option>
-              <option value="active">Aktivní (na webu)</option>
-              <option value="inactive">Neaktivní</option>
-            </select>
-          </Field>
           <Field label="Olivator Score">
             <Input value={olivatorScore} onChange={setScore} type="number" />
-          </Field>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Název" required>
-            <Input value={name} onChange={setName} required />
           </Field>
           <Field label="Slug (URL)" required>
             <Input value={slug} onChange={setSlug} required />
           </Field>
         </div>
+        <Field label="Název" required>
+          <Input value={name} onChange={setName} required />
+        </Field>
         <Field label="Krátký název (compare bar)">
           <Input value={nameShort} onChange={setNameShort} placeholder="Gaea Fresh" />
         </Field>
