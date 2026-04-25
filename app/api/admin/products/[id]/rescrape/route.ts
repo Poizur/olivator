@@ -65,24 +65,38 @@ export async function POST(
 
     // ── 3. Save gallery URLs (no download — admin picks what to keep) ──
     if (scraped.galleryImages.length > 0) {
-      // Delete existing scraped images for this product (keep manually-uploaded by source='manual')
+      // Delete only candidates from previous rescrape — keep approved (scraper) and manual rows.
       await supabaseAdmin
         .from('product_images')
         .delete()
         .eq('product_id', id)
         .eq('source', 'scraper_candidate')
 
-      const rows = scraped.galleryImages.map((img, i) => ({
-        product_id: id,
-        url: img.url,
-        alt_text: img.alt,
-        is_primary: i === 0,
-        sort_order: i,
-        source: 'scraper_candidate', // not yet downloaded — admin must approve
-      }))
-      const { error: imgErr } = await supabaseAdmin.from('product_images').insert(rows)
-      if (imgErr) failures.push(`galerie: ${imgErr.message}`)
-      else steps.push(`galerie ${rows.length} fotek uloženo (čeká na výběr)`)
+      // Skip URLs that already exist as approved/manual rows — would create duplicates.
+      const { data: existingRows } = await supabaseAdmin
+        .from('product_images')
+        .select('url')
+        .eq('product_id', id)
+      const existingUrls = new Set((existingRows ?? []).map(r => r.url as string))
+      // Also handle Supabase Storage URLs that originated from these CDN URLs (rough match by filename)
+      const newCandidates = scraped.galleryImages.filter(img => !existingUrls.has(img.url))
+
+      if (newCandidates.length > 0) {
+        const rows = newCandidates.map((img, i) => ({
+          product_id: id,
+          url: img.url,
+          alt_text: img.alt,
+          // Don't set is_primary — admin's previous primary stays as-is
+          is_primary: false,
+          sort_order: 100 + i, // candidates after approved rows
+          source: 'scraper_candidate', // not yet downloaded — admin must approve
+        }))
+        const { error: imgErr } = await supabaseAdmin.from('product_images').insert(rows)
+        if (imgErr) failures.push(`galerie: ${imgErr.message}`)
+        else steps.push(`galerie +${rows.length} kandidátů (${existingUrls.size} už schválených)`)
+      } else {
+        steps.push(`galerie ${existingUrls.size} už schválených (žádní noví kandidáti)`)
+      }
     }
 
     // ── 4. Facts (Haiku) ────────────────────────────────────────────────
