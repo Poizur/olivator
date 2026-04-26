@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getProducts, getProductBySlug, getOffersForProduct } from '@/lib/data'
+import { getProducts, getProductBySlug, getOffersForProduct, getProductGallery } from '@/lib/data'
 import { countryFlag, countryName, typeLabel, certLabel, formatPrice, formatPricePer100ml } from '@/lib/utils'
 import { productSchema, breadcrumbSchema, faqSchema } from '@/lib/schema'
 import { generateProductFAQ } from '@/lib/product-faq'
@@ -9,7 +9,7 @@ import { ScoreSection } from '@/components/score-section'
 import { FlavorWheel } from '@/components/flavor-wheel'
 import { PriceTable } from '@/components/price-table'
 import { AffiliateLink } from '@/components/affiliate-link'
-import { ProductImage } from '@/components/product-image'
+import { ProductGallery } from '@/components/product-gallery'
 import { ProductActions } from './product-actions'
 
 export async function generateStaticParams() {
@@ -65,7 +65,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const product = await getProductBySlug(slug)
   if (!product) notFound()
 
-  const offers = await getOffersForProduct(product.id)
+  const [offers, gallery] = await Promise.all([
+    getOffersForProduct(product.id),
+    getProductGallery(product.id),
+  ])
   const cheapest = offers[0]
 
   // Transparent spec table — missing data shown as "— nezveřejněno" in italics
@@ -163,30 +166,25 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-14 items-start mb-14">
-        {/* Left — image */}
-        <div className="sticky top-[72px]">
-          <div className="bg-off rounded-[var(--radius-card)] h-[380px] flex items-center justify-center relative mb-4 overflow-hidden p-8">
-            <ProductImage product={product} fallbackSize="text-[120px]" sizes="(max-width: 768px) 100vw, 500px" />
-            <div className="absolute top-4 right-4 bg-terra text-white text-sm font-bold px-4 py-2 rounded-full flex items-center gap-1.5">
+        {/* Left — gallery */}
+        <ProductGallery
+          productName={product.name}
+          fallbackImageUrl={product.imageUrl}
+          galleryImages={gallery.map(g => ({
+            id: g.id,
+            url: g.url,
+            altText: g.altText,
+            isPrimary: g.isPrimary,
+          }))}
+          scoreBadge={
+            <div className="bg-terra text-white text-sm font-bold px-4 py-2 rounded-full flex items-center gap-1.5 shadow-md">
               <svg width="13" height="13" fill="#fff" viewBox="0 0 24 24">
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
               </svg>
               Score {product.olivatorScore}
             </div>
-          </div>
-          <div className="flex gap-2">
-            {['🫒', '📋', '🌿'].map((e, i) => (
-              <div
-                key={i}
-                className={`w-16 h-16 bg-off rounded-lg border-[1.5px] flex items-center justify-center text-2xl cursor-pointer transition-colors ${
-                  i === 0 ? 'border-olive' : 'border-off2 hover:border-olive'
-                }`}
-              >
-                {e}
-              </div>
-            ))}
-          </div>
-        </div>
+          }
+        />
 
         {/* Right — info */}
         <div>

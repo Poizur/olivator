@@ -451,6 +451,34 @@ export async function deleteProduct(id: string) {
   if (error) throw error
 }
 
+// ── Gallery images (approved only — for public product pages) ────────
+
+export interface GalleryImage {
+  id: string
+  url: string
+  altText: string | null
+  isPrimary: boolean
+  sortOrder: number
+}
+
+export async function getProductGallery(productId: string): Promise<GalleryImage[]> {
+  const { data, error } = await supabaseAdmin
+    .from('product_images')
+    .select('id, url, alt_text, is_primary, sort_order, source')
+    .eq('product_id', productId)
+    .neq('source', 'scraper_candidate') // only show approved + manual
+    .order('is_primary', { ascending: false }) // primary first
+    .order('sort_order', { ascending: true })
+  if (error) throw error
+  return (data ?? []).map(r => ({
+    id: r.id as string,
+    url: r.url as string,
+    altText: (r.alt_text as string) ?? null,
+    isPrimary: (r.is_primary as boolean) ?? false,
+    sortOrder: (r.sort_order as number) ?? 0,
+  }))
+}
+
 // ── Rescrape: partial update from scraper (fills only NULL fields + refreshes source) ──
 
 export interface RescrapePatch {
