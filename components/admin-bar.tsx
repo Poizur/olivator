@@ -46,9 +46,16 @@ export async function AdminBar() {
 
   return (
     <>
+      {/* Push sticky Nav and any sticky elements below the admin bar.
+          AdminBar is fixed (out of flow) so a manual offset is needed.
+          Targets Nav (sticky top-0 z-50) and product page sticky panels. */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        nav.sticky { top: 2.25rem !important; }
+        .sticky.top-\\[72px\\] { top: 6.5rem !important; }
+      ` }} />
       {/* Spacer so content isn't hidden behind fixed bar */}
       <div aria-hidden className="h-9" />
-      <div className="fixed top-0 left-0 right-0 z-50 bg-text text-white text-[12px] font-medium border-b border-black/20 shadow-sm">
+      <div className="fixed top-0 left-0 right-0 z-[60] bg-text text-white text-[12px] font-medium border-b border-black/20 shadow-sm">
         <div className="max-w-[1280px] mx-auto px-5 h-9 flex items-center gap-1 overflow-x-auto whitespace-nowrap">
           <span className="text-[13px] mr-2">🌿 Olivator Admin</span>
           <span className="opacity-30">|</span>
