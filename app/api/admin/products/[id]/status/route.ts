@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { revalidateProduct } from '@/lib/revalidate'
 
 /** Quick status change without going through full form save. */
 export async function PATCH(
@@ -24,6 +25,7 @@ export async function PATCH(
       .eq('id', id)
     if (error) throw error
 
+    await revalidateProduct(id)
     return NextResponse.json({ ok: true, status })
   } catch (err) {
     console.error('[status PATCH]', err)

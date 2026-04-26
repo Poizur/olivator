@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { downloadGalleryImage, detectImageRole, ensureProductsBucket } from '@/lib/product-image'
+import { revalidateProduct } from '@/lib/revalidate'
 
 export const maxDuration = 90 // up to 25 images × ~3s each
 
@@ -145,6 +146,9 @@ export async function PUT(
 
     const downloaded = downloadResults.filter(r => r.ok && r.filename).length
     const failed = downloadResults.filter(r => !r.ok)
+
+    // Revalidate public pages so changes show up immediately on /olej/[slug]
+    await revalidateProduct(id)
 
     return NextResponse.json({
       ok: true,

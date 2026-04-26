@@ -9,6 +9,7 @@ import { generateProductDescriptions } from '@/lib/content-agent'
 import { calculateScore } from '@/lib/score'
 import { deriveUseCases } from '@/lib/use-case-deriver'
 import { countryName } from '@/lib/utils'
+import { revalidateProduct } from '@/lib/revalidate'
 
 export const maxDuration = 90 // full pipeline: scrape + facts + flavor + rewrite + score
 
@@ -258,6 +259,8 @@ export async function POST(
       .from('products')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', id)
+
+    await revalidateProduct(id)
 
     return NextResponse.json({
       ok: true,

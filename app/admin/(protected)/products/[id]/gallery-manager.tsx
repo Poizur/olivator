@@ -30,6 +30,18 @@ export function GalleryManager({ productId }: { productId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId])
 
+  // Listen for global form save event — save gallery selection together with product form.
+  // ProductForm dispatches 'product-form-saved' after successful PUT.
+  useEffect(() => {
+    const handler = () => {
+      // Only save if there are unsaved decisions (kept set differs from approved DB state)
+      void onSave()
+    }
+    window.addEventListener('product-form-saved', handler)
+    return () => window.removeEventListener('product-form-saved', handler)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keep, primaryId, images])
+
   async function loadImages() {
     setLoading(true)
     try {
@@ -242,25 +254,23 @@ export function GalleryManager({ productId }: { productId: string }) {
         </div>
       )}
 
-      <div className="mt-6 flex items-center gap-3 flex-wrap">
-        <button
-          type="button"
-          onClick={onSave}
-          disabled={saving}
-          className="bg-olive text-white rounded-full px-5 py-2 text-[13px] font-medium hover:bg-olive-dark disabled:opacity-40 transition-colors"
-        >
-          {saving ? 'Ukládám...' : `✓ Uložit výběr (${keep.size})`}
-        </button>
-        <span className="text-[11px] text-text3">
-          Nezaškrtnuté se smažou. Hlavní = označená hvězdičkou ★
+      <div className="mt-6 flex items-center gap-3 flex-wrap text-[11px] text-text3">
+        <span>
+          <strong className="text-text">Vybráno: {keep.size}</strong> &middot; Nezaškrtnuté se smažou při ukládání &middot;
+          Hlavní = označená hvězdičkou ★ &middot; Ukládá se s formulářem (💾 Uložit změny nahoře)
         </span>
+        {saving && (
+          <span className="text-olive-dark bg-olive-bg border border-olive-border rounded px-2 py-1">
+            Ukládám galerii...
+          </span>
+        )}
         {status && (
-          <span className="text-[11px] text-olive-dark bg-olive-bg border border-olive-border rounded px-2 py-1">
+          <span className="text-olive-dark bg-olive-bg border border-olive-border rounded px-2 py-1">
             {status}
           </span>
         )}
         {error && (
-          <span className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
+          <span className="text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
             ⚠ {error}
           </span>
         )}

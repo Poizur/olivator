@@ -3,6 +3,7 @@ import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { scanLabReport } from '@/lib/lab-report-agent'
 import { calculateScore } from '@/lib/score'
+import { revalidateProduct } from '@/lib/revalidate'
 
 export const maxDuration = 45
 
@@ -105,6 +106,8 @@ export async function POST(
       newScore = score.total
       scoreBreakdown = score.breakdown
     }
+
+    if (filled.length > 0) await revalidateProduct(id)
 
     return NextResponse.json({
       ok: true,

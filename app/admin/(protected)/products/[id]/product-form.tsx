@@ -151,6 +151,9 @@ export function ProductForm({
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error || 'Uložení selhalo')
       }
+      // Notify gallery (and any other panels listening) to save themselves
+      // as part of the unified "Uložit změny" action.
+      window.dispatchEvent(new CustomEvent('product-form-saved'))
       setSuccess(true)
       router.refresh()
       setTimeout(() => setSuccess(false), 2500)

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { updateProduct, deleteProduct } from '@/lib/data'
+import { revalidateProduct } from '@/lib/revalidate'
 
 export async function PUT(
   request: NextRequest,
@@ -13,6 +14,7 @@ export async function PUT(
     const { id } = await params
     const body = await request.json()
     await updateProduct(id, body)
+    await revalidateProduct(id)
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('[admin/products PUT]', err)
