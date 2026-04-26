@@ -451,6 +451,128 @@ export async function deleteProduct(id: string) {
   if (error) throw error
 }
 
+// ── Editable FAQs ─────────────────────────────────────────────────────
+
+export interface GeneralFAQ {
+  id: string
+  question: string
+  answer: string
+  sortOrder: number
+  isActive: boolean
+  category: string
+}
+
+export async function getActiveGeneralFAQs(): Promise<GeneralFAQ[]> {
+  const { data, error } = await supabaseAdmin
+    .from('general_faqs')
+    .select('id, question, answer, sort_order, is_active, category')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+  if (error) {
+    // If table doesn't exist yet (migration not run), gracefully return [].
+    if (error.code === '42P01' || error.code === 'PGRST205') return []
+    throw error
+  }
+  return (data ?? []).map(r => ({
+    id: r.id as string,
+    question: r.question as string,
+    answer: r.answer as string,
+    sortOrder: (r.sort_order as number) ?? 0,
+    isActive: (r.is_active as boolean) ?? true,
+    category: (r.category as string) ?? 'general',
+  }))
+}
+
+export async function getAllGeneralFAQs(): Promise<GeneralFAQ[]> {
+  const { data, error } = await supabaseAdmin
+    .from('general_faqs')
+    .select('id, question, answer, sort_order, is_active, category')
+    .order('sort_order', { ascending: true })
+  if (error) {
+    if (error.code === '42P01' || error.code === 'PGRST205') return []
+    throw error
+  }
+  return (data ?? []).map(r => ({
+    id: r.id as string,
+    question: r.question as string,
+    answer: r.answer as string,
+    sortOrder: (r.sort_order as number) ?? 0,
+    isActive: (r.is_active as boolean) ?? true,
+    category: (r.category as string) ?? 'general',
+  }))
+}
+
+export async function upsertGeneralFAQ(input: {
+  id?: string
+  question: string
+  answer: string
+  sortOrder?: number
+  isActive?: boolean
+  category?: string
+}): Promise<{ id: string }> {
+  const payload = {
+    question: input.question,
+    answer: input.answer,
+    sort_order: input.sortOrder ?? 0,
+    is_active: input.isActive ?? true,
+    category: input.category ?? 'general',
+    updated_at: new Date().toISOString(),
+  }
+  if (input.id) {
+    const { error } = await supabaseAdmin.from('general_faqs').update(payload).eq('id', input.id)
+    if (error) throw error
+    return { id: input.id }
+  } else {
+    const { data, error } = await supabaseAdmin
+      .from('general_faqs')
+      .insert(payload)
+      .select('id')
+      .single()
+    if (error) throw error
+    return { id: data!.id as string }
+  }
+}
+
+export async function deleteGeneralFAQ(id: string): Promise<void> {
+  const { error } = await supabaseAdmin.from('general_faqs').delete().eq('id', id)
+  if (error) throw error
+}
+
+export interface CustomFAQ {
+  question: string
+  answer: string
+  source: 'auto' | 'manual'
+}
+
+export async function getProductCustomFAQs(productId: string): Promise<CustomFAQ[]> {
+  const { data, error } = await supabaseAdmin
+    .from('products')
+    .select('custom_faqs')
+    .eq('id', productId)
+    .maybeSingle()
+  if (error) {
+    if (error.code === '42703' || error.code === 'PGRST204') return []
+    throw error
+  }
+  const raw = data?.custom_faqs
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((r): r is CustomFAQ => typeof r === 'object' && r !== null && typeof (r as CustomFAQ).question === 'string')
+    .map(r => ({
+      question: r.question,
+      answer: r.answer ?? '',
+      source: (r as CustomFAQ).source ?? 'manual',
+    }))
+}
+
+export async function setProductCustomFAQs(productId: string, faqs: CustomFAQ[]): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('products')
+    .update({ custom_faqs: faqs, updated_at: new Date().toISOString() })
+    .eq('id', productId)
+  if (error) throw error
+}
+
 // ── Gallery images (approved only — for public product pages) ────────
 
 export interface GalleryImage {

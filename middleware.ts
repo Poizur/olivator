@@ -44,27 +44,33 @@ async function isValidSession(cookieValue: string | undefined, secret: string): 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  if (!pathname.startsWith('/admin')) return NextResponse.next()
-  if (pathname === '/admin/login' || pathname === '/api/admin/login') {
-    return NextResponse.next()
+  // Pass pathname through a header so server components (incl. AdminBar in
+  // root layout) can read it without prop drilling. Set on every request.
+  const requestHeaders = new Headers(request.headers)
+  requestHeaders.set('x-pathname', pathname)
+
+  // Admin route protection
+  if (pathname.startsWith('/admin') && pathname !== '/admin/login' && !pathname.startsWith('/api/admin/login')) {
+    const secret = process.env.ADMIN_SECRET_KEY
+    if (!secret) {
+      return new NextResponse('ADMIN_SECRET_KEY not configured', { status: 500 })
+    }
+    const cookie = request.cookies.get(COOKIE_NAME)
+    const valid = await isValidSession(cookie?.value, secret)
+    if (!valid) {
+      const loginUrl = new URL('/admin/login', request.url)
+      loginUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
   }
 
-  const secret = process.env.ADMIN_SECRET_KEY
-  if (!secret) {
-    return new NextResponse('ADMIN_SECRET_KEY not configured', { status: 500 })
-  }
-
-  const cookie = request.cookies.get(COOKIE_NAME)
-  const valid = await isValidSession(cookie?.value, secret)
-  if (!valid) {
-    const loginUrl = new URL('/admin/login', request.url)
-    loginUrl.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(loginUrl)
-  }
-
-  return NextResponse.next()
+  return NextResponse.next({
+    request: { headers: requestHeaders },
+  })
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  // Match all pages except static assets — middleware sets x-pathname header
+  // so AdminBar (rendered in root layout) can know which page we're on.
+  matcher: ['/((?!_next/static|_next/image|favicon|.*\\.(?:webp|jpg|jpeg|png|svg|ico|json|js|css)$).*)'],
 }

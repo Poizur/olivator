@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getProducts, getProductBySlug, getOffersForProduct, getProductGallery } from '@/lib/data'
+import { getProducts, getProductBySlug, getOffersForProduct, getProductGallery, getProductCustomFAQs, getActiveGeneralFAQs } from '@/lib/data'
 import { countryFlag, countryName, typeLabel, certLabel, formatPrice, formatPricePer100ml } from '@/lib/utils'
 import { productSchema, breadcrumbSchema, faqSchema } from '@/lib/schema'
 import { generateProductFAQ } from '@/lib/product-faq'
@@ -65,9 +65,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const product = await getProductBySlug(slug)
   if (!product) notFound()
 
-  const [offers, gallery] = await Promise.all([
+  const [offers, gallery, customFAQs, dbGeneralFAQs] = await Promise.all([
     getOffersForProduct(product.id),
     getProductGallery(product.id),
+    getProductCustomFAQs(product.id),
+    getActiveGeneralFAQs(),
   ])
   const cheapest = offers[0]
 
@@ -127,8 +129,32 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       : [{ key: 'Původ', value: '🌾 Přímo od výrobce', missing: false }]),
   ]
 
-  const productFAQs = generateProductFAQ(product, cheapest ?? null)
-  const generalFAQs = selectGeneralFAQs(product.slug, 5)
+  // Product-specific FAQs:
+  // - If admin saved custom_faqs in DB → use those (admin's edits override defaults)
+  // - Otherwise → use auto-generated template ones
+  const autoFAQs = generateProductFAQ(product, cheapest ?? null)
+  const productFAQs = customFAQs.length > 0
+    ? customFAQs.map(f => ({ question: f.question, answer: f.answer }))
+    : autoFAQs
+
+  // General FAQs:
+  // - If DB has admin-curated entries → use random 5 from those
+  // - Otherwise → fall back to hardcoded GENERAL_FAQS (selectGeneralFAQs)
+  const generalFAQs = dbGeneralFAQs.length > 0
+    ? (() => {
+        // Deterministic shuffle by slug to avoid full duplicate content across products
+        let hash = 0
+        for (let i = 0; i < product.slug.length; i++) hash = ((hash << 5) - hash + product.slug.charCodeAt(i)) | 0
+        const start = Math.abs(hash) % dbGeneralFAQs.length
+        const out = []
+        for (let i = 0; i < Math.min(5, dbGeneralFAQs.length); i++) {
+          const f = dbGeneralFAQs[(start + i) % dbGeneralFAQs.length]
+          out.push({ question: f.question, answer: f.answer })
+        }
+        return out
+      })()
+    : selectGeneralFAQs(product.slug, 5)
+
   // For Schema.org we combine both — Google rewards comprehensive FAQ pages
   const allFAQs = [...productFAQs, ...generalFAQs]
 

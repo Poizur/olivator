@@ -6,6 +6,7 @@ import { Nav } from '@/components/nav'
 import { Footer } from '@/components/footer'
 import { CompareProvider } from '@/lib/compare-context'
 import { CompareBar } from '@/components/compare-bar'
+import { AdminBar } from '@/components/admin-bar'
 import './globals.css'
 
 const playfair = Playfair_Display({
@@ -65,6 +66,7 @@ export default function RootLayout({
   return (
     <html lang="cs" className={`${playfair.variable} ${inter.variable}`}>
       <body className="min-h-screen flex flex-col antialiased">
+        <AdminBar />
         <CompareProvider>
           <Nav />
           <main className="flex-1">{children}</main>

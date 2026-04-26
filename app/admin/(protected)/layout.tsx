@@ -10,6 +10,7 @@ const LINKS = [
   { href: '/admin', label: 'Přehled' },
   { href: '/admin/retailers', label: 'Prodejci' },
   { href: '/admin/products', label: 'Produkty' },
+  { href: '/admin/faq', label: 'FAQ' },
 ]
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
