@@ -64,6 +64,16 @@ export function StatusActions({ productId, currentStatus, publicUrl }: StatusAct
     <div className="flex items-center gap-2 flex-wrap">
       {statusBadge}
 
+      {/* Save form — submits the form rendered below via form="product-form" attribute */}
+      <button
+        type="submit"
+        form="product-form"
+        className="inline-flex items-center gap-2 bg-olive text-white rounded-full px-5 py-2.5 text-sm font-medium hover:bg-olive-dark transition-colors"
+        title="Uložit všechny změny ve formuláři"
+      >
+        💾 Uložit změny
+      </button>
+
       {/* Publish button — visible when not active */}
       {currentStatus !== 'active' && (
         <button

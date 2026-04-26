@@ -162,7 +162,7 @@ export function ProductForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form id="product-form" onSubmit={onSubmit} className="space-y-4">
       {/* Basic */}
       <Section title="Základní údaje">
         <div className="grid grid-cols-3 gap-4">
