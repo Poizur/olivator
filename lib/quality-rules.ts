@@ -392,6 +392,57 @@ async function persistViolations(productId: string, current: RuleViolation[]): P
   }
 }
 
+/** Pre-publish gate. Runs full audit, attempts auto-fix on fixable issues,
+ *  re-runs to see what survived. Returns whether product is safe to activate.
+ *
+ *  Used by:
+ *  - Discovery auto-publish (publishCandidate) — if blocked, leaves draft
+ *  - Manual approve from /admin/discovery — same
+ *  - Status PATCH draft→active in future (currently bypassed for admin override)
+ */
+export async function runPrePublishAudit(productId: string): Promise<{
+  canPublish: boolean
+  blockingErrors: RuleViolation[]
+  warnings: RuleViolation[]
+  autoFixed: string[]
+}> {
+  const initialViolations = await auditProduct(productId, { persist: true })
+  const autoFixed: string[] = []
+
+  // Try auto-fix on every issue that has one
+  const { data: issues } = await supabaseAdmin
+    .from('quality_issues')
+    .select('id, rule_id')
+    .eq('product_id', productId)
+    .eq('status', 'open')
+
+  for (const issue of issues ?? []) {
+    const rule = rules.find(r => r.ruleId === issue.rule_id)
+    if (!rule || !rule.autoFix) continue
+    try {
+      const result = await attemptAutoFix(issue.id as string)
+      if (result.ok) autoFixed.push(issue.rule_id as string)
+    } catch {
+      // continue
+    }
+  }
+
+  // Re-audit after auto-fix attempts
+  const finalViolations = autoFixed.length > 0
+    ? await auditProduct(productId, { persist: true })
+    : initialViolations
+
+  const blockingErrors = finalViolations.filter(v => v.severity === 'error')
+  const warnings = finalViolations.filter(v => v.severity === 'warning')
+
+  return {
+    canPublish: blockingErrors.length === 0,
+    blockingErrors,
+    warnings,
+    autoFixed,
+  }
+}
+
 /** Run auto-fix for a specific issue. Returns success status. */
 export async function attemptAutoFix(issueId: string): Promise<{ ok: boolean; message?: string }> {
   const { data: issue } = await supabaseAdmin

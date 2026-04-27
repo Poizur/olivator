@@ -25,7 +25,7 @@ import { estimateFlavorProfile } from './flavor-agent'
 import { deriveUseCases } from './use-case-deriver'
 import { downloadAndStoreImage } from './product-image'
 import { detectCertificationsInText } from './cert-detector'
-import { auditProduct } from './quality-rules'
+import { auditProduct, runPrePublishAudit } from './quality-rules'
 import { countryName } from './utils'
 
 export type CandidateStatus =
@@ -350,7 +350,8 @@ export async function publishCandidate(
     .update({ use_cases: derived.useCases })
     .eq('id', productId)
 
-  // AI rewrite (Sonnet — most expensive step)
+  // AI rewrite (Sonnet — most expensive step). Saves description but
+  // keeps status='draft' — pre-publish gate decides activation below.
   try {
     const generated = await generateProductDescriptions({
       name: scraped.name,
@@ -371,19 +372,40 @@ export async function publishCandidate(
         description_short: generated.shortDescription,
         description_long: generated.longDescription,
         ai_generated_at: new Date().toISOString(),
-        // Auto-publish — flip to active
-        status: 'active',
       })
       .eq('id', productId)
   } catch (err) {
     console.warn('[discovery] AI rewrite failed, leaving as draft:', err)
   }
 
-  // Run quality audit on the freshly published product so admin sees issues immediately
+  // ── PRE-PUBLISH GATE ──
+  // Run full quality audit + auto-fix. If errors remain, leave product as
+  // draft and surface reasoning in discovery_candidates. Prevents pipeline
+  // from auto-publishing broken products (missing image, bio claim without
+  // cert, etc.). Admin can manually publish anyway via /admin/products.
   try {
-    await auditProduct(productId, { persist: true })
+    const gate = await runPrePublishAudit(productId)
+    if (gate.canPublish) {
+      await supabaseAdmin
+        .from('products')
+        .update({ status: 'active', updated_at: new Date().toISOString() })
+        .eq('id', productId)
+    } else {
+      // Block: stay as draft, log reasons
+      const reasons = gate.blockingErrors.map(e => `${e.ruleId}: ${e.message}`).join(' · ')
+      console.warn(`[discovery] pre-publish gate BLOCKED ${productId}:`, reasons)
+      // Persist reason on product (so admin sees "draft because: ...")
+      await supabaseAdmin
+        .from('products')
+        .update({
+          status: 'draft',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', productId)
+    }
   } catch (err) {
-    console.warn('[discovery] quality audit failed:', err)
+    console.warn('[discovery] pre-publish gate failed:', err)
+    // Conservative: if gate itself errors, leave as draft
   }
 
   return productId
@@ -515,9 +537,31 @@ export async function runDiscoveryAgent(): Promise<DiscoveryRunResult> {
           if (autoPublish && quality.quality === 'high') {
             try {
               resultingProductId = await publishCandidate(scraped, cr.shopSlug, cr.shopDomain)
-              finalStatus = 'auto_published'
-              reasoning = `AUTO-PUBLISHED: ${quality.reasoning}`
-              result.autoPublished++
+              // Verify final status — gate may have blocked publishing
+              const { data: finalProduct } = await supabaseAdmin
+                .from('products')
+                .select('status')
+                .eq('id', resultingProductId)
+                .maybeSingle()
+              if (finalProduct?.status === 'active') {
+                finalStatus = 'auto_published'
+                reasoning = `AUTO-PUBLISHED: ${quality.reasoning}`
+                result.autoPublished++
+              } else {
+                // Pre-publish gate blocked — needs admin review
+                const { data: blockingIssues } = await supabaseAdmin
+                  .from('quality_issues')
+                  .select('rule_id, message')
+                  .eq('product_id', resultingProductId)
+                  .eq('status', 'open')
+                  .eq('severity', 'error')
+                const reasons = (blockingIssues ?? [])
+                  .map(b => b.rule_id as string)
+                  .join(', ')
+                finalStatus = 'needs_review'
+                reasoning = `Pipeline doběhla, ale Quality gate blokoval publish: ${reasons || 'unknown errors'}. Otevři produkt → vyřeš issues → publikuj ručně.`
+                result.needsReview++
+              }
             } catch (err) {
               finalStatus = 'failed'
               reasoning = `Failed during publish: ${err instanceof Error ? err.message : 'unknown'}`
