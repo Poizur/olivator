@@ -96,7 +96,7 @@ export function IssueRow({ issue }: { issue: IssueWithProduct }) {
             disabled={busy !== null}
             className="bg-olive text-white rounded-full px-3 py-1 text-[11px] font-medium hover:bg-olive-dark disabled:opacity-40 transition-colors"
           >
-            {busy === 'auto_fix' ? '...' : '⚡ Auto-fix'}
+            {busy === 'auto_fix' ? '...' : '⚡ Opravit'}
           </button>
         )}
         {issue.status === 'open' && (

@@ -1,8 +1,8 @@
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
-import { DiscoveryRunner } from './discovery-runner'
 import { CandidateRow } from './candidate-row'
 import { DiscoveryQueue } from './discovery-queue'
+import { DiscoveryRunner } from './discovery-runner'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,17 +50,15 @@ export default async function DiscoveryPage() {
       <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
         <div>
           <h1 className="font-[family-name:var(--font-display)] text-3xl text-text mb-1">
-            Discovery
+            Návrhy nových olejů
           </h1>
-          <p className="text-sm text-text3 max-w-[640px]">
-            Agent prochází nakonfigurované e-shopy, hledá nové olivové oleje, dedupne přes EAN/název
-            a buď je auto-publikuje (HIGH confidence) nebo dá do fronty.
-            E-shopy spravuješ v{' '}
+          <p className="text-sm text-text3 max-w-[720px]">
+            Fronta olejů které agent našel na e-shopech a čekají na tvé schválení.
+            Spravuješ je v{' '}
             <Link href="/admin/discovery/sources" className="text-olive hover:underline">
-              📋 Zdroje
+              📋 E-shopech
             </Link>
-            {' '}· Frekvenci v{' '}
-            <Link href="/admin/nastaveni" className="text-olive hover:underline">Nastavení</Link>.
+            .
           </p>
         </div>
         <DiscoveryRunner />
@@ -70,8 +68,8 @@ export default async function DiscoveryPage() {
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
         <Stat label="Celkem" value={all.length} color="text" />
         <Stat label="Ke schválení" value={needsReview.length} color="terra" />
-        <Stat label="Auto-publikované" value={autoPublished.length} color="olive" />
-        <Stat label="Nové offers" value={autoAdded.length} color="olive" />
+        <Stat label="Automaticky publikované" value={autoPublished.length} color="olive" />
+        <Stat label="Nové ceny" value={autoAdded.length} color="olive" />
         <Stat label="Schválené" value={approved.length} color="olive" />
         <Stat label="Zamítnuté" value={rejected.length + failed.length} color="text3" />
       </div>
@@ -81,7 +79,7 @@ export default async function DiscoveryPage() {
       )}
 
       {autoPublished.length > 0 && (
-        <Section title={`✅ Auto-publikováno (${autoPublished.length})`} subtle>
+        <Section title={`✅ Automaticky publikováno (${autoPublished.length})`} subtle>
           <div className="space-y-2">
             {autoPublished.slice(0, 20).map(c => <CandidateRow key={c.id} candidate={c as never} />)}
           </div>
@@ -89,7 +87,7 @@ export default async function DiscoveryPage() {
       )}
 
       {autoAdded.length > 0 && (
-        <Section title={`🔗 Nové nabídky pro existující (${autoAdded.length})`} subtle>
+        <Section title={`🔗 Nové ceny u existujících olejů (${autoAdded.length})`} subtle>
           <div className="space-y-2">
             {autoAdded.slice(0, 20).map(c => <CandidateRow key={c.id} candidate={c as never} />)}
           </div>
@@ -110,10 +108,10 @@ export default async function DiscoveryPage() {
       {all.length === 0 && (
         <div className="bg-white border border-off2 rounded-lg p-8 text-center">
           <div className="text-2xl mb-2">🤖</div>
-          <div className="text-sm text-text2 mb-4">Discovery agent ještě nikdy neběžel.</div>
+          <div className="text-sm text-text2 mb-4">Agent ještě nehledal nové oleje.</div>
           <p className="text-xs text-text3">
-            Klikni nahoře na <strong>🚀 Spustit Discovery</strong> pro manuální test, nebo počkej
-            na pondělí 4:00 UTC kdy běží automaticky (cron schedule v Nastavení).
+            Klikni nahoře na <strong>🚀 Najít nové oleje</strong> nebo nastav týdenní automatické
+            spouštění v Nastavení.
           </p>
         </div>
       )}

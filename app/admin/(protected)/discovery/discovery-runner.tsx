@@ -71,7 +71,7 @@ export function DiscoveryRunner() {
   }, [])
 
   async function onRun() {
-    if (!confirm('Spustit Discovery agent? Trvá 5-20 min podle počtu nových produktů.')) return
+    if (!confirm('Najít nové oleje na všech aktivních e-shopech? Trvá 5–20 min podle počtu produktů.')) return
     setRunning(true)
     setResult(null)
     setError(null)
@@ -80,14 +80,14 @@ export function DiscoveryRunner() {
     try {
       const res = await fetch('/api/admin/discovery/run', { method: 'POST' })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Discovery selhal')
+      if (!res.ok) throw new Error(data.error || 'Hledání selhalo')
       setResult(data as RunResult)
       router.refresh()
     } catch (err) {
       // Better error message
       let msg = err instanceof Error ? err.message : 'Chyba'
       if (msg.includes('did not match the expected pattern')) {
-        msg = 'Některá URL nebyla validní (parsing error). Discovery běžel dál — počkej + Cmd+R, uvidíš co se uložilo.'
+        msg = 'Některá URL nebyla validní. Hledání běželo dál — počkej + Cmd+R, uvidíš co se uložilo.'
       }
       setError(msg)
     } finally {
@@ -110,7 +110,7 @@ export function DiscoveryRunner() {
         disabled={running}
         className="bg-olive text-white rounded-full px-5 py-2.5 text-sm font-medium hover:bg-olive-dark disabled:opacity-40 transition-colors"
       >
-        {running ? `⏳ Hledám... ${formatElapsed(elapsed)}` : '🚀 Spustit Discovery'}
+        {running ? `⏳ Hledám... ${formatElapsed(elapsed)}` : '🚀 Najít nové oleje'}
       </button>
 
       {/* Live progress while running */}
@@ -122,10 +122,10 @@ export function DiscoveryRunner() {
           </div>
           <div className="grid grid-cols-2 gap-1 text-[11px] text-text2">
             {progress.auto_published > 0 && (
-              <div>✅ <strong>{progress.auto_published}</strong> auto-publikováno</div>
+              <div>✅ <strong>{progress.auto_published}</strong> automaticky publikováno</div>
             )}
             {progress.auto_added_offer > 0 && (
-              <div>🔗 <strong>{progress.auto_added_offer}</strong> nová nabídka</div>
+              <div>🔗 <strong>{progress.auto_added_offer}</strong> nových cen</div>
             )}
             {progress.needs_review > 0 && (
               <div>⏳ <strong>{progress.needs_review}</strong> ke schválení</div>

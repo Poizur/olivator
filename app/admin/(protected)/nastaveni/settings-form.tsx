@@ -65,7 +65,7 @@ export function SettingsForm({ initialValues, defs }: SettingsFormProps) {
   return (
     <div className="space-y-6">
       {/* Notifications */}
-      <Section title="📧 Notifikace" subtitle="E-maily z agentů (Discovery summary, alerty)">
+      <Section title="📧 Notifikace" subtitle="E-maily z agentů (souhrny, alerty)">
         <Field label="E-mail příjemce" desc={defs.notification_email?.description}>
           <input
             type="email"
@@ -78,7 +78,7 @@ export function SettingsForm({ initialValues, defs }: SettingsFormProps) {
       </Section>
 
       {/* Discovery */}
-      <Section title="🔍 Discovery agent" subtitle="Hledá nové produkty na e-shopech">
+      <Section title="🔍 Hledání nových olejů" subtitle="Agent procházející e-shopy">
         <Field label="Maximální počet nálezů za 1 běh" desc={defs.discovery_daily_limit?.description}>
           <input
             type="number"
@@ -91,7 +91,7 @@ export function SettingsForm({ initialValues, defs }: SettingsFormProps) {
         </Field>
 
         <Field
-          label="Auto-publish HIGH-confidence nálezy"
+          label="Automaticky publikovat olej když má kompletní data"
           desc={defs.discovery_auto_publish?.description}
         >
           <label className="inline-flex items-center gap-2">

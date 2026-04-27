@@ -275,7 +275,7 @@ function AddSourceForm({
           onChange={e => setStatus(e.target.value)}
           className="px-3 py-2 border border-off2 rounded-lg text-sm"
         >
-          <option value="enabled">Aktivní (Discovery ho prochází)</option>
+          <option value="enabled">Aktivní (agent ho prochází)</option>
           <option value="suggested">Návrh (čeká, neprochází)</option>
           <option value="disabled">Vypnuto</option>
         </select>
@@ -374,13 +374,13 @@ function SourceRow({
   }
 
   async function bulkImport() {
-    if (!confirm(`Spustit bulk import na ${s.domain}? Discovery najde a publikuje všechny olive oily. Trvá 5-15 min.`)) return
+    if (!confirm(`Stáhnout všechny olivové oleje z ${s.domain}? Trvá 5–15 min.`)) return
     setBusy('import')
     try {
       const res = await fetch(`/api/admin/discovery/sources/${s.id}/import`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      onSuccess(`Bulk import dokončen: ${data.newCandidates ?? 0} kandidátů, ${data.autoPublished ?? 0} publikováno`)
+      onSuccess(`Stahování dokončeno: ${data.newCandidates ?? 0} návrhů, ${data.autoPublished ?? 0} publikováno`)
       onChanged()
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Chyba')
@@ -481,7 +481,7 @@ function SourceRow({
                 disabled={busy !== null}
                 className="bg-terra text-white rounded-full px-3 py-1 text-[11px] font-medium hover:opacity-90 disabled:opacity-40"
               >
-                {busy === 'import' ? '⏳ Importuji...' : '🚀 Bulk import'}
+                {busy === 'import' ? '⏳ Stahuji...' : '🚀 Stáhnout produkty'}
               </button>
               <button
                 type="button"
@@ -523,13 +523,13 @@ function ProspectorButton({
   const [running, setRunning] = useState(false)
 
   async function onProspect() {
-    if (!confirm('Spustit Prospector — agent prohledá kurátorský seznam ~16 specialty CZ shopů,\notestuje crawler u každého a přidá nové jako "suggested" do registru.\n\nNic se neaktivuje automaticky — ty pak přepneš ty zajímavé na enabled.')) return
+    if (!confirm('Najít nové e-shopy — agent projde kurátorský seznam ~16 českých specialty obchodů s olivovým olejem, otestuje je a přidá nové jako návrhy.\n\nNic se neaktivuje automaticky — ty pak ručně vybereš které aktivovat.')) return
     setRunning(true)
     try {
       const res = await fetch('/api/admin/prospect/run', { method: 'POST' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      const msg = `Prospector: ${data.newlyAdded} nových shopů přidáno (z ${data.totalCandidates} kandidátů, ${data.alreadyKnown} už máme, ${data.testedSuccess} crawler funkční)`
+      const msg = `Hotovo: ${data.newlyAdded} nových e-shopů (z ${data.totalCandidates} prozkoumaných, ${data.alreadyKnown} už máme, ${data.testedSuccess} funkčních)`
       onSuccess(msg)
       onChanged()
     } catch (err) {
@@ -546,7 +546,7 @@ function ProspectorButton({
       disabled={running}
       className="bg-terra text-white rounded-full px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-40"
     >
-      {running ? '🔭 Prospektuji...' : '🔭 Najít nové e-shopy'}
+      {running ? '🔭 Hledám...' : '🔭 Najít nové e-shopy'}
     </button>
   )
 }

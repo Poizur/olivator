@@ -99,7 +99,7 @@ export default async function QualityPage() {
         <Stat label="Otevřené errors" value={errors.length} color="red" />
         <Stat label="Otevřené warnings" value={warnings.length} color="terra" />
         <Stat label="Info" value={infos.length} color="text2" />
-        <Stat label="Auto-fixed / Resolved" value={resolved.length} color="olive" />
+        <Stat label="Vyřešené" value={resolved.length} color="olive" />
         <Stat label="Ignorované" value={ignored.length} color="text3" />
       </div>
 
