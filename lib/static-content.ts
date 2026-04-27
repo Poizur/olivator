@@ -18,6 +18,19 @@ export const RANKINGS: Ranking[] = [
   { slug: 'nejlepsi-recky-olej', title: 'Nejlepší řecký olivový olej', description: 'Top řecké oleje — Kréta, Lesbos, Peloponés', productIds: ['gaea-fresh-extra-virgin', 'terra-creta-estate-evoo', 'aglandau-premium-evoo'], emoji: '🇬🇷' },
   { slug: 'nejlepsi-bio-olej', title: 'Nejlepší bio olivový olej', description: 'BIO certifikované oleje seřazené dle Score', productIds: ['olival-selection-premium', 'gaea-fresh-extra-virgin', 'terra-creta-estate-evoo', 'escelsior-bio-siciliano'], emoji: '🌿' },
   { slug: 'olivovy-olej-do-200-kc', title: 'Nejlepší olej do 200 Kč', description: 'Kvalitní oleje za rozumnou cenu', productIds: ['gaea-fresh-extra-virgin', 'ybarra-premium-evoo', 'carbonell-extra-virgin'], emoji: '💰' },
+  {
+    slug: 'nejlepsi-vysokopolyfenolovy-olej',
+    title: 'Nejlepší vysokopolyfenolové oleje',
+    description: 'Oleje s obsahem polyfenolů nad 500 mg/kg — funkční elixíry s nejvyšším antioxidačním potenciálem.',
+    productIds: [
+      'evolia-platinum-2000-polyfenolu-bio-extra-panensky-olivovy-olej-250-ml',
+      'intini-extra-alberobello',
+      'sitia-kreta-premium-gold-0-2-extra-panensky-olivovy-olej-5-l',
+      'intini-coratina-alberobello',
+      'corinto-pelopones-600-polyfenolu-extra-panensky-olivovy-olej-0-3-500-ml',
+    ],
+    emoji: '⚗️',
+  },
 ]
 
 export function getArticles(category?: string): Article[] {
