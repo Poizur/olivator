@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
 import { DiscoveryRunner } from './discovery-runner'
 import { CandidateRow } from './candidate-row'
+import { DiscoveryQueue } from './discovery-queue'
 
 export const dynamic = 'force-dynamic'
 
@@ -76,11 +77,7 @@ export default async function DiscoveryPage() {
       </div>
 
       {needsReview.length > 0 && (
-        <Section title={`⏳ Čeká na schválení (${needsReview.length})`}>
-          <div className="space-y-2">
-            {needsReview.map(c => <CandidateRow key={c.id} candidate={c as never} />)}
-          </div>
-        </Section>
+        <DiscoveryQueue needsReview={needsReview as never} />
       )}
 
       {autoPublished.length > 0 && (
