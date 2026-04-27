@@ -3,8 +3,8 @@ import { getProductsWithOffers } from '@/lib/data'
 import { ComparatorContent } from './comparator-content'
 
 export const metadata = {
-  title: 'Porovnávač olejů',
-  description: 'Porovnej 2–5 olivových olejů vedle sebe. Olivator Score, kyselost, polyfenoly, ceny.',
+  title: 'Olej proti oleji — porovnávač | Olivator',
+  description: 'Postav 2–5 olivových olejů vedle sebe. Olivator Score, kyselost, polyfenoly, cena za 100 ml. Bez marketingu.',
 }
 
 export default async function ComparatorPage() {

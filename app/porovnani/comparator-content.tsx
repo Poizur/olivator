@@ -73,30 +73,44 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
     <div className="max-w-[1080px] mx-auto px-10 py-10">
       <div className="text-center mb-9">
         <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-text mb-2">
-          Porovnávač olejů
+          Olej proti oleji
         </h1>
         <p className="text-[15px] text-text2 font-light">
-          Vyber 2–5 olejů a uvidíš přesně čím se liší
+          Score · kyselost · polyfenoly · cena za 100&nbsp;ml. Bez marketingu, jen fakta.
         </p>
       </div>
 
-      {/* Slots */}
+      {/* Slots — s náhledovou fotkou produktu */}
       <div className="flex gap-3 mb-9 overflow-x-auto pb-1">
         {items.map(item => (
           <div
             key={item.id}
-            className="flex-1 min-w-[160px] rounded-[var(--radius-card)] border-[1.5px] border-off2 p-5 text-center bg-white hover:border-olive-light transition-all"
+            className="flex-1 min-w-[160px] rounded-[var(--radius-card)] border-[1.5px] border-off2 p-4 text-center bg-white hover:border-olive-light transition-all"
           >
-            <div className="text-2xl mb-2">{countryFlag(item.originCountry)}</div>
-            <div className="inline-block bg-terra text-white text-[11px] font-semibold px-2 py-0.5 rounded-full mb-1.5">
-              {item.olivatorScore}
-            </div>
-            <div className="text-[13px] font-medium text-text leading-tight mb-1">
-              {item.nameShort}
-            </div>
-            <div className="text-xs text-text3">
-              {formatPrice(getCheapestOffer(item.id)?.price || 0)} &middot; {formatPricePer100ml(getCheapestOffer(item.id)?.price || 0, item.volumeMl)}
-            </div>
+            <Link href={`/olej/${item.slug}`} className="block">
+              <div className="relative w-full aspect-square bg-off rounded-lg mb-2 overflow-hidden">
+                {item.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    className="w-full h-full object-contain p-1"
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-3xl">🫒</div>
+                )}
+                <div className="absolute top-1.5 right-1.5 bg-terra text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+                  {item.olivatorScore}
+                </div>
+              </div>
+              <div className="text-[13px] font-medium text-text leading-tight mb-1 line-clamp-2 min-h-[34px]">
+                {countryFlag(item.originCountry)} {item.nameShort}
+              </div>
+              <div className="text-xs text-text3">
+                {formatPrice(getCheapestOffer(item.id)?.price || 0)} &middot; {formatPricePer100ml(getCheapestOffer(item.id)?.price || 0, item.volumeMl)}
+              </div>
+            </Link>
             <button
               onClick={() => removeItem(item.id)}
               className="text-[10px] text-text3 mt-1.5 cursor-pointer hover:text-terra"
@@ -109,11 +123,11 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
           <Link
             key={`empty-${i}`}
             href="/srovnavac"
-            className={`flex-1 min-w-[160px] rounded-[var(--radius-card)] border-[1.5px] border-dashed border-off2 p-5 text-center bg-white cursor-pointer hover:border-olive-light hover:bg-olive-bg transition-all ${
+            className={`flex-1 min-w-[160px] rounded-[var(--radius-card)] border-[1.5px] border-dashed border-off2 p-5 text-center bg-white cursor-pointer hover:border-olive-light hover:bg-olive-bg transition-all flex flex-col items-center justify-center ${
               i > 1 ? 'opacity-40' : ''
             }`}
           >
-            <div className="text-[22px] text-off2 mb-1.5">+</div>
+            <div className="text-[28px] text-off2 mb-1.5">+</div>
             <div className="text-xs text-text3">Přidat olej</div>
           </Link>
         ))}
@@ -129,6 +143,7 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
             {items.map(item => (
               <span key={item.id} className="text-xs px-3.5 py-1.5 rounded-full bg-olive text-white border border-olive">
                 {countryFlag(item.originCountry)} {item.nameShort}
+                {item.volumeMl > 0 && <span className="opacity-70 ml-1">{item.volumeMl >= 1000 ? `${item.volumeMl / 1000}l` : `${item.volumeMl}ml`}</span>}
               </span>
             ))}
             {notInCompare.slice(0, 4).map(p => (
@@ -136,8 +151,10 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
                 key={p.id}
                 onClick={() => addItem(p)}
                 className="text-xs px-3.5 py-1.5 rounded-full border border-off2 bg-white text-text2 cursor-pointer transition-all hover:border-olive-light hover:text-olive"
+                title={p.name}
               >
                 {countryFlag(p.originCountry)} {p.nameShort}
+                {p.volumeMl > 0 && <span className="opacity-60 ml-1">{p.volumeMl >= 1000 ? `${p.volumeMl / 1000}l` : `${p.volumeMl}ml`}</span>}
               </button>
             ))}
             <Link
@@ -191,7 +208,19 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
                 </th>
                 {items.map(item => (
                   <th key={item.id} className="text-center text-[11px] font-semibold text-olive tracking-wider uppercase px-3.5 py-2.5 border-b-2 border-off">
-                    {countryFlag(item.originCountry)} {item.nameShort}
+                    <Link href={`/olej/${item.slug}`} className="inline-flex flex-col items-center gap-1.5 hover:opacity-80 transition-opacity">
+                      <div className="w-10 h-10 bg-off rounded overflow-hidden border border-off2">
+                        {item.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain p-0.5" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-base">🫒</div>
+                        )}
+                      </div>
+                      <span className="text-[10px] leading-tight">
+                        {countryFlag(item.originCountry)} {item.nameShort}
+                      </span>
+                    </Link>
                   </th>
                 ))}
               </tr>
@@ -202,6 +231,19 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
                 const best = metric.higherBetter ? Math.max(...values) : Math.min(...values)
                 const worst = metric.higherBetter ? Math.min(...values) : Math.max(...values)
 
+                // Skip rows where all values are the "missing" sentinel — žádný produkt nemá data,
+                // tabulka by ukazovala jen "—" napříč. Šum, neukazuj.
+                const formattedAll = items.map((it, i) =>
+                  metric.format.length > 1
+                    ? (metric.format as (v: number, p: Product) => string)(values[i], it)
+                    : (metric.format as (v: number) => string)(values[i])
+                )
+                const allMissing = formattedAll.every(s => s === '—' || s === 'Žádné')
+                if (allMissing) return null
+
+                // Color coding má smysl jen když existuje skutečný rozdíl mezi produkty
+                const hasVariation = best !== worst
+
                 return (
                   <tr key={metric.label} className="hover:bg-off">
                     <td className="text-[13px] text-text2 px-3.5 py-3 border-b border-off">
@@ -209,20 +251,20 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
                     </td>
                     {items.map((item, i) => {
                       const val = values[i]
-                      const isBest = val === best && items.length > 1
-                      const isWorst = val === worst && items.length > 1 && best !== worst
+                      const formatted = formattedAll[i]
+                      const isMissing = formatted === '—' || formatted === 'Žádné'
+                      const isBest = hasVariation && val === best && !isMissing
+                      const isWorst = hasVariation && val === worst && !isMissing
 
                       return (
                         <td
                           key={item.id}
                           className={`text-center font-medium px-3.5 py-3 border-b border-off text-[13px] ${
-                            isBest ? 'text-green-600' : isWorst ? 'text-red-500' : 'text-text'
+                            isMissing ? 'text-text3 italic' : isBest ? 'text-green-600' : isWorst ? 'text-red-500' : 'text-text'
                           }`}
                         >
-                          {'format' in metric && metric.format.length > 1
-                            ? (metric.format as (v: number, p: Product) => string)(val, item)
-                            : (metric.format as (v: number) => string)(val)}
-                          {metric.showBar && (
+                          {formatted}
+                          {metric.showBar && !isMissing && (
                             <div className="flex items-center justify-center gap-1.5 mt-1">
                               <div className="w-14 h-[5px] bg-off2 rounded-full overflow-hidden inline-block">
                                 <div
@@ -268,10 +310,12 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
       )}
 
       {items.length < 2 && (
-        <div className="text-center py-20 text-text3">
-          Přidej alespoň 2 oleje pro porovnání.
-          <br />
-          <Link href="/srovnavac" className="text-olive mt-2 inline-block">Přejít do srovnávače →</Link>
+        <div className="text-center py-20">
+          <div className="text-[15px] text-text2 mb-1">Začni dvěma oleji.</div>
+          <div className="text-xs text-text3 mb-5">Tabulka se postaví sama, čísla rozhodnou za tebe.</div>
+          <Link href="/srovnavac" className="inline-flex items-center gap-2 bg-olive text-white rounded-full px-5 py-2.5 text-[13px] font-medium hover:bg-olive-dark transition-colors">
+            Vybrat oleje →
+          </Link>
         </div>
       )}
     </div>
