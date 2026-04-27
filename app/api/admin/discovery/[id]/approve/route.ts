@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
-import { publishCandidate } from '@/lib/discovery-agent'
+import { publishCandidate, resolveRetailerForCandidate } from '@/lib/discovery-agent'
 import { revalidatePath } from 'next/cache'
 import type { ScrapedProduct } from '@/lib/product-scraper'
 
@@ -60,15 +60,8 @@ export async function POST(
       )
     }
 
-    // Derive retailer slug from candidate.source_domain
-    // We need the slug — look up retailer by domain
-    const { data: retailer } = await supabaseAdmin
-      .from('retailers')
-      .select('slug')
-      .eq('domain', candidate.source_domain as string)
-      .maybeSingle()
-    const retailerSlug = (retailer?.slug as string) || (candidate.source_domain as string).split('.')[0]
-    const retailerDomain = candidate.source_domain as string
+    const { slug: retailerSlug, domain: retailerDomain } =
+      await resolveRetailerForCandidate(candidate.source_domain as string)
 
     let productId: string
     try {

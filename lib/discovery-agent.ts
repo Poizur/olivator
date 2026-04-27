@@ -191,6 +191,23 @@ function assessQuality(scraped: ScrapedProduct): {
   return { quality: 'low', reasoning: `Sparse data (${score}/8) — chybí název / původ / cena / obrázek` }
 }
 
+/** Resolve a candidate's source_domain to retailer slug + canonical domain.
+ *  Strips `www.` prefix so lookup works regardless of whether the candidate
+ *  was scraped from a www-prefixed URL or not. Falls back to deriving slug
+ *  from domain (e.g. `reckonasbavi.cz` → `reckonasbavi`) if retailer not in DB. */
+export async function resolveRetailerForCandidate(
+  sourceDomain: string
+): Promise<{ slug: string; domain: string }> {
+  const normalized = sourceDomain.replace(/^www\./, '')
+  const { data: retailer } = await supabaseAdmin
+    .from('retailers')
+    .select('slug')
+    .eq('domain', normalized)
+    .maybeSingle()
+  const slug = (retailer?.slug as string) || normalized.split('.')[0]
+  return { slug, domain: normalized }
+}
+
 /** Convert ScrapedProduct → product DB row + create offer + run AI pipeline.
  *  Returns the new product id. Exported so admin "approve" endpoint can run
  *  the same pipeline when admin manually approves a needs_review candidate. */

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
-import { publishCandidate } from '@/lib/discovery-agent'
+import { publishCandidate, resolveRetailerForCandidate } from '@/lib/discovery-agent'
 import {
   createBulkJob,
   setJobRunning,
@@ -122,13 +122,8 @@ async function processBulkApprove(jobId: string, ids: string[]): Promise<void> {
           failed++
           errors.push({ id, reason: 'Missing name/slug in scraped data' })
         } else {
-          const { data: retailer } = await supabaseAdmin
-            .from('retailers')
-            .select('slug')
-            .eq('domain', candidate.source_domain as string)
-            .maybeSingle()
-          const retailerSlug = (retailer?.slug as string) || (candidate.source_domain as string).split('.')[0]
-          const retailerDomain = candidate.source_domain as string
+          const { slug: retailerSlug, domain: retailerDomain } =
+            await resolveRetailerForCandidate(candidate.source_domain as string)
 
           const productId = await publishCandidate(data, retailerSlug, retailerDomain)
           await supabaseAdmin
