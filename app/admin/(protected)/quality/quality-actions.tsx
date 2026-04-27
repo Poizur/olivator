@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 
 export function QualityActions() {
   const router = useRouter()
-  const [running, setRunning] = useState<null | 'audit' | 'meta'>(null)
+  const [running, setRunning] = useState<null | 'audit' | 'meta' | 'vision'>(null)
   const [error, setError] = useState<string | null>(null)
   const [summary, setSummary] = useState<string | null>(null)
 
@@ -49,6 +49,26 @@ export function QualityActions() {
     }
   }
 
+  async function onBulkVision() {
+    if (!confirm('AI vision pass: alt text všech fotek + auto-scan lab reportů. Trvá ~5-10 min, stojí ~$2 v Claude API. OK?')) return
+    setRunning('vision')
+    setError(null)
+    setSummary(null)
+    try {
+      const res = await fetch('/api/admin/products/bulk-vision', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setSummary(
+        `✓ Alt: ${data.alt_processed} (skip ${data.alt_skipped}, fail ${data.alt_failed}) · Lab: ${data.lab_scanned} skenováno, ${data.lab_updated} doplněno`
+      )
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Chyba')
+    } finally {
+      setRunning(null)
+    }
+  }
+
   return (
     <div className="flex flex-col items-end gap-2">
       <div className="flex gap-2 flex-wrap justify-end">
@@ -68,6 +88,15 @@ export function QualityActions() {
           title="SEO meta description pro Google snippet (130-160 znaků)"
         >
           {running === 'meta' ? '✏️ Generuju…' : '✏️ SEO meta description'}
+        </button>
+        <button
+          type="button"
+          onClick={onBulkVision}
+          disabled={running !== null}
+          className="bg-olive text-white rounded-full px-5 py-2.5 text-sm font-medium hover:bg-olive-dark disabled:opacity-40 transition-colors"
+          title="AI vision: alt text všech fotek + auto-scan lab reportů. ~$2 v Claude API."
+        >
+          {running === 'vision' ? '👁️ Vidím…' : '👁️ Vision pass'}
         </button>
       </div>
       {summary && (

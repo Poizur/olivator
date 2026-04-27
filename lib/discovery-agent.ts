@@ -23,7 +23,8 @@ import { calculateScore } from './score'
 import { extractFactsFromText } from './fact-extractor'
 import { estimateFlavorProfile } from './flavor-agent'
 import { deriveUseCases } from './use-case-deriver'
-import { downloadAndStoreImage } from './product-image'
+import { downloadAndStoreImage, generateImageAltText } from './product-image'
+import { scanLabReport, looksLikeLabReport } from './lab-report-agent'
 import { detectCertificationsInText } from './cert-detector'
 import { auditProduct, runPrePublishAudit } from './quality-rules'
 import { countryName } from './utils'
@@ -380,7 +381,8 @@ export async function publishCandidate(
         .select('id, url, sort_order, source')
 
       // 2. Download all PUBLISHED rows to Supabase Storage in parallel,
-      //    update each row with the new hosted URL. Candidates stay as hotlinks.
+      //    update each row with the new hosted URL + AI vision alt text.
+      //    Candidates stay as hotlinks (no AI cost on drafts).
       //    Best-effort — if a download fails, row keeps its hotlink.
       const publishedRows = (insertedRows ?? []).filter((r) => r.source === 'scraper')
       if (publishedRows.length > 0) {
@@ -392,15 +394,62 @@ export async function publishCandidate(
                 scraped.slug,
                 `g${r.sort_order}`
               )
+              // Generate vision-based alt text on the original (pre-resize) URL
+              // for better detail recognition. Best-effort.
+              let altText: string
+              try {
+                altText = await generateImageAltText(r.url as string, scraped.name)
+              } catch {
+                altText = scraped.name
+              }
               await supabaseAdmin
                 .from('product_images')
-                .update({ url: stored })
+                .update({ url: stored, alt_text: altText })
                 .eq('id', r.id)
             } catch (err) {
               console.warn(`[discovery] gallery download failed for sort=${r.sort_order}:`, err instanceof Error ? err.message : err)
             }
           })
         )
+      }
+
+      // 4. Auto-scan lab report photos: pokud některá fotka vypadá jako lab
+      //    report (heuristika nebo AI alt), spusť OCR a doplň chybějící chemii.
+      //    Jen pokud má produkt aspoň jedno NULL pole které lab umí vyplnit.
+      try {
+        const labCandidates = (insertedRows ?? []).filter((r) =>
+          looksLikeLabReport(r.url as string, null)
+        )
+        if (labCandidates.length > 0) {
+          // Read current product chemistry to skip if everything is filled
+          const { data: prod } = await supabaseAdmin
+            .from('products')
+            .select('acidity, polyphenols, peroxide_value, oleic_acid_pct')
+            .eq('id', productId)
+            .maybeSingle()
+          const needsScan =
+            !prod ||
+            prod.acidity == null ||
+            prod.polyphenols == null ||
+            prod.peroxide_value == null ||
+            prod.oleic_acid_pct == null
+          if (needsScan) {
+            // Scan first lab-looking photo (most likely a real report)
+            const lab = await scanLabReport(labCandidates[0].url as string)
+            if (lab.confidence !== 'low') {
+              const patch: Record<string, number> = {}
+              if (prod?.acidity == null && lab.acidity != null) patch.acidity = lab.acidity
+              if (prod?.polyphenols == null && lab.polyphenols != null) patch.polyphenols = lab.polyphenols
+              if (prod?.peroxide_value == null && lab.peroxideValue != null) patch.peroxide_value = lab.peroxideValue
+              if (prod?.oleic_acid_pct == null && lab.oleicAcidPct != null) patch.oleic_acid_pct = lab.oleicAcidPct
+              if (Object.keys(patch).length > 0) {
+                await supabaseAdmin.from('products').update(patch).eq('id', productId)
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[discovery] lab auto-scan failed:', err instanceof Error ? err.message : err)
       }
 
       // 3. Update products.image_url to the primary's hosted URL.

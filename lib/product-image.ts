@@ -4,10 +4,60 @@
 // then updates products.image_url.
 
 import sharp from 'sharp'
+import Anthropic from '@anthropic-ai/sdk'
 import { supabaseAdmin } from './supabase'
 
 const OFF_BASE = 'https://world.openfoodfacts.org/api/v2/product'
 const STORAGE_BUCKET = 'products'
+
+/** Claude vision-based alt text per photo. Cheap Haiku model, returns
+ *  ≤120 char Czech description that includes product name. Falls back
+ *  to a rule-based alt on any error. */
+export async function generateImageAltText(
+  imageUrl: string,
+  productName: string
+): Promise<string> {
+  const fallback = productName
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return fallback
+
+  const client = new Anthropic({ apiKey })
+  try {
+    const res = await client.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 200,
+      system: `Jsi accessibility/SEO copywriter pro e-shop s olivovými oleji.
+
+Generuješ alt text pro fotografii produktu. Pravidla:
+- POVINNĚ česky, MAX 120 znaků
+- Začít názvem produktu (zkráceným pokud je dlouhý)
+- Pak STRUČNĚ popsat co je na fotce (přední strana, štítek detail, lab report, balení, použití…)
+- Žádné marketingové fráze, jen popis
+- Žádné uvozovky, žádné emoji
+- Vrať POUZE jeden řádek alt textu, žádný úvod ani závěr`,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'url', url: imageUrl } },
+            { type: 'text', text: `Produkt: ${productName}\n\nVrať alt text.` },
+          ],
+        },
+      ],
+    })
+    const text = res.content
+      .filter((b) => b.type === 'text')
+      .map((b) => (b as { type: 'text'; text: string }).text)
+      .join('')
+      .trim()
+      .replace(/^["'„"]+|["'""]+$/g, '')
+    if (!text || text.length < 10) return fallback
+    return text.length > 120 ? text.slice(0, 120).replace(/\s+\S*$/, '') : text
+  } catch (err) {
+    console.warn('[image/alt] vision failed:', err instanceof Error ? err.message : err)
+    return fallback
+  }
+}
 
 interface OFFProductResponse {
   status?: number
