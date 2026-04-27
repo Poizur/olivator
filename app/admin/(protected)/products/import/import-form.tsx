@@ -93,6 +93,11 @@ export function ImportForm() {
         sourceUrl: data.url,
         rawDescription: data.rawDescription,
         status: 'draft',
+        // For auto-creating offer from scraped data
+        scrapedPrice: data.price,
+        scrapedCurrency: data.currency,
+        scrapedDomain: data.domain,
+        scrapedRetailerName: data.brand && data.domain ? null : null, // domain → retailer name fallback handled server-side
       }
       const res = await fetch('/api/admin/products', {
         method: 'POST',
