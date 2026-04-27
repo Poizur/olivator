@@ -25,13 +25,39 @@ interface CrawlerConfig {
 }
 
 // Heuristic: a Shoptet URL is a PRODUCT (not category) when:
-//   - path contains "olivov..-olej" or "panensk" (it's olive oil)
+//   - path contains "olivov..-olej" or "panensk" (signals olive oil)
 //   - path contains a volume marker: 250ml, 500ml, 0,5l, 1l, 5l, etc.
-//   - path is NOT prefixed with /blog/, /znacka/, /vyrobci/ (non-product sections)
+//   - path is NOT prefixed with /blog/, /znacka/, /vyrobci/
+//   - path does NOT contain cosmetic keywords (krém, mýdlo, maska, šampon, …)
+//     because those are creams/soaps WITH olive oil as ingredient, not edible oil
+const COSMETIC_NEGATIVE_KEYWORDS = [
+  'krem', 'krém',
+  'mydlo', 'mýdlo',
+  'maska', 'masku',
+  'sampon', 'šampon',
+  'gel', 'sprchov',
+  'kosmet',
+  'pletov', 'tělov', 'vlasov',
+  'masaz', 'masáž',
+  'spa-',
+  'olej-na-vlasy', 'olej-na-tel', 'olej-do-koupele',
+  'serum',
+  'balzam', 'balzám',
+  'opal', // opalovací
+  'parf',
+  'plet', // pleť
+  'arom', // aromaterapie
+]
+
 const PRODUCT_URL_HEURISTIC = (url: string): boolean => {
   if (!/olivov\w*-olej|extra-panensk|panensk\w-olej/i.test(url)) return false
   if (!/\d+[-_,.]?\d*(?:ml|l)\b/i.test(url)) return false
   if (/\/(blog|znacka|vyrobci|kategorie|sk|en)\//i.test(url)) return false
+  // Negative filter: cosmetics, soaps, creams that contain olive oil as ingredient
+  const lowerUrl = url.toLowerCase()
+  for (const kw of COSMETIC_NEGATIVE_KEYWORDS) {
+    if (lowerUrl.includes(kw)) return false
+  }
   return true
 }
 

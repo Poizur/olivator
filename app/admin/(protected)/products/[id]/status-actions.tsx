@@ -34,6 +34,22 @@ export function StatusActions({ productId, currentStatus, publicUrl }: StatusAct
     }
   }
 
+  async function deleteProduct() {
+    if (!confirm('NAVŽDY smazat tento produkt z databáze?\n\nSmažou se i:\n- všechny nabídky prodejců\n- obrázky v Storage\n- FAQ, fakta, kvalita issues\n\nTuto akci nelze vrátit.')) return
+    if (!confirm('Opravdu? Tohle smaže produkt navždy.')) return
+    setBusy('publish') // reuse busy state
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/products/${productId}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Smazání selhalo')
+      router.push('/admin/products')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Chyba')
+      setBusy(null)
+    }
+  }
+
   // Big status pill — same design family as action buttons
   const statusBadge = (() => {
     if (currentStatus === 'active') {
@@ -128,6 +144,17 @@ export function StatusActions({ productId, currentStatus, publicUrl }: StatusAct
       >
         ← Zpět
       </Link>
+
+      {/* Delete — destructive, isolated visually with red hover */}
+      <button
+        type="button"
+        onClick={deleteProduct}
+        disabled={busy !== null}
+        className="inline-flex items-center gap-2 bg-white border border-off2 text-text3 rounded-full px-4 py-2.5 text-sm font-medium hover:border-red-300 hover:text-red-700 hover:bg-red-50 disabled:opacity-40 transition-colors"
+        title="Smazat produkt navždy z databáze"
+      >
+        🗑 Smazat
+      </button>
 
       {error && (
         <span className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
