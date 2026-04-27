@@ -221,12 +221,44 @@ function extractAcidity(text: string | null): number | null {
   return parseFloat(m[1].replace(',', '.'))
 }
 
-function extractPolyphenols(text: string | null): number | null {
+// Words inside the polyphenol match that signal it's a regulatory/typical/EU
+// threshold reference, not a fact about THIS product. Reject those matches.
+const POLYPHENOL_THRESHOLD_MARKERS = [
+  'minimáln', 'alespoň', 'musí mí', 'musí být', 'vyžaduje', 'norma',
+  'typicky', 'obvykl', 'běžn', 'standardn', 'kategori',
+]
+
+export function extractPolyphenols(text: string | null): number | null {
   if (!text) return null
-  // "polyfenoly 312 mg/kg", "polyphenols: 250"
-  const m = text.match(/polyfenol\w*[:\s]*(\d{2,4})/i) || text.match(/polyphenol\w*[:\s]*(\d{2,4})/i)
+  // JS regex `\w` doesn't match unicode letters like ů/é — so `polyfenol\w*`
+  // wouldn't capture "polyfenolů". Use `[^\s\d:]*` instead so diacritics
+  // between the keyword and the number don't break the match.
+  // Czech word order — number BEFORE keyword: "2012 mg/kg polyfenolů", "600+ polyfenolů".
+  // English/declined Czech — number AFTER keyword: "polyphenols: 250", "polyfenolů 623 mg/kg",
+  // "polyfenolů dosahuje 646 mg/kg" (allow short verb between).
+  const m =
+    text.match(/(\d{2,5})\s*\+?\s*mg\s*\/\s*kg\s*polyfenol/i) ||
+    text.match(/(\d{2,5})\s*\+?\s*polyfenol/i) ||
+    text.match(/polyfenol[^\s\d:]*[:\s]*(\d{2,5})/i) ||
+    text.match(/polyphenol[^\s\d:]*[:\s]*(\d{2,5})/i) ||
+    // Fallback: keyword + a short verb/preposition + number followed by mg.
+    // Sentence boundary protected via [^.!?] — won't bleed across sentences.
+    text.match(/polyfenol[^.!?]{0,30}?(\d{2,5})\s*\+?\s*mg/i) ||
+    text.match(/polyphenol[^.!?]{0,30}?(\d{2,5})\s*\+?\s*mg/i)
   if (!m) return null
-  return parseInt(m[1], 10)
+
+  // Reject matches that contain threshold/reference language between keyword
+  // and number — e.g. "polyfenolů minimálně 250 mg/kg" is the EU norm value,
+  // not the product's actual polyphenol count.
+  const matchedSpan = m[0].toLowerCase()
+  if (POLYPHENOL_THRESHOLD_MARKERS.some((w) => matchedSpan.includes(w))) {
+    return null
+  }
+
+  const n = parseInt(m[1], 10)
+  // Sanity: realistic range 50–3000 mg/kg. Below 50 likely a different number.
+  if (n < 50 || n > 3000) return null
+  return n
 }
 
 /** Extract peroxide value — "peroxidové číslo: ≤ 20 mEq" / "peroxid 8,5 mEq/kg". */
