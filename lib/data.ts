@@ -212,6 +212,7 @@ export interface SiteStats {
   byCertification: Record<string, number>
   byType: Record<string, number>
   under200Kc: number
+  highPolyphenols: number
 }
 
 export async function getSiteStats(): Promise<SiteStats> {
@@ -221,6 +222,7 @@ export async function getSiteStats(): Promise<SiteStats> {
   const byCertification: Record<string, number> = {}
   const byType: Record<string, number> = {}
   let under200Kc = 0
+  let highPolyphenols = 0
 
   for (const p of products) {
     byOrigin[p.originCountry] = (byOrigin[p.originCountry] ?? 0) + 1
@@ -229,6 +231,7 @@ export async function getSiteStats(): Promise<SiteStats> {
       byCertification[c] = (byCertification[c] ?? 0) + 1
     }
     if (p.cheapestOffer && p.cheapestOffer.price <= 200) under200Kc++
+    if (p.polyphenols != null && p.polyphenols >= 500) highPolyphenols++
   }
 
   const { count } = await supabaseAdmin
@@ -243,6 +246,7 @@ export async function getSiteStats(): Promise<SiteStats> {
     byCertification,
     byType,
     under200Kc,
+    highPolyphenols,
   }
 }
 

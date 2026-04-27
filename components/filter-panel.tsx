@@ -7,6 +7,7 @@ export interface FilterCounts {
   types: Record<string, number>
   origins: Record<string, number>
   certifications: Record<string, number>
+  highPolyphenols?: number
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -41,6 +42,7 @@ export function FilterPanel({ counts }: { counts: FilterCounts }) {
   const activeTypes = searchParams.get('type')?.split(',').filter(Boolean) || []
   const activeOrigins = searchParams.get('origin')?.split(',').filter(Boolean) || []
   const activeCerts = searchParams.get('cert')?.split(',').filter(Boolean) || []
+  const activeQuality = searchParams.get('quality')?.split(',').filter(Boolean) || []
 
   const toggleFilter = useCallback((key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -98,6 +100,20 @@ export function FilterPanel({ counts }: { counts: FilterCounts }) {
           items={certItems}
           active={activeCerts}
           onToggle={(v) => toggleFilter('cert', v)}
+        />
+      )}
+      {(counts.highPolyphenols ?? 0) > 0 && (
+        <FilterSection
+          label="Kvalita"
+          items={[
+            {
+              value: 'high_polyphenols',
+              label: 'Vysoký obsah polyfenolů (≥500 mg/kg)',
+              count: counts.highPolyphenols ?? 0,
+            },
+          ]}
+          active={activeQuality}
+          onToggle={(v) => toggleFilter('quality', v)}
           isLast
         />
       )}

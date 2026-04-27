@@ -16,6 +16,7 @@ export default async function SrovnavacPage() {
     types: stats.byType,
     origins: stats.byOrigin,
     certifications: stats.byCertification,
+    highPolyphenols: stats.highPolyphenols,
   }
   return (
     <Suspense fallback={<div className="p-10 text-center text-text3">Načítání...</div>}>

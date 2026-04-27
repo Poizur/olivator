@@ -14,6 +14,7 @@ export function ListingContent({ products, counts }: { products: ProductWithOffe
   const activeTypes = searchParams.get('type')?.split(',').filter(Boolean) || []
   const activeOrigins = searchParams.get('origin')?.split(',').filter(Boolean) || []
   const activeCerts = searchParams.get('cert')?.split(',').filter(Boolean) || []
+  const activeQuality = searchParams.get('quality')?.split(',').filter(Boolean) || []
   const sort = searchParams.get('sort') || 'score'
 
   const filtered = useMemo(() => {
@@ -29,6 +30,9 @@ export function ListingContent({ products, counts }: { products: ProductWithOffe
       list = list.filter(p =>
         activeCerts.some(c => p.certifications.includes(c))
       )
+    }
+    if (activeQuality.includes('high_polyphenols')) {
+      list = list.filter(p => p.polyphenols != null && p.polyphenols >= 500)
     }
 
     switch (sort) {
@@ -48,12 +52,13 @@ export function ListingContent({ products, counts }: { products: ProductWithOffe
     }
 
     return list
-  }, [products, activeTypes, activeOrigins, activeCerts, sort])
+  }, [products, activeTypes, activeOrigins, activeCerts, activeQuality, sort])
 
   const filterDesc = [
     activeTypes.length > 0 ? activeTypes.join(', ') : null,
     activeOrigins.length > 0 ? activeOrigins.join(' + ') : null,
     activeCerts.length > 0 ? activeCerts.join(', ') : null,
+    activeQuality.includes('high_polyphenols') ? 'polyfenoly ≥500' : null,
   ].filter(Boolean).join(' · ')
 
   return (
