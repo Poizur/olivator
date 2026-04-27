@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
+import { headers } from 'next/headers'
 import { Playfair_Display, Inter } from 'next/font/google'
 import { GoogleAnalytics } from '@next/third-parties/google'
 import { Nav } from '@/components/nav'
@@ -57,21 +58,27 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: ReactNode
 }) {
   const gaId = process.env.NEXT_PUBLIC_GA4_ID
+  // Hide public Nav + Footer + CompareBar on /admin pages (admin uses dark
+  // AdminBar at top + its own page content, no public chrome needed).
+  const headersList = await headers()
+  const pathname = headersList.get('x-pathname') ?? ''
+  const isAdminPage = pathname.startsWith('/admin')
+
   return (
     <html lang="cs" className={`${playfair.variable} ${inter.variable}`}>
       <body className="min-h-screen flex flex-col antialiased">
         <AdminBar />
         <CompareProvider>
-          <Nav />
+          {!isAdminPage && <Nav />}
           <main className="flex-1">{children}</main>
-          <Footer />
-          <CompareBar />
+          {!isAdminPage && <Footer />}
+          {!isAdminPage && <CompareBar />}
         </CompareProvider>
         {gaId && <GoogleAnalytics gaId={gaId} />}
       </body>

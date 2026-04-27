@@ -39,9 +39,8 @@ export async function AdminBar() {
   const headersList = await headers()
   const pathname = headersList.get('x-pathname') || headersList.get('next-url') || ''
 
-  // Don't render on /admin pages (they have their own nav)
-  if (pathname.startsWith('/admin')) return null
-
+  // Show on ALL pages — Shoptet/WP style admin always visible top bar.
+  // Even on /admin/* pages we keep the dark bar; admin layout no longer has its own nav.
   const edit = await getEditLink(pathname)
 
   return (
