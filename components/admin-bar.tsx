@@ -1,6 +1,7 @@
 // Admin toolbar — sticky bar across the whole site (Wordpress / Shoptet style).
-// Shows ONLY for authenticated admin. Provides quick navigation to admin sections
-// + context-aware "Edit" link when viewing a public product/article page.
+// Shows ONLY for authenticated admin. Provides quick navigation grouped into
+// 5 top-level entries with hover dropdowns; mobile collapses to a <details>
+// hamburger so we don't need any client JS.
 //
 // Renders as <AdminBar /> in root layout. Uses `headers()` to read pathname.
 
@@ -9,6 +10,47 @@ import Link from 'next/link'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { AdminBarLogout } from './admin-bar-logout'
+
+type NavLink = { href: string; label: string }
+type NavGroup = { label: string; items: NavLink[] }
+type NavEntry = NavLink | NavGroup
+
+const NAV: NavEntry[] = [
+  { href: '/admin', label: 'Přehled' },
+  {
+    label: 'Katalog',
+    items: [
+      { href: '/admin/products', label: 'Produkty' },
+      { href: '/admin/retailers', label: 'Prodejci' },
+      { href: '/admin/faq', label: 'FAQ' },
+    ],
+  },
+  {
+    label: 'Discovery',
+    items: [
+      { href: '/admin/discovery', label: 'Návrhy' },
+      { href: '/admin/discovery/sources', label: 'E-shopy' },
+      { href: '/admin/bulk-jobs', label: 'Historie' },
+    ],
+  },
+  {
+    label: 'Kontrola',
+    items: [{ href: '/admin/quality', label: 'Kvalita' }],
+  },
+  { href: '/admin/nastaveni', label: '⚙ Nastavení' },
+]
+
+const isGroup = (e: NavEntry): e is NavGroup => 'items' in e
+
+/** Longest-prefix-match across all hrefs. Picks `/admin/discovery/sources`
+ *  over `/admin/discovery` over `/admin`. Returns null if nothing matches. */
+function findActive(pathname: string): NavLink | null {
+  const all: NavLink[] = NAV.flatMap((e) => (isGroup(e) ? e.items : [e]))
+  const matches = all
+    .filter((l) => pathname === l.href || pathname.startsWith(l.href + '/'))
+    .sort((a, b) => b.href.length - a.href.length)
+  return matches[0] ?? null
+}
 
 async function getEditLink(pathname: string): Promise<{ href: string; label: string } | null> {
   // Product detail: /olej/[slug] → admin editor
@@ -27,7 +69,6 @@ async function getEditLink(pathname: string): Promise<{ href: string; label: str
       }
     }
   }
-  // Could add: /pruvodce/[slug], /recept/[slug], /zebricek/[slug] when they get DB editing
   return null
 }
 
@@ -35,19 +76,20 @@ export async function AdminBar() {
   const isAdmin = await isAdminAuthenticated()
   if (!isAdmin) return null
 
-  // Read pathname from x-pathname header (set by middleware) or from referer fallback
   const headersList = await headers()
   const pathname = headersList.get('x-pathname') || headersList.get('next-url') || ''
 
-  // Show on ALL pages — Shoptet/WP style admin always visible top bar.
-  // Even on /admin/* pages we keep the dark bar; admin layout no longer has its own nav.
+  const active = findActive(pathname)
   const edit = await getEditLink(pathname)
+
+  const baseTab =
+    'px-2 py-0.5 rounded transition-colors hover:bg-white/10 whitespace-nowrap'
+  const activeTab = 'bg-white/15 text-white'
+  const inactiveTab = 'text-white/90'
 
   return (
     <>
-      {/* Push sticky Nav and any sticky elements below the admin bar.
-          AdminBar is fixed (out of flow) so a manual offset is needed.
-          Targets Nav (sticky top-0 z-50) and product page sticky panels. */}
+      {/* Push sticky Nav and any sticky elements below the admin bar. */}
       <style dangerouslySetInnerHTML={{ __html: `
         nav.sticky { top: 2.25rem !important; }
         .sticky.top-\\[72px\\] { top: 6.5rem !important; }
@@ -55,57 +97,151 @@ export async function AdminBar() {
       {/* Spacer so content isn't hidden behind fixed bar */}
       <div aria-hidden className="h-9" />
       <div className="fixed top-0 left-0 right-0 z-[60] bg-text text-white text-[12px] font-medium border-b border-black/20 shadow-sm">
-        <div className="max-w-[1280px] mx-auto px-5 h-9 flex items-center gap-1 overflow-x-auto whitespace-nowrap">
-          <span className="text-[13px] mr-2">🌿 Olivator Admin</span>
-          <span className="opacity-30">|</span>
-          <Link href="/admin" className="px-2 py-0.5 hover:bg-white/10 rounded transition-colors">
-            Přehled
-          </Link>
-          <Link href="/admin/products" className="px-2 py-0.5 hover:bg-white/10 rounded transition-colors">
-            Produkty
-          </Link>
-          <Link href="/admin/retailers" className="px-2 py-0.5 hover:bg-white/10 rounded transition-colors">
-            Prodejci
-          </Link>
-          <Link href="/admin/faq" className="px-2 py-0.5 hover:bg-white/10 rounded transition-colors">
-            FAQ
-          </Link>
-          <Link href="/admin/discovery/sources" className="px-2 py-0.5 hover:bg-white/10 rounded transition-colors">
-            E-shopy
-          </Link>
-          <Link href="/admin/discovery" className="px-2 py-0.5 hover:bg-white/10 rounded transition-colors">
-            Návrhy
-          </Link>
-          <Link href="/admin/quality" className="px-2 py-0.5 hover:bg-white/10 rounded transition-colors">
-            Kvalita
-          </Link>
-          <Link href="/admin/bulk-jobs" className="px-2 py-0.5 hover:bg-white/10 rounded transition-colors">
-            Historie
-          </Link>
-          <Link href="/admin/nastaveni" className="px-2 py-0.5 hover:bg-white/10 rounded transition-colors">
-            ⚙ Nastavení
-          </Link>
-          <span className="opacity-30 mx-1">|</span>
-          <Link
-            href="/"
-            className="px-2 py-0.5 hover:bg-white/10 rounded transition-colors flex items-center gap-1"
-            title="Otevřít veřejnou homepage"
-          >
-            🌐 Zobrazit web
-          </Link>
-          {edit && (
-            <>
-              <span className="opacity-30 mx-1">|</span>
-              <Link
-                href={edit.href}
-                className="px-2 py-0.5 bg-terra/80 hover:bg-terra rounded transition-colors"
-              >
-                {edit.label}
-              </Link>
-            </>
-          )}
-          <div className="ml-auto flex items-center gap-1">
-            <span className="opacity-50 text-[11px] hidden md:inline">vidíš jen ty (admin)</span>
+        <div className="max-w-[1280px] mx-auto px-5 h-9 flex items-center gap-1">
+          <span className="text-[13px] mr-2 shrink-0">🌿 Olivator Admin</span>
+          <span className="opacity-30 shrink-0">|</span>
+
+          {/* DESKTOP NAV */}
+          <nav className="hidden md:flex items-center gap-1">
+            {NAV.map((entry) => {
+              if (!isGroup(entry)) {
+                const isActive = active?.href === entry.href
+                return (
+                  <Link
+                    key={entry.href}
+                    href={entry.href}
+                    className={`${baseTab} ${isActive ? activeTab : inactiveTab}`}
+                  >
+                    {entry.label}
+                  </Link>
+                )
+              }
+              const activeChild = entry.items.find((i) => i.href === active?.href)
+              const isActive = !!activeChild
+              return (
+                <div key={entry.label} className="group relative">
+                  <Link
+                    href={entry.items[0].href}
+                    className={`${baseTab} flex items-center gap-1 ${
+                      isActive ? activeTab : inactiveTab
+                    }`}
+                  >
+                    <span>{entry.label}</span>
+                    {activeChild && (
+                      <span className="opacity-60">· {activeChild.label}</span>
+                    )}
+                    <span className="opacity-50 text-[10px]">▾</span>
+                  </Link>
+                  {/* Dropdown panel */}
+                  <div
+                    className="absolute left-0 top-full pt-1 hidden group-hover:block z-[70]"
+                    role="menu"
+                  >
+                    <div className="min-w-[180px] bg-[#2a2a2d] border border-white/10 rounded shadow-lg py-1">
+                      {entry.items.map((item) => {
+                        const itemActive = active?.href === item.href
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            className={`block px-3 py-1.5 text-[12px] transition-colors hover:bg-white/10 ${
+                              itemActive ? 'bg-white/15 text-white' : 'text-white/90'
+                            }`}
+                          >
+                            {item.label}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+            <span className="opacity-30 mx-1">|</span>
+            <Link
+              href="/"
+              className={`${baseTab} ${inactiveTab} flex items-center gap-1`}
+              title="Otevřít veřejnou homepage"
+            >
+              🌐 Zobrazit web
+            </Link>
+            {edit && (
+              <>
+                <span className="opacity-30 mx-1">|</span>
+                <Link
+                  href={edit.href}
+                  className="px-2 py-0.5 bg-terra/80 hover:bg-terra rounded transition-colors whitespace-nowrap"
+                >
+                  {edit.label}
+                </Link>
+              </>
+            )}
+          </nav>
+
+          {/* MOBILE: hamburger via <details> — no client JS needed */}
+          <details className="md:hidden relative">
+            <summary
+              className={`${baseTab} ${inactiveTab} list-none cursor-pointer flex items-center gap-1 [&::-webkit-details-marker]:hidden`}
+            >
+              <span>☰</span>
+              {active && <span className="opacity-80">{active.label}</span>}
+            </summary>
+            <div className="absolute left-0 top-full mt-1 min-w-[200px] bg-[#2a2a2d] border border-white/10 rounded shadow-lg py-1 z-[70]">
+              {NAV.map((entry) => {
+                if (!isGroup(entry)) {
+                  const isActive = active?.href === entry.href
+                  return (
+                    <Link
+                      key={entry.href}
+                      href={entry.href}
+                      className={`block px-3 py-1.5 text-[12px] hover:bg-white/10 ${
+                        isActive ? 'bg-white/15 text-white' : 'text-white/90'
+                      }`}
+                    >
+                      {entry.label}
+                    </Link>
+                  )
+                }
+                return (
+                  <div key={entry.label} className="border-t border-white/10 first:border-t-0 mt-1 first:mt-0 pt-1 first:pt-0">
+                    <div className="px-3 py-1 text-[10px] uppercase tracking-wide text-white/50">
+                      {entry.label}
+                    </div>
+                    {entry.items.map((item) => {
+                      const isActive = active?.href === item.href
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={`block px-3 py-1.5 text-[12px] hover:bg-white/10 ${
+                            isActive ? 'bg-white/15 text-white' : 'text-white/90'
+                          }`}
+                        >
+                          {item.label}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )
+              })}
+              <div className="border-t border-white/10 mt-1 pt-1">
+                <Link href="/" className="block px-3 py-1.5 text-[12px] hover:bg-white/10 text-white/90">
+                  🌐 Zobrazit web
+                </Link>
+                {edit && (
+                  <Link
+                    href={edit.href}
+                    className="block px-3 py-1.5 text-[12px] hover:bg-white/10 text-terra"
+                  >
+                    {edit.label}
+                  </Link>
+                )}
+              </div>
+            </div>
+          </details>
+
+          <div className="ml-auto flex items-center gap-1 shrink-0">
+            <span className="opacity-50 text-[11px] hidden lg:inline">vidíš jen ty (admin)</span>
             <AdminBarLogout />
           </div>
         </div>
