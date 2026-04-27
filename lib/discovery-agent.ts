@@ -339,9 +339,11 @@ export async function publishCandidate(
 
       // Build SEO alt text — uses product name + position. Real description
       // would require Claude vision per photo; this is the safe default.
+      const productName = scraped.name ?? 'Olivový olej'
+      const productSlug = scraped.slug ?? 'product'
       const altFor = (i: number): string => {
-        if (i === 0) return scraped.name
-        return `${scraped.name} — pohled ${i + 1}`
+        if (i === 0) return productName
+        return `${productName} — pohled ${i + 1}`
       }
 
       // 1. Insert all rows first with original (e-shop) URLs as fallback
@@ -373,34 +375,36 @@ export async function publishCandidate(
           source: 'scraper_candidate',
         })
       })
-      if (rows.length === 0) return
-
-      const { data: insertedRows } = await supabaseAdmin
-        .from('product_images')
-        .insert(rows)
-        .select('id, url, sort_order, source')
+      let insertedRows: Array<{ id: string; url: string; sort_order: number; source: string }> = []
+      if (rows.length > 0) {
+        const { data } = await supabaseAdmin
+          .from('product_images')
+          .insert(rows)
+          .select('id, url, sort_order, source')
+        insertedRows = (data ?? []) as typeof insertedRows
+      }
 
       // 2. Download all PUBLISHED rows to Supabase Storage in parallel,
       //    update each row with the new hosted URL + AI vision alt text.
       //    Candidates stay as hotlinks (no AI cost on drafts).
       //    Best-effort — if a download fails, row keeps its hotlink.
-      const publishedRows = (insertedRows ?? []).filter((r) => r.source === 'scraper')
+      const publishedRows = insertedRows.filter((r) => r.source === 'scraper')
       if (publishedRows.length > 0) {
         await Promise.all(
           publishedRows.map(async (r) => {
             try {
               const stored = await downloadAndStoreImage(
                 r.url as string,
-                scraped.slug,
+                productSlug,
                 `g${r.sort_order}`
               )
               // Generate vision-based alt text on the original (pre-resize) URL
               // for better detail recognition. Best-effort.
               let altText: string
               try {
-                altText = await generateImageAltText(r.url as string, scraped.name)
+                altText = await generateImageAltText(r.url as string, productName)
               } catch {
-                altText = scraped.name
+                altText = productName
               }
               await supabaseAdmin
                 .from('product_images')
@@ -417,7 +421,7 @@ export async function publishCandidate(
       //    report (heuristika nebo AI alt), spusť OCR a doplň chybějící chemii.
       //    Jen pokud má produkt aspoň jedno NULL pole které lab umí vyplnit.
       try {
-        const labCandidates = (insertedRows ?? []).filter((r) =>
+        const labCandidates = insertedRows.filter((r) =>
           looksLikeLabReport(r.url as string, null)
         )
         if (labCandidates.length > 0) {
