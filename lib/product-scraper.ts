@@ -324,6 +324,7 @@ export async function scrapeProductPage(url: string): Promise<ScrapedProduct> {
 
   // --- EAN / SKU ---
   let ean: string | null = null
+  // 1. JSON-LD product schema
   if (product) {
     const candidates = [product.gtin13, product.gtin, product.sku, product.mpn]
     for (const c of candidates) {
@@ -333,10 +334,40 @@ export async function scrapeProductPage(url: string): Promise<ScrapedProduct> {
       }
     }
   }
+  // 2. Schema.org microdata: <meta itemprop="gtin13" content="..."> / itemprop="gtin"
   if (!ean) {
-    // Fallback: look for "EAN: 12345" pattern in page text
-    const pageText = $('body').text().slice(0, 20_000)
-    const m = pageText.match(/EAN[:\s]*(\d{8,14})/i) || pageText.match(/GTIN[:\s]*(\d{8,14})/i)
+    const microdataKeys = ['gtin13', 'gtin12', 'gtin', 'gtin14', 'gtin8', 'productID']
+    for (const key of microdataKeys) {
+      const val = $(`[itemprop="${key}"]`).first().attr('content') ?? $(`[itemprop="${key}"]`).first().text()
+      if (val && /^\d{8,14}$/.test(val.trim())) {
+        ean = val.trim()
+        break
+      }
+    }
+  }
+  // 3. Common shop class names (Shoptet's productEan, generic .ean, [data-ean])
+  if (!ean) {
+    const classCandidates = [
+      $('.productEan__value').first().text(),
+      $('.product-ean').first().text(),
+      $('[data-ean]').first().attr('data-ean'),
+      $('[data-gtin]').first().attr('data-gtin'),
+    ]
+    for (const c of classCandidates) {
+      if (c && /^\d{8,14}$/.test(c.trim())) {
+        ean = c.trim()
+        break
+      }
+    }
+  }
+  // 4. Fallback regex on page text — tolerates HTML elements between keyword and number
+  if (!ean) {
+    const pageText = $('body').text().slice(0, 30_000)
+    // Up to 100 chars between keyword and number for HTML-cluttered tables
+    const m =
+      pageText.match(/EAN[\s:.\-]{0,5}(\d{8,14})/i) ||
+      pageText.match(/GTIN[\s:.\-]{0,5}(\d{8,14})/i) ||
+      pageText.match(/Čárový kód[\s:.\-]{0,5}(\d{8,14})/i)
     if (m) ean = m[1]
   }
 
