@@ -77,6 +77,7 @@ export function QualityActions() {
           onClick={onAudit}
           disabled={running !== null}
           className="bg-olive text-white rounded-full px-5 py-2.5 text-sm font-medium hover:bg-olive-dark disabled:opacity-40 transition-colors"
+          title="Spustí quality rules audit napříč katalogem"
         >
           {running === 'audit' ? '🔍 Auditing…' : '🔍 Spustit audit'}
         </button>
@@ -84,20 +85,24 @@ export function QualityActions() {
           type="button"
           onClick={onBulkMeta}
           disabled={running !== null}
-          className="bg-olive text-white rounded-full px-5 py-2.5 text-sm font-medium hover:bg-olive-dark disabled:opacity-40 transition-colors"
-          title="SEO meta description pro Google snippet (130-160 znaků)"
+          className="bg-white border border-off2 text-text2 rounded-full px-4 py-2 text-[13px] font-medium hover:border-olive-light hover:text-olive disabled:opacity-40 transition-colors"
+          title="Manuální fix: SEO meta description pro produkty bez něj. Pro nové produkty se generuje automaticky při discovery."
         >
-          {running === 'meta' ? '✏️ Generuju…' : '✏️ SEO meta description'}
+          {running === 'meta' ? '✏️ Generuju…' : '✏️ Doplnit SEO meta'}
         </button>
         <button
           type="button"
           onClick={onBulkVision}
           disabled={running !== null}
-          className="bg-olive text-white rounded-full px-5 py-2.5 text-sm font-medium hover:bg-olive-dark disabled:opacity-40 transition-colors"
-          title="AI vision: alt text všech fotek + auto-scan lab reportů. ~$2 v Claude API."
+          className="bg-white border border-off2 text-text2 rounded-full px-4 py-2 text-[13px] font-medium hover:border-olive-light hover:text-olive disabled:opacity-40 transition-colors"
+          title="Manuální fix: AI vision alt text + lab scan pro existující fotky. Pro nové se dělá automaticky při discovery. Stojí ~$2 v Claude API."
         >
-          {running === 'vision' ? '👁️ Vidím…' : '👁️ Vision pass'}
+          {running === 'vision' ? '👁️ Vidím…' : '👁️ Doplnit vision'}
         </button>
+      </div>
+      <div className="text-[11px] text-text3 max-w-[420px] text-right leading-snug">
+        Tlačítka <strong>Doplnit</strong> jsou pojistka — pro nové produkty se vše dělá automaticky
+        v discovery cronu. Klikni jen pro retroaktivní fix nebo po výpadku Claude API.
       </div>
       {summary && (
         <span className="text-[11px] text-olive-dark bg-olive-bg border border-olive-border rounded px-3 py-1.5">
