@@ -288,6 +288,75 @@ function detectBannedPhrases(text: string, certifications: string[]): Array<{ na
   return hits
 }
 
+// Cheap Haiku-based generator for SEO meta_description (150-160 chars).
+// Separate from generateProductDescriptions because:
+// 1. Different audience (Google snippet, not on-page reader)
+// 2. Strict char budget (Google truncates at ~160)
+// 3. Should run in bulk over the catalog → Haiku price/speed.
+export interface MetaDescriptionInput {
+  name: string
+  shortDescription: string | null
+  originRegion: string | null
+  originCountry: string | null
+  acidity: number | null
+  polyphenols: number | null
+  certifications: string[]
+  olivatorScore: number | null
+}
+
+const META_SYSTEM_PROMPT = `Jsi SEO copywriter pro Olivator.cz.
+Generuješ meta description pro Google snippet.
+
+══ HARD CONSTRAINTS ══
+- POVINNĚ 130-160 znaků (Google useká nad 160)
+- Aktivní hlas, přítomný čas, přirozená čeština
+- ŽÁDNÉ uvozovky, žádné emoji
+- ŽÁDNÉ marketingové fráze: "skvělý", "nejlepší", "prémiový", "výjimečný", "kvalitní", "luxusní"
+- Konkrétní data: alespoň jeden konkrétní fakt (kyselost X %, polyfenoly X mg/kg, Score X/100, region, certifikace)
+- Implicitní CTA bez agresivity ("Najdi cenu", "Srovnej u 3 prodejců", "Olivator Score X/100")
+
+══ STRUKTURA ══
+[Co to je] + [konkrétní fakt s číslem] + [proč si vybrat / kde najít]
+
+══ PŘÍKLADY DOBRÉ FORMY ══
+"EVOLIA PLATINUM 250 ml — řecký bio EVOO s 2012 mg/kg polyfenolů a kyselostí 0,2 %. Olivator Score 77/100. Srovnej cenu u prodejců."
+"Intini Coratina z Apulie. Kyselost 0,16 %, polyfenoly 623 mg/kg, italský DOP. Olivator Score 62. Najdi nejnižší cenu na olivator.cz."
+
+══ OUTPUT ══
+Vrať POUZE jeden řádek meta description, žádný JSON, žádné uvozovky kolem. Žádný úvod ani závěr.`
+
+export async function generateMetaDescription(input: MetaDescriptionInput): Promise<string> {
+  const client = getClient()
+  const lines: string[] = [
+    `Název: ${input.name}`,
+  ]
+  if (input.shortDescription) lines.push(`Krátký popis: ${input.shortDescription}`)
+  if (input.originCountry) {
+    const region = input.originRegion ? `${input.originRegion}, ${input.originCountry}` : input.originCountry
+    lines.push(`Původ: ${region}`)
+  }
+  if (input.acidity != null) lines.push(`Kyselost: ${input.acidity} %`)
+  if (input.polyphenols != null) lines.push(`Polyfenoly: ${input.polyphenols} mg/kg`)
+  if (input.certifications.length > 0) lines.push(`Certifikace: ${input.certifications.join(', ').toUpperCase()}`)
+  if (input.olivatorScore != null) lines.push(`Olivator Score: ${input.olivatorScore}/100`)
+
+  const res = await client.messages.create({
+    model: 'claude-haiku-4-5',
+    max_tokens: 250,
+    system: META_SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: lines.join('\n') }],
+  })
+  const text = res.content
+    .filter((b) => b.type === 'text')
+    .map((b) => (b as { type: 'text'; text: string }).text)
+    .join('')
+    .trim()
+    .replace(/^["'„"]+|["'""]+$/g, '') // strip surrounding quotes if model adds them
+  // Apply Czech typography (NBSP after single-letter prepositions, etc.)
+  const { fixed } = applyCzechTypographyFixes(text)
+  return fixed
+}
+
 export async function generateProductDescriptions(
   input: ContentInput
 ): Promise<ContentOutput> {

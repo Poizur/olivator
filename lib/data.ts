@@ -29,6 +29,8 @@ interface ProductRow {
   score_breakdown: Record<string, number>
   description_short: string | null
   description_long: string | null
+  meta_title: string | null
+  meta_description: string | null
   status: string
   image_url: string | null
   image_source: string | null
@@ -75,6 +77,8 @@ function mapProduct(row: ProductRow): Product {
     },
     descriptionShort: row.description_short ?? '',
     descriptionLong: row.description_long ?? '',
+    metaTitle: row.meta_title ?? null,
+    metaDescription: row.meta_description ?? null,
     status: row.status as Product['status'],
     imageUrl: row.image_url ?? null,
     imageSource: row.image_source ?? null,

@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation'
 
 export function QualityActions() {
   const router = useRouter()
-  const [running, setRunning] = useState(false)
+  const [running, setRunning] = useState<null | 'audit' | 'meta'>(null)
   const [error, setError] = useState<string | null>(null)
   const [summary, setSummary] = useState<string | null>(null)
 
   async function onAudit() {
     if (!confirm('Spustit audit všech aktivních produktů? Trvá ~30-60s podle počtu.')) return
-    setRunning(true)
+    setRunning('audit')
     setError(null)
     setSummary(null)
     try {
@@ -23,20 +23,53 @@ export function QualityActions() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Chyba')
     } finally {
-      setRunning(false)
+      setRunning(null)
+    }
+  }
+
+  async function onBulkMeta() {
+    if (!confirm('Vygenerovat SEO meta description pro všechny produkty s prázdným polem? Trvá ~1-2 min.')) return
+    setRunning('meta')
+    setError(null)
+    setSummary(null)
+    try {
+      const res = await fetch('/api/admin/products/bulk-meta', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setSummary(
+        data.processed === 0
+          ? `✓ ${data.message ?? 'Vše už má meta description.'}`
+          : `✓ Hotovo: ${data.processed} vygenerováno, ${data.failed ?? 0} selhalo`
+      )
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Chyba')
+    } finally {
+      setRunning(null)
     }
   }
 
   return (
     <div className="flex flex-col items-end gap-2">
-      <button
-        type="button"
-        onClick={onAudit}
-        disabled={running}
-        className="bg-olive text-white rounded-full px-5 py-2.5 text-sm font-medium hover:bg-olive-dark disabled:opacity-40 transition-colors"
-      >
-        {running ? '🔍 Auditing...' : '🔍 Spustit audit'}
-      </button>
+      <div className="flex gap-2 flex-wrap justify-end">
+        <button
+          type="button"
+          onClick={onAudit}
+          disabled={running !== null}
+          className="bg-olive text-white rounded-full px-5 py-2.5 text-sm font-medium hover:bg-olive-dark disabled:opacity-40 transition-colors"
+        >
+          {running === 'audit' ? '🔍 Auditing…' : '🔍 Spustit audit'}
+        </button>
+        <button
+          type="button"
+          onClick={onBulkMeta}
+          disabled={running !== null}
+          className="bg-olive text-white rounded-full px-5 py-2.5 text-sm font-medium hover:bg-olive-dark disabled:opacity-40 transition-colors"
+          title="SEO meta description pro Google snippet (130-160 znaků)"
+        >
+          {running === 'meta' ? '✏️ Generuju…' : '✏️ SEO meta description'}
+        </button>
+      </div>
       {summary && (
         <span className="text-[11px] text-olive-dark bg-olive-bg border border-olive-border rounded px-3 py-1.5">
           {summary}

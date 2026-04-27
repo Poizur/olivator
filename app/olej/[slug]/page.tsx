@@ -28,9 +28,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const product = await getProductBySlug(slug)
   if (!product) return { title: 'Nenalezeno' }
 
-  const title = `${product.name} — Score ${product.olivatorScore}/100 · ceny, recenze`
+  const title = product.metaTitle || `${product.name} — Score ${product.olivatorScore}/100 · ceny, recenze`
   const description = trimMeta(
-    product.descriptionShort ||
+    product.metaDescription ||
+      product.descriptionShort ||
       `${product.name} — Olivator Score ${product.olivatorScore}/100. Srovnání cen z 18 prodejců.`
   )
   const url = `https://olivator.cz/olej/${product.slug}`

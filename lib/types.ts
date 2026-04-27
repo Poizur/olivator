@@ -30,6 +30,8 @@ export interface Product {
   scoreBreakdown: ScoreBreakdown
   descriptionShort: string
   descriptionLong: string
+  metaTitle: string | null         // SEO <title>; null falls back to generated
+  metaDescription: string | null   // SEO meta description (130-160 chars); null falls back
   status: 'draft' | 'active' | 'inactive'
   imageUrl?: string | null
   imageSource?: string | null
