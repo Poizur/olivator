@@ -193,18 +193,53 @@ function assessQuality(scraped: ScrapedProduct): {
 
 /** Resolve a candidate's source_domain to retailer slug + canonical domain.
  *  Strips `www.` prefix so lookup works regardless of whether the candidate
- *  was scraped from a www-prefixed URL or not. Falls back to deriving slug
- *  from domain (e.g. `reckonasbavi.cz` → `reckonasbavi`) if retailer not in DB. */
+ *  was scraped from a www-prefixed URL or not.
+ *
+ *  Auto-creates the retailer row if it doesn't exist yet — discovery_sources
+ *  table is separate from retailers table, so a shop added via Prospector
+ *  has no retailer entry until first product is published from it. Without
+ *  this on-the-fly upsert, bulk-approve crashes with "Retailer X not found". */
 export async function resolveRetailerForCandidate(
   sourceDomain: string
 ): Promise<{ slug: string; domain: string }> {
   const normalized = sourceDomain.replace(/^www\./, '')
-  const { data: retailer } = await supabaseAdmin
+
+  // 1) Lookup by domain
+  const { data: byDomain } = await supabaseAdmin
     .from('retailers')
     .select('slug')
     .eq('domain', normalized)
     .maybeSingle()
-  const slug = (retailer?.slug as string) || normalized.split('.')[0]
+  if (byDomain?.slug) {
+    return { slug: byDomain.slug as string, domain: normalized }
+  }
+
+  // 2) Derive slug from domain root (e.g. "reckyeshop.cz" → "reckyeshop")
+  const slug = normalized.split('.')[0]
+
+  // 3) Lookup by slug (in case retailer exists with different domain spelling)
+  const { data: bySlug } = await supabaseAdmin
+    .from('retailers')
+    .select('slug')
+    .eq('slug', slug)
+    .maybeSingle()
+  if (bySlug?.slug) {
+    return { slug: bySlug.slug as string, domain: normalized }
+  }
+
+  // 4) Auto-create — Title Case the slug for display name
+  const name = slug.charAt(0).toUpperCase() + slug.slice(1)
+  await supabaseAdmin.from('retailers').upsert(
+    {
+      slug,
+      name,
+      domain: normalized,
+      is_active: true,
+      market: 'CZ',
+    },
+    { onConflict: 'slug' }
+  )
+
   return { slug, domain: normalized }
 }
 
