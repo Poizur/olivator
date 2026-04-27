@@ -142,15 +142,26 @@ export function CandidateRow({ candidate }: { candidate: Candidate }) {
           </>
         )}
         {candidate.status === 'failed' && (
-          <button
-            type="button"
-            onClick={approve}
-            disabled={busy !== null}
-            className="bg-terra text-white rounded-full px-3 py-1 text-[11px] font-medium hover:opacity-90 disabled:opacity-40 transition-colors"
-            title="Spustit pipeline znovu — pokud jsi mezitím opravil chybu, projde"
-          >
-            {busy === 'approve' ? '...' : '↻ Zkusit znovu'}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={approve}
+              disabled={busy !== null}
+              className="bg-terra text-white rounded-full px-3 py-1 text-[11px] font-medium hover:opacity-90 disabled:opacity-40 transition-colors"
+              title="Spustit pipeline znovu — pokud jsi mezitím opravil chybu, projde"
+            >
+              {busy === 'approve' ? '...' : '↻ Zkusit znovu'}
+            </button>
+            <button
+              type="button"
+              onClick={reject}
+              disabled={busy !== null}
+              className="text-text3 hover:text-terra px-2 py-1 text-[11px]"
+              title="Zamítnout — neukazuje se v aktivní queue, zůstane v historii"
+            >
+              ✕
+            </button>
+          </>
         )}
       </div>
       {error && (
