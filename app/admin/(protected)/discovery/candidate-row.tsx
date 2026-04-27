@@ -141,6 +141,17 @@ export function CandidateRow({ candidate }: { candidate: Candidate }) {
             </button>
           </>
         )}
+        {candidate.status === 'failed' && (
+          <button
+            type="button"
+            onClick={approve}
+            disabled={busy !== null}
+            className="bg-terra text-white rounded-full px-3 py-1 text-[11px] font-medium hover:opacity-90 disabled:opacity-40 transition-colors"
+            title="Spustit pipeline znovu — pokud jsi mezitím opravil chybu, projde"
+          >
+            {busy === 'approve' ? '...' : '↻ Zkusit znovu'}
+          </button>
+        )}
       </div>
       {error && (
         <span className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
