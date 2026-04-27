@@ -24,6 +24,8 @@ import { extractFactsFromText } from './fact-extractor'
 import { estimateFlavorProfile } from './flavor-agent'
 import { deriveUseCases } from './use-case-deriver'
 import { downloadAndStoreImage } from './product-image'
+import { detectCertificationsInText } from './cert-detector'
+import { auditProduct } from './quality-rules'
 import { countryName } from './utils'
 
 export type CandidateStatus =
@@ -199,6 +201,19 @@ export async function publishCandidate(
 ): Promise<string> {
   if (!scraped.name || !scraped.slug) throw new Error('Missing name/slug')
 
+  // Auto-detect certifications from raw + name (HIGH-confidence only — admin
+  // can review LOW/MEDIUM later in cert detector panel).
+  const detectedCerts: string[] = []
+  const certText = [scraped.name, scraped.rawDescription].filter(Boolean).join('\n')
+  if (certText) {
+    const candidates = detectCertificationsInText(certText)
+    for (const c of candidates) {
+      if (c.confidence === 'high' && !detectedCerts.includes(c.cert)) {
+        detectedCerts.push(c.cert)
+      }
+    }
+  }
+
   // Ensure retailer
   const { data: retailer } = await supabaseAdmin
     .from('retailers')
@@ -223,6 +238,7 @@ export async function publishCandidate(
         peroxide_value: scraped.peroxideValue,
         volume_ml: scraped.volumeMl,
         packaging: scraped.packaging,
+        certifications: detectedCerts,
         description_short: scraped.descriptionShort,
         source_url: scraped.url,
         raw_description: scraped.rawDescription,
@@ -304,7 +320,7 @@ export async function publishCandidate(
     acidity: scraped.acidity,
     polyphenols: scraped.polyphenols,
     peroxideValue: scraped.peroxideValue,
-    certifications: [],
+    certifications: detectedCerts,
     pricePer100ml:
       scraped.price && scraped.volumeMl ? (scraped.price / scraped.volumeMl) * 100 : null,
   })
@@ -327,7 +343,7 @@ export async function publishCandidate(
     pricePerLiter:
       scraped.price && scraped.volumeMl ? (scraped.price / scraped.volumeMl) * 1000 : null,
     packaging: scraped.packaging,
-    certifications: [],
+    certifications: detectedCerts,
   })
   await supabaseAdmin
     .from('products')
@@ -345,7 +361,7 @@ export async function publishCandidate(
       volumeMl: scraped.volumeMl,
       acidity: scraped.acidity,
       polyphenols: scraped.polyphenols,
-      certifications: [],
+      certifications: detectedCerts,
       olivatorScore: score.total,
       rawDescription: scraped.rawDescription,
     })
@@ -363,7 +379,13 @@ export async function publishCandidate(
     console.warn('[discovery] AI rewrite failed, leaving as draft:', err)
   }
 
-  // Mark retailer if we created one ad-hoc
+  // Run quality audit on the freshly published product so admin sees issues immediately
+  try {
+    await auditProduct(productId, { persist: true })
+  } catch (err) {
+    console.warn('[discovery] quality audit failed:', err)
+  }
+
   return productId
 }
 

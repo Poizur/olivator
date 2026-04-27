@@ -460,6 +460,84 @@ export async function deleteProduct(id: string) {
   if (error) throw error
 }
 
+// ── Product variants — same brand+region, different volume ────────────
+
+export interface VariantProduct {
+  id: string
+  slug: string
+  name: string
+  volumeMl: number | null
+  packaging: string | null
+  cheapestPrice: number | null
+  olivatorScore: number | null
+}
+
+/** Find sibling products of given product (same brand + region + base name).
+ *  Used on product detail page to show "available in other sizes". */
+export async function getVariantProducts(productId: string): Promise<VariantProduct[]> {
+  const { data: current } = await supabaseAdmin
+    .from('products')
+    .select('id, name_short, origin_country, origin_region, name')
+    .eq('id', productId)
+    .maybeSingle()
+  if (!current) return []
+
+  const brand = current.name_short as string | null
+  const region = current.origin_region as string | null
+
+  // Need at least brand or country+region to match meaningfully
+  if (!brand && !region) return []
+
+  // Match products with same brand. If no brand, fall back to same region.
+  let query = supabaseAdmin
+    .from('products')
+    .select('id, slug, name, volume_ml, packaging, olivator_score, name_short, origin_region')
+    .eq('status', 'active')
+    .neq('id', productId)
+  if (brand) {
+    query = query.eq('name_short', brand)
+  } else {
+    query = query.eq('origin_region', region as string)
+  }
+  const { data: candidates } = await query
+  if (!candidates || candidates.length === 0) return []
+
+  // Stricter match: same region too (if brand only) — avoid false positives
+  // when brand is generic ("Olivar Selection")
+  const filtered = candidates.filter(c => {
+    if (!brand) return true // already filtered by region
+    return c.origin_region === region
+  })
+
+  // Get cheapest offer per candidate
+  const ids = filtered.map(c => c.id as string)
+  if (ids.length === 0) return []
+  const { data: offers } = await supabaseAdmin
+    .from('product_offers')
+    .select('product_id, price')
+    .in('product_id', ids)
+    .order('price', { ascending: true })
+  const cheapestByProduct = new Map<string, number>()
+  for (const o of offers ?? []) {
+    const pid = o.product_id as string
+    if (!cheapestByProduct.has(pid)) {
+      cheapestByProduct.set(pid, Number(o.price))
+    }
+  }
+
+  return filtered
+    .map(c => ({
+      id: c.id as string,
+      slug: c.slug as string,
+      name: c.name as string,
+      volumeMl: c.volume_ml as number | null,
+      packaging: c.packaging as string | null,
+      cheapestPrice: cheapestByProduct.get(c.id as string) ?? null,
+      olivatorScore: c.olivator_score as number | null,
+    }))
+    .sort((a, b) => (a.volumeMl ?? 0) - (b.volumeMl ?? 0))
+}
+
 // ── Editable FAQs ─────────────────────────────────────────────────────
 
 export interface GeneralFAQ {

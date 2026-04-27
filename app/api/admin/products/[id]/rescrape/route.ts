@@ -10,6 +10,7 @@ import { calculateScore } from '@/lib/score'
 import { deriveUseCases } from '@/lib/use-case-deriver'
 import { countryName } from '@/lib/utils'
 import { revalidateProduct } from '@/lib/revalidate'
+import { auditProduct } from '@/lib/quality-rules'
 
 export const maxDuration = 90 // full pipeline: scrape + facts + flavor + rewrite + score
 
@@ -259,6 +260,13 @@ export async function POST(
       .from('products')
       .update({ updated_at: new Date().toISOString() })
       .eq('id', id)
+
+    // Quality audit — flag/resolve issues based on fresh data
+    try {
+      await auditProduct(id, { persist: true })
+    } catch (err) {
+      console.warn('[rescrape] quality audit failed:', err)
+    }
 
     await revalidateProduct(id)
 

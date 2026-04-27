@@ -73,6 +73,9 @@ export async function AdminBar() {
           <Link href="/admin/discovery" className="px-2 py-0.5 hover:bg-white/10 rounded transition-colors">
             Discovery
           </Link>
+          <Link href="/admin/quality" className="px-2 py-0.5 hover:bg-white/10 rounded transition-colors">
+            Kvalita
+          </Link>
           <Link href="/admin/nastaveni" className="px-2 py-0.5 hover:bg-white/10 rounded transition-colors">
             ⚙ Nastavení
           </Link>

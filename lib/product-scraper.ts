@@ -206,8 +206,17 @@ function inferBrand(name: string | null): string | null {
 
 function extractAcidity(text: string | null): number | null {
   if (!text) return null
-  // "acidita: 0,3%", "kyselost 0.2 %", "acidity 0.2%"
-  const m = text.match(/(?:acidita|kyselost|acidity)[:\s]*(\d+[,.]?\d*)\s*%/i)
+  // Patterns to handle (in order of specificity):
+  //   "acidita: 0,3%"             → 0.3
+  //   "kyselost 0.2 %"            → 0.2
+  //   "Acidita: max. ≤ 0,39%"    → 0.39 (upper bound, conservative)
+  //   "Acidita: ≤ 0,5%"           → 0.5
+  //   "Acidita: < 0,3%"           → 0.3
+  //   "Acidita: do 0,5%"          → 0.5
+  //   "Acidita: 0,32 - 0,8%"      → 0.32 (range, take low = naměřená)
+  //   "Acidita 0,32-0,8%"          → 0.32
+  const re = /(?:acidita|kyselost|acidity)[:\s]*(?:max\.?\s*)?(?:[≤<]\s*|do\s+)?(\d+[,.]?\d*)\s*(?:%|\s*-\s*\d+[,.]?\d*\s*%)/i
+  const m = text.match(re)
   if (!m) return null
   return parseFloat(m[1].replace(',', '.'))
 }

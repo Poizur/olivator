@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getProducts, getProductBySlug, getOffersForProduct, getProductGallery, getProductCustomFAQs, getActiveGeneralFAQs } from '@/lib/data'
+import { getProducts, getProductBySlug, getOffersForProduct, getProductGallery, getProductCustomFAQs, getActiveGeneralFAQs, getVariantProducts } from '@/lib/data'
 import { countryFlag, countryName, typeLabel, certLabel, formatPrice, formatPricePer100ml } from '@/lib/utils'
 import { productSchema, breadcrumbSchema, faqSchema } from '@/lib/schema'
 import { generateProductFAQ } from '@/lib/product-faq'
@@ -65,11 +65,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const product = await getProductBySlug(slug)
   if (!product) notFound()
 
-  const [offers, gallery, customFAQs, dbGeneralFAQs] = await Promise.all([
+  const [offers, gallery, customFAQs, dbGeneralFAQs, variants] = await Promise.all([
     getOffersForProduct(product.id),
     getProductGallery(product.id),
     getProductCustomFAQs(product.id),
     getActiveGeneralFAQs(),
+    getVariantProducts(product.id),
   ])
   const cheapest = offers[0]
 
@@ -298,6 +299,52 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </h2>
           <div className="text-[15px] text-text2 leading-relaxed whitespace-pre-line">
             {product.descriptionLong}
+          </div>
+        </section>
+      )}
+
+      {/* Variants — same brand+region, different sizes */}
+      {variants.length > 0 && (
+        <section className="mt-12 max-w-[1040px]">
+          <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-2">
+            Stejný olej v jiných baleních
+          </h2>
+          <p className="text-[13px] text-text3 mb-4">
+            {product.nameShort
+              ? `${product.nameShort} z regionu ${product.originRegion ?? ''} v dalších objemech`
+              : 'Stejný producent v dalších objemech'}
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {variants.map(v => (
+              <Link
+                key={v.id}
+                href={`/olej/${v.slug}`}
+                className="bg-white border border-off2 rounded-lg p-4 hover:border-olive-light transition-colors group"
+              >
+                <div className="text-[11px] uppercase tracking-wider text-text3 mb-1">
+                  {v.volumeMl ? `${v.volumeMl >= 1000 ? `${v.volumeMl / 1000} l` : `${v.volumeMl} ml`}` : '—'}
+                  {v.packaging === 'dark_glass' && ' · sklo'}
+                  {v.packaging === 'tin' && ' · plech'}
+                </div>
+                <div className="text-[13px] font-medium text-text group-hover:text-olive-dark line-clamp-2 mb-2">
+                  {v.name}
+                </div>
+                <div className="flex items-end justify-between">
+                  {v.cheapestPrice ? (
+                    <div className="text-base font-semibold text-text">
+                      {Math.round(v.cheapestPrice)} Kč
+                    </div>
+                  ) : (
+                    <div className="text-[12px] text-text3 italic">Cena chybí</div>
+                  )}
+                  {v.olivatorScore != null && v.olivatorScore > 0 && (
+                    <div className="text-[10px] bg-terra text-white rounded-full px-2 py-0.5 font-bold">
+                      {v.olivatorScore}
+                    </div>
+                  )}
+                </div>
+              </Link>
+            ))}
           </div>
         </section>
       )}
