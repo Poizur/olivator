@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "cron:discovery": "tsx scripts/cron/discovery.ts",
+    "cron:prospect": "tsx scripts/cron/prospect.ts"
   },
   "engines": {
     "node": ">=20.18.0"
@@ -22,6 +24,7 @@
     "react-dom": "19.2.4",
     "sharp": "^0.34.5",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   },
   "devDependencies": {
