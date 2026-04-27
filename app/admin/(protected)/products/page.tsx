@@ -1,21 +1,30 @@
 import Link from 'next/link'
 import { getAllProductsAdmin } from '@/lib/data'
 import { countryFlag, typeLabel, extractBrand } from '@/lib/utils'
+import { calculateCompleteness, completenessColor } from '@/lib/completeness'
 
 export default async function AdminProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; brand?: string }>
+  searchParams: Promise<{ status?: string; brand?: string; sort?: string }>
 }) {
-  const { status, brand } = await searchParams
+  const { status, brand, sort } = await searchParams
 
   // Fetch all products (no status filter) for global brand list + counts
   const allProducts = await getAllProductsAdmin()
 
+  // Pre-compute completeness for each product (used in badge + sort)
+  const withCompleteness = allProducts.map((p) => ({ ...p, _completeness: calculateCompleteness(p) }))
+
   // Apply filters client-side using single DB fetch
-  let filtered = [...allProducts]
+  let filtered = [...withCompleteness]
   if (status) filtered = filtered.filter(p => p.status === status)
   if (brand) filtered = filtered.filter(p => extractBrand(p.name) === brand)
+
+  // Sort: default = newest, ?sort=completeness = worst first (admin sees gaps to fix)
+  if (sort === 'completeness') {
+    filtered.sort((a, b) => a._completeness.weightedPercent - b._completeness.weightedPercent)
+  }
 
   const statusCounts = {
     all: allProducts.length,
@@ -135,6 +144,15 @@ export default async function AdminProductsPage({
               <th className="text-left px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Typ</th>
               <th className="text-right px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Score</th>
               <th className="text-right px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3 whitespace-nowrap">Kyselost</th>
+              <th className="text-center px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">
+                <Link
+                  href={sort === 'completeness' ? '/admin/products' : '/admin/products?sort=completeness'}
+                  className={`hover:text-olive transition-colors ${sort === 'completeness' ? 'text-olive' : ''}`}
+                  title="Kliknutím seřadit od nejvíce neúplných"
+                >
+                  Komplet {sort === 'completeness' ? '↑' : '↕'}
+                </Link>
+              </th>
               <th className="text-center px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Stav</th>
               <th className="px-3 py-3"></th>
             </tr>
@@ -142,7 +160,7 @@ export default async function AdminProductsPage({
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-text3 text-sm">
+                <td colSpan={10} className="px-4 py-10 text-center text-text3 text-sm">
                   Žádné produkty neodpovídají vybraným filtrům
                 </td>
               </tr>
@@ -188,6 +206,9 @@ export default async function AdminProductsPage({
                   {p.acidity ? `${p.acidity}%` : '—'}
                 </td>
                 <td className="px-3 py-3 text-center">
+                  <CompletenessBadge result={p._completeness} />
+                </td>
+                <td className="px-3 py-3 text-center">
                   <StatusBadge status={p.status} />
                 </td>
                 <td className="px-3 py-3 text-right">
@@ -209,6 +230,21 @@ export default async function AdminProductsPage({
         {brand && <> &middot; výrobce: <strong>{brand}</strong></>}
       </div>
     </div>
+  )
+}
+
+function CompletenessBadge({ result }: { result: ReturnType<typeof calculateCompleteness> }) {
+  const { bg, text } = completenessColor(result.weightedPercent)
+  const tooltip = result.missing.length > 0
+    ? `Chybí: ${result.missing.map((m) => m.label).join(', ')}`
+    : 'Vše vyplněno'
+  return (
+    <span
+      className={`text-[11px] ${bg} ${text} px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block`}
+      title={tooltip}
+    >
+      {result.weightedPercent}%
+    </span>
   )
 }
 
