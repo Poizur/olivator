@@ -318,45 +318,73 @@ export async function publishCandidate(
     )
   }
 
-  // Image — primary (downloaded to Supabase Storage immediately)
-  if (scraped.imageUrl) {
-    try {
-      const storedUrl = await downloadAndStoreImage(scraped.imageUrl, scraped.slug)
-      await supabaseAdmin
-        .from('products')
-        .update({ image_url: storedUrl, image_source: 'discovery_agent' })
-        .eq('id', productId)
-    } catch (err) {
-      console.warn('[discovery] image download failed:', err)
-    }
-  }
-
-  // Gallery candidates — store extra images as `scraper_candidate` rows so admin
-  // can pick which to keep without triggering a full rescrape. Skip the primary
-  // (already downloaded above) to avoid duplicate, plus URLs already saved.
-  if (scraped.galleryImages.length > 1) {
+  // Images — auto-publish first 5 as `scraper` (visible in public gallery),
+  // rest as `scraper_candidate` (admin picks which to swap in).
+  // Primary image also gets downloaded to Supabase Storage and stored on
+  // products.image_url for backwards-compat quick access (product cards, OG tags).
+  const PUBLISH_COUNT = 5
+  if (scraped.galleryImages.length > 0) {
     try {
       const { data: existingRows } = await supabaseAdmin
         .from('product_images')
-        .select('url')
+        .select('url, is_primary')
         .eq('product_id', productId)
       const existingUrls = new Set((existingRows ?? []).map((r) => r.url as string))
-      const candidates = scraped.galleryImages
-        .filter((img) => img.url !== scraped.imageUrl && !existingUrls.has(img.url))
-      if (candidates.length > 0) {
-        await supabaseAdmin.from('product_images').insert(
-          candidates.map((img, i) => ({
-            product_id: productId,
-            url: img.url,
-            alt_text: img.alt,
-            is_primary: false,
-            sort_order: 100 + i,
-            source: 'scraper_candidate',
-          }))
-        )
+      const hasExistingApproved =
+        (existingRows ?? []).some((r) => (r.is_primary as boolean | null) === true)
+
+      const newImages = scraped.galleryImages.filter((img) => !existingUrls.has(img.url))
+      const toPublish = newImages.slice(0, PUBLISH_COUNT)
+      const toCandidate = newImages.slice(PUBLISH_COUNT)
+
+      const rows: Array<{
+        product_id: string
+        url: string
+        alt_text: string | null
+        is_primary: boolean
+        sort_order: number
+        source: string
+      }> = []
+      toPublish.forEach((img, i) => {
+        rows.push({
+          product_id: productId,
+          url: img.url,
+          alt_text: img.alt,
+          is_primary: !hasExistingApproved && i === 0,
+          sort_order: i,
+          source: 'scraper',
+        })
+      })
+      toCandidate.forEach((img, i) => {
+        rows.push({
+          product_id: productId,
+          url: img.url,
+          alt_text: img.alt,
+          is_primary: false,
+          sort_order: 100 + i,
+          source: 'scraper_candidate',
+        })
+      })
+      if (rows.length > 0) {
+        await supabaseAdmin.from('product_images').insert(rows)
+      }
+
+      // Download the primary image to Supabase Storage for fast public access
+      // and store on products.image_url. Only if we actually have a primary URL
+      // and it's a newly published one (otherwise existing primary stays).
+      if (scraped.imageUrl && toPublish.some((img) => img.url === scraped.imageUrl)) {
+        try {
+          const storedUrl = await downloadAndStoreImage(scraped.imageUrl, scraped.slug)
+          await supabaseAdmin
+            .from('products')
+            .update({ image_url: storedUrl, image_source: 'discovery_agent' })
+            .eq('id', productId)
+        } catch (err) {
+          console.warn('[discovery] image download failed:', err)
+        }
       }
     } catch (err) {
-      console.warn('[discovery] gallery candidates insert failed:', err)
+      console.warn('[discovery] gallery insert failed:', err)
     }
   }
 
