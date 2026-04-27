@@ -1,8 +1,12 @@
 [build]
 builder = "NIXPACKS"
 
+# Note: startCommand intentionally NOT set here — Nixpacks auto-detects
+# `npm start` for the web service, and cron services override per-service
+# via dashboard (Settings → Deploy → Custom Start Command). Setting it here
+# would lock the field for all services.
+
 [deploy]
-startCommand = "npm start"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
