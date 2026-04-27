@@ -382,6 +382,34 @@ function SourceRow({
     }
   }
 
+  async function testCrawler() {
+    setBusy('test')
+    try {
+      const res = await fetch('/api/admin/discovery/sources', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          domain: s.domain,
+          crawler_type: s.crawler_type,
+          category_url: s.category_url,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const result = data.result
+      if (result.error) {
+        onError(`${s.domain}: ${result.error}`)
+      } else {
+        onSuccess(`${s.domain}: ✓ Nalezeno ${result.urls?.length ?? 0} olejů`)
+      }
+      onChanged()
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Test selhal')
+    } finally {
+      setBusy(null)
+    }
+  }
+
   return (
     <div className="bg-white border border-off2 rounded-lg p-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -432,6 +460,14 @@ function SourceRow({
           )}
           {s.status === 'enabled' && (
             <>
+              <button
+                type="button"
+                onClick={testCrawler}
+                disabled={busy !== null}
+                className="bg-off border border-off2 text-text rounded-full px-3 py-1 text-[11px] font-medium hover:border-olive-light disabled:opacity-40"
+              >
+                {busy === 'test' ? '🧪...' : '🧪 Test'}
+              </button>
               <button
                 type="button"
                 onClick={bulkImport}
