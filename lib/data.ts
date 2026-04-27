@@ -94,6 +94,9 @@ function mapRetailer(row: Record<string, unknown>): Retailer {
     defaultCommissionPct: Number(row.default_commission_pct ?? 0),
     isActive: (row.is_active as boolean) ?? true,
     market: (row.market as string) ?? 'CZ',
+    rating: row.rating != null ? Number(row.rating) : null,
+    ratingCount: row.rating_count != null ? Number(row.rating_count) : null,
+    ratingSource: (row.rating_source as string) ?? null,
   }
 }
 
@@ -292,10 +295,13 @@ export interface RetailerInput {
   defaultCommissionPct: number
   isActive: boolean
   market: string
+  rating?: number | null
+  ratingCount?: number | null
+  ratingSource?: string | null
 }
 
 export async function upsertRetailer(input: RetailerInput, id?: string) {
-  const payload = {
+  const payload: Record<string, unknown> = {
     name: input.name,
     slug: input.slug,
     domain: input.domain,
@@ -305,6 +311,9 @@ export async function upsertRetailer(input: RetailerInput, id?: string) {
     is_active: input.isActive,
     market: input.market,
   }
+  if (input.rating !== undefined) payload.rating = input.rating
+  if (input.ratingCount !== undefined) payload.rating_count = input.ratingCount
+  if (input.ratingSource !== undefined) payload.rating_source = input.ratingSource
 
   if (id) {
     const { error } = await supabaseAdmin.from('retailers').update(payload).eq('id', id)

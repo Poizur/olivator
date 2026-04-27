@@ -62,6 +62,9 @@ export interface Retailer {
   defaultCommissionPct: number
   isActive: boolean
   market: string
+  rating?: number | null
+  ratingCount?: number | null
+  ratingSource?: string | null
 }
 
 export interface ProductOffer {

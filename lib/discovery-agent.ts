@@ -1,0 +1,527 @@
+// Discovery Agent — finds new olive oils across configured shops, dedupes
+// against our DB, auto-publishes high-confidence finds, queues the rest
+// for admin review.
+//
+// Pipeline:
+//   1. Crawl enabled shops (lib/shop-crawlers) → list of product URLs
+//   2. For each URL → scrape product (lib/product-scraper)
+//   3. Match against existing products by EAN / fuzzy name
+//   4. Decide:
+//      - EAN match exact → AUTO_ADDED_OFFER (just add new offer for this retailer)
+//      - Strong fuzzy name match → NEEDS_REVIEW (probably duplicate)
+//      - Truly new + high confidence (good data) → AUTO_PUBLISHED (or PENDING if auto-publish off)
+//      - New but low confidence → NEEDS_REVIEW
+//   5. Persist decisions to discovery_candidates table
+//   6. Generate AI content for new products that should be published
+
+import { supabaseAdmin } from './supabase'
+import { scrapeProductPage, type ScrapedProduct } from './product-scraper'
+import { crawlShops } from './shop-crawlers'
+import { getSetting } from './settings'
+import { generateProductDescriptions } from './content-agent'
+import { calculateScore } from './score'
+import { extractFactsFromText } from './fact-extractor'
+import { estimateFlavorProfile } from './flavor-agent'
+import { deriveUseCases } from './use-case-deriver'
+import { downloadAndStoreImage } from './product-image'
+import { countryName } from './utils'
+
+export type CandidateStatus =
+  | 'pending'
+  | 'auto_published'
+  | 'auto_added_offer'
+  | 'approved'
+  | 'rejected'
+  | 'needs_review'
+  | 'failed'
+
+export interface DiscoveryRunResult {
+  shopsCrawled: number
+  totalUrlsFound: number
+  newCandidates: number
+  autoPublished: number
+  autoAddedOffers: number
+  needsReview: number
+  failed: number
+  errors: string[]
+  shopErrors: Array<{ shop: string; error: string }>
+  candidateIds: string[]
+}
+
+/** Normalize a product name for fuzzy matching: lowercase, strip diacritics,
+ *  collapse whitespace, remove volume markers. */
+function normalizeName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // strip diacritics
+    .replace(/\d+[.,]?\d*\s*(?:ml|l|kg|g)\b/gi, '') // strip volume
+    .replace(/\bextra\s*panensk[yý]\b/gi, '') // strip "extra panensky" — too generic
+    .replace(/\bolivov\w*\s*olej\w*\b/gi, '') // strip "olivovy olej"
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/** Levenshtein distance (DP) — for fuzzy name matching. */
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0
+  if (!a.length) return b.length
+  if (!b.length) return a.length
+  const dp: number[][] = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0))
+  for (let i = 0; i <= a.length; i++) dp[i][0] = i
+  for (let j = 0; j <= b.length; j++) dp[0][j] = j
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
+    }
+  }
+  return dp[a.length][b.length]
+}
+
+/** Match scraped product against existing DB products.
+ *  Returns: { matched_product_id?, match_type, match_confidence, reasoning }. */
+async function matchProduct(scraped: ScrapedProduct): Promise<{
+  matchedProductId: string | null
+  matchType: 'ean' | 'fuzzy_name' | 'none'
+  matchConfidence: number
+  reasoning: string
+}> {
+  // 1. EAN exact match (strongest signal)
+  if (scraped.ean) {
+    const { data: byEan } = await supabaseAdmin
+      .from('products')
+      .select('id, name')
+      .eq('ean', scraped.ean)
+      .maybeSingle()
+    if (byEan?.id) {
+      return {
+        matchedProductId: byEan.id as string,
+        matchType: 'ean',
+        matchConfidence: 1.0,
+        reasoning: `EAN ${scraped.ean} přesná shoda s existujícím produktem "${byEan.name}"`,
+      }
+    }
+  }
+
+  // 2. Fuzzy name match — get all products, compute similarity
+  if (!scraped.name) {
+    return { matchedProductId: null, matchType: 'none', matchConfidence: 0, reasoning: 'Bez názvu' }
+  }
+  const { data: all } = await supabaseAdmin
+    .from('products')
+    .select('id, name, volume_ml')
+  const candidates = all ?? []
+  const normalizedScraped = normalizeName(scraped.name)
+  if (!normalizedScraped) {
+    return { matchedProductId: null, matchType: 'none', matchConfidence: 0, reasoning: 'Název po normalizaci prázdný' }
+  }
+
+  let best: { id: string; name: string; similarity: number } | null = null
+  for (const p of candidates) {
+    const normalizedDb = normalizeName(p.name as string)
+    if (!normalizedDb) continue
+    const dist = levenshtein(normalizedScraped, normalizedDb)
+    const maxLen = Math.max(normalizedScraped.length, normalizedDb.length)
+    const similarity = 1 - dist / maxLen
+    // Bonus for same volume
+    let bonus = 0
+    if (scraped.volumeMl && p.volume_ml && Number(scraped.volumeMl) === Number(p.volume_ml)) bonus = 0.1
+    const adjusted = Math.min(1, similarity + bonus)
+    if (!best || adjusted > best.similarity) {
+      best = { id: p.id as string, name: p.name as string, similarity: adjusted }
+    }
+  }
+
+  if (best && best.similarity >= 0.85) {
+    return {
+      matchedProductId: best.id,
+      matchType: 'fuzzy_name',
+      matchConfidence: best.similarity,
+      reasoning: `Pravděpodobně stejný produkt jako "${best.name}" (podobnost ${(best.similarity * 100).toFixed(0)}%)`,
+    }
+  }
+  if (best && best.similarity >= 0.70) {
+    return {
+      matchedProductId: best.id,
+      matchType: 'fuzzy_name',
+      matchConfidence: best.similarity,
+      reasoning: `Možný duplikát s "${best.name}" (${(best.similarity * 100).toFixed(0)}%) — vyžaduje schválení`,
+    }
+  }
+
+  return {
+    matchedProductId: null,
+    matchType: 'none',
+    matchConfidence: best?.similarity ?? 0,
+    reasoning: best
+      ? `Žádná shoda. Nejbližší: "${best.name}" (${(best.similarity * 100).toFixed(0)}%) — pod prahem 70%`
+      : 'Žádný podobný produkt v DB',
+  }
+}
+
+/** Heuristic: how confident are we this is a publishable product?
+ *  high → enough data, can auto-publish
+ *  medium → has basics but missing 1-2 things, defer to admin
+ *  low → too sparse, definitely review */
+function assessQuality(scraped: ScrapedProduct): {
+  quality: 'high' | 'medium' | 'low'
+  reasoning: string
+} {
+  const hasName = !!scraped.name
+  const hasOrigin = !!scraped.originCountry
+  const hasVolume = !!scraped.volumeMl
+  const hasPrice = !!scraped.price
+  const hasImage = !!scraped.imageUrl
+  const hasRawDesc = !!(scraped.rawDescription && scraped.rawDescription.length > 200)
+  const hasAcidity = scraped.acidity != null
+  const hasType = !!scraped.type
+
+  const score = [hasName, hasOrigin, hasVolume, hasPrice, hasImage, hasRawDesc, hasAcidity, hasType]
+    .filter(Boolean).length
+
+  if (score >= 7) {
+    return { quality: 'high', reasoning: `Skoro úplná data (${score}/8 polí)` }
+  }
+  if (score >= 5) {
+    return { quality: 'medium', reasoning: `Slušná data, ale chybí ${8 - score} pole` }
+  }
+  return { quality: 'low', reasoning: `Sparse data (${score}/8) — chybí název / původ / cena / obrázek` }
+}
+
+/** Convert ScrapedProduct → product DB row + create offer + run AI pipeline.
+ *  Returns the new product id. */
+async function publishCandidate(
+  scraped: ScrapedProduct,
+  retailerSlug: string,
+  retailerDomain: string
+): Promise<string> {
+  if (!scraped.name || !scraped.slug) throw new Error('Missing name/slug')
+
+  // Ensure retailer
+  const { data: retailer } = await supabaseAdmin
+    .from('retailers')
+    .select('id')
+    .eq('slug', retailerSlug)
+    .maybeSingle()
+  if (!retailer) throw new Error(`Retailer ${retailerSlug} not found`)
+
+  // Create product (status='draft' initially)
+  const { data: created, error: prodErr } = await supabaseAdmin
+    .from('products')
+    .upsert(
+      {
+        ean: scraped.ean || null,
+        name: scraped.name,
+        slug: scraped.slug,
+        name_short: scraped.brand,
+        origin_country: scraped.originCountry,
+        origin_region: scraped.originRegion,
+        type: scraped.type ?? 'evoo',
+        acidity: scraped.acidity,
+        peroxide_value: scraped.peroxideValue,
+        volume_ml: scraped.volumeMl,
+        packaging: scraped.packaging,
+        description_short: scraped.descriptionShort,
+        source_url: scraped.url,
+        raw_description: scraped.rawDescription,
+        status: 'draft',
+      },
+      { onConflict: 'slug' }
+    )
+    .select('id')
+    .single()
+  if (prodErr || !created) throw new Error(`Product upsert failed: ${prodErr?.message}`)
+  const productId = created.id as string
+
+  // Create offer
+  if (scraped.price) {
+    await supabaseAdmin.from('product_offers').upsert(
+      {
+        product_id: productId,
+        retailer_id: retailer.id,
+        price: scraped.price,
+        currency: scraped.currency ?? 'CZK',
+        in_stock: scraped.inStock ?? true,
+        product_url: scraped.url,
+      },
+      { onConflict: 'product_id,retailer_id' }
+    )
+  }
+
+  // Image
+  if (scraped.imageUrl) {
+    try {
+      const storedUrl = await downloadAndStoreImage(scraped.imageUrl, scraped.slug)
+      await supabaseAdmin
+        .from('products')
+        .update({ image_url: storedUrl, image_source: 'discovery_agent' })
+        .eq('id', productId)
+    } catch (err) {
+      console.warn('[discovery] image download failed:', err)
+    }
+  }
+
+  // AI pipeline (best-effort, don't block on individual failures)
+  try {
+    if (scraped.rawDescription && scraped.rawDescription.length > 30) {
+      const facts = await extractFactsFromText(scraped.rawDescription)
+      if (facts.length > 0) {
+        await supabaseAdmin
+          .from('products')
+          .update({ extracted_facts: facts })
+          .eq('id', productId)
+      }
+    }
+  } catch (err) {
+    console.warn('[discovery] facts extraction:', err)
+  }
+
+  try {
+    if (scraped.rawDescription) {
+      const flavor = await estimateFlavorProfile({
+        name: scraped.name,
+        rawDescription: scraped.rawDescription,
+        acidity: scraped.acidity,
+        polyphenols: scraped.polyphenols,
+        originCountry: scraped.originCountry,
+        originRegion: scraped.originRegion,
+        type: scraped.type,
+      })
+      const { fruity, herbal, bitter, spicy, mild, nutty, buttery } = flavor
+      await supabaseAdmin
+        .from('products')
+        .update({ flavor_profile: { fruity, herbal, bitter, spicy, mild, nutty, buttery } })
+        .eq('id', productId)
+    }
+  } catch (err) {
+    console.warn('[discovery] flavor estimation:', err)
+  }
+
+  // Score
+  const score = calculateScore({
+    acidity: scraped.acidity,
+    polyphenols: scraped.polyphenols,
+    peroxideValue: scraped.peroxideValue,
+    certifications: [],
+    pricePer100ml:
+      scraped.price && scraped.volumeMl ? (scraped.price / scraped.volumeMl) * 100 : null,
+  })
+  await supabaseAdmin
+    .from('products')
+    .update({ olivator_score: score.total, score_breakdown: score.breakdown })
+    .eq('id', productId)
+
+  // Use cases
+  const { data: flavorRow } = await supabaseAdmin
+    .from('products')
+    .select('flavor_profile')
+    .eq('id', productId)
+    .maybeSingle()
+  const derived = deriveUseCases({
+    type: scraped.type,
+    acidity: scraped.acidity,
+    polyphenols: scraped.polyphenols,
+    flavorProfile: (flavorRow?.flavor_profile as Record<string, number>) ?? null,
+    pricePerLiter:
+      scraped.price && scraped.volumeMl ? (scraped.price / scraped.volumeMl) * 1000 : null,
+    packaging: scraped.packaging,
+    certifications: [],
+  })
+  await supabaseAdmin
+    .from('products')
+    .update({ use_cases: derived.useCases })
+    .eq('id', productId)
+
+  // AI rewrite (Sonnet — most expensive step)
+  try {
+    const generated = await generateProductDescriptions({
+      name: scraped.name,
+      brand: scraped.brand,
+      origin: scraped.originCountry ? countryName(scraped.originCountry) : null,
+      region: scraped.originRegion,
+      type: scraped.type,
+      volumeMl: scraped.volumeMl,
+      acidity: scraped.acidity,
+      polyphenols: scraped.polyphenols,
+      certifications: [],
+      olivatorScore: score.total,
+      rawDescription: scraped.rawDescription,
+    })
+    await supabaseAdmin
+      .from('products')
+      .update({
+        description_short: generated.shortDescription,
+        description_long: generated.longDescription,
+        ai_generated_at: new Date().toISOString(),
+        // Auto-publish — flip to active
+        status: 'active',
+      })
+      .eq('id', productId)
+  } catch (err) {
+    console.warn('[discovery] AI rewrite failed, leaving as draft:', err)
+  }
+
+  // Mark retailer if we created one ad-hoc
+  return productId
+}
+
+/** Add new offer to existing matched product, no new product created. */
+async function addOfferToExisting(
+  matchedProductId: string,
+  scraped: ScrapedProduct,
+  retailerSlug: string
+): Promise<string> {
+  const { data: retailer } = await supabaseAdmin
+    .from('retailers')
+    .select('id')
+    .eq('slug', retailerSlug)
+    .maybeSingle()
+  if (!retailer) throw new Error(`Retailer ${retailerSlug} not found`)
+
+  const { data: created, error } = await supabaseAdmin
+    .from('product_offers')
+    .upsert(
+      {
+        product_id: matchedProductId,
+        retailer_id: retailer.id,
+        price: scraped.price,
+        currency: scraped.currency ?? 'CZK',
+        in_stock: scraped.inStock ?? true,
+        product_url: scraped.url,
+      },
+      { onConflict: 'product_id,retailer_id' }
+    )
+    .select('id')
+    .single()
+  if (error || !created) throw new Error(`Offer upsert failed: ${error?.message}`)
+  return created.id as string
+}
+
+/** Main agent runner. Crawls all enabled shops, processes new candidates,
+ *  respects daily limit, returns summary. */
+export async function runDiscoveryAgent(): Promise<DiscoveryRunResult> {
+  const enabledShops = (await getSetting<string[]>('discovery_enabled_shops')) ?? []
+  const dailyLimit = (await getSetting<number>('discovery_daily_limit')) ?? 5
+  const autoPublish = (await getSetting<boolean>('discovery_auto_publish')) ?? false
+
+  const result: DiscoveryRunResult = {
+    shopsCrawled: 0,
+    totalUrlsFound: 0,
+    newCandidates: 0,
+    autoPublished: 0,
+    autoAddedOffers: 0,
+    needsReview: 0,
+    failed: 0,
+    errors: [],
+    shopErrors: [],
+    candidateIds: [],
+  }
+
+  const crawlResults = await crawlShops(enabledShops)
+  result.shopsCrawled = crawlResults.length
+
+  for (const cr of crawlResults) {
+    if (cr.error) {
+      result.shopErrors.push({ shop: cr.shopSlug, error: cr.error })
+      continue
+    }
+    result.totalUrlsFound += cr.urls.length
+
+    // Skip URLs that already exist as offers — don't re-process
+    const { data: existingOffers } = await supabaseAdmin
+      .from('product_offers')
+      .select('product_url')
+    const seenUrls = new Set((existingOffers ?? []).map(o => o.product_url as string))
+    const newUrls = cr.urls.filter(u => !seenUrls.has(u))
+
+    let processedFromShop = 0
+    for (const url of newUrls) {
+      // Respect daily limit (across all shops)
+      if (processedFromShop + result.newCandidates >= dailyLimit) break
+
+      try {
+        const scraped = await scrapeProductPage(url)
+        const match = await matchProduct(scraped)
+        const quality = assessQuality(scraped)
+
+        let finalStatus: CandidateStatus = 'pending'
+        let reasoning = match.reasoning
+        let resultingProductId: string | null = null
+        let resultingOfferId: string | null = null
+
+        if (match.matchType === 'ean' && match.matchedProductId) {
+          // Existing product, new retailer → just add offer
+          try {
+            resultingOfferId = await addOfferToExisting(match.matchedProductId, scraped, cr.shopSlug)
+            finalStatus = 'auto_added_offer'
+            resultingProductId = match.matchedProductId
+            reasoning += ' → přidán nový offer'
+            result.autoAddedOffers++
+          } catch (err) {
+            finalStatus = 'failed'
+            reasoning += ` → failed: ${err instanceof Error ? err.message : 'unknown'}`
+            result.failed++
+          }
+        } else if (match.matchType === 'fuzzy_name' && match.matchConfidence >= 0.85) {
+          // High-confidence fuzzy match → admin should confirm before adding offer
+          finalStatus = 'needs_review'
+          reasoning += ' → ručně potvrď jestli je to ten samý produkt'
+          result.needsReview++
+        } else if (match.matchType === 'fuzzy_name') {
+          // Lower-confidence — flag for review
+          finalStatus = 'needs_review'
+          result.needsReview++
+        } else {
+          // Truly new
+          if (autoPublish && quality.quality === 'high') {
+            try {
+              resultingProductId = await publishCandidate(scraped, cr.shopSlug, cr.shopDomain)
+              finalStatus = 'auto_published'
+              reasoning = `AUTO-PUBLISHED: ${quality.reasoning}`
+              result.autoPublished++
+            } catch (err) {
+              finalStatus = 'failed'
+              reasoning = `Failed during publish: ${err instanceof Error ? err.message : 'unknown'}`
+              result.failed++
+            }
+          } else {
+            finalStatus = 'needs_review'
+            reasoning = `Nový produkt — ${quality.reasoning} — čeká na schválení`
+            result.needsReview++
+          }
+        }
+
+        // Persist candidate
+        const { data: cand } = await supabaseAdmin
+          .from('discovery_candidates')
+          .insert({
+            source_url: url,
+            source_domain: cr.shopDomain,
+            matched_product_id: match.matchedProductId,
+            match_type: match.matchType,
+            match_confidence: match.matchConfidence,
+            candidate_data: scraped as unknown as Record<string, unknown>,
+            status: finalStatus,
+            reasoning,
+            resulting_product_id: resultingProductId,
+            resulting_offer_id: resultingOfferId,
+          })
+          .select('id')
+          .single()
+        if (cand?.id) result.candidateIds.push(cand.id as string)
+
+        result.newCandidates++
+        processedFromShop++
+
+        // Be polite — 3 sec between scrape calls
+        await new Promise(r => setTimeout(r, 3000))
+      } catch (err) {
+        result.errors.push(`${url}: ${err instanceof Error ? err.message : 'scrape failed'}`)
+        result.failed++
+      }
+    }
+  }
+
+  return result
+}

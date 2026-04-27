@@ -2,6 +2,14 @@ import type { ProductOffer } from '@/lib/types'
 import { formatPrice, formatPricePer100ml } from '@/lib/utils'
 import { AffiliateLink } from './affiliate-link'
 
+/** Render rating as Unicode stars: full ★, half ⯨ (approx), empty ☆.
+ *  4.7 → "★★★★★" (rounds half-up to 5 if >= .5).
+ *  Conservative — we don't show half stars to keep glyphs simple. */
+function renderStars(rating: number): string {
+  const rounded = Math.round(rating)
+  return '★'.repeat(rounded) + '☆'.repeat(Math.max(0, 5 - rounded))
+}
+
 interface PriceTableProps {
   offers: ProductOffer[]
   volumeMl: number
@@ -43,7 +51,19 @@ export function PriceTable({ offers, volumeMl, productSlug, productName }: Price
                 </span>
               )}
             </div>
-            {i === 0 && (
+            {/* Star rating — trust signal under retailer name */}
+            {offer.retailer.rating != null && offer.retailer.rating > 0 && (
+              <div className="flex items-center gap-1 mt-0.5">
+                <span className="text-[11px] text-terra" aria-label={`Hodnocení ${offer.retailer.rating} z 5`}>
+                  {renderStars(offer.retailer.rating)}
+                </span>
+                <span className="text-[10px] text-text3">
+                  {offer.retailer.rating.toFixed(1)}
+                  {offer.retailer.ratingCount ? ` (${offer.retailer.ratingCount.toLocaleString('cs-CZ')} hodnocení)` : ''}
+                </span>
+              </div>
+            )}
+            {i === 0 && offer.retailer.rating == null && (
               <div className="text-[11px] text-olive-light mt-0.5">Doručení dnes</div>
             )}
           </div>

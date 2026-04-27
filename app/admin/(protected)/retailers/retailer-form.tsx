@@ -19,6 +19,9 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
   const [commissionPct, setCommissionPct] = useState(String(initial?.defaultCommissionPct ?? ''))
   const [isActive, setIsActive] = useState(initial?.isActive ?? true)
   const [market, setMarket] = useState(initial?.market ?? 'CZ')
+  const [rating, setRating] = useState(String(initial?.rating ?? ''))
+  const [ratingCount, setRatingCount] = useState(String(initial?.ratingCount ?? ''))
+  const [ratingSource, setRatingSource] = useState(initial?.ratingSource ?? '')
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -34,6 +37,9 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
         defaultCommissionPct: Number(commissionPct) || 0,
         isActive,
         market,
+        rating: rating ? Number(rating) : null,
+        ratingCount: ratingCount ? Number(ratingCount) : 0,
+        ratingSource: ratingSource || null,
       }
       const res = await fetch(
         isEdit ? `/api/admin/retailers/${initial!.id}` : '/api/admin/retailers',
@@ -133,6 +139,39 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
           <label htmlFor="isActive" className="text-sm text-text cursor-pointer">
             Aktivní — zobrazí se jako zdroj nabídek na webu
           </label>
+        </div>
+      </div>
+
+      <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 space-y-4">
+        <div>
+          <div className="text-sm font-semibold text-text">Hodnocení e-shopu (hvězdičky)</div>
+          <div className="text-xs text-text2 mt-0.5">
+            Zobrazí se pod tlačítkem &ldquo;Koupit&rdquo; na produktové kartě jako trust signal.
+            Můžeš zadat ručně z Heureka stránky e-shopu (např. „98% spokojenost, 4.7/5 z 523 hodnocení").
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <Label>Rating (0–5)</Label>
+            <Input value={rating} onChange={setRating} type="number" step="0.1" placeholder="4.7" />
+          </div>
+          <div>
+            <Label>Počet hodnocení</Label>
+            <Input value={ratingCount} onChange={setRatingCount} type="number" placeholder="523" />
+          </div>
+          <div>
+            <Label>Zdroj</Label>
+            <select
+              value={ratingSource}
+              onChange={e => setRatingSource(e.target.value)}
+              className="w-full px-3 py-2 border border-off2 rounded-lg text-sm focus:outline-none focus:border-olive"
+            >
+              <option value="">— Žádný —</option>
+              <option value="heureka">Heureka</option>
+              <option value="google">Google Reviews</option>
+              <option value="manual">Ručně</option>
+            </select>
+          </div>
         </div>
       </div>
 
