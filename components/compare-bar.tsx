@@ -16,9 +16,20 @@ export function CompareBar() {
         {items.map(item => (
           <div
             key={item.id}
-            className="w-20 h-14 border border-olive-light bg-olive-bg rounded-xl flex flex-col items-center justify-center relative cursor-pointer text-xl transition-all"
+            className="w-20 h-14 border border-olive-light bg-olive-bg rounded-xl flex flex-col items-center justify-center relative cursor-pointer transition-all overflow-hidden"
+            title={item.name}
           >
-            🫒
+            {item.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={item.imageUrl}
+                alt={item.name}
+                className="w-9 h-9 object-contain"
+                loading="lazy"
+              />
+            ) : (
+              <span className="text-xl">🫒</span>
+            )}
             <span className="text-[9px] text-olive font-medium mt-0.5 text-center px-0.5 leading-tight max-w-[72px] overflow-hidden whitespace-nowrap text-ellipsis">
               {item.nameShort}
             </span>
