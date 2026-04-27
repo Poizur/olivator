@@ -18,7 +18,7 @@ import { supabaseAdmin } from './supabase'
 import { scrapeProductPage, type ScrapedProduct } from './product-scraper'
 import { crawlShops, getKnownShopSlugs } from './shop-crawlers'
 import { getSetting } from './settings'
-import { generateProductDescriptions } from './content-agent'
+import { generateProductDescriptions, generateMetaDescription } from './content-agent'
 import { calculateScore } from './score'
 import { extractFactsFromText } from './fact-extractor'
 import { estimateFlavorProfile } from './flavor-agent'
@@ -572,6 +572,30 @@ export async function publishCandidate(
         ai_generated_at: new Date().toISOString(),
       })
       .eq('id', productId)
+
+    // SEO meta_description — Haiku-generated 130-160 char snippet pro Google
+    // search result. Best-effort, blokuje activation jen pokud chce admin.
+    try {
+      const meta = await generateMetaDescription({
+        name: scraped.name,
+        shortDescription: generated.shortDescription,
+        originCountry: scraped.originCountry,
+        originRegion: scraped.originRegion,
+        acidity: scraped.acidity,
+        polyphenols: scraped.polyphenols,
+        certifications: detectedCerts,
+        olivatorScore: score.total,
+      })
+      const trimmed = meta.length <= 160 ? meta : (meta.slice(0, 160).replace(/\s+\S*$/, '') || meta.slice(0, 160))
+      if (trimmed.length >= 50) {
+        await supabaseAdmin
+          .from('products')
+          .update({ meta_description: trimmed })
+          .eq('id', productId)
+      }
+    } catch (err) {
+      console.warn('[discovery] meta_description gen failed:', err instanceof Error ? err.message : err)
+    }
   } catch (err) {
     console.warn('[discovery] AI rewrite failed, leaving as draft:', err)
   }
