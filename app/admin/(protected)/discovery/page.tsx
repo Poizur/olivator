@@ -54,7 +54,11 @@ export default async function DiscoveryPage() {
           <p className="text-sm text-text3 max-w-[640px]">
             Agent prochází nakonfigurované e-shopy, hledá nové olivové oleje, dedupne přes EAN/název
             a buď je auto-publikuje (HIGH confidence) nebo dá do fronty.
-            Frekvenci a aktivní e-shopy nastavíš v{' '}
+            E-shopy spravuješ v{' '}
+            <Link href="/admin/discovery/sources" className="text-olive hover:underline">
+              📋 Zdroje
+            </Link>
+            {' '}· Frekvenci v{' '}
             <Link href="/admin/nastaveni" className="text-olive hover:underline">Nastavení</Link>.
           </p>
         </div>

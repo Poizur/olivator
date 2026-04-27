@@ -35,39 +35,29 @@ const PRODUCT_URL_HEURISTIC = (url: string): boolean => {
   return true
 }
 
-// Known shops — config-driven so admin can enable/disable in settings.
-const CRAWLERS: Record<string, CrawlerConfig> = {
-  reckonasbavi: {
-    slug: 'reckonasbavi',
-    domain: 'shop.reckonasbavi.cz',
-    type: 'shoptet_sitemap',
-    productPathFilter: undefined, // we use PRODUCT_URL_HEURISTIC instead
-  },
-  olivio: {
-    slug: 'olivio',
-    domain: 'olivio.cz',
-    type: 'shoptet_sitemap',
-  },
-  gaea: {
-    slug: 'gaea',
-    domain: 'gaea.cz',
-    type: 'shoptet_sitemap',
-  },
-  mujbio: {
-    slug: 'mujbio',
-    domain: 'mujbio.cz',
-    type: 'shoptet_sitemap',
-  },
-  zdravasila: {
-    slug: 'zdravasila',
-    domain: 'zdravasila.cz',
-    type: 'shoptet_sitemap',
-  },
-  olivovyolej: {
-    slug: 'olivovyolej',
-    domain: 'olivovyolej.cz',
-    type: 'shoptet_sitemap',
-  },
+// Configs are now read from DB (discovery_sources table) at runtime via
+// getCrawlerConfig(slug). The hardcoded fallback below is empty — admin must
+// configure shops via /admin/discovery/sources UI.
+//
+// During migration period: if DB doesn't have the slug, function falls back
+// to a minimal default that crawls https://{slug}.cz/sitemap.xml. This lets
+// us survive missing migrations.
+async function getCrawlerConfig(slug: string): Promise<CrawlerConfig | null> {
+  // Lazy import to avoid circular dep with supabase admin
+  const { supabaseAdmin } = await import('./supabase')
+  const { data, error } = await supabaseAdmin
+    .from('discovery_sources')
+    .select('slug, domain, crawler_type, category_url')
+    .eq('slug', slug)
+    .maybeSingle()
+  if (error || !data) return null
+  const ct = (data.crawler_type as string) ?? 'shoptet_sitemap'
+  return {
+    slug: data.slug as string,
+    domain: data.domain as string,
+    type: (ct === 'shoptet_category' || ct === 'custom' ? ct : 'shoptet_sitemap') as CrawlerConfig['type'],
+    categoryUrl: (data.category_url as string) ?? undefined,
+  }
 }
 
 const FETCH_HEADERS = {
@@ -194,9 +184,10 @@ async function crawlShoptetCategory(config: CrawlerConfig): Promise<string[]> {
   return [...allUrls]
 }
 
-/** Main entrypoint — crawl one configured shop, return product URLs. */
+/** Main entrypoint — crawl one configured shop, return product URLs.
+ *  Reads config from DB (discovery_sources). */
 export async function crawlShop(slug: string): Promise<CrawlerResult> {
-  const config = CRAWLERS[slug]
+  const config = await getCrawlerConfig(slug)
   if (!config) {
     return {
       shopSlug: slug,
@@ -204,7 +195,7 @@ export async function crawlShop(slug: string): Promise<CrawlerResult> {
       urls: [],
       source: 'unknown',
       fetchedAt: new Date().toISOString(),
-      error: `No crawler config for shop "${slug}"`,
+      error: `No crawler config for shop "${slug}" — přidej v /admin/discovery/sources`,
     }
   }
 
@@ -239,6 +230,48 @@ export async function crawlShop(slug: string): Promise<CrawlerResult> {
   }
 }
 
+/** Test crawler config without persisting. Used by admin UI 🧪 Test button. */
+export async function testCrawlerForDomain(
+  domain: string,
+  options: { type?: 'shoptet_sitemap' | 'shoptet_category'; categoryUrl?: string } = {}
+): Promise<CrawlerResult> {
+  const config: CrawlerConfig = {
+    slug: 'test',
+    domain: domain.replace(/^https?:\/\//, '').replace(/\/$/, ''),
+    type: options.type ?? 'shoptet_sitemap',
+    categoryUrl: options.categoryUrl,
+  }
+  try {
+    let urls: string[] = []
+    let source: 'sitemap' | 'category' = 'category'
+
+    if (config.type === 'shoptet_sitemap') {
+      urls = await crawlShoptetSitemap(config)
+      source = 'sitemap'
+    } else if (config.type === 'shoptet_category') {
+      urls = await crawlShoptetCategory(config)
+      source = 'category'
+    }
+
+    return {
+      shopSlug: config.slug,
+      shopDomain: config.domain,
+      urls,
+      source,
+      fetchedAt: new Date().toISOString(),
+    }
+  } catch (err) {
+    return {
+      shopSlug: config.slug,
+      shopDomain: config.domain,
+      urls: [],
+      source: config.type === 'shoptet_sitemap' ? 'sitemap' : 'category',
+      fetchedAt: new Date().toISOString(),
+      error: err instanceof Error ? err.message : 'Test failed',
+    }
+  }
+}
+
 /** Crawl multiple shops in sequence (avoids rate limit issues). */
 export async function crawlShops(slugs: string[]): Promise<CrawlerResult[]> {
   const results: CrawlerResult[] = []
@@ -250,6 +283,13 @@ export async function crawlShops(slugs: string[]): Promise<CrawlerResult[]> {
   return results
 }
 
-export function getKnownShopSlugs(): string[] {
-  return Object.keys(CRAWLERS)
+/** Read enabled shop slugs from DB (replaces old hardcoded list). */
+export async function getKnownShopSlugs(): Promise<string[]> {
+  const { supabaseAdmin } = await import('./supabase')
+  const { data, error } = await supabaseAdmin
+    .from('discovery_sources')
+    .select('slug')
+    .eq('status', 'enabled')
+  if (error) return []
+  return (data ?? []).map(r => r.slug as string)
 }

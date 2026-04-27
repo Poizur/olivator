@@ -16,7 +16,7 @@
 
 import { supabaseAdmin } from './supabase'
 import { scrapeProductPage, type ScrapedProduct } from './product-scraper'
-import { crawlShops } from './shop-crawlers'
+import { crawlShops, getKnownShopSlugs } from './shop-crawlers'
 import { getSetting } from './settings'
 import { generateProductDescriptions } from './content-agent'
 import { calculateScore } from './score'
@@ -446,7 +446,13 @@ async function addOfferToExisting(
 /** Main agent runner. Crawls all enabled shops, processes new candidates,
  *  respects daily limit, returns summary. */
 export async function runDiscoveryAgent(): Promise<DiscoveryRunResult> {
-  const enabledShops = (await getSetting<string[]>('discovery_enabled_shops')) ?? []
+  // Source of truth: discovery_sources table (status='enabled').
+  // Old setting 'discovery_enabled_shops' is deprecated but kept as fallback
+  // for migration period — if DB has 0 enabled, try setting.
+  let enabledShops = await getKnownShopSlugs()
+  if (enabledShops.length === 0) {
+    enabledShops = (await getSetting<string[]>('discovery_enabled_shops')) ?? []
+  }
   const dailyLimit = (await getSetting<number>('discovery_daily_limit')) ?? 5
   const autoPublish = (await getSetting<boolean>('discovery_auto_publish')) ?? false
 
