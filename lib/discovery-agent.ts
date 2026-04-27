@@ -429,11 +429,26 @@ export async function runDiscoveryAgent(): Promise<DiscoveryRunResult> {
     }
     result.totalUrlsFound += cr.urls.length
 
-    // Skip URLs that already exist as offers — don't re-process
+    // Dedup: skip URLs already seen
+    //   - As existing offer (already linked to product)
+    //   - As candidate in queue (pending / auto_published / etc.) UNLESS it
+    //     was rejected or failed long ago (allow retry of failed)
     const { data: existingOffers } = await supabaseAdmin
       .from('product_offers')
       .select('product_url')
-    const seenUrls = new Set((existingOffers ?? []).map(o => o.product_url as string))
+    const offerUrls = new Set((existingOffers ?? []).map(o => o.product_url as string))
+
+    const { data: existingCandidates } = await supabaseAdmin
+      .from('discovery_candidates')
+      .select('source_url, status')
+    const candidateUrls = new Set(
+      (existingCandidates ?? [])
+        // Allow re-processing only if previously failed (transient errors should retry)
+        .filter(c => c.status !== 'failed')
+        .map(c => c.source_url as string)
+    )
+
+    const seenUrls = new Set([...offerUrls, ...candidateUrls])
     const newUrls = cr.urls.filter(u => !seenUrls.has(u))
 
     let processedFromShop = 0
