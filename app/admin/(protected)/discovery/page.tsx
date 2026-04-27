@@ -69,9 +69,9 @@ export default async function DiscoveryPage() {
         <Stat label="Celkem" value={all.length} color="text" />
         <Stat label="Ke schválení" value={needsReview.length} color="terra" />
         <Stat label="Automaticky publikované" value={autoPublished.length} color="olive" />
-        <Stat label="Nové ceny" value={autoAdded.length} color="olive" />
         <Stat label="Schválené" value={approved.length} color="olive" />
-        <Stat label="Zamítnuté" value={rejected.length + failed.length} color="text3" />
+        <Stat label="Selhalo" value={failed.length} color="red" />
+        <Stat label="Zamítnuté" value={rejected.length} color="text3" />
       </div>
 
       {needsReview.length > 0 && (
@@ -94,12 +94,22 @@ export default async function DiscoveryPage() {
         </Section>
       )}
 
-      {(rejected.length > 0 || failed.length > 0) && (
-        <Section title={`❌ Zamítnuté / selhalo (${rejected.length + failed.length})`} subtle>
+      {failed.length > 0 && (
+        <Section title={`⚠️ Selhalo — vyžaduje pozornost (${failed.length})`}>
+          <div className="space-y-2">
+            {failed.slice(0, 30).map(c => <CandidateRow key={c.id} candidate={c as never} />)}
+          </div>
+        </Section>
+      )}
+
+      {rejected.length > 0 && (
+        <Section title={`🗑 Zamítnuté — historie (${rejected.length})`} subtle>
           <details className="bg-white border border-off2 rounded-lg p-4">
-            <summary className="cursor-pointer text-sm text-text2">Zobrazit historii</summary>
+            <summary className="cursor-pointer text-sm text-text2">
+              Zobrazit zamítnuté (jen pro audit, bez akce)
+            </summary>
             <div className="mt-3 space-y-2">
-              {[...rejected, ...failed].slice(0, 30).map(c => <CandidateRow key={c.id} candidate={c as never} />)}
+              {rejected.slice(0, 30).map(c => <CandidateRow key={c.id} candidate={c as never} />)}
             </div>
           </details>
         </Section>
@@ -125,6 +135,7 @@ function Stat({ label, value, color }: { label: string; value: number; color: st
     olive: 'text-olive-dark',
     terra: 'text-terra',
     text3: 'text-text3',
+    red: 'text-red-600',
   }
   return (
     <div className="bg-white border border-off2 rounded-lg p-3">
