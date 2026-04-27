@@ -68,13 +68,20 @@ export function SourcesAdmin({ initialSources }: { initialSources: Source[] }) {
       )}
 
       {!showAdd && (
-        <button
-          type="button"
-          onClick={() => setShowAdd(true)}
-          className="bg-olive text-white rounded-full px-4 py-2 text-sm font-medium hover:bg-olive-dark mb-4"
-        >
-          + Přidat e-shop
-        </button>
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setShowAdd(true)}
+            className="bg-olive text-white rounded-full px-4 py-2 text-sm font-medium hover:bg-olive-dark"
+          >
+            + Přidat e-shop
+          </button>
+          <ProspectorButton
+            onSuccess={notifySuccess}
+            onError={notifyError}
+            onChanged={refreshSources}
+          />
+        </div>
       )}
 
       {showAdd && (
@@ -502,4 +509,44 @@ function SourceRow({
 
 function Label({ children }: { children: React.ReactNode }) {
   return <div className="text-[11px] uppercase tracking-wider text-text3 mb-1">{children}</div>
+}
+
+function ProspectorButton({
+  onSuccess,
+  onError,
+  onChanged,
+}: {
+  onSuccess: (m: string) => void
+  onError: (m: string) => void
+  onChanged: () => void
+}) {
+  const [running, setRunning] = useState(false)
+
+  async function onProspect() {
+    if (!confirm('Spustit Prospector — agent prohledá kurátorský seznam ~16 specialty CZ shopů,\notestuje crawler u každého a přidá nové jako "suggested" do registru.\n\nNic se neaktivuje automaticky — ty pak přepneš ty zajímavé na enabled.')) return
+    setRunning(true)
+    try {
+      const res = await fetch('/api/admin/prospect/run', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const msg = `Prospector: ${data.newlyAdded} nových shopů přidáno (z ${data.totalCandidates} kandidátů, ${data.alreadyKnown} už máme, ${data.testedSuccess} crawler funkční)`
+      onSuccess(msg)
+      onChanged()
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Chyba')
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onProspect}
+      disabled={running}
+      className="bg-terra text-white rounded-full px-4 py-2 text-sm font-medium hover:opacity-90 disabled:opacity-40"
+    >
+      {running ? '🔭 Prospektuji...' : '🔭 Najít nové e-shopy'}
+    </button>
+  )
 }
