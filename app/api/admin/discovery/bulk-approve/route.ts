@@ -9,6 +9,7 @@ import {
   completeJob,
   failJob,
 } from '@/lib/bulk-jobs'
+import { sendBulkJobCompletionEmail } from '@/lib/email'
 import { revalidatePath } from 'next/cache'
 import type { ScrapedProduct } from '@/lib/product-scraper'
 
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
  *  No HTTP timeout because it runs after response is returned. */
 async function processBulkApprove(jobId: string, ids: string[]): Promise<void> {
   await setJobRunning(jobId)
+  const startTime = Date.now()
 
   const errors: Array<{ id: string; reason: string }> = []
   let processed = 0
@@ -181,4 +183,19 @@ async function processBulkApprove(jobId: string, ids: string[]): Promise<void> {
     // ignore
   }
   await completeJob(jobId)
+
+  // Email summary (best-effort, doesn't block job completion)
+  try {
+    const durationSec = Math.round((Date.now() - startTime) / 1000)
+    await sendBulkJobCompletionEmail({
+      type: 'discovery_bulk_approve',
+      total: ids.length,
+      succeeded,
+      failed,
+      errors,
+      durationSec,
+    })
+  } catch (err) {
+    console.warn('[bulk-approve] email send failed:', err)
+  }
 }

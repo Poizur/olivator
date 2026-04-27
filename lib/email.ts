@@ -72,6 +72,64 @@ async function logNotification(
   }
 }
 
+/** Send bulk job completion email — short summary after admin's bulk approve. */
+export async function sendBulkJobCompletionEmail(jobInfo: {
+  type: string
+  total: number
+  succeeded: number
+  failed: number
+  errors: Array<{ id: string; reason: string }>
+  durationSec: number
+}): Promise<void> {
+  const recipient = await getSetting<string>('notification_email')
+  if (!recipient) return
+
+  const typeLabel = jobInfo.type === 'discovery_bulk_approve'
+    ? 'Hromadné schválení'
+    : jobInfo.type
+  const subject = `[Olivator] ${typeLabel} hotovo · ${jobInfo.succeeded}/${jobInfo.total}`
+
+  const minutes = Math.floor(jobInfo.durationSec / 60)
+  const seconds = jobInfo.durationSec % 60
+  const durationLabel = minutes > 0 ? `${minutes} min ${seconds} s` : `${seconds} s`
+
+  const html = `<!DOCTYPE html>
+<html lang="cs"><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#fafafa">
+<div style="background:white;border-radius:12px;padding:32px;border:1px solid #e8e8ed">
+  <h1 style="font-size:20px;color:#2d6a4f;margin:0 0 8px">✓ ${typeLabel} dokončeno</h1>
+  <p style="color:#6e6e73;font-size:14px;margin:0 0 24px">Trvalo ${durationLabel}</p>
+
+  <div style="background:#f5f5f7;border-radius:8px;padding:16px;margin-bottom:16px">
+    <div style="font-size:13px;line-height:1.8">
+      ✅ <strong>${jobInfo.succeeded}</strong> úspěšně publikováno<br>
+      ${jobInfo.failed > 0 ? `❌ <strong style="color:#c00">${jobInfo.failed}</strong> selhalo` : ''}
+    </div>
+  </div>
+
+  ${
+    jobInfo.errors.length > 0
+      ? `<div style="background:#fee;border-left:4px solid #c00;padding:12px 16px;border-radius:6px;margin-bottom:16px">
+          <strong>Chyby:</strong>
+          <ul style="font-size:12px;color:#600;margin:6px 0 0;padding-left:20px">
+            ${jobInfo.errors.slice(0, 5).map(e => `<li>${e.reason}</li>`).join('')}
+            ${jobInfo.errors.length > 5 ? `<li style="font-style:italic">…a ${jobInfo.errors.length - 5} dalších</li>` : ''}
+          </ul>
+        </div>`
+      : ''
+  }
+
+  <div style="text-align:center;margin-top:24px">
+    <a href="https://olivator.cz/admin/discovery" style="display:inline-block;background:#2d6a4f;color:white;text-decoration:none;padding:12px 24px;border-radius:24px;font-size:14px;font-weight:500">
+      Otevřít Návrhy →
+    </a>
+  </div>
+</div>
+</body></html>`.trim()
+
+  const sendResult = await sendViaResend(recipient, subject, html)
+  await logNotification(recipient, subject, 'bulk_job_completion', html, sendResult)
+}
+
 /** Send discovery run summary email. */
 export async function sendDiscoverySummary(result: DiscoveryRunResult): Promise<void> {
   const recipient = await getSetting<string>('notification_email')
