@@ -318,7 +318,7 @@ export async function publishCandidate(
     )
   }
 
-  // Image
+  // Image — primary (downloaded to Supabase Storage immediately)
   if (scraped.imageUrl) {
     try {
       const storedUrl = await downloadAndStoreImage(scraped.imageUrl, scraped.slug)
@@ -328,6 +328,35 @@ export async function publishCandidate(
         .eq('id', productId)
     } catch (err) {
       console.warn('[discovery] image download failed:', err)
+    }
+  }
+
+  // Gallery candidates — store extra images as `scraper_candidate` rows so admin
+  // can pick which to keep without triggering a full rescrape. Skip the primary
+  // (already downloaded above) to avoid duplicate, plus URLs already saved.
+  if (scraped.galleryImages.length > 1) {
+    try {
+      const { data: existingRows } = await supabaseAdmin
+        .from('product_images')
+        .select('url')
+        .eq('product_id', productId)
+      const existingUrls = new Set((existingRows ?? []).map((r) => r.url as string))
+      const candidates = scraped.galleryImages
+        .filter((img) => img.url !== scraped.imageUrl && !existingUrls.has(img.url))
+      if (candidates.length > 0) {
+        await supabaseAdmin.from('product_images').insert(
+          candidates.map((img, i) => ({
+            product_id: productId,
+            url: img.url,
+            alt_text: img.alt,
+            is_primary: false,
+            sort_order: 100 + i,
+            source: 'scraper_candidate',
+          }))
+        )
+      }
+    } catch (err) {
+      console.warn('[discovery] gallery candidates insert failed:', err)
     }
   }
 

@@ -24,6 +24,7 @@ export function GalleryManager({ productId }: { productId: string }) {
   const [error, setError] = useState<string | null>(null)
   const [scanningId, setScanningId] = useState<string | null>(null)
   const [scanResult, setScanResult] = useState<{ filled: string[]; message: string; newScore: number | null; confidence: string } | null>(null)
+  const [refreshingGallery, setRefreshingGallery] = useState(false)
 
   useEffect(() => {
     void loadImages()
@@ -109,6 +110,30 @@ export function GalleryManager({ productId }: { productId: string }) {
     }
   }
 
+  async function onRefreshGallery() {
+    setRefreshingGallery(true)
+    setError(null)
+    setStatus(null)
+    try {
+      const res = await fetch(`/api/admin/products/${productId}/rescrape-gallery`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Rescrape galerie selhal')
+      setStatus(
+        data.added > 0
+          ? `✓ +${data.added} nových kandidátů nascrapováno`
+          : data.message ?? 'Žádní noví kandidáti — všechny URL již existují'
+      )
+      await loadImages()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Chyba')
+    } finally {
+      setRefreshingGallery(false)
+    }
+  }
+
   async function onSave() {
     setSaving(true)
     setError(null)
@@ -145,10 +170,26 @@ export function GalleryManager({ productId }: { productId: string }) {
   if (images.length === 0) {
     return (
       <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6">
-        <div className="text-sm font-semibold text-text mb-1">Galerie fotek</div>
-        <div className="text-xs text-text3 italic mt-2 bg-off rounded-lg px-3 py-3 text-center">
-          Žádné obrázky. Klikni &ldquo;🔄 Rescrape&rdquo; nahoře, aby se nascrapovaly ze zdrojového e-shopu.
+        <div className="flex items-center justify-between mb-3 gap-4">
+          <div className="text-sm font-semibold text-text">Galerie fotek</div>
+          <button
+            type="button"
+            onClick={onRefreshGallery}
+            disabled={refreshingGallery}
+            className="text-[12px] bg-olive text-white rounded-full px-3.5 py-1.5 hover:bg-olive-dark disabled:opacity-40 transition-colors"
+          >
+            {refreshingGallery ? '🔄 Stahuji…' : '🔄 Načíst galerii ze zdroje'}
+          </button>
         </div>
+        <div className="text-xs text-text3 italic bg-off rounded-lg px-3 py-3 text-center">
+          Žádné obrázky uložené. Klikni &ldquo;Načíst galerii ze zdroje&rdquo; pro rychlé stažení (jen obrázky, ~5–10 s) — nebo &ldquo;🔄 Rescrape&rdquo; nahoře pro plnou aktualizaci včetně textů.
+        </div>
+        {status && (
+          <div className="mt-2 text-[12px] text-olive-dark bg-olive-bg border border-olive-border rounded px-3 py-2">{status}</div>
+        )}
+        {error && (
+          <div className="mt-2 text-[12px] text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">⚠ {error}</div>
+        )}
       </div>
     )
   }
@@ -173,7 +214,17 @@ export function GalleryManager({ productId }: { productId: string }) {
             Ostatní smažeme.
           </div>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+          <button
+            type="button"
+            onClick={onRefreshGallery}
+            disabled={refreshingGallery}
+            className="text-[11px] bg-olive text-white rounded-full px-3 py-1 hover:bg-olive-dark disabled:opacity-40 transition-colors"
+            title="Stáhne nové foto-kandidáty ze zdrojové URL (~5-10 s, neaktualizuje texty)"
+          >
+            {refreshingGallery ? '🔄 Stahuji…' : '🔄 Aktualizovat galerii'}
+          </button>
+          <span className="text-text3">·</span>
           <button
             type="button"
             onClick={() => setKeep(new Set(images.map(i => i.id)))}
