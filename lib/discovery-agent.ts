@@ -190,8 +190,9 @@ function assessQuality(scraped: ScrapedProduct): {
 }
 
 /** Convert ScrapedProduct → product DB row + create offer + run AI pipeline.
- *  Returns the new product id. */
-async function publishCandidate(
+ *  Returns the new product id. Exported so admin "approve" endpoint can run
+ *  the same pipeline when admin manually approves a needs_review candidate. */
+export async function publishCandidate(
   scraped: ScrapedProduct,
   retailerSlug: string,
   retailerDomain: string

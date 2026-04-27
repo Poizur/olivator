@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { publishCandidate } from '@/lib/discovery-agent'
 import { revalidatePath } from 'next/cache'
+import type { ScrapedProduct } from '@/lib/product-scraper'
 
-export const maxDuration = 60
+// Long timeout — approval triggers full pipeline (image, AI rewrite, etc.)
+export const maxDuration = 240
 
-/** Mark a discovery candidate as approved.
- *  - If candidate already has resulting_product_id → just flip status to active
- *  - If not, the candidate is just queued data; create + publish requires
- *    re-running the full pipeline (TODO: defer to a separate publish endpoint).
- *  For MVP we just mark approved + flip resulting product to 'active' if exists.
+/** Approve a discovery candidate.
+ *  - If candidate has resulting_product_id (auto_published earlier) → just flip status to active
+ *  - If needs_review (no product yet) → run full publishCandidate() pipeline now
  */
 export async function POST(
   _request: Request,
@@ -29,27 +30,81 @@ export async function POST(
       return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
     }
 
-    // If a product was already created — flip it to active
+    // Path 1: product already exists from auto-publish → just activate
     if (candidate.resulting_product_id) {
       await supabaseAdmin
         .from('products')
         .update({ status: 'active', updated_at: new Date().toISOString() })
-        .eq('id', candidate.resulting_product_id)
+        .eq('id', candidate.resulting_product_id as string)
+
+      await supabaseAdmin
+        .from('discovery_candidates')
+        .update({
+          status: 'approved',
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: 'admin',
+        })
+        .eq('id', id)
+
       revalidatePath('/')
       revalidatePath('/srovnavac')
+      return NextResponse.json({ ok: true, productId: candidate.resulting_product_id })
+    }
+
+    // Path 2: needs_review candidate → run full pipeline now
+    const data = candidate.candidate_data as unknown as ScrapedProduct
+    if (!data?.name || !data.slug) {
+      return NextResponse.json(
+        { error: 'Candidate scraped data missing name/slug — cannot publish' },
+        { status: 400 }
+      )
+    }
+
+    // Derive retailer slug from candidate.source_domain
+    // We need the slug — look up retailer by domain
+    const { data: retailer } = await supabaseAdmin
+      .from('retailers')
+      .select('slug')
+      .eq('domain', candidate.source_domain as string)
+      .maybeSingle()
+    const retailerSlug = (retailer?.slug as string) || (candidate.source_domain as string).split('.')[0]
+    const retailerDomain = candidate.source_domain as string
+
+    let productId: string
+    try {
+      productId = await publishCandidate(data, retailerSlug, retailerDomain)
+    } catch (err) {
+      // Mark candidate failed so admin sees it
+      await supabaseAdmin
+        .from('discovery_candidates')
+        .update({
+          status: 'failed',
+          reasoning: `Approve pipeline failed: ${err instanceof Error ? err.message : 'unknown'}`,
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: 'admin',
+        })
+        .eq('id', id)
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : 'Pipeline failed' },
+        { status: 500 }
+      )
     }
 
     await supabaseAdmin
       .from('discovery_candidates')
       .update({
         status: 'approved',
+        resulting_product_id: productId,
         reviewed_at: new Date().toISOString(),
         reviewed_by: 'admin',
       })
       .eq('id', id)
 
-    return NextResponse.json({ ok: true })
+    revalidatePath('/')
+    revalidatePath('/srovnavac')
+    return NextResponse.json({ ok: true, productId })
   } catch (err) {
+    console.error('[discovery approve]', err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Server error' },
       { status: 500 }

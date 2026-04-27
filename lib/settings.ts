@@ -38,8 +38,12 @@ export const SETTINGS: Record<SettingKey, SettingDef<unknown>> = {
   },
   discovery_enabled_shops: {
     key: 'discovery_enabled_shops',
-    default: ['reckonasbavi', 'olivio', 'gaea', 'mujbio', 'zdravasila'],
-    description: 'Aktivní e-shopy (slug v retailers tabulce), které Discovery scanuje',
+    // Default jen ověřené e-shopy s klasickým olivovým olejem.
+    // Olivio.cz / mujbio.cz mají DNS issues, gaea.cz / zdravasila.cz mají
+    // jiný sortiment (kosmetika, doplňky). Lze přidat zpět z Nastavení
+    // až budou crawlery doladěné.
+    default: ['reckonasbavi'],
+    description: 'Aktivní e-shopy které Discovery scanuje. Začínáme s reckonasbavi.cz (specialty řecký shop, 62 olejů). Další lze přidat z Nastavení.',
   },
   discovery_schedule_cron: {
     key: 'discovery_schedule_cron',
