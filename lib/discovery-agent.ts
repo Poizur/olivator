@@ -599,8 +599,14 @@ export async function runDiscoveryAgent(): Promise<DiscoveryRunResult> {
         // Be polite — 3 sec between scrape calls
         await new Promise(r => setTimeout(r, 3000))
       } catch (err) {
-        result.errors.push(`${url}: ${err instanceof Error ? err.message : 'scrape failed'}`)
+        const errMsg = err instanceof Error ? err.message : 'scrape failed'
+        // Normalize unhelpful errors
+        const friendly = errMsg.includes('did not match the expected pattern')
+          ? 'URL parsing error (možná chybný encoding)'
+          : errMsg
+        result.errors.push(`${url}: ${friendly}`)
         result.failed++
+        console.warn(`[discovery] URL failed: ${url}`, err)
       }
     }
   }
