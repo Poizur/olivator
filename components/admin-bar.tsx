@@ -70,6 +70,14 @@ export async function AdminBar() {
           <Link href="/admin/faq" className="px-2 py-0.5 hover:bg-white/10 rounded transition-colors">
             FAQ
           </Link>
+          <span className="opacity-30 mx-1">|</span>
+          <Link
+            href="/"
+            className="px-2 py-0.5 hover:bg-white/10 rounded transition-colors flex items-center gap-1"
+            title="Otevřít veřejnou homepage"
+          >
+            🌐 Zobrazit web
+          </Link>
           {edit && (
             <>
               <span className="opacity-30 mx-1">|</span>
