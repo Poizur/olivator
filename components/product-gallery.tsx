@@ -93,6 +93,17 @@ export function ProductGallery({
           ))}
         </div>
       )}
+
+      {/* Attribution — required disclosure that photos come from partner shops */}
+      <div className="mt-3 text-[11px] text-text3 leading-snug">
+        Fotky od výrobců a partnerských e-shopů.{' '}
+        <a
+          href="/o-projektu#fotky"
+          className="text-text2 hover:text-olive underline decoration-dotted"
+        >
+          Více
+        </a>
+      </div>
     </div>
   )
 }

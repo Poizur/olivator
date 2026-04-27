@@ -15,9 +15,9 @@ export function Footer() {
         <div className="flex gap-5">
           {[
             { href: '/metodika', label: 'Metodika' },
-            { href: '/', label: 'O nás' },
-            { href: '/', label: 'Partneři' },
-            { href: '/', label: 'GDPR' },
+            { href: '/o-projektu', label: 'O projektu' },
+            { href: '/o-projektu#fotky', label: 'Fotky' },
+            { href: '/o-projektu#affiliate', label: 'Affiliate' },
           ].map(l => (
             <Link
               key={l.label}
