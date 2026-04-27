@@ -45,9 +45,20 @@ export interface ScrapedProduct {
   imageUrl: string | null       // primary image (backwards compat)
   galleryImages: ScrapedImage[] // all product images (primary + gallery)
 
+  // Lab analysis (some shops publish on product page without a lab report image)
+  k232: number | null
+  k270: number | null
+  deltaK: number | null
+  waxMaxMgPerKg: number | null  // Vosk (≤ X mg/kg)
+  oleicAcidPct: number | null   // some shops list it as parameter
+
   // Content
   descriptionShort: string | null
   rawDescription: string | null // full scraped text, for AI rewrite
+
+  // Generic catch-all: every key:value row from "Parametry produktu" tables.
+  // Allows admin to inspect what scraper saw and add new mappings later.
+  parameterTable: Record<string, string>
 }
 
 function extractFirstMatch(re: RegExp, str: string): string | null {
@@ -267,6 +278,110 @@ function extractPeroxide(text: string | null): number | null {
   const m = text.match(/peroxid(?:ov[ée]? číslo)?[:\s]*(?:≤|<=?|max)?\s*(\d+[.,]?\d*)\s*m?Eq/i)
   if (!m) return null
   return parseFloat(m[1].replace(',', '.'))
+}
+
+/** Parse a number from a string that may contain prefixes (≤, <, max), suffix
+ *  units, comma decimals, and ranges ("0,49% až ≤ 0,8%"). Returns the FIRST
+ *  number found (for ranges, that's the lower bound, which is the actual value). */
+function parseValueWithPrefix(s: string): number | null {
+  if (!s) return null
+  const m = s.match(/(\d+[.,]?\d*)/)
+  if (!m) return null
+  const n = parseFloat(m[1].replace(',', '.'))
+  return isFinite(n) ? n : null
+}
+
+/** Generic parser for "Parametry produktu" tables — handles the common
+ *  <table><tr><th>label</th><td>value</td></tr></table> pattern used by
+ *  Shoptet, WooCommerce, and most Czech e-shops. Returns key:value map
+ *  with HTML stripped from values. */
+function extractParameterTable($: cheerio.CheerioAPI): Record<string, string> {
+  const out: Record<string, string> = {}
+  // <th>label</th><td>value</td> rows
+  $('tr').each((_, el) => {
+    const $tr = $(el)
+    const label = $tr.find('th').first().text().trim().replace(/[:：]\s*$/, '')
+    const value = $tr.find('td').first().text().trim()
+    if (label && value && label.length < 60 && value.length < 200) {
+      // Skip rows that look like UI navigation, not data
+      if (/přidat|košík|cart|wishlist|oblíbené/i.test(label)) return
+      out[label] = value
+    }
+  })
+  // Also <dl><dt>label</dt><dd>value</dd></dl>
+  $('dl').each((_, el) => {
+    const $dl = $(el)
+    const dts = $dl.find('dt').toArray()
+    const dds = $dl.find('dd').toArray()
+    for (let i = 0; i < Math.min(dts.length, dds.length); i++) {
+      const label = $(dts[i]).text().trim().replace(/[:：]\s*$/, '')
+      const value = $(dds[i]).text().trim()
+      if (label && value && !out[label]) out[label] = value
+    }
+  })
+  return out
+}
+
+/** Map known parameter table keys to structured fields. Returns partial
+ *  ScrapedProduct. Keys are matched case-insensitive on label prefix. */
+function mapParameterTableToFields(table: Record<string, string>): {
+  k232: number | null
+  k270: number | null
+  deltaK: number | null
+  waxMaxMgPerKg: number | null
+  oleicAcidPct: number | null
+  acidityFromTable: number | null
+  peroxideFromTable: number | null
+  packagingFromTable: string | null
+} {
+  // Helper: find first table key that includes any of `needles` (lowercase, normalized)
+  const findKey = (...needles: string[]): string | null => {
+    for (const [k, _v] of Object.entries(table)) {
+      const norm = k.toLowerCase().replace(/[:.]/g, '').trim()
+      if (needles.some((n) => norm.includes(n))) return k
+    }
+    return null
+  }
+  const valueOf = (...needles: string[]): string | null => {
+    const k = findKey(...needles)
+    return k ? table[k] : null
+  }
+
+  // K232 / K270 / DK — small decimals
+  const k232 = parseValueWithPrefix(valueOf('k232') ?? '')
+  const k270 = parseValueWithPrefix(valueOf('k270') ?? '')
+  const deltaKRaw = valueOf('dk', 'delta k', 'δk')
+  const deltaK = parseValueWithPrefix(deltaKRaw ?? '')
+  // Vosk (≤ 150 mg/kg) — wax content
+  const waxMaxMgPerKg = parseValueWithPrefix(valueOf('vosk') ?? '')
+  // Oleic acid
+  const oleicAcidPct = parseValueWithPrefix(
+    valueOf('kyselina olejov', 'olejová kyselina', 'oleic') ?? ''
+  )
+  // Acidity from table (range "0,49% až ≤ 0,8%" → take 0,49)
+  const acidityFromTable = parseValueWithPrefix(valueOf('acidita', 'kyselost') ?? '')
+  // Peroxide
+  const peroxideFromTable = parseValueWithPrefix(
+    valueOf('peroxidov', 'peroxid') ?? ''
+  )
+  // Packaging
+  const packagingRaw = (valueOf('druh obalu', 'obal') ?? '').toLowerCase()
+  let packagingFromTable: string | null = null
+  if (/plech/.test(packagingRaw)) packagingFromTable = 'tin'
+  else if (/sklo|glass/.test(packagingRaw)) packagingFromTable = 'dark_glass'
+  else if (/pet|plast/.test(packagingRaw)) packagingFromTable = 'pet'
+  else if (/keramik/.test(packagingRaw)) packagingFromTable = 'ceramic'
+
+  return {
+    k232,
+    k270,
+    deltaK,
+    waxMaxMgPerKg,
+    oleicAcidPct,
+    acidityFromTable,
+    peroxideFromTable,
+    packagingFromTable,
+  }
 }
 
 /** Resolve a possibly-relative URL against a base. */
@@ -498,11 +613,17 @@ export async function scrapeProductPage(url: string): Promise<ScrapedProduct> {
   const type = inferType(allText)
   const origin = inferOrigin(allText)
   const volumeMl = inferVolumeMl(allText)
-  const packaging = inferPackaging(allText)
+  const inferredPackaging = inferPackaging(allText)
   const acidity = extractAcidity(rawDescription) ?? extractAcidity(shortDesc) ?? extractAcidity(paramsText)
   const polyphenols = extractPolyphenols(rawDescription) ?? extractPolyphenols(shortDesc) ?? extractPolyphenols(paramsText)
-  const peroxideValue = extractPeroxide(rawDescription) ?? extractPeroxide(paramsText)
+  const peroxideText = extractPeroxide(rawDescription) ?? extractPeroxide(paramsText)
   const slug = name ? slugify(name) : null
+
+  // Generic parameter table — extracts ALL key:value rows so admin sees everything
+  // the page exposed. Mapper picks known structured fields; rest stays in
+  // parameterTable map for extracted_facts pipeline.
+  const parameterTable = extractParameterTable($)
+  const tableFields = mapParameterTableToFields(parameterTable)
 
   return {
     url,
@@ -515,10 +636,16 @@ export async function scrapeProductPage(url: string): Promise<ScrapedProduct> {
     originCountry: origin.country,
     originRegion: origin.region,
     volumeMl,
-    packaging,
-    acidity,
+    packaging: tableFields.packagingFromTable ?? inferredPackaging,
+    // Prefer text-derived values (more accurate than table ranges) but fall back to table.
+    acidity: acidity ?? tableFields.acidityFromTable,
     polyphenols,
-    peroxideValue,
+    peroxideValue: peroxideText ?? tableFields.peroxideFromTable,
+    k232: tableFields.k232,
+    k270: tableFields.k270,
+    deltaK: tableFields.deltaK,
+    waxMaxMgPerKg: tableFields.waxMaxMgPerKg,
+    oleicAcidPct: tableFields.oleicAcidPct,
     price,
     currency: currency ?? 'CZK',
     inStock: null,
@@ -526,5 +653,6 @@ export async function scrapeProductPage(url: string): Promise<ScrapedProduct> {
     galleryImages: dedupedGallery,
     descriptionShort: shortDesc,
     rawDescription,
+    parameterTable,
   }
 }

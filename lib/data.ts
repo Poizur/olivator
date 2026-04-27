@@ -705,15 +705,23 @@ export interface RescrapePatch {
   acidity: number | null
   polyphenols: number | null
   peroxideValue: number | null
+  oleicAcidPct: number | null
   volumeMl: number | null
   packaging: string | null
+  // Lab values + raw parameter table — pushed into products.score_breakdown
+  // and extracted_facts as additional metadata (no schema migration needed).
+  k232: number | null
+  k270: number | null
+  deltaK: number | null
+  waxMaxMgPerKg: number | null
+  parameterTable: Record<string, string>
 }
 
 /** Updates only fields that are currently NULL in DB, always refreshes source_url + raw_description. */
 export async function applyRescrapePatch(id: string, patch: RescrapePatch): Promise<{ filled: string[] }> {
   const { data: existing, error: readErr } = await supabaseAdmin
     .from('products')
-    .select('ean, acidity, polyphenols, peroxide_value, volume_ml, packaging')
+    .select('ean, acidity, polyphenols, peroxide_value, oleic_acid_pct, volume_ml, packaging, score_breakdown, extracted_facts')
     .eq('id', id)
     .maybeSingle()
   if (readErr) throw readErr
@@ -762,6 +770,43 @@ export async function applyRescrapePatch(id: string, patch: RescrapePatch): Prom
   if (!existing.packaging && patch.packaging) {
     payload.packaging = patch.packaging
     filled.push('obal')
+  }
+  if ((existing as { oleic_acid_pct: number | string | null }).oleic_acid_pct == null && patch.oleicAcidPct != null) {
+    payload.oleic_acid_pct = patch.oleicAcidPct
+    filled.push('kyselina olejová')
+  }
+
+  // Lab values that don't have dedicated columns: stash in score_breakdown JSONB
+  // alongside score components. Keys: k232, k270, dk, wax_mg_kg.
+  // Only fill if missing (preserve admin-set values).
+  const existingBreakdown = (existing as { score_breakdown: Record<string, number> | null }).score_breakdown ?? {}
+  const labPatch: Record<string, number> = {}
+  if (existingBreakdown.k232 == null && patch.k232 != null) labPatch.k232 = patch.k232
+  if (existingBreakdown.k270 == null && patch.k270 != null) labPatch.k270 = patch.k270
+  if (existingBreakdown.dk == null && patch.deltaK != null) labPatch.dk = patch.deltaK
+  if (existingBreakdown.wax_mg_kg == null && patch.waxMaxMgPerKg != null) labPatch.wax_mg_kg = patch.waxMaxMgPerKg
+  if (Object.keys(labPatch).length > 0) {
+    payload.score_breakdown = { ...existingBreakdown, ...labPatch }
+    filled.push(`lab (${Object.keys(labPatch).join(', ')})`)
+  }
+
+  // Stash full parameter table in extracted_facts as a single 'parameter_table'
+  // entry. Replaces any prior parameter_table entry, keeps other facts intact.
+  if (Object.keys(patch.parameterTable).length > 0) {
+    const existingFacts = Array.isArray(
+      (existing as { extracted_facts: unknown }).extracted_facts
+    )
+      ? ((existing as { extracted_facts: Array<Record<string, unknown>> }).extracted_facts)
+      : []
+    const otherFacts = existingFacts.filter((f) => (f as { key: string }).key !== 'parameter_table')
+    const tableEntry = {
+      key: 'parameter_table',
+      label: 'Parametry produktu (zdroj)',
+      value: JSON.stringify(patch.parameterTable),
+      importance: 'medium',
+      source: 'scraped',
+    }
+    payload.extracted_facts = [...otherFacts, tableEntry]
   }
 
   const { error } = await supabaseAdmin.from('products').update(payload).eq('id', id)

@@ -52,7 +52,7 @@ export async function POST(
     const scraped = await scrapeProductPage(url)
     steps.push(`scrape (${scraped.rawDescription?.length ?? 0} znaků)`)
 
-    // ── 2. Patch NULL fields (acidity, peroxide, volume, ean, packaging) ──
+    // ── 2. Patch NULL fields + uloží lab values (k232/k270/dk/vosk) + parameter table ──
     const { filled } = await applyRescrapePatch(id, {
       sourceUrl: url,
       rawDescription: scraped.rawDescription,
@@ -60,8 +60,14 @@ export async function POST(
       acidity: scraped.acidity,
       polyphenols: scraped.polyphenols,
       peroxideValue: scraped.peroxideValue,
+      oleicAcidPct: scraped.oleicAcidPct,
       volumeMl: scraped.volumeMl,
       packaging: scraped.packaging,
+      k232: scraped.k232,
+      k270: scraped.k270,
+      deltaK: scraped.deltaK,
+      waxMaxMgPerKg: scraped.waxMaxMgPerKg,
+      parameterTable: scraped.parameterTable,
     })
     if (filled.length > 0) steps.push(`doplněno: ${filled.join(', ')}`)
 
