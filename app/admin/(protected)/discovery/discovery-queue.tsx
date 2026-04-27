@@ -1,8 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CandidateRow } from './candidate-row'
+
+interface JobState {
+  id: string
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+  total: number
+  processed: number
+  succeeded: number
+  failed: number
+  current_item: string | null
+  errors: Array<{ id: string; reason: string }>
+  completed_at: string | null
+}
 
 interface Candidate {
   id: string
@@ -32,6 +44,37 @@ export function DiscoveryQueue({ needsReview }: DiscoveryQueueProps) {
   const [busy, setBusy] = useState<'approve' | 'reject' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState<string | null>(null)
+  const [job, setJob] = useState<JobState | null>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Poll job status every 2s while running
+  useEffect(() => {
+    if (!job?.id || job.status === 'completed' || job.status === 'failed') {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
+      return
+    }
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/admin/bulk-jobs/${job.id}`)
+        const data = await res.json()
+        if (!res.ok || !data.job) return
+        setJob(data.job)
+        if (data.job.status === 'completed' || data.job.status === 'failed') {
+          // Done — refresh page to show updated candidate list
+          router.refresh()
+          setBusy(null)
+        }
+      } catch {
+        // ignore intermittent errors
+      }
+    }, 2000)
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [job?.id, job?.status, router])
 
   function toggle(id: string) {
     setSelected(prev => {
@@ -52,17 +95,19 @@ export function DiscoveryQueue({ needsReview }: DiscoveryQueueProps) {
 
   async function bulkAction(action: 'approve' | 'reject') {
     if (selected.size === 0) return
+    const totalSec = selected.size * 30
     const verb = action === 'approve' ? 'schválit' : 'zamítnout'
     if (!confirm(
       `${verb.toUpperCase()} ${selected.size} kandidátů?\n\n` +
       (action === 'approve'
-        ? 'Pro každý se spustí AI pipeline (image + facts + flavor + score + AI rewrite). Trvá ~30s na produkt = celkem ~' + (selected.size * 30) + ' s.'
-        : 'Kandidáti se označí jako zamítnuté. Tahle akce je rychlá.')
+        ? `Pro každý se spustí AI pipeline (image + facts + flavor + score + AI rewrite). Trvá ~30s/produkt = celkem ~${Math.ceil(totalSec / 60)} min.\n\nBěží na pozadí — můžeš zavřít tab a vrátit se později.`
+        : 'Kandidáti se označí jako zamítnuté. Hotovo okamžitě.')
     )) return
 
     setBusy(action)
     setError(null)
-    setProgress(`Zpracovávám ${selected.size} ${action === 'approve' ? 'schválení' : 'zamítnutí'}...`)
+    setProgress(null)
+    setJob(null)
     try {
       const res = await fetch('/api/admin/discovery/bulk-approve', {
         method: 'POST',
@@ -72,23 +117,38 @@ export function DiscoveryQueue({ needsReview }: DiscoveryQueueProps) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
 
-      if (action === 'approve') {
-        setProgress(
-          `✓ Hotovo: ${data.approved ?? 0} schváleno, ${data.alreadyPublished ?? 0} již publikováno, ${data.failed ?? 0} selhalo`
-        )
-      } else {
+      if (action === 'reject' || data.immediate) {
+        // Fast path — immediate result
         setProgress(`✓ Zamítnuto: ${data.rejected ?? 0}`)
+        setSelected(new Set())
+        router.refresh()
+        setBusy(null)
+        setTimeout(() => setProgress(null), 5000)
+      } else if (data.jobId) {
+        // Async — start polling
+        setSelected(new Set())
+        setJob({
+          id: data.jobId,
+          status: 'pending',
+          total: 0,
+          processed: 0,
+          succeeded: 0,
+          failed: 0,
+          current_item: null,
+          errors: [],
+          completed_at: null,
+        })
+        // First poll fires from useEffect when job state set
       }
-      setSelected(new Set())
-      router.refresh()
-      setTimeout(() => setProgress(null), 6000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Chyba')
-      setProgress(null)
-    } finally {
       setBusy(null)
     }
   }
+
+  // Helpers for progress UI
+  const isJobActive = job && (job.status === 'pending' || job.status === 'running')
+  const pct = job && job.total > 0 ? Math.round((job.processed / job.total) * 100) : 0
 
   if (needsReview.length === 0) return null
 
@@ -162,6 +222,74 @@ export function DiscoveryQueue({ needsReview }: DiscoveryQueueProps) {
           </span>
         )}
       </div>
+
+      {/* Background job progress panel — appears while async work runs */}
+      {job && (
+        <div className={`mb-3 rounded-lg p-4 border ${
+          job.status === 'completed'
+            ? 'bg-olive-bg border-olive-border'
+            : job.status === 'failed'
+            ? 'bg-red-50 border-red-200'
+            : 'bg-olive-bg/50 border-olive-border'
+        }`}>
+          <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+            <div className="text-[13px] font-semibold text-olive-dark">
+              {job.status === 'completed'
+                ? `✓ Bulk schválení dokončeno (${job.succeeded}/${job.total})`
+                : job.status === 'failed'
+                ? `❌ Bulk schválení selhalo`
+                : `⏳ Schvaluji ${job.processed} z ${job.total}`
+              }
+            </div>
+            <div className="text-[11px] text-text2">
+              ✅ {job.succeeded} úspěšně {job.failed > 0 && `· ❌ ${job.failed} selhalo`}
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          {job.total > 0 && (
+            <div className="w-full bg-white/50 rounded-full h-2 mb-2 overflow-hidden">
+              <div
+                className={`h-2 transition-all duration-500 ${
+                  job.status === 'failed' ? 'bg-red-400' : 'bg-olive'
+                }`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          )}
+
+          <div className="flex items-center justify-between text-[11px] text-text3">
+            <span>
+              {job.current_item && isJobActive && (
+                <>Aktuálně: <strong className="text-text2">{job.current_item}</strong></>
+              )}
+            </span>
+            <span>{pct} %</span>
+          </div>
+
+          {isJobActive && (
+            <div className="mt-2 text-[10px] text-text3">
+              💡 Můžeš zavřít tab — běží na pozadí. Vrať se za ~{Math.ceil((job.total - job.processed) * 30 / 60)} min.
+            </div>
+          )}
+
+          {job.errors.length > 0 && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-[11px] text-terra">
+                {job.errors.length} chyb — zobrazit
+              </summary>
+              <ul className="mt-1 text-[11px] text-text3 space-y-0.5 ml-4">
+                {job.errors.slice(0, 8).map((e, i) => (
+                  <li key={i} className="truncate">• {e.reason}</li>
+                ))}
+                {job.errors.length > 8 && (
+                  <li className="italic">... a {job.errors.length - 8} dalších</li>
+                )}
+              </ul>
+            </details>
+          )}
+        </div>
+      )}
 
       <div className="space-y-2">
         {needsReview.map(c => (

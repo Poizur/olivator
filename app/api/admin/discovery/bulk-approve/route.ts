@@ -2,23 +2,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { publishCandidate } from '@/lib/discovery-agent'
+import {
+  createBulkJob,
+  setJobRunning,
+  updateJobProgress,
+  completeJob,
+  failJob,
+} from '@/lib/bulk-jobs'
 import { revalidatePath } from 'next/cache'
 import type { ScrapedProduct } from '@/lib/product-scraper'
 
-// 4 minutes — bulk of 5-10 candidates × 30-60s each pipeline
-export const maxDuration = 600
-export const dynamic = 'force-dynamic'
-
-interface BulkResult {
-  approved: number
-  alreadyPublished: number
-  failed: number
-  errors: Array<{ candidateId: string; reason: string }>
-}
+// Returns immediately after creating job. Background processing continues
+// indefinitely on Railway long-running container (no timeout).
+export const maxDuration = 30
 
 /** POST { ids: [...], action: 'approve' | 'reject' }
- *  Bulk approve: for each candidate, runs publishCandidate or activates existing.
- *  Bulk reject: just flips status='rejected'. */
+ *  Creates bulk_job, kicks off background processing, returns jobId.
+ *  Frontend polls /api/admin/bulk-jobs/[id] for live progress. */
 export async function POST(request: NextRequest) {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -29,11 +29,10 @@ export async function POST(request: NextRequest) {
     const action: string = body?.action ?? 'approve'
 
     if (ids.length === 0) {
-      return NextResponse.json({ error: 'Žádné kandidáti k zpracování' }, { status: 400 })
+      return NextResponse.json({ error: 'Žádné kandidáti' }, { status: 400 })
     }
 
-    const result: BulkResult = { approved: 0, alreadyPublished: 0, failed: 0, errors: [] }
-
+    // Reject is fast — just one UPDATE, no background needed
     if (action === 'reject') {
       const { error } = await supabaseAdmin
         .from('discovery_candidates')
@@ -44,95 +43,142 @@ export async function POST(request: NextRequest) {
         })
         .in('id', ids)
       if (error) throw error
-      return NextResponse.json({ ok: true, rejected: ids.length })
+      return NextResponse.json({ ok: true, immediate: true, rejected: ids.length })
     }
 
-    // Approve: process each sequentially (avoid Anthropic rate limits)
-    for (const id of ids) {
-      try {
-        const { data: candidate } = await supabaseAdmin
-          .from('discovery_candidates')
-          .select('*')
-          .eq('id', id)
-          .maybeSingle()
-        if (!candidate) {
-          result.failed++
-          result.errors.push({ candidateId: id, reason: 'Not found' })
-          continue
-        }
+    // Approve = long pipeline. Create job + fire-and-forget background.
+    const jobId = await createBulkJob('discovery_bulk_approve', ids.length, { ids })
 
-        // Path 1: product already exists from prior auto-publish → just activate
-        if (candidate.resulting_product_id) {
-          await supabaseAdmin
-            .from('products')
-            .update({ status: 'active', updated_at: new Date().toISOString() })
-            .eq('id', candidate.resulting_product_id as string)
-          await supabaseAdmin
-            .from('discovery_candidates')
-            .update({
-              status: 'approved',
-              reviewed_at: new Date().toISOString(),
-              reviewed_by: 'admin_bulk',
-            })
-            .eq('id', id)
-          result.alreadyPublished++
-          continue
-        }
+    // Kick off async processing — don't await
+    void processBulkApprove(jobId, ids).catch(err => {
+      console.error('[bulk-approve background]', err)
+      void failJob(jobId, err instanceof Error ? err.message : 'Unknown error')
+    })
 
-        // Path 2: needs full pipeline
-        const data = candidate.candidate_data as unknown as ScrapedProduct
-        if (!data?.name || !data.slug) {
-          result.failed++
-          result.errors.push({ candidateId: id, reason: 'Missing name/slug in scraped data' })
-          continue
-        }
-
-        const { data: retailer } = await supabaseAdmin
-          .from('retailers')
-          .select('slug')
-          .eq('domain', candidate.source_domain as string)
-          .maybeSingle()
-        const retailerSlug = (retailer?.slug as string) || (candidate.source_domain as string).split('.')[0]
-        const retailerDomain = candidate.source_domain as string
-
-        const productId = await publishCandidate(data, retailerSlug, retailerDomain)
-        await supabaseAdmin
-          .from('discovery_candidates')
-          .update({
-            status: 'approved',
-            resulting_product_id: productId,
-            reviewed_at: new Date().toISOString(),
-            reviewed_by: 'admin_bulk',
-          })
-          .eq('id', id)
-        result.approved++
-      } catch (err) {
-        result.failed++
-        result.errors.push({
-          candidateId: id,
-          reason: err instanceof Error ? err.message : 'Unknown error',
-        })
-        // Mark as failed in DB for visibility
-        await supabaseAdmin
-          .from('discovery_candidates')
-          .update({
-            status: 'failed',
-            reasoning: `Bulk approve failed: ${err instanceof Error ? err.message : 'unknown'}`,
-            reviewed_at: new Date().toISOString(),
-            reviewed_by: 'admin_bulk',
-          })
-          .eq('id', id)
-      }
-    }
-
-    revalidatePath('/')
-    revalidatePath('/srovnavac')
-
-    return NextResponse.json({ ok: true, ...result })
+    return NextResponse.json({ ok: true, jobId })
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Server error' },
       { status: 500 }
     )
   }
+}
+
+/** Background worker — sequentially processes each candidate, updates job.
+ *  No HTTP timeout because it runs after response is returned. */
+async function processBulkApprove(jobId: string, ids: string[]): Promise<void> {
+  await setJobRunning(jobId)
+
+  const errors: Array<{ id: string; reason: string }> = []
+  let processed = 0
+  let succeeded = 0
+  let failed = 0
+
+  for (const id of ids) {
+    try {
+      const { data: candidate } = await supabaseAdmin
+        .from('discovery_candidates')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle()
+      if (!candidate) {
+        failed++
+        errors.push({ id, reason: 'Not found' })
+        continue
+      }
+
+      const data = candidate.candidate_data as unknown as ScrapedProduct
+      const itemName = data?.name ?? 'unknown'
+
+      // Update job — show what we're working on
+      await updateJobProgress(jobId, {
+        processed,
+        succeeded,
+        failed,
+        current_item: itemName,
+        errors,
+      })
+
+      // Path 1: already published — just activate
+      if (candidate.resulting_product_id) {
+        await supabaseAdmin
+          .from('products')
+          .update({ status: 'active', updated_at: new Date().toISOString() })
+          .eq('id', candidate.resulting_product_id as string)
+        await supabaseAdmin
+          .from('discovery_candidates')
+          .update({
+            status: 'approved',
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: 'admin_bulk',
+          })
+          .eq('id', id)
+        succeeded++
+      } else {
+        // Path 2: full pipeline
+        if (!data?.name || !data.slug) {
+          failed++
+          errors.push({ id, reason: 'Missing name/slug in scraped data' })
+        } else {
+          const { data: retailer } = await supabaseAdmin
+            .from('retailers')
+            .select('slug')
+            .eq('domain', candidate.source_domain as string)
+            .maybeSingle()
+          const retailerSlug = (retailer?.slug as string) || (candidate.source_domain as string).split('.')[0]
+          const retailerDomain = candidate.source_domain as string
+
+          const productId = await publishCandidate(data, retailerSlug, retailerDomain)
+          await supabaseAdmin
+            .from('discovery_candidates')
+            .update({
+              status: 'approved',
+              resulting_product_id: productId,
+              reviewed_at: new Date().toISOString(),
+              reviewed_by: 'admin_bulk',
+            })
+            .eq('id', id)
+          succeeded++
+        }
+      }
+    } catch (err) {
+      failed++
+      errors.push({
+        id,
+        reason: err instanceof Error ? err.message.slice(0, 200) : 'Unknown error',
+      })
+      // Mark candidate failed
+      try {
+        await supabaseAdmin
+          .from('discovery_candidates')
+          .update({
+            status: 'failed',
+            reasoning: `Bulk approve failed: ${err instanceof Error ? err.message.slice(0, 200) : 'unknown'}`,
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: 'admin_bulk',
+          })
+          .eq('id', id)
+      } catch {
+        // ignore
+      }
+    } finally {
+      processed++
+      // Update progress after each item
+      await updateJobProgress(jobId, {
+        processed,
+        succeeded,
+        failed,
+        errors,
+      })
+    }
+  }
+
+  // Done — revalidate public pages + mark complete
+  try {
+    revalidatePath('/')
+    revalidatePath('/srovnavac')
+  } catch {
+    // ignore
+  }
+  await completeJob(jobId)
 }
