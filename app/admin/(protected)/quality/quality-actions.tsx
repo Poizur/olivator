@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 
 export function QualityActions() {
   const router = useRouter()
-  const [running, setRunning] = useState<null | 'audit' | 'meta' | 'vision'>(null)
+  const [running, setRunning] = useState<null | 'audit' | 'meta' | 'vision' | 'links'>(null)
   const [error, setError] = useState<string | null>(null)
   const [summary, setSummary] = useState<string | null>(null)
 
@@ -40,6 +40,26 @@ export function QualityActions() {
         data.processed === 0
           ? `✓ ${data.message ?? 'Vše už má meta description.'}`
           : `✓ Hotovo: ${data.processed} vygenerováno, ${data.failed ?? 0} selhalo`
+      )
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Chyba')
+    } finally {
+      setRunning(null)
+    }
+  }
+
+  async function onLinkCheck() {
+    if (!confirm('Projet všechny affiliate URLs a deaktivovat 404? Trvá ~2-3 min.')) return
+    setRunning('links')
+    setError(null)
+    setSummary(null)
+    try {
+      const res = await fetch('/api/admin/link-check', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setSummary(
+        `✓ Zkontrolováno ${data.totalChecked}: živé ${data.alive}, mrtvé ${data.dead}, deaktivováno ${data.deactivated}, reaktivováno ${data.reactivated}`
       )
       router.refresh()
     } catch (err) {
@@ -89,6 +109,15 @@ export function QualityActions() {
           title="Manuální fix: SEO meta description pro produkty bez něj. Pro nové produkty se generuje automaticky při discovery."
         >
           {running === 'meta' ? '✏️ Generuju…' : '✏️ Doplnit SEO meta'}
+        </button>
+        <button
+          type="button"
+          onClick={onLinkCheck}
+          disabled={running !== null}
+          className="bg-white border border-off2 text-text2 rounded-full px-4 py-2 text-[13px] font-medium hover:border-olive-light hover:text-olive disabled:opacity-40 transition-colors"
+          title="HEAD request na všechny affiliate URLs — 404/410 deaktivuje, znovu-žijící reaktivuje. Cron běží denně automaticky."
+        >
+          {running === 'links' ? '🔗 Kontroluju…' : '🔗 Zkontrolovat odkazy'}
         </button>
         <button
           type="button"
