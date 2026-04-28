@@ -37,8 +37,34 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
   const article = getArticleBySlug(slug)
   if (!article || article.category === 'recept') notFound()
 
+  // Schema.org Article — pomáhá Google ukázat rich result (excerpt, datum, autor)
+  const articleSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: article.title,
+    description: article.excerpt,
+    author: {
+      '@type': 'Organization',
+      name: 'Olivator',
+      url: 'https://olivator.cz',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Olivator',
+      url: 'https://olivator.cz',
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `https://olivator.cz/pruvodce/${article.slug}`,
+    },
+  }
+
   return (
     <div className="max-w-[720px] mx-auto px-6 md:px-10 py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
       <div className="text-xs text-text3 mb-7">
         <Link href="/" className="text-olive">Olivator</Link>
         {' › '}

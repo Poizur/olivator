@@ -35,8 +35,32 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
   const allProducts = await getProductsWithOffers()
   const recommended = allProducts.slice(0, 2)
 
+  // Schema.org Recipe — strukturované recept-rich-snippet (může vyhrát ingredients carousel)
+  const recipeSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Recipe',
+    name: article.title,
+    description: article.excerpt,
+    author: { '@type': 'Organization', name: 'Olivator' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Olivator',
+      url: 'https://olivator.cz',
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `https://olivator.cz/recept/${article.slug}`,
+    },
+    recipeCategory: 'Italian',
+    recipeCuisine: 'Mediterranean',
+  }
+
   return (
     <div className="max-w-[720px] mx-auto px-6 md:px-10 py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(recipeSchema) }}
+      />
       <div className="text-xs text-text3 mb-7">
         <Link href="/" className="text-olive">Olivator</Link>
         {' › '}
