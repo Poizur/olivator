@@ -64,7 +64,10 @@ export function CompareBar() {
       </div>
 
       <Link
-        href={`/porovnani?ids=${items.map(i => i.id).join(',')}`}
+        href={items.length >= 2
+          ? `/porovnani/${items.map(i => i.slug).join('-vs-')}`
+          : `/porovnani`
+        }
         onClick={() => trackCompareOpen(items.length)}
         className={`bg-olive text-white border-none rounded-full px-5 py-2.5 text-[13px] font-medium cursor-pointer whitespace-nowrap transition-colors hover:bg-olive-dark ${
           items.length < 2 ? 'opacity-40 pointer-events-none' : ''

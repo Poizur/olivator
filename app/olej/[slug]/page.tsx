@@ -66,14 +66,41 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const product = await getProductBySlug(slug)
   if (!product) notFound()
 
-  const [offers, gallery, customFAQs, dbGeneralFAQs, variants] = await Promise.all([
+  const [offers, gallery, customFAQs, dbGeneralFAQs, variants, allProducts] = await Promise.all([
     getOffersForProduct(product.id),
     getProductGallery(product.id),
     getProductCustomFAQs(product.id),
     getActiveGeneralFAQs(),
     getVariantProducts(product.id),
+    getProducts(),
   ])
   const cheapest = offers[0]
+
+  // Find 3 similar products for "Porovnat s podobnými" CTA — různá značka,
+  // podobné Score/origin/certifikace. Same algorithm as comparator suggestions.
+  const similarProducts = (() => {
+    const candidates = allProducts.filter(
+      (p) => p.id !== product.id && p.nameShort !== product.nameShort
+    )
+    const scored = candidates.map((p) => {
+      let s = 0
+      if (p.originCountry === product.originCountry) s += 0.3
+      if (p.originRegion && p.originRegion === product.originRegion) s += 0.2
+      const scoreDiff = Math.abs(p.olivatorScore - product.olivatorScore)
+      s += Math.max(0, (20 - scoreDiff) / 20) * 0.2
+      const sharedCerts = p.certifications.filter((c) =>
+        product.certifications.includes(c)
+      ).length
+      s += Math.min(sharedCerts * 0.1, 0.2)
+      if (p.type === product.type) s += 0.1
+      return { product: p, similarity: s }
+    })
+    return scored
+      .filter((x) => x.similarity >= 0.2)
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, 3)
+      .map((x) => x.product)
+  })()
 
   // Transparent spec table — missing data shown as "— nezveřejněno" in italics
   const specs = [
@@ -300,6 +327,52 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </h2>
           <div className="text-[15px] text-text2 leading-relaxed whitespace-pre-line">
             {product.descriptionLong}
+          </div>
+        </section>
+      )}
+
+      {/* Porovnat s podobnými — internal link → /porovnani slug URL */}
+      {similarProducts.length >= 2 && (
+        <section className="mt-12 max-w-[1040px]">
+          <div className="bg-olive-bg/50 border border-olive-border/40 rounded-[var(--radius-card)] p-6">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex-1 min-w-[280px]">
+                <h2 className="font-[family-name:var(--font-display)] text-xl text-text mb-1">
+                  Postavit vedle podobných?
+                </h2>
+                <p className="text-[13px] text-text2 leading-relaxed">
+                  Vidíš, jak si {product.nameShort} stojí oproti {similarProducts.length}&nbsp;dalším podobným olejům — Score, kyselost, polyfenoly, cena.
+                </p>
+              </div>
+              <Link
+                href={`/porovnani/${[product, ...similarProducts].map((p) => p.slug).join('-vs-')}`}
+                className="bg-olive text-white rounded-full px-5 py-2.5 text-[13px] font-medium hover:bg-olive-dark transition-colors whitespace-nowrap"
+              >
+                Porovnat oleje →
+              </Link>
+            </div>
+            <div className="mt-4 flex gap-2 flex-wrap">
+              {similarProducts.map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/olej/${p.slug}`}
+                  className="flex items-center gap-2 bg-white border border-off2 rounded-lg px-3 py-2 hover:border-olive-light transition-colors"
+                >
+                  {p.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.imageUrl} alt={p.name} className="w-7 h-7 object-contain" loading="lazy" />
+                  ) : (
+                    <span className="text-base">🫒</span>
+                  )}
+                  <span className="text-[12px] text-text">
+                    {countryFlag(p.originCountry)} {p.nameShort}
+                  </span>
+                  <span className="text-[10px] bg-terra/15 text-terra rounded px-1.5 py-0.5 font-semibold">
+                    {p.olivatorScore}
+                  </span>
+                </Link>
+              ))}
+            </div>
           </div>
         </section>
       )}

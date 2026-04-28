@@ -1,14 +1,49 @@
 'use client'
 
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { useCompare } from '@/lib/compare-context'
-import { countryFlag, formatPrice, formatPricePer100ml, certLabel } from '@/lib/utils'
+import { countryFlag, formatPrice, formatPricePer100ml, certLabel, typeLabel, countryName } from '@/lib/utils'
 import type { Product, ProductOffer } from '@/lib/types'
+
+const PACKAGING_LABELS: Record<string, string> = {
+  dark_glass: 'Tmavé sklo',
+  glass: 'Sklo',
+  tin: 'Plech',
+  pet: 'PET',
+  ceramic: 'Keramika',
+}
 
 type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
 
-export function ComparatorContent({ allProducts }: { allProducts: ProductWithOffer[] }) {
-  const { items, removeItem, addItem } = useCompare()
+interface Props {
+  allProducts: ProductWithOffer[]
+  serverItems?: ProductWithOffer[]
+}
+
+export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
+  const { items: clientItems, removeItem, addItem } = useCompare()
+  const [hydrated, setHydrated] = useState(false)
+
+  // Hydration pattern: pre-mount render uses serverItems (z URL ?ids=)
+  // takže SSR HTML obsahuje skutečnou tabulku pro Google bot. Po mount-u
+  // synchronizujeme localStorage na URL state a přepneme na clientItems.
+  useEffect(() => {
+    if (serverItems.length > 0) {
+      const clientIds = new Set(clientItems.map((p) => p.id))
+      for (const sp of serverItems) {
+        if (!clientIds.has(sp.id)) addItem(sp)
+      }
+    }
+    setHydrated(true)
+    // Run once on mount — clientItems intentionally not in deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Pre-hydration: použij URL serverItems (nutné pro SSR + match s prvním
+  // klient renderem aby nedošlo k hydration mismatch). Po mount-u: clientItems.
+  const items = hydrated ? clientItems : serverItems
+
   const empty = 5 - items.length
   const offerByProductId = new Map(allProducts.map(p => [p.id, p.cheapestOffer]))
   const getCheapestOffer = (pid: string) => offerByProductId.get(pid) ?? null
@@ -89,6 +124,34 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
       label: 'Certifikace',
       getValue: (p: Product) => p.certifications.length,
       format: (_: number, p: Product) => p.certifications.length > 0 ? p.certifications.map(certLabel).join(' + ') : 'Žádné',
+      higherBetter: true,
+    },
+    {
+      label: 'Typ',
+      getValue: () => 0,
+      format: (_v: number, p: Product) => p.type ? typeLabel(p.type) : '—',
+      higherBetter: true,
+    },
+    {
+      label: 'Původ',
+      getValue: () => 0,
+      format: (_v: number, p: Product) => {
+        if (!p.originCountry) return '—'
+        const country = countryName(p.originCountry)
+        return p.originRegion ? `${p.originRegion}, ${country}` : country
+      },
+      higherBetter: true,
+    },
+    {
+      label: 'Peroxidové číslo',
+      getValue: (p: Product) => p.peroxideValue ?? 999,
+      format: (_v: number, p: Product) => p.peroxideValue != null ? `${p.peroxideValue} mEq/kg` : '—',
+      higherBetter: false,
+    },
+    {
+      label: 'Obal',
+      getValue: () => 0,
+      format: (_v: number, p: Product) => p.packaging ? (PACKAGING_LABELS[p.packaging] ?? p.packaging) : '—',
       higherBetter: true,
     },
     {
@@ -251,9 +314,122 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
         </div>
       )}
 
-      {/* Comparison table */}
+      {/* Schema.org ItemList — Google rich result */}
       {items.length >= 2 && (
-        <div className="overflow-x-auto">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'ItemList',
+              name: items.map((p) => p.nameShort).join(' vs '),
+              description: `Porovnání ${items.length} olivových olejů`,
+              numberOfItems: items.length,
+              itemListElement: items.map((item, i) => ({
+                '@type': 'ListItem',
+                position: i + 1,
+                item: {
+                  '@type': 'Product',
+                  name: item.name,
+                  image: item.imageUrl ?? undefined,
+                  brand: { '@type': 'Brand', name: item.nameShort },
+                  ...(item.ean ? { gtin13: item.ean } : {}),
+                  url: `https://olivator.cz/olej/${item.slug}`,
+                  aggregateRating: {
+                    '@type': 'AggregateRating',
+                    ratingValue: item.olivatorScore,
+                    bestRating: 100,
+                    worstRating: 0,
+                    ratingCount: 1,
+                  },
+                  offers: getCheapestOffer(item.id)
+                    ? {
+                        '@type': 'Offer',
+                        price: getCheapestOffer(item.id)!.price,
+                        priceCurrency: getCheapestOffer(item.id)!.currency ?? 'CZK',
+                        availability: 'https://schema.org/InStock',
+                      }
+                    : undefined,
+                },
+              })),
+            }),
+          }}
+        />
+      )}
+
+      {/* MOBILE — stacked cards (each product = vertical block, all metrics inside) */}
+      {items.length >= 2 && (
+        <div className="md:hidden space-y-4">
+          {items.map((item) => {
+            const offer = getCheapestOffer(item.id)
+            return (
+              <div key={item.id} className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden">
+                <Link href={`/olej/${item.slug}`} className="flex items-center gap-3 p-4 border-b border-off bg-off/30 hover:bg-off/60 transition-colors">
+                  <div className="relative w-14 h-14 shrink-0 bg-white rounded overflow-hidden border border-off2">
+                    {item.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain p-1" loading="lazy" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-xl">🫒</div>
+                    )}
+                    {item.originCountry && (
+                      <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded text-[10px] leading-none px-0.5 shadow-sm border border-off2">
+                        {countryFlag(item.originCountry)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-text leading-tight">{item.name}</div>
+                    {offer && (
+                      <div className="text-xs text-text3 mt-0.5">
+                        {formatPrice(offer.price)} · {formatPricePer100ml(offer.price, item.volumeMl)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="bg-terra text-white text-sm font-bold px-2.5 py-1 rounded-full">{item.olivatorScore}</div>
+                </Link>
+                <div className="divide-y divide-off">
+                  {metrics.map((metric) => {
+                    const values = items.map((p) => metric.getValue(p))
+                    const best = metric.higherBetter ? Math.max(...values) : Math.min(...values)
+                    const worst = metric.higherBetter ? Math.min(...values) : Math.max(...values)
+                    const formattedAll = items.map((it, idx) =>
+                      metric.format.length > 1
+                        ? (metric.format as (v: number, p: Product) => string)(values[idx], it)
+                        : (metric.format as (v: number) => string)(values[idx])
+                    )
+                    if (formattedAll.every((s) => s === '—' || s === 'Žádné')) return null
+                    const itemIdx = items.findIndex((i) => i.id === item.id)
+                    const val = values[itemIdx]
+                    const formatted = formattedAll[itemIdx]
+                    const isMissing = formatted === '—' || formatted === 'Žádné'
+                    const hasVariation = best !== worst
+                    const isBest = hasVariation && val === best && !isMissing
+                    const isWorst = hasVariation && val === worst && !isMissing
+                    return (
+                      <div key={metric.label} className="flex items-center justify-between px-4 py-2.5">
+                        <span className="text-[12px] text-text3">{metric.label}</span>
+                        <span
+                          className={`text-[13px] font-medium tabular-nums ${
+                            isMissing ? 'text-text3 italic' : isBest ? 'text-green-600' : isWorst ? 'text-red-500' : 'text-text'
+                          }`}
+                        >
+                          {formatted}
+                          {isBest && <span className="text-[10px] ml-1.5 text-green-600/70">nejlepší</span>}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* DESKTOP — comparison table */}
+      {items.length >= 2 && (
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
               <tr>
