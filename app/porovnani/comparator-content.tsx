@@ -130,12 +130,17 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-3xl">🫒</div>
                 )}
+                {item.originCountry && (
+                  <div className="absolute top-1.5 left-1.5 bg-white/90 backdrop-blur-sm rounded px-1 py-0.5 text-sm leading-none shadow-sm" title={item.originCountry}>
+                    {countryFlag(item.originCountry)}
+                  </div>
+                )}
                 <div className="absolute top-1.5 right-1.5 bg-terra text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
                   {item.olivatorScore}
                 </div>
               </div>
               <div className="text-[13px] font-medium text-text leading-tight mb-1 line-clamp-2 min-h-[34px]">
-                {countryFlag(item.originCountry)} {item.nameShort}
+                {item.nameShort}
               </div>
               <div className="text-xs text-text3">
                 {formatPrice(getCheapestOffer(item.id)?.price || 0)} &middot; {formatPricePer100ml(getCheapestOffer(item.id)?.price || 0, item.volumeMl)}
@@ -180,17 +185,22 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
                   className="group flex items-center gap-2.5 p-2 rounded-lg bg-white border border-off2 hover:border-olive-light hover:shadow-sm transition-all text-left"
                   title={`Přidat: ${p.name}`}
                 >
-                  <div className="w-10 h-10 shrink-0 bg-off rounded overflow-hidden border border-off2">
+                  <div className="relative w-10 h-10 shrink-0 bg-off rounded overflow-hidden border border-off2">
                     {p.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={p.imageUrl} alt={p.name} className="w-full h-full object-contain p-0.5" loading="lazy" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-base">🫒</div>
                     )}
+                    {p.originCountry && (
+                      <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded text-[10px] leading-none px-0.5 shadow-sm border border-off2">
+                        {countryFlag(p.originCountry)}
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] text-text font-medium truncate">
-                      {countryFlag(p.originCountry)} {p.nameShort}
+                      {p.nameShort}
                       {p.volumeMl > 0 && <span className="text-text3 ml-1">{p.volumeMl >= 1000 ? `${p.volumeMl / 1000}l` : `${p.volumeMl}ml`}</span>}
                     </div>
                     <div className="text-[10px] text-text3 mt-0.5 flex items-center gap-1.5">
@@ -253,16 +263,21 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
                 {items.map(item => (
                   <th key={item.id} className="text-center text-[11px] font-semibold text-olive tracking-wider uppercase px-3.5 py-2.5 border-b-2 border-off">
                     <Link href={`/olej/${item.slug}`} className="inline-flex flex-col items-center gap-1.5 hover:opacity-80 transition-opacity">
-                      <div className="w-10 h-10 bg-off rounded overflow-hidden border border-off2">
+                      <div className="relative w-10 h-10 bg-off rounded overflow-hidden border border-off2">
                         {item.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain p-0.5" loading="lazy" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-base">🫒</div>
                         )}
+                        {item.originCountry && (
+                          <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded text-[10px] leading-none px-0.5 shadow-sm border border-off2">
+                            {countryFlag(item.originCountry)}
+                          </div>
+                        )}
                       </div>
                       <span className="text-[10px] leading-tight">
-                        {countryFlag(item.originCountry)} {item.nameShort}
+                        {item.nameShort}
                       </span>
                     </Link>
                   </th>

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useCompare } from '@/lib/compare-context'
 import { trackCompareOpen } from '@/lib/analytics'
+import { countryFlag } from '@/lib/utils'
 
 export function CompareBar() {
   const { items, removeItem, clearAll } = useCompare()
@@ -29,6 +30,11 @@ export function CompareBar() {
               />
             ) : (
               <span className="text-xl">🫒</span>
+            )}
+            {item.originCountry && (
+              <span className="absolute bottom-3.5 left-1 text-[10px] leading-none bg-white/90 rounded px-0.5">
+                {countryFlag(item.originCountry)}
+              </span>
             )}
             <span className="text-[9px] text-olive font-medium mt-0.5 text-center px-0.5 leading-tight max-w-[72px] overflow-hidden whitespace-nowrap text-ellipsis">
               {item.nameShort}
