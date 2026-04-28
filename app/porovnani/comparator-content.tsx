@@ -18,6 +18,36 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
     ? items.reduce((best, p) => p.olivatorScore > best.olivatorScore ? p : best)
     : null
 
+  // Smart suggestions: pro každý kandidát spočítáme podobnost vůči všem
+  // už vybraným olejům (origin, region, score, certifikace, typ). Pokud je
+  // compare prázdný, fallback na top-Score produkty.
+  const suggestions = (() => {
+    if (notInCompare.length === 0) return []
+    if (items.length === 0) {
+      return [...notInCompare].sort((a, b) => b.olivatorScore - a.olivatorScore).slice(0, 4)
+    }
+    const scored = notInCompare.map((p) => {
+      const similarity = items.reduce((sum, item) => {
+        let s = 0
+        if (p.originCountry && p.originCountry === item.originCountry) s += 0.3
+        if (p.originRegion && p.originRegion === item.originRegion) s += 0.2
+        const scoreDiff = Math.abs(p.olivatorScore - item.olivatorScore)
+        s += Math.max(0, (20 - scoreDiff) / 20) * 0.2
+        const sharedCerts = p.certifications.filter((c) => item.certifications.includes(c)).length
+        s += Math.min(sharedCerts * 0.1, 0.2)
+        if (p.type === item.type) s += 0.1
+        return sum + s
+      }, 0) / items.length
+      return { product: p, similarity }
+    })
+    // Min threshold — pokud kandidát nemá nic společného (similarity < 0.15), nezahrnovat
+    return scored
+      .filter((x) => x.similarity >= 0.15)
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, 4)
+      .map((x) => x.product)
+  })()
+
   // Null-safe metric: getValue always returns a number (0 = "missing" sentinel),
   // format checks the original Product for true nullability.
   const metrics = [
@@ -73,10 +103,10 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
     <div className="max-w-[1080px] mx-auto px-10 py-10">
       <div className="text-center mb-9">
         <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-text mb-2">
-          Olej proti oleji
+          Pomůžeme ti vybrat olej
         </h1>
         <p className="text-[15px] text-text2 font-light">
-          Score · kyselost · polyfenoly · cena za 100&nbsp;ml. Bez marketingu, jen fakta.
+          Postav 2 až 5 olejů vedle sebe — uvidíš rozdíly v Score, kyselosti, polyfenolech i ceně.
         </p>
       </div>
 
@@ -133,35 +163,49 @@ export function ComparatorContent({ allProducts }: { allProducts: ProductWithOff
         ))}
       </div>
 
-      {/* Quick add chips */}
-      {notInCompare.length > 0 && (
-        <div className="bg-off rounded-xl p-4 mb-6">
-          <div className="text-[11px] font-semibold tracking-wider uppercase text-text3 mb-2.5">
-            Rychlé přidání
+      {/* Smart suggestions — podobné oleje na základě toho, co už máš v porovnání */}
+      {suggestions.length > 0 && items.length < 5 && (
+        <div className="bg-olive-bg/40 border border-olive-border/30 rounded-xl p-4 mb-6">
+          <div className="text-[11px] font-semibold tracking-wider uppercase text-olive-dark mb-3 flex items-center gap-2">
+            <span>✨</span>
+            <span>{items.length === 0 ? 'Doporučujeme začít s těmito' : 'Mohlo by sednout do porovnání'}</span>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            {items.map(item => (
-              <span key={item.id} className="text-xs px-3.5 py-1.5 rounded-full bg-olive text-white border border-olive">
-                {countryFlag(item.originCountry)} {item.nameShort}
-                {item.volumeMl > 0 && <span className="opacity-70 ml-1">{item.volumeMl >= 1000 ? `${item.volumeMl / 1000}l` : `${item.volumeMl}ml`}</span>}
-              </span>
-            ))}
-            {notInCompare.slice(0, 4).map(p => (
-              <button
-                key={p.id}
-                onClick={() => addItem(p)}
-                className="text-xs px-3.5 py-1.5 rounded-full border border-off2 bg-white text-text2 cursor-pointer transition-all hover:border-olive-light hover:text-olive"
-                title={p.name}
-              >
-                {countryFlag(p.originCountry)} {p.nameShort}
-                {p.volumeMl > 0 && <span className="opacity-60 ml-1">{p.volumeMl >= 1000 ? `${p.volumeMl / 1000}l` : `${p.volumeMl}ml`}</span>}
-              </button>
-            ))}
-            <Link
-              href="/srovnavac"
-              className="text-xs px-3.5 py-1.5 rounded-full border border-off2 bg-white text-text2 hover:border-olive-light hover:text-olive"
-            >
-              Hledat další →
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+            {suggestions.map((p) => {
+              const offer = getCheapestOffer(p.id)
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => addItem(p)}
+                  className="group flex items-center gap-2.5 p-2 rounded-lg bg-white border border-off2 hover:border-olive-light hover:shadow-sm transition-all text-left"
+                  title={`Přidat: ${p.name}`}
+                >
+                  <div className="w-10 h-10 shrink-0 bg-off rounded overflow-hidden border border-off2">
+                    {p.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.imageUrl} alt={p.name} className="w-full h-full object-contain p-0.5" loading="lazy" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-base">🫒</div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] text-text font-medium truncate">
+                      {countryFlag(p.originCountry)} {p.nameShort}
+                      {p.volumeMl > 0 && <span className="text-text3 ml-1">{p.volumeMl >= 1000 ? `${p.volumeMl / 1000}l` : `${p.volumeMl}ml`}</span>}
+                    </div>
+                    <div className="text-[10px] text-text3 mt-0.5 flex items-center gap-1.5">
+                      <span className="text-terra font-semibold">Score {p.olivatorScore}</span>
+                      {offer && <span>· {offer.price} Kč</span>}
+                    </div>
+                  </div>
+                  <span className="text-olive opacity-0 group-hover:opacity-100 transition-opacity text-sm shrink-0">+</span>
+                </button>
+              )
+            })}
+          </div>
+          <div className="mt-3 text-[11px] text-text3 text-right">
+            <Link href="/srovnavac" className="text-olive hover:text-olive-dark">
+              Najít další oleje →
             </Link>
           </div>
         </div>
