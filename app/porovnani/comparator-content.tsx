@@ -95,7 +95,7 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
     },
     {
       label: 'Kyselost',
-      getValue: (p: Product) => p.acidity ?? 999, // null = "worst" for lower-better
+      getValue: (p: Product) => p.acidity ?? 999,
       format: (_v: number, p: Product) => p.acidity != null ? `${p.acidity} %` : '—',
       higherBetter: false,
     },
@@ -104,21 +104,6 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
       getValue: (p: Product) => p.polyphenols ?? 0,
       format: (_v: number, p: Product) => p.polyphenols != null ? `${p.polyphenols} mg/kg` : '—',
       higherBetter: true,
-    },
-    {
-      label: 'Cena / 100 ml',
-      getValue: (p: Product) => {
-        const offer = getCheapestOffer(p.id)
-        return offer ? Math.round((offer.price / p.volumeMl) * 100) : 9999
-      },
-      format: (v: number) => v === 9999 ? '—' : `${v} Kč`,
-      higherBetter: false,
-    },
-    {
-      label: 'Cena lahve',
-      getValue: (p: Product) => getCheapestOffer(p.id)?.price || 9999,
-      format: (v: number) => v === 9999 ? '—' : `${v} Kč`,
-      higherBetter: false,
     },
     {
       label: 'Certifikace',
@@ -159,6 +144,25 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
       getValue: (p: Product) => p.harvestYear ?? 0,
       format: (_v: number, p: Product) => p.harvestYear ? String(p.harvestYear) : '—',
       higherBetter: true,
+    },
+    // Ceny + nákup CTA — záměrně NA KONCI tabulky, po všech datech.
+    // Cena/100 ml = férové srovnání napříč objemy. Cena lahve = co skutečně
+    // zaplatíš → je to zároveň affiliate odkaz (decentní CTA).
+    {
+      label: 'Cena / 100 ml',
+      getValue: (p: Product) => {
+        const offer = getCheapestOffer(p.id)
+        return offer ? Math.round((offer.price / p.volumeMl) * 100) : 9999
+      },
+      format: (v: number) => v === 9999 ? '—' : `${v} Kč`,
+      higherBetter: false,
+    },
+    {
+      label: 'Cena & nákup',
+      getValue: (p: Product) => getCheapestOffer(p.id)?.price || 9999,
+      format: (v: number) => v === 9999 ? '—' : `${v} Kč`,
+      higherBetter: false,
+      isCta: true,
     },
   ]
 
@@ -406,6 +410,29 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                     const hasVariation = best !== worst
                     const isBest = hasVariation && val === best && !isMissing
                     const isWorst = hasVariation && val === worst && !isMissing
+                    const isCta = 'isCta' in metric && metric.isCta && !isMissing && offer
+                    const ctaHref = isCta ? `/go/${offer.retailer.slug}/${item.slug}` : null
+
+                    if (isCta && ctaHref) {
+                      return (
+                        <a
+                          key={metric.label}
+                          href={ctaHref}
+                          target="_blank"
+                          rel="noopener sponsored"
+                          className="flex items-center justify-between px-4 py-3 bg-olive-bg/40 hover:bg-olive-bg transition-colors"
+                        >
+                          <span className="text-[12px] text-olive-dark font-medium">
+                            Koupit u {offer.retailer.name}
+                          </span>
+                          <span className={`text-[14px] font-semibold tabular-nums flex items-center gap-1.5 ${isBest ? 'text-green-600' : 'text-text'}`}>
+                            {formatted}
+                            <span className="text-olive">→</span>
+                          </span>
+                        </a>
+                      )
+                    }
+
                     return (
                       <div key={metric.label} className="flex items-center justify-between px-4 py-2.5">
                         <span className="text-[12px] text-text3">{metric.label}</span>
@@ -490,25 +517,54 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                       const isMissing = formatted === '—' || formatted === 'Žádné'
                       const isBest = hasVariation && val === best && !isMissing
                       const isWorst = hasVariation && val === worst && !isMissing
+                      const offer = getCheapestOffer(item.id)
+                      // Decentní CTA buňka — kliknutím na cenu jde uživatel
+                      // přes /go/[retailer]/[product] affiliate redirect na e-shop
+                      const isCta = 'isCta' in metric && metric.isCta && !isMissing && offer
+                      const ctaHref = isCta ? `/go/${offer.retailer.slug}/${item.slug}` : null
 
-                      return (
-                        <td
-                          key={item.id}
-                          className={`text-center font-medium px-3.5 py-3 border-b border-off text-[13px] ${
-                            isMissing ? 'text-text3 italic' : isBest ? 'text-green-600' : isWorst ? 'text-red-500' : 'text-text'
-                          }`}
-                        >
+                      const cellClasses = `text-center font-medium px-3.5 py-3 border-b border-off text-[13px] ${
+                        isMissing ? 'text-text3 italic' : isBest ? 'text-green-600' : isWorst ? 'text-red-500' : 'text-text'
+                      }`
+
+                      const inner = (
+                        <>
                           {formatted}
                           {metric.showBar && !isMissing && (
                             <div className="flex items-center justify-center gap-1.5 mt-1">
                               <div className="w-14 h-[5px] bg-off2 rounded-full overflow-hidden inline-block">
-                                <div
-                                  className="h-full rounded-full bg-terra"
-                                  style={{ width: `${val}%` }}
-                                />
+                                <div className="h-full rounded-full bg-terra" style={{ width: `${val}%` }} />
                               </div>
                             </div>
                           )}
+                        </>
+                      )
+
+                      if (isCta && ctaHref) {
+                        return (
+                          <td key={item.id} className={`${cellClasses} p-0`}>
+                            <a
+                              href={ctaHref}
+                              target="_blank"
+                              rel="noopener sponsored"
+                              className="group flex flex-col items-center justify-center gap-0.5 px-3.5 py-3 hover:bg-olive-bg transition-colors"
+                              title={`Koupit u ${offer.retailer.name}`}
+                            >
+                              <span className={isBest ? 'text-green-600 font-semibold' : 'text-text font-semibold'}>
+                                {formatted}
+                              </span>
+                              <span className="text-[10px] text-text3 group-hover:text-olive flex items-center gap-1 leading-none">
+                                <span className="opacity-70">{offer.retailer.name}</span>
+                                <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                              </span>
+                            </a>
+                          </td>
+                        )
+                      }
+
+                      return (
+                        <td key={item.id} className={cellClasses}>
+                          {inner}
                         </td>
                       )
                     })}
@@ -517,30 +573,6 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
               })}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {/* CTA row */}
-      {items.length >= 2 && (
-        <div className="grid gap-2.5 mt-4" style={{ gridTemplateColumns: `repeat(${items.length}, 1fr)` }}>
-          {items.map((item, i) => {
-            const offer = getCheapestOffer(item.id)
-            return (
-              <div
-                key={item.id}
-                className={`rounded-xl px-3.5 py-2.5 text-center cursor-pointer transition-all border ${
-                  i === 0 ? 'bg-olive border-olive' : 'bg-off border-off2 hover:border-olive-light hover:bg-olive-bg'
-                }`}
-              >
-                <div className={`text-[11px] mb-0.5 ${i === 0 ? 'text-white/70' : 'text-text3'}`}>
-                  {offer?.retailer.name}{i === 0 ? ' · Nejlevněji' : ''}
-                </div>
-                <div className={`text-[15px] font-semibold ${i === 0 ? 'text-white' : 'text-text'}`}>
-                  {offer ? formatPrice(offer.price) : '—'} — {item.nameShort}
-                </div>
-              </div>
-            )
-          })}
         </div>
       )}
 
