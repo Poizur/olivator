@@ -570,20 +570,24 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
 
                       if (isCta && ctaHref) {
                         return (
-                          <td key={item.id} className={`${cellClasses} p-0`}>
+                          <td key={item.id} className="text-center px-2 py-3 border-b border-off">
                             <a
                               href={ctaHref}
                               target="_blank"
                               rel="noopener sponsored"
-                              className="group flex flex-col items-center justify-center gap-0.5 px-3.5 py-3 hover:bg-olive-bg transition-colors"
+                              className={`group inline-flex flex-col items-center gap-0.5 rounded-full px-4 py-2 transition-all ${
+                                isBest
+                                  ? 'bg-olive text-white hover:bg-olive-dark shadow-sm'
+                                  : 'bg-white border border-olive text-olive-dark hover:bg-olive hover:text-white hover:border-olive-dark'
+                              }`}
                               title={`Koupit u ${offer.retailer.name}`}
                             >
-                              <span className={isBest ? 'text-green-600 font-semibold' : 'text-text font-semibold'}>
-                                {formatted}
+                              <span className="text-[13px] font-semibold flex items-center gap-1.5 leading-none">
+                                Koupit za {formatted}
+                                <span aria-hidden="true">→</span>
                               </span>
-                              <span className="text-[10px] text-text3 group-hover:text-olive flex items-center gap-1 leading-none">
-                                <span className="opacity-70">{offer.retailer.name}</span>
-                                <span className="opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                              <span className={`text-[10px] leading-none ${isBest ? 'text-white/70' : 'text-text3 group-hover:text-white/80'}`}>
+                                {offer.retailer.name}
                               </span>
                             </a>
                           </td>
