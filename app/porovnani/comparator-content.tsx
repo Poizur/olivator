@@ -575,21 +575,19 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                               href={ctaHref}
                               target="_blank"
                               rel="noopener sponsored"
-                              className={`group inline-flex flex-col items-center gap-0.5 rounded-full px-4 py-2 transition-all ${
+                              className={`group inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-semibold whitespace-nowrap transition-all ${
                                 isBest
                                   ? 'bg-olive text-white hover:bg-olive-dark shadow-sm'
                                   : 'bg-white border border-olive text-olive-dark hover:bg-olive hover:text-white hover:border-olive-dark'
                               }`}
                               title={`Koupit u ${offer.retailer.name}`}
                             >
-                              <span className="text-[13px] font-semibold flex items-center gap-1.5 leading-none">
-                                Koupit za {formatted}
-                                <span aria-hidden="true">→</span>
-                              </span>
-                              <span className={`text-[10px] leading-none ${isBest ? 'text-white/70' : 'text-text3 group-hover:text-white/80'}`}>
-                                {offer.retailer.name}
-                              </span>
+                              <span>{formatted}</span>
+                              <span aria-hidden="true" className="opacity-70 group-hover:translate-x-0.5 transition-transform">→</span>
                             </a>
+                            <div className="text-[10px] text-text3 mt-1 leading-none">
+                              u {offer.retailer.name}
+                            </div>
                           </td>
                         )
                       }
