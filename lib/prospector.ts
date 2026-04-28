@@ -95,8 +95,8 @@ export async function runProspector(): Promise<ProspectResult> {
       categoryUrl: candidate.categoryUrl,
     })
 
-    let urlCount = test.urls.length
-    let scanError: string | null = test.error ?? null
+    const urlCount = test.urls.length
+    const scanError: string | null = test.error ?? null
 
     if (urlCount > 0) {
       result.testedSuccess++

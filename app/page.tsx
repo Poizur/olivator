@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { getProductsWithOffers, getSiteStats } from '@/lib/data'
 import { getArticles } from '@/lib/static-content'
 import { OilCard } from '@/components/oil-card'
+import { NewsletterSignup } from '@/components/newsletter-signup'
 
 export default async function Home() {
   const [allProducts, stats] = await Promise.all([
@@ -201,6 +202,10 @@ export default async function Home() {
             </Link>
           ))}
         </div>
+      </section>
+
+      <section className="px-6 md:px-10 py-16 max-w-[1080px] mx-auto">
+        <NewsletterSignup source="homepage" variant="hero" />
       </section>
     </>
   )
