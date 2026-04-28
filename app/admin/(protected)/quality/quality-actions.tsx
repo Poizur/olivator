@@ -59,7 +59,7 @@ export function QualityActions() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setSummary(
-        `✓ Zkontrolováno ${data.totalChecked}: živé ${data.alive}, mrtvé ${data.dead}, deaktivováno ${data.deactivated}, reaktivováno ${data.reactivated}`
+        `✓ ${data.totalChecked} URLs: ${data.alive} živé, ${data.dead} mrtvé · nabídky -${data.deactivated}/+${data.reactivated} · produkty -${data.productsDeactivated}/+${data.productsReactivated}`
       )
       router.refresh()
     } catch (err) {

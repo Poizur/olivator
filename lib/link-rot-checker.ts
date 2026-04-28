@@ -21,6 +21,8 @@ export interface LinkCheckResult {
   errored: number
   deactivated: number
   reactivated: number
+  productsDeactivated: number
+  productsReactivated: number
   deadOffers: Array<{
     offerId: string
     productSlug: string
@@ -82,13 +84,19 @@ export async function runLinkRotCheck(): Promise<LinkCheckResult> {
     errored: 0,
     deactivated: 0,
     reactivated: 0,
+    productsDeactivated: 0,
+    productsReactivated: 0,
     deadOffers: [],
   }
+
+  // Sleduj product_ids u kterých se nějaký offer hnul — na konci pro ně
+  // přepočítáme product.status
+  const touchedProductIds = new Set<string>()
 
   const { data: offers } = await supabaseAdmin
     .from('product_offers')
     .select(`
-      id, product_url, affiliate_url, in_stock,
+      id, product_id, product_url, affiliate_url, in_stock,
       products ( slug, name ),
       retailers ( name, slug )
     `)
@@ -98,6 +106,7 @@ export async function runLinkRotCheck(): Promise<LinkCheckResult> {
 
   for (const raw of offers as unknown as Array<{
     id: string
+    product_id: string
     product_url: string | null
     affiliate_url: string | null
     in_stock: boolean
@@ -122,6 +131,7 @@ export async function runLinkRotCheck(): Promise<LinkCheckResult> {
           .update({ in_stock: true, last_checked: new Date().toISOString() })
           .eq('id', raw.id)
         result.reactivated++
+        touchedProductIds.add(raw.product_id)
       } else {
         await supabaseAdmin
           .from('product_offers')
@@ -145,10 +155,43 @@ export async function runLinkRotCheck(): Promise<LinkCheckResult> {
           .update({ in_stock: false, last_checked: new Date().toISOString() })
           .eq('id', raw.id)
         result.deactivated++
+        touchedProductIds.add(raw.product_id)
       }
     }
 
     await new Promise((r) => setTimeout(r, POLITE_DELAY_MS))
+  }
+
+  // ── Reconcile product.status pro každý dotčený produkt ──
+  // Pravidlo: žádná živá nabídka → 'inactive'. Aspoň jedna živá → 'active'.
+  // Drafty NIKDY nediráme — admin je drží mimo web vědomě.
+  for (const productId of touchedProductIds) {
+    const { data: prod } = await supabaseAdmin
+      .from('products')
+      .select('id, status, name')
+      .eq('id', productId)
+      .maybeSingle()
+    if (!prod || prod.status === 'draft') continue
+
+    const { data: prodOffers } = await supabaseAdmin
+      .from('product_offers')
+      .select('in_stock')
+      .eq('product_id', productId)
+    const hasLive = (prodOffers ?? []).some((o) => o.in_stock)
+
+    if (!hasLive && prod.status === 'active') {
+      await supabaseAdmin
+        .from('products')
+        .update({ status: 'inactive', updated_at: new Date().toISOString() })
+        .eq('id', productId)
+      result.productsDeactivated++
+    } else if (hasLive && prod.status === 'inactive') {
+      await supabaseAdmin
+        .from('products')
+        .update({ status: 'active', updated_at: new Date().toISOString() })
+        .eq('id', productId)
+      result.productsReactivated++
+    }
   }
 
   return result

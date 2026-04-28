@@ -28,8 +28,10 @@ async function main() {
       checked: result.totalChecked,
       alive: result.alive,
       dead: result.dead,
-      deactivated: result.deactivated,
-      reactivated: result.reactivated,
+      offersDeactivated: result.deactivated,
+      offersReactivated: result.reactivated,
+      productsDeactivated: result.productsDeactivated,
+      productsReactivated: result.productsReactivated,
     })
 
     if (result.deadOffers.length > 0) {
