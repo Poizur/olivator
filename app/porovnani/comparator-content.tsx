@@ -218,9 +218,10 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
             </Link>
             <button
               onClick={() => removeItem(item.id)}
-              className="text-[10px] text-text3 mt-1.5 cursor-pointer hover:text-terra"
+              className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-terra border border-terra/40 rounded-full px-3 py-1 cursor-pointer transition-colors hover:bg-terra hover:text-white hover:border-terra"
             >
-              ✕ odebrat
+              <span aria-hidden="true">✕</span>
+              <span>Odebrat</span>
             </button>
           </div>
         ))}
