@@ -14,10 +14,57 @@ export const ARTICLES: Article[] = [
 
 // Rankings reference products by slug (stable identifier)
 export const RANKINGS: Ranking[] = [
-  { slug: 'nejlepsi-olivovy-olej-2025', title: 'Nejlepší olivový olej 2025', description: 'Top 10 olejů dle Olivator Score', productIds: ['olival-selection-premium', 'gaea-fresh-extra-virgin', 'terra-creta-estate-evoo', 'escelsior-bio-siciliano', 'aglandau-premium-evoo', 'ybarra-premium-evoo', 'frantoio-franci-igp', 'carbonell-extra-virgin'], emoji: '🏆' },
-  { slug: 'nejlepsi-recky-olej', title: 'Nejlepší řecký olivový olej', description: 'Top řecké oleje — Kréta, Lesbos, Peloponés', productIds: ['gaea-fresh-extra-virgin', 'terra-creta-estate-evoo', 'aglandau-premium-evoo'], emoji: '🇬🇷' },
-  { slug: 'nejlepsi-bio-olej', title: 'Nejlepší bio olivový olej', description: 'BIO certifikované oleje seřazené dle Score', productIds: ['olival-selection-premium', 'gaea-fresh-extra-virgin', 'terra-creta-estate-evoo', 'escelsior-bio-siciliano'], emoji: '🌿' },
-  { slug: 'olivovy-olej-do-200-kc', title: 'Nejlepší olej do 200 Kč', description: 'Kvalitní oleje za rozumnou cenu', productIds: ['gaea-fresh-extra-virgin', 'ybarra-premium-evoo', 'carbonell-extra-virgin'], emoji: '💰' },
+  {
+    slug: 'nejlepsi-olivovy-olej-2025',
+    title: 'Nejlepší olivový olej 2025',
+    description: 'Top 8 olejů dle Olivator Score',
+    productIds: [
+      'sitia-kreta-premium-gold-0-2-extra-panensky-olivovy-olej-5-l',
+      'evolia-platinum-2000-polyfenolu-bio-extra-panensky-olivovy-olej-250-ml',
+      'sitia-kreta-premium-gold-0-2-extra-panensky-olivovy-olej-1-l',
+      'sitia-kreta-premium-gold-0-2-extra-panensky-olivovy-olej-3-l',
+      'intini-coratina-alberobello',
+      'iliada-kalamata-extra-panensky-olivovy-olej-0-5-500ml',
+      'sitia-kreta-premium-gold-0-2-extra-panensky-olivovy-olej-500-ml',
+      'intini-extra-alberobello',
+    ],
+    emoji: '🏆',
+  },
+  {
+    slug: 'nejlepsi-recky-olej',
+    title: 'Nejlepší řecký olivový olej',
+    description: 'Top řecké oleje — Kréta, Peloponés, Korfu. Většinou s DOP certifikací.',
+    productIds: [
+      'sitia-kreta-premium-gold-0-2-extra-panensky-olivovy-olej-5-l',
+      'evolia-platinum-2000-polyfenolu-bio-extra-panensky-olivovy-olej-250-ml',
+      'sitia-kreta-premium-gold-0-2-extra-panensky-olivovy-olej-1-l',
+      'sitia-kreta-premium-gold-0-2-extra-panensky-olivovy-olej-3-l',
+      'iliada-kalamata-extra-panensky-olivovy-olej-0-5-500ml',
+      'sitia-kreta-premium-gold-0-2-extra-panensky-olivovy-olej-500-ml',
+    ],
+    emoji: '🇬🇷',
+  },
+  {
+    slug: 'nejlepsi-bio-olej',
+    title: 'Nejlepší bio olivový olej',
+    description: 'BIO certifikované oleje seřazené dle Score',
+    productIds: [
+      'evolia-platinum-2000-polyfenolu-bio-extra-panensky-olivovy-olej-250-ml',
+      'corinto-aryballos-bio-extra-panensky-olivovy-olej-manaki-0-3-300-ml',
+      'corinto-pelopones-bio-extra-panensky-olivovy-olej-manaki-0-4-500-ml',
+    ],
+    emoji: '🌿',
+  },
+  {
+    slug: 'nejlepsi-italsky-olej',
+    title: 'Nejlepší italský olivový olej',
+    description: 'Top italské oleje — Apulie, Toskánsko. Charakteristická chuť, vysoké polyfenoly.',
+    productIds: [
+      'intini-coratina-alberobello',
+      'intini-extra-alberobello',
+    ],
+    emoji: '🇮🇹',
+  },
   {
     slug: 'nejlepsi-vysokopolyfenolovy-olej',
     title: 'Nejlepší vysokopolyfenolové oleje',

@@ -322,6 +322,19 @@ function extractParameterTable($: cheerio.CheerioAPI): Record<string, string> {
   return out
 }
 
+/** Map textové hořkosti na 0-100 score pro flavor_profile.bitter.
+ *  Reckonasbavi používá fixní set: Jemný / Středně hořký / Výrazný / Pálivý. */
+function mapBitterness(text: string | null): number | null {
+  if (!text) return null
+  const t = text.toLowerCase()
+  if (/jemn[ýá]/.test(t)) return 25       // Jemný = nízká hořkost
+  if (/středn[ěí]/.test(t)) return 50    // Středně hořký
+  if (/výrazn[ýá]/.test(t)) return 75    // Výrazný = vysoká
+  if (/pálivý|štiplavý/.test(t)) return 80 // Pálivý překračuje hořkost
+  if (/hořk[ýá]/.test(t)) return 70       // Generic "hořký"
+  return null
+}
+
 /** Map known parameter table keys to structured fields. Returns partial
  *  ScrapedProduct. Keys are matched case-insensitive on label prefix. */
 function mapParameterTableToFields(table: Record<string, string>): {
@@ -333,6 +346,7 @@ function mapParameterTableToFields(table: Record<string, string>): {
   acidityFromTable: number | null
   peroxideFromTable: number | null
   packagingFromTable: string | null
+  bitternessFromTable: number | null
 } {
   // Helper: find first table key that includes any of `needles` (lowercase, normalized)
   const findKey = (...needles: string[]): string | null => {
@@ -372,6 +386,9 @@ function mapParameterTableToFields(table: Record<string, string>): {
   else if (/pet|plast/.test(packagingRaw)) packagingFromTable = 'pet'
   else if (/keramik/.test(packagingRaw)) packagingFromTable = 'ceramic'
 
+  // Bitterness — 'Hořkost' label v Shoptet shopech
+  const bitternessFromTable = mapBitterness(valueOf('hořkost', 'horkost'))
+
   return {
     k232,
     k270,
@@ -381,6 +398,7 @@ function mapParameterTableToFields(table: Record<string, string>): {
     acidityFromTable,
     peroxideFromTable,
     packagingFromTable,
+    bitternessFromTable,
   }
 }
 
