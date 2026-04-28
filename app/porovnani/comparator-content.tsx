@@ -288,35 +288,63 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
         </div>
       )}
 
-      {/* Winner */}
-      {winner && items.length >= 2 && (
-        <div className="bg-olive-bg rounded-[var(--radius-card)] px-6 py-5 mb-5 flex items-center gap-4">
-          <span className="text-3xl">🏆</span>
-          <div>
-            <div className="text-[10px] font-semibold tracking-widest uppercase text-olive mb-0.5">
-              Olivator doporučuje
+      {/* Winner — klíčový conversion moment: photo + reason + buy CTA */}
+      {winner && items.length >= 2 && (() => {
+        const winnerOffer = getCheapestOffer(winner.id)
+        const reasons = (() => {
+          const parts: string[] = []
+          if (winner.acidity != null) {
+            parts.push(`${winner.acidity <= 0.25 ? 'Nejlepší kyselost' : 'Nízká kyselost'} (${winner.acidity} %)`)
+          }
+          if (winner.polyphenols != null) {
+            parts.push(`${winner.polyphenols} mg/kg polyfenolů`)
+          }
+          if (winner.certifications.length > 0) {
+            parts.push(`certifikace ${winner.certifications.map(certLabel).join(' + ')}`)
+          }
+          return parts.length > 0 ? parts.join(', ') + '.' : `Celkové skóre ${winner.olivatorScore}/100.`
+        })()
+
+        return (
+          <div className="bg-olive-bg rounded-[var(--radius-card)] p-4 md:p-5 mb-5 flex items-center gap-4 flex-wrap md:flex-nowrap">
+            <Link href={`/olej/${winner.slug}`} className="relative w-20 h-20 shrink-0 bg-white rounded-lg border border-olive-border/40 overflow-hidden hover:shadow-md transition-shadow">
+              {winner.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={winner.imageUrl} alt={winner.name} className="w-full h-full object-contain p-1" loading="lazy" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-3xl">🫒</div>
+              )}
+              <div className="absolute -top-1 -left-1 text-2xl drop-shadow-sm" aria-hidden="true">🏆</div>
+              {winner.originCountry && (
+                <div className="absolute bottom-1 right-1 text-[11px] leading-none bg-white rounded shadow-sm px-0.5">
+                  {countryFlag(winner.originCountry)}
+                </div>
+              )}
+            </Link>
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] font-semibold tracking-widest uppercase text-olive mb-0.5">
+                Olivator doporučuje
+              </div>
+              <Link href={`/olej/${winner.slug}`} className="text-sm font-medium text-text leading-tight block hover:text-olive-dark transition-colors">
+                {winner.name} <span className="text-text3 font-normal">— Score {winner.olivatorScore}</span>
+              </Link>
+              <div className="text-xs text-text2 mt-1">{reasons}</div>
             </div>
-            <div className="text-sm font-medium text-text">
-              {winner.name} — Score {winner.olivatorScore}
-            </div>
-            <div className="text-xs text-text2 mt-0.5">
-              {(() => {
-                const parts: string[] = []
-                if (winner.acidity != null) {
-                  parts.push(`${winner.acidity <= 0.25 ? 'Nejlepší kyselost' : 'Nízká kyselost'} (${winner.acidity} %)`)
-                }
-                if (winner.polyphenols != null) {
-                  parts.push(`${winner.polyphenols} mg/kg polyfenolů`)
-                }
-                if (winner.certifications.length > 0) {
-                  parts.push(`certifikace ${winner.certifications.map(certLabel).join(' + ')}`)
-                }
-                return parts.length > 0 ? parts.join(', ') + '.' : `Celkové skóre ${winner.olivatorScore}/100.`
-              })()}
-            </div>
+            {winnerOffer && (
+              <a
+                href={`/go/${winnerOffer.retailer.slug}/${winner.slug}`}
+                target="_blank"
+                rel="noopener sponsored"
+                className="bg-olive text-white rounded-full px-5 py-2.5 text-[13px] font-semibold hover:bg-olive-dark transition-colors flex items-center gap-2 whitespace-nowrap shrink-0"
+                title={`Koupit u ${winnerOffer.retailer.name}`}
+              >
+                Koupit za {formatPrice(winnerOffer.price)}
+                <span aria-hidden="true">→</span>
+              </a>
+            )}
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Schema.org ItemList — Google rich result */}
       {items.length >= 2 && (
