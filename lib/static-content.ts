@@ -2,6 +2,7 @@
 // Until Content Agent is wired up, these live in code
 
 import type { Article, Ranking } from './types'
+import { ARTICLE_BODIES } from './article-bodies'
 
 export const ARTICLES: Article[] = [
   { slug: 'jak-vybrat-olivovy-olej', title: 'Jak vybrat olivový olej: na co opravdu záleží', category: 'pruvodce', excerpt: 'Kyselost, polyfenoly, certifikace — vysvětlujeme, co znamenají čísla na etiketě a proč na nich záleží.', readTime: '8 min čtení', emoji: '📖' },
@@ -86,7 +87,10 @@ export function getArticles(category?: string): Article[] {
 }
 
 export function getArticleBySlug(slug: string): Article | undefined {
-  return ARTICLES.find(a => a.slug === slug)
+  const article = ARTICLES.find(a => a.slug === slug)
+  if (!article) return undefined
+  // Inject body z článkového storage (pokud existuje)
+  return { ...article, body: ARTICLE_BODIES[slug] }
 }
 
 export function getRankings(): Ranking[] {

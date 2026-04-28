@@ -99,6 +99,9 @@ export interface Article {
   readTime: string
   emoji: string
   imageUrl?: string
+  /** Multi-paragraph body — odděleny `\n\n`. Heading sekce začínají `## ` (H2)
+   *  nebo `### ` (H3). Žádný markdown bold/italic — sec 16 zákazuje vatu. */
+  body?: string
 }
 
 export interface Ranking {

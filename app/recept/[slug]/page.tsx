@@ -1,11 +1,30 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getArticles, getArticleBySlug } from '@/lib/static-content'
 import { getProductsWithOffers } from '@/lib/data'
 import { formatPrice } from '@/lib/utils'
+import { ArticleBody } from '@/components/article-body'
 
 export function generateStaticParams() {
   return getArticles().filter(a => a.category === 'recept').map(a => ({ slug: a.slug }))
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const article = getArticleBySlug(slug)
+  if (!article) return { title: 'Recept nenalezen' }
+  return {
+    title: article.title,
+    description: article.excerpt,
+    alternates: { canonical: `https://olivator.cz/recept/${article.slug}` },
+    openGraph: {
+      type: 'article',
+      url: `https://olivator.cz/recept/${article.slug}`,
+      title: article.title,
+      description: article.excerpt,
+    },
+  }
 }
 
 export default async function RecipeDetailPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -17,7 +36,7 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
   const recommended = allProducts.slice(0, 2)
 
   return (
-    <div className="max-w-[720px] mx-auto px-10 py-10">
+    <div className="max-w-[720px] mx-auto px-6 md:px-10 py-10">
       <div className="text-xs text-text3 mb-7">
         <Link href="/" className="text-olive">Olivator</Link>
         {' › '}
@@ -40,11 +59,17 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
         {article.emoji}
       </div>
 
-      <div className="text-base text-text2 leading-relaxed mb-8">
-        <p>{article.excerpt}</p>
-        <p className="mt-4 text-text3 italic">
-          Plný recept bude vygenerován Content Agentem po připojení Supabase a Claude API.
-        </p>
+      <div className="mb-8">
+        {article.body ? (
+          <ArticleBody body={article.body} />
+        ) : (
+          <div className="space-y-4 text-text2">
+            <p className="text-base leading-relaxed">{article.excerpt}</p>
+            <p className="text-base leading-relaxed text-text3 italic">
+              Plný recept se připravuje. Vrať se brzy.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Affiliate CTA */}
