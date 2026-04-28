@@ -6,6 +6,7 @@
 // and on-demand via /admin/quality dashboard.
 
 import { supabaseAdmin } from './supabase'
+import { generateProductDescriptions, generateMetaDescription } from './content-agent'
 
 export type Severity = 'error' | 'warning' | 'info'
 
@@ -26,6 +27,9 @@ export interface ProductSnapshot {
   image_source: string | null
   source_url: string | null
   volume_ml: number | null
+  origin_country: string | null
+  origin_region: string | null
+  olivator_score: number | null
 }
 
 export interface RuleViolation {
@@ -164,6 +168,55 @@ const rules: QualityRule[] = [
         message: 'Produkt nemá description_long. Spustit AI rewrite.',
       }
     },
+    autoFix: async (p) => {
+      const generated = await generateProductDescriptions({
+        name: p.name,
+        origin: p.origin_country ?? null,
+        type: p.type ?? null,
+        volumeMl: p.volume_ml ?? null,
+        acidity: p.acidity != null ? Number(p.acidity) : null,
+        polyphenols: p.polyphenols ?? null,
+        certifications: p.certifications ?? [],
+        rawDescription: p.raw_description ?? null,
+        olivatorScore: p.olivator_score ?? null,
+      })
+      if (!generated.longDescription || generated.longDescription.length < 100) {
+        return { ok: false, message: 'AI vygenerovalo příliš krátký text' }
+      }
+      const { error } = await supabaseAdmin
+        .from('products')
+        .update({
+          description_short: generated.shortDescription,
+          description_long: generated.longDescription,
+          ai_generated_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', p.id)
+      if (error) return { ok: false, message: error.message }
+
+      // Dogenerovat i meta_description pokud chybí
+      try {
+        const meta = await generateMetaDescription({
+          name: p.name,
+          shortDescription: generated.shortDescription,
+          originCountry: p.origin_country,
+          originRegion: p.origin_region,
+          acidity: p.acidity,
+          polyphenols: p.polyphenols,
+          olivatorScore: p.olivator_score,
+          certifications: p.certifications ?? [],
+        })
+        if (meta && meta.length >= 50) {
+          const final = meta.length <= 160 ? meta : meta.slice(0, 160).replace(/\s+\S*$/, '')
+          await supabaseAdmin
+            .from('products')
+            .update({ meta_description: final })
+            .eq('id', p.id)
+        }
+      } catch { /* meta je bonus, neblokuje */ }
+
+      return { ok: true, message: `Popis vygenerován (${generated.longDescription.split(/\s+/).length} slov)` }
+    },
   },
 
   // No image at all
@@ -296,7 +349,7 @@ export async function auditProduct(
 ): Promise<RuleViolation[]> {
   const { data: row, error } = await supabaseAdmin
     .from('products')
-    .select('id, name, slug, status, type, acidity, polyphenols, peroxide_value, certifications, description_short, description_long, raw_description, image_url, image_source, source_url, volume_ml')
+    .select('id, name, slug, status, type, acidity, polyphenols, peroxide_value, certifications, description_short, description_long, raw_description, image_url, image_source, source_url, volume_ml, origin_country, origin_region, olivator_score')
     .eq('id', productId)
     .maybeSingle()
   if (error || !row) return []
@@ -460,7 +513,7 @@ export async function attemptAutoFix(issueId: string): Promise<{ ok: boolean; me
 
   const { data: product } = await supabaseAdmin
     .from('products')
-    .select('id, name, slug, status, type, acidity, polyphenols, peroxide_value, certifications, description_short, description_long, raw_description, image_url, image_source, source_url, volume_ml')
+    .select('id, name, slug, status, type, acidity, polyphenols, peroxide_value, certifications, description_short, description_long, raw_description, image_url, image_source, source_url, volume_ml, origin_country, origin_region, olivator_score')
     .eq('id', issue.product_id)
     .maybeSingle()
   if (!product) return { ok: false, message: 'Product not found' }
