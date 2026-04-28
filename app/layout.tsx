@@ -6,8 +6,10 @@ import { GoogleAnalytics } from '@next/third-parties/google'
 import { Nav } from '@/components/nav'
 import { Footer } from '@/components/footer'
 import { CompareProvider } from '@/lib/compare-context'
+import { WishlistProvider } from '@/lib/wishlist-context'
 import { CompareBar } from '@/components/compare-bar'
 import { AdminBar } from '@/components/admin-bar'
+import { SommelierChat } from '@/components/sommelier-chat'
 import './globals.css'
 
 const playfair = Playfair_Display({
@@ -74,12 +76,15 @@ export default async function RootLayout({
     <html lang="cs" className={`${playfair.variable} ${inter.variable}`}>
       <body className="min-h-screen flex flex-col antialiased">
         <AdminBar />
+        <WishlistProvider>
         <CompareProvider>
           {!isAdminPage && <Nav />}
           <main className="flex-1">{children}</main>
           {!isAdminPage && <Footer />}
           {!isAdminPage && <CompareBar />}
+          {!isAdminPage && <SommelierChat />}
         </CompareProvider>
+        </WishlistProvider>
         {gaId && <GoogleAnalytics gaId={gaId} />}
       </body>
     </html>

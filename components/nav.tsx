@@ -53,6 +53,20 @@ export function Nav() {
               Hledat
             </Link>
             <Link
+              href="/quiz"
+              className="hidden sm:block text-[13px] text-text2 hover:text-olive transition-colors whitespace-nowrap"
+            >
+              Quiz
+            </Link>
+            <Link
+              href="/oblibene"
+              className="hidden sm:flex items-center text-[13px] text-text2 hover:text-olive transition-colors"
+              aria-label="Oblíbené"
+              title="Oblíbené oleje"
+            >
+              ♡
+            </Link>
+            <Link
               href="/porovnani"
               className="bg-olive text-white border-none rounded-full px-4 py-1.5 text-xs font-medium hover:bg-olive-dark transition-colors"
             >

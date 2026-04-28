@@ -7,6 +7,23 @@
 
 ---
 
+## 0. EFEKTIVITA — PŘEČTI JAKO PRVNÍ
+
+### Cíl
+Každý token = peníze + čas. Pracuj kompaktně, ale bez zkratkovitosti která způsobí chybu.
+
+### Zásady
+1. **Čti jen co potřebuješ.** Než otevřeš soubor, zjisti přes `grep` nebo `find` přesně kde je relevantní část. `head -n 50` před čtením celého souboru.
+2. **Jeden průchod, ne iterace.** Navrhni a implementuj změnu najednou — nerozděluj na "udělám A, pak uvidíme B". Pokud problém vyžaduje více souborů, načti všechny najednou (parallel tool calls).
+3. **Neopakuj kontext.** Nepřepisuj uživateli co jsi právě udělal — vidí diff. Krátké shrnutí na konci odpovědi stačí (1–2 věty).
+4. **Nepiš komentáře jako dokumentaci.** Komentář jen pokud WHY není zřejmé z kódu. Žádné bloky "# Sekce X", žádné nadpisy v kódu.
+5. **Nesouboruj zbytečně.** Nové soubory jen když existující opravdu nestačí. Upřednostňuj editaci před vytvořením.
+6. **Haiku pro levné úkoly.** Claude Haiku (haiku-4-5-20251001) pro chat API, scraping summaries, simple classification. Sonnet pro komplexní reasoning (Score kalkulace, Manager Agent, SEO analýzy).
+7. **Neeskaluj předčasně.** Typo, chybějící import, CSS = oprav sám. Eskaluj jen po 2 neúspěšných pokusech na netriviální bug (viz sekce 20).
+8. **Batch tool calls.** Pokud potřebuješ 3 soubory najednou → 1 zpráva se 3 Read tool calls. Ne 3 zprávy za sebou.
+
+---
+
 ## 1. VIZE A BUSINESS MODEL
 
 ### Co je Olivator

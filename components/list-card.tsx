@@ -4,6 +4,7 @@ import Link from 'next/link'
 import type { Product, ProductOffer } from '@/lib/types'
 import { countryFlag, countryName, formatPrice, formatPricePer100ml, certLabel } from '@/lib/utils'
 import { ProductImage } from './product-image'
+import { WishlistButton } from './wishlist-button'
 
 interface ListCardProps {
   product: Product
@@ -87,6 +88,7 @@ export function ListCard({ product, offer, rank }: ListCardProps) {
         <span className="bg-olive text-white border-none rounded-full px-4 py-2 text-xs font-medium shrink-0">
           Koupit
         </span>
+        <WishlistButton productId={product.id} className="shrink-0" />
       </div>
     </Link>
   )
