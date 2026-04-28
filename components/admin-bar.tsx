@@ -35,7 +35,10 @@ const NAV: NavEntry[] = [
   },
   {
     label: 'Kontrola',
-    items: [{ href: '/admin/quality', label: 'Kvalita' }],
+    items: [
+      { href: '/admin/quality', label: 'Kvalita' },
+      { href: '/admin/manager', label: '📊 Manager' },
+    ],
   },
   { href: '/admin/nastaveni', label: '⚙ Nastavení' },
 ]

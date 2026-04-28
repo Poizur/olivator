@@ -3,6 +3,43 @@ import { getAllProductsAdmin } from '@/lib/data'
 import { countryFlag, typeLabel, extractBrand } from '@/lib/utils'
 import { calculateCompleteness, completenessColor } from '@/lib/completeness'
 
+function CompletenessBadge({ result }: { result: ReturnType<typeof calculateCompleteness> }) {
+  const { bg, text } = completenessColor(result.weightedPercent)
+  const tooltip = result.missing.length > 0
+    ? `Chybí: ${result.missing.map((m) => m.label).join(', ')}`
+    : 'Vše vyplněno'
+  return (
+    <span
+      className={`text-[11px] ${bg} ${text} px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block`}
+      title={tooltip}
+    >
+      {result.weightedPercent}%
+    </span>
+  )
+}
+
+function StatusBadge({ status }: { status: string }) {
+  if (status === 'active') {
+    return (
+      <span className="text-[11px] bg-olive-bg text-olive-dark px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block">
+        ● aktivní
+      </span>
+    )
+  }
+  if (status === 'draft') {
+    return (
+      <span className="text-[11px] bg-terra-bg text-terra px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block">
+        ○ draft
+      </span>
+    )
+  }
+  return (
+    <span className="text-[11px] bg-off text-text3 px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block">
+      ○ neaktivní
+    </span>
+  )
+}
+
 export default async function AdminProductsPage({
   searchParams,
 }: {
@@ -230,42 +267,5 @@ export default async function AdminProductsPage({
         {brand && <> &middot; výrobce: <strong>{brand}</strong></>}
       </div>
     </div>
-  )
-}
-
-function CompletenessBadge({ result }: { result: ReturnType<typeof calculateCompleteness> }) {
-  const { bg, text } = completenessColor(result.weightedPercent)
-  const tooltip = result.missing.length > 0
-    ? `Chybí: ${result.missing.map((m) => m.label).join(', ')}`
-    : 'Vše vyplněno'
-  return (
-    <span
-      className={`text-[11px] ${bg} ${text} px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block`}
-      title={tooltip}
-    >
-      {result.weightedPercent}%
-    </span>
-  )
-}
-
-function StatusBadge({ status }: { status: string }) {
-  if (status === 'active') {
-    return (
-      <span className="text-[11px] bg-olive-bg text-olive-dark px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block">
-        ● aktivní
-      </span>
-    )
-  }
-  if (status === 'draft') {
-    return (
-      <span className="text-[11px] bg-terra-bg text-terra px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block">
-        ○ draft
-      </span>
-    )
-  }
-  return (
-    <span className="text-[11px] bg-off text-text3 px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block">
-      ○ neaktivní
-    </span>
   )
 }

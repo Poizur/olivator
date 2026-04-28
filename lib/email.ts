@@ -263,3 +263,81 @@ export async function sendProspectorSummary(result: ProspectResult): Promise<voi
   const sendResult = await sendViaResend(recipient, subject, html)
   await logNotification(recipient, subject, 'prospector_summary', html, sendResult)
 }
+
+import type { ManagerReport } from './manager-agent'
+
+const PRIORITY_BADGE: Record<string, string> = {
+  high: 'background:#fee;color:#c00;border:1px solid #fcc',
+  medium: 'background:#fff8e6;color:#946800;border:1px solid #ffd966',
+  low: 'background:#f0f4ff;color:#3949ab;border:1px solid #c5cae9',
+}
+
+const CATEGORY_LABEL: Record<string, string> = {
+  seo: 'SEO',
+  content: 'Obsah',
+  affiliate: 'Affiliate',
+  quality: 'Kvalita',
+  technical: 'Technické',
+}
+
+/** Týdenní strategický report od Manager agenta. */
+export async function sendManagerReport(report: ManagerReport): Promise<void> {
+  const recipient = await getSetting<string>('notification_email')
+  if (!recipient) return
+
+  const m = report.metrics
+  const subject = `[Olivator] Týdenní report ${m.periodStart} – ${m.periodEnd}`
+
+  const actionsHtml = report.suggestedActions
+    .map(
+      (a) => `
+      <li style="margin-bottom:14px;padding:14px;background:#fafafa;border-radius:8px;border:1px solid #e8e8ed">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+          <span style="${PRIORITY_BADGE[a.priority] ?? PRIORITY_BADGE.medium};padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">${a.priority}</span>
+          <span style="font-size:11px;color:#6e6e73">${CATEGORY_LABEL[a.category] ?? a.category}</span>
+        </div>
+        <div style="font-size:14px;font-weight:600;color:#1d1d1f;margin-bottom:4px">${a.title}</div>
+        <div style="font-size:13px;color:#3a3a3c;line-height:1.5">${a.description}</div>
+      </li>`
+    )
+    .join('')
+
+  const html = `<!DOCTYPE html>
+<html lang="cs"><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#fafafa">
+<div style="background:white;border-radius:12px;padding:32px;border:1px solid #e8e8ed">
+  <h1 style="font-size:22px;color:#2d6a4f;margin:0 0 8px">📊 Týdenní report Olivator</h1>
+  <p style="color:#6e6e73;font-size:13px;margin:0 0 24px">${m.periodStart} – ${m.periodEnd}</p>
+
+  <div style="background:#f5f5f7;border-radius:8px;padding:16px;margin-bottom:20px;font-size:14px;line-height:1.6;color:#1d1d1f">
+    ${report.aiAnalysis.replace(/\n/g, '<br>')}
+  </div>
+
+  <h2 style="font-size:14px;color:#1d1d1f;margin:24px 0 12px;text-transform:uppercase;letter-spacing:0.5px">Týden v číslech</h2>
+  <table style="width:100%;font-size:13px;border-collapse:collapse">
+    <tr><td style="padding:6px 0;color:#6e6e73">Aktivních produktů</td><td style="text-align:right;font-weight:600">${m.totalActiveProducts}</td></tr>
+    <tr><td style="padding:6px 0;color:#6e6e73">Affiliate kliků za týden</td><td style="text-align:right;font-weight:600">${m.totalClicks}</td></tr>
+    <tr><td style="padding:6px 0;color:#6e6e73">Offers bez affiliate URL</td><td style="text-align:right;font-weight:600;color:${m.offersWithoutAffiliate > m.totalOffers / 2 ? '#c00' : '#1d1d1f'}">${m.offersWithoutAffiliate}/${m.totalOffers}</td></tr>
+    <tr><td style="padding:6px 0;color:#6e6e73">Nové discovery kandidáti</td><td style="text-align:right;font-weight:600">${m.newCandidatesThisWeek}</td></tr>
+    <tr><td style="padding:6px 0;color:#6e6e73">Čeká na schválení</td><td style="text-align:right;font-weight:600">${m.candidatesPending}</td></tr>
+    <tr><td style="padding:6px 0;color:#6e6e73">Otevřené quality issues</td><td style="text-align:right;font-weight:600">${m.openQualityIssues}</td></tr>
+    <tr><td style="padding:6px 0;color:#6e6e73">Pod 70 % completeness</td><td style="text-align:right;font-weight:600">${m.productsLowCompleteness}</td></tr>
+  </table>
+
+  <h2 style="font-size:14px;color:#1d1d1f;margin:24px 0 12px;text-transform:uppercase;letter-spacing:0.5px">📋 Akce na příští týden</h2>
+  <ul style="list-style:none;padding:0;margin:0">${actionsHtml}</ul>
+
+  <div style="text-align:center;margin-top:24px">
+    <a href="https://olivator.cz/admin/manager" style="display:inline-block;background:#2d6a4f;color:white;text-decoration:none;padding:12px 24px;border-radius:24px;font-size:14px;font-weight:500">
+      Otevřít report v adminu →
+    </a>
+  </div>
+
+  <p style="font-size:11px;color:#aeaeb2;margin-top:32px;border-top:1px solid #e8e8ed;padding-top:16px">
+    Generováno automaticky. Odpovědi a otázky → info@olivator.cz.
+  </p>
+</div>
+</body></html>`.trim()
+
+  const sendResult = await sendViaResend(recipient, subject, html)
+  await logNotification(recipient, subject, 'manager_report', html, sendResult)
+}

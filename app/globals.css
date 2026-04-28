@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/* Twemoji Country Flags polyfill — Chrome/Edge na Windows nemá v systému
+ * regional indicator emoji glyphs (🇬🇷, 🇮🇹). Bez tohoto fallback fontu
+ * uživatelé vidí jen "GR", "IT" písmena. unicode-range omezuje font
+ * jen na flag code points, neovlivňuje ostatní text. */
+@font-face {
+  font-family: 'Twemoji Country Flags';
+  unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E007F;
+  src: url('https://cdn.jsdelivr.net/npm/country-flag-emoji-polyfill@0.1.8/dist/TwemojiCountryFlags.woff2') format('woff2');
+  font-display: swap;
+}
+
 @theme inline {
   --color-olive: #2d6a4f;
   --color-olive-dark: #1b4332;
@@ -23,7 +34,8 @@ html {
 }
 
 body {
-  font-family: var(--font-body);
+  /* 'Twemoji Country Flags' v rodině — Chrome ji použije pro flag glyphy, Inter pro zbytek. */
+  font-family: var(--font-body), 'Twemoji Country Flags', 'Segoe UI Emoji', 'Apple Color Emoji';
   color: var(--color-text);
   background: #ffffff;
   -webkit-font-smoothing: antialiased;
