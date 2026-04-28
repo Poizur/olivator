@@ -89,9 +89,16 @@ export async function runProspector(): Promise<ProspectResult> {
       continue
     }
 
+    // custom type = mainstream grocer (Rohlík, Košík) — jejich sitemaps jsou obří
+    // a způsobují TCP stall. Prospector je přeskočí; discovery je řeší separátně.
+    if (candidate.crawlerType === 'custom') {
+      result.alreadyKnown++
+      continue
+    }
+
     // Test crawler — see if shop is reachable + parses
     const test = await testCrawlerForDomain(candidate.domain, {
-      type: candidate.crawlerType === 'custom' ? 'shoptet_sitemap' : candidate.crawlerType,
+      type: candidate.crawlerType,
       categoryUrl: candidate.categoryUrl,
     })
 
@@ -121,7 +128,7 @@ export async function runProspector(): Promise<ProspectResult> {
         domain: candidate.domain,
         slug,
         name: candidate.name,
-        crawler_type: candidate.crawlerType === 'custom' ? 'shoptet_sitemap' : candidate.crawlerType,
+        crawler_type: candidate.crawlerType,
         status: 'suggested',
         source: 'prospector_curated',
         reasoning: candidate.reasoning + (urlCount > 0 ? ` · ✓ test: ${urlCount} olejů` : ` · ✗ test selhal`),

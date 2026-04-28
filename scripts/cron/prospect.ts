@@ -9,12 +9,22 @@
 import { runProspector } from '@/lib/prospector'
 import { sendProspectorSummary } from '@/lib/email'
 
+const MAX_RUNTIME_MS = 10 * 60 * 1000 // 10 minut — pak process.exit bez ohledu
+
 async function main() {
   const startedAt = Date.now()
   console.log('[cron:prospect] start', new Date().toISOString())
 
+  // Hard kill — pokud job visí (TCP stall, nekonečná sitemap), nezablokuje Railway
+  const killTimer = setTimeout(() => {
+    console.error('[cron:prospect] TIMEOUT — exceeded 10 min, forcing exit')
+    process.exit(2)
+  }, MAX_RUNTIME_MS)
+  killTimer.unref()
+
   try {
     const result = await runProspector()
+    clearTimeout(killTimer)
     const elapsedSec = Math.round((Date.now() - startedAt) / 1000)
     console.log(`[cron:prospect] done in ${elapsedSec}s`, {
       totalCandidates: result.totalCandidates,
