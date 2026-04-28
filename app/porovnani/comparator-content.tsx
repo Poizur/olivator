@@ -206,11 +206,14 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                   {item.olivatorScore}
                 </div>
               </div>
-              <div className="text-[13px] font-medium text-text leading-tight mb-1 line-clamp-2 min-h-[34px]">
+              <div className="text-base font-semibold text-text leading-tight mb-1.5 line-clamp-2 min-h-[40px]">
                 {item.nameShort}
               </div>
-              <div className="text-xs text-text3">
-                {formatPrice(getCheapestOffer(item.id)?.price || 0)} &middot; {formatPricePer100ml(getCheapestOffer(item.id)?.price || 0, item.volumeMl)}
+              <div className="text-[13px] text-text font-medium">
+                {formatPrice(getCheapestOffer(item.id)?.price || 0)}
+              </div>
+              <div className="text-[11px] text-text3">
+                {formatPricePer100ml(getCheapestOffer(item.id)?.price || 0, item.volumeMl)}
               </div>
             </Link>
             <button
@@ -492,22 +495,22 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                   Parametr
                 </th>
                 {items.map(item => (
-                  <th key={item.id} className="text-center text-[11px] font-semibold text-olive tracking-wider uppercase px-3.5 py-2.5 border-b-2 border-off">
-                    <Link href={`/olej/${item.slug}`} className="inline-flex flex-col items-center gap-1.5 hover:opacity-80 transition-opacity">
-                      <div className="relative w-10 h-10 bg-off rounded overflow-hidden border border-off2">
+                  <th key={item.id} className="text-center text-[11px] font-semibold text-olive tracking-wider uppercase px-3.5 pb-3 pt-2 border-b-2 border-off">
+                    <Link href={`/olej/${item.slug}`} className="inline-flex flex-col items-center gap-2 hover:opacity-80 transition-opacity">
+                      <div className="relative w-20 h-20 bg-white rounded-lg overflow-hidden border border-off2">
                         {item.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain p-0.5" loading="lazy" />
+                          <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain p-1.5" loading="lazy" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-base">🫒</div>
+                          <div className="w-full h-full flex items-center justify-center text-2xl">🫒</div>
                         )}
                         {item.originCountry && (
-                          <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded text-[10px] leading-none px-0.5 shadow-sm border border-off2">
+                          <div className="absolute bottom-1 right-1 bg-white rounded text-[12px] leading-none px-1 py-0.5 shadow-sm border border-off2">
                             {countryFlag(item.originCountry)}
                           </div>
                         )}
                       </div>
-                      <span className="text-[10px] leading-tight">
+                      <span className="text-[11px] leading-tight">
                         {item.nameShort}
                       </span>
                     </Link>
