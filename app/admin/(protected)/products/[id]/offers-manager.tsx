@@ -136,10 +136,10 @@ export function OffersManager({ productId, retailers, initialOffers }: OffersMan
   }
 
   return (
-    <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-6">
       <div className="mb-4">
-        <div className="text-sm font-semibold text-text">Nabídky prodejců</div>
-        <div className="text-xs text-text3 mt-0.5">
+        <div className="text-sm font-semibold text-white">Nabídky prodejců</div>
+        <div className="text-xs text-zinc-500 mt-0.5">
           Vyplň cenu a URL produktu u každého prodejce. Prázdná cena = nabídka se smaže.
           Affiliate URL generuje systém automaticky dle šablony prodejce.
         </div>
@@ -153,12 +153,12 @@ export function OffersManager({ productId, retailers, initialOffers }: OffersMan
             <div
               key={row.retailerId}
               className={`grid grid-cols-[160px_120px_1fr_80px_120px] items-center gap-3 p-3 rounded-lg border ${
-                isCheapest ? 'border-olive bg-olive-bg/30' : 'border-off2'
+                isCheapest ? 'border-olive bg-emerald-500/10/30' : 'border-zinc-800'
               }`}
             >
               <div>
-                <div className="text-sm font-medium text-text">{row.retailer.name}</div>
-                <div className="text-[10px] text-text3">
+                <div className="text-sm font-medium text-white">{row.retailer.name}</div>
+                <div className="text-[10px] text-zinc-500">
                   {row.retailer.defaultCommissionPct}% komise
                   {isCheapest && <span className="ml-1 text-olive">· nejlevněji</span>}
                 </div>
@@ -169,16 +169,16 @@ export function OffersManager({ productId, retailers, initialOffers }: OffersMan
                 value={row.price}
                 onChange={e => updateRow(row.retailerId, { price: e.target.value })}
                 placeholder="Kč"
-                className="px-2.5 py-1.5 border border-off2 rounded text-sm text-right tabular-nums focus:outline-none focus:border-olive"
+                className="px-2.5 py-1.5 border border-zinc-800 rounded text-sm text-right tabular-nums focus:outline-none focus:border-olive"
               />
               <input
                 type="url"
                 value={row.productUrl}
                 onChange={e => updateRow(row.retailerId, { productUrl: e.target.value })}
                 placeholder={`https://${row.retailer.domain}/olej...`}
-                className="px-2.5 py-1.5 border border-off2 rounded text-xs font-mono focus:outline-none focus:border-olive"
+                className="px-2.5 py-1.5 border border-zinc-800 rounded text-xs font-mono focus:outline-none focus:border-olive"
               />
-              <label className="flex items-center gap-1.5 text-xs text-text2 cursor-pointer">
+              <label className="flex items-center gap-1.5 text-xs text-zinc-400 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={row.inStock}
@@ -193,16 +193,16 @@ export function OffersManager({ productId, retailers, initialOffers }: OffersMan
                 disabled={!row.dirty || row.saving}
                 className={`text-xs rounded-full px-3 py-1.5 font-medium transition-colors ${
                   row.saved
-                    ? 'bg-olive-bg text-olive-dark'
+                    ? 'bg-emerald-500/10 text-emerald-400'
                     : row.dirty
                     ? 'bg-olive text-white hover:bg-olive-dark'
-                    : 'bg-off text-text3'
+                    : 'bg-zinc-800/40 text-zinc-500'
                 } disabled:cursor-not-allowed`}
               >
                 {row.saving ? '...' : row.saved ? '✓ Uloženo' : row.dirty ? 'Uložit' : (row.id ? 'Uloženo' : 'Prázdné')}
               </button>
               {row.error && (
-                <div className="col-span-5 text-[11px] text-red-600">{row.error}</div>
+                <div className="col-span-5 text-[11px] text-red-400">{row.error}</div>
               )}
             </div>
           )

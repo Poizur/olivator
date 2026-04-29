@@ -39,14 +39,14 @@ export default async function SourcesPage() {
   return (
     <div>
       <div className="mb-4">
-        <Link href="/admin/discovery" className="text-[12px] text-text3 hover:text-olive">
+        <Link href="/admin/discovery" className="text-[12px] text-zinc-500 hover:text-olive">
           ← Zpět na Discovery
         </Link>
       </div>
-      <h1 className="font-[family-name:var(--font-display)] text-3xl text-text mb-1">
+      <h1 className="font-[family-name:var(--font-display)] text-3xl text-white mb-1">
         Zdroje (e-shopy)
       </h1>
-      <p className="text-sm text-text3 mb-6 max-w-[640px]">
+      <p className="text-sm text-zinc-500 mb-6 max-w-[640px]">
         Registr všech e-shopů které sledujeme. Discovery agent prochází jen ty co mají
         status <strong>enabled</strong>. Můžeš ručně přidávat nové, testovat crawler
         bez import, a spouštět bulk import per shop.

@@ -171,7 +171,7 @@ export function ProductForm({
         <div className="grid grid-cols-3 gap-4">
           <Field label="EAN (volitelné)">
             <Input value={ean} onChange={setEan} placeholder="8012345678901 nebo prázdné" />
-            <div className="text-[10px] text-text3 mt-0.5">
+            <div className="text-[10px] text-zinc-500 mt-0.5">
               Nemají ho malí farmáři a boutique produkty — nech prázdné
             </div>
           </Field>
@@ -288,7 +288,7 @@ export function ProductForm({
         </Field>
         <Field label="Použití (odvozené automaticky)">
           {uses.length === 0 ? (
-            <div className="text-[12px] text-text3 italic bg-off rounded-lg px-3 py-2">
+            <div className="text-[12px] text-zinc-500 italic bg-zinc-800/40 rounded-lg px-3 py-2">
               Zatím nic. Klikni <strong>🔄 Rescrape</strong> nahoře — systém odvodí použití
               z chuťového profilu, polyfenolů, typu oleje a ceny.
             </div>
@@ -297,14 +297,14 @@ export function ProductForm({
               {uses.map(u => (
                 <span
                   key={u}
-                  className="bg-olive-bg text-olive-dark border border-olive-border rounded-full px-3 py-1 text-xs"
+                  className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full px-3 py-1 text-xs"
                 >
                   {USE_LABELS[u] ?? u}
                 </span>
               ))}
             </div>
           )}
-          <div className="text-[11px] text-text3 mt-1.5">
+          <div className="text-[11px] text-zinc-500 mt-1.5">
             Každý kvalitní EVOO je „na všechno" — proto ručně nezaškrtáváme. Odvozeno z dat:
             rafinované = smažení, jemné = ryby/salát, výrazné = maso, polyfenoly ≥ 250 mg/kg = zdraví,
             cena + obal = dárek.
@@ -342,7 +342,7 @@ export function ProductForm({
           >
             Spočítat automaticky
           </button>
-          <span className="text-[11px] text-text3 leading-tight">
+          <span className="text-[11px] text-zinc-500 leading-tight">
             Použije kyselost, certifikace, polyfenoly + peroxidové číslo a cenu
             z nejlevnější nabídky ({cheapestOfferPrice ? `${cheapestOfferPrice} Kč` : 'chybí'}).
           </span>
@@ -387,17 +387,17 @@ export function ProductForm({
       </Section>
 
       {error && (
-        <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+        <div className="text-xs text-red-400 bg-red-500/100/10 border border-red-500/20 rounded-lg px-3 py-2">
           {error}
         </div>
       )}
       {success && (
-        <div className="text-xs text-olive-dark bg-olive-bg border border-olive-border rounded-lg px-3 py-2">
+        <div className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
           ✓ Uloženo
         </div>
       )}
 
-      <div className="flex items-center gap-2 sticky bottom-4 bg-white border border-off2 rounded-[var(--radius-card)] p-4 shadow-sm flex-wrap">
+      <div className="flex items-center gap-2 sticky bottom-4 bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-4 shadow-sm flex-wrap">
         <button
           type="submit"
           disabled={saving}
@@ -405,7 +405,7 @@ export function ProductForm({
         >
           {saving ? 'Ukládám...' : 'Uložit změny'}
         </button>
-        <span className="text-[11px] text-text3 ml-2">
+        <span className="text-[11px] text-zinc-500 ml-2">
           Akce <strong>⚡ Publikovat</strong> / <strong>👁 Zobrazit</strong> / <strong>← Zpět</strong> najdeš nahoře vpravo
         </span>
       </div>
@@ -413,14 +413,14 @@ export function ProductForm({
   )
 }
 
-const inputCls = 'w-full px-3 py-2 border border-off2 rounded-lg text-sm focus:outline-none focus:border-olive'
+const inputCls = 'w-full px-3 py-2 border border-zinc-800 rounded-lg text-sm focus:outline-none focus:border-olive'
 
 function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 space-y-4">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-6 space-y-4">
       <div>
-        <div className="text-sm font-semibold text-text">{title}</div>
-        {subtitle && <div className="text-xs text-text3 mt-0.5">{subtitle}</div>}
+        <div className="text-sm font-semibold text-white">{title}</div>
+        {subtitle && <div className="text-xs text-zinc-500 mt-0.5">{subtitle}</div>}
       </div>
       {children}
     </div>
@@ -430,8 +430,8 @@ function Section({ title, subtitle, children }: { title: string; subtitle?: stri
 function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-xs font-medium text-text2 mb-1">
-        {label}{required && <span className="text-terra ml-0.5">*</span>}
+      <div className="text-xs font-medium text-zinc-400 mb-1">
+        {label}{required && <span className="text-amber-400 ml-0.5">*</span>}
       </div>
       {children}
     </div>
@@ -467,7 +467,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
       className={`text-xs px-3 py-1 rounded-full border transition-colors cursor-pointer ${
         active
           ? 'bg-olive text-white border-olive'
-          : 'bg-white border-off2 text-text2 hover:border-olive-light hover:text-olive'
+          : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-olive3 hover:text-olive'
       }`}
     >
       {children}
@@ -530,9 +530,9 @@ function RewriteButton({
 
   const badgeClass = (() => {
     if (!validation) return ''
-    if (validation.errors > 0) return 'bg-red-50 border-red-200 text-red-700'
-    if (validation.warnings > 0) return 'bg-terra-bg border-terra/30 text-terra'
-    return 'bg-olive-bg border-olive-border text-olive-dark'
+    if (validation.errors > 0) return 'bg-red-500/10 border-red-500/20 text-red-400'
+    if (validation.warnings > 0) return 'bg-amber-500/100/10 border-terra/30 text-amber-400'
+    return 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
   })()
 
   return (
@@ -542,16 +542,16 @@ function RewriteButton({
           type="button"
           onClick={onClick}
           disabled={loading}
-          className="bg-olive-bg text-olive-dark border border-olive-border rounded-full px-4 py-1.5 text-[13px] font-medium hover:bg-olive-border disabled:opacity-40 transition-colors"
+          className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full px-4 py-1.5 text-[13px] font-medium hover:bg-olive-border disabled:opacity-40 transition-colors"
         >
           {loading ? 'Přepisuji… (~5-10s)' : 'Přepsat AI'}
         </button>
-        <span className="text-[11px] text-text3 leading-tight flex-1">
+        <span className="text-[11px] text-zinc-500 leading-tight flex-1">
           Claude vygeneruje unikátní SEO popis. Po generování systém automaticky
           zkontroluje banned fráze a halucinace.
         </span>
         {error && (
-          <span className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded px-2 py-0.5">
+          <span className="text-[11px] text-red-400 bg-red-500/100/10 border border-red-500/20 rounded px-2 py-0.5">
             ⚠ {error}
           </span>
         )}
@@ -643,17 +643,17 @@ function FlavorAiButton({
       >
         {loading ? 'Odhaduji chuť…' : 'Spočítat automaticky'}
       </button>
-      <span className="text-[11px] text-text3 leading-tight flex-1">
+      <span className="text-[11px] text-zinc-500 leading-tight flex-1">
         Claude přečte popis produktu z e-shopu + parametry (odrůda, polyfenoly, původ) a odhadne
         7 chuťových os. Uloží se hned do DB.
       </span>
       {error && (
-        <span className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded px-2 py-0.5">
+        <span className="text-[11px] text-red-400 bg-red-500/100/10 border border-red-500/20 rounded px-2 py-0.5">
           ⚠ {error}
         </span>
       )}
       {reasoning && (
-        <div className="basis-full text-[12px] text-olive-dark bg-olive-bg border border-olive-border rounded-lg px-3 py-2">
+        <div className="basis-full text-[12px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
           <strong>AI vysvětlení:</strong> {reasoning}
         </div>
       )}
@@ -721,7 +721,7 @@ function CertDetectorPanel({
   )
 
   return (
-    <div className="mb-4 pb-4 border-b border-off">
+    <div className="mb-4 pb-4 border-b border-zinc-800">
       <div className="flex items-center gap-3 mb-2 flex-wrap">
         <button
           type="button"
@@ -731,19 +731,19 @@ function CertDetectorPanel({
         >
           {loading ? '🔍 Hledám...' : '🔍 Detekovat z popisu'}
         </button>
-        <span className="text-[11px] text-text3 leading-tight flex-1">
+        <span className="text-[11px] text-zinc-500 leading-tight flex-1">
           AI naskenuje raw_description a extrahovaná fakta — najde zmínky DOP / BIO / NYIOOC /
           Demeter s úrovní jistoty. Ty potvrdíš co přidat.
         </span>
         {error && (
-          <span className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded px-2 py-0.5">
+          <span className="text-[11px] text-red-400 bg-red-500/100/10 border border-red-500/20 rounded px-2 py-0.5">
             ⚠ {error}
           </span>
         )}
       </div>
 
       {candidates !== null && visibleCandidates.length === 0 && (
-        <div className="text-[12px] text-text3 italic bg-off rounded-lg px-3 py-2 mt-2">
+        <div className="text-[12px] text-zinc-500 italic bg-zinc-800/40 rounded-lg px-3 py-2 mt-2">
           {candidates.length === 0
             ? 'V textu nebyla nalezena žádná zmínka certifikace.'
             : 'Všechny nalezené certifikace už jsou přidané nebo zahozené.'}
@@ -757,10 +757,10 @@ function CertDetectorPanel({
               key={c.cert}
               className={`flex items-start gap-3 rounded-lg border px-3 py-2 ${
                 c.confidence === 'high'
-                  ? 'bg-olive-bg border-olive-border'
+                  ? 'bg-emerald-500/10 border-emerald-500/20'
                   : c.confidence === 'medium'
-                  ? 'bg-terra-bg border-terra/30'
-                  : 'bg-off border-off2'
+                  ? 'bg-amber-500/100/10 border-terra/30'
+                  : 'bg-zinc-800/40 border-zinc-800'
               }`}
             >
               <span
@@ -775,13 +775,13 @@ function CertDetectorPanel({
                 {c.confidence}
               </span>
               <div className="flex-1 min-w-0">
-                <div className="text-[13px] font-medium text-text">
+                <div className="text-[13px] font-medium text-white">
                   {c.label}{' '}
-                  <span className="text-[11px] text-text2 font-normal">
+                  <span className="text-[11px] text-zinc-400 font-normal">
                     — nalezeno: &ldquo;{c.evidence}&rdquo;
                   </span>
                 </div>
-                <div className="text-[11px] text-text3 mt-0.5">{c.reasoning}</div>
+                <div className="text-[11px] text-zinc-500 mt-0.5">{c.reasoning}</div>
               </div>
               <div className="flex gap-1 shrink-0">
                 <button
@@ -794,7 +794,7 @@ function CertDetectorPanel({
                 <button
                   type="button"
                   onClick={() => setDismissed(prev => new Set(prev).add(c.cert))}
-                  className="text-text3 hover:text-terra text-[11px] px-2"
+                  className="text-zinc-500 hover:text-amber-400 text-[11px] px-2"
                   title="Zahodit návrh"
                 >
                   ✕
@@ -806,7 +806,7 @@ function CertDetectorPanel({
       )}
 
       {visibleCandidates.some(c => c.confidence === 'low') && (
-        <div className="text-[11px] text-text3 mt-2 bg-off rounded px-3 py-2">
+        <div className="text-[11px] text-zinc-500 mt-2 bg-zinc-800/40 rounded px-3 py-2">
           <strong>⚠ Upozornění:</strong> <span className="bg-text3 text-white px-1 rounded">LOW</span> kandidáti
           jsou jen tvrzení výrobce (např. &ldquo;chemicky neošetřovaný&rdquo;), ne oficiální certifikace.
           Před přidáním do BIO ověř papíry u výrobce — jinak hrozí pokuta za klamavou reklamu.

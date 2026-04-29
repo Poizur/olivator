@@ -158,14 +158,14 @@ export function DiscoveryQueue({ needsReview }: DiscoveryQueueProps) {
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
-        <h2 className="text-sm font-semibold text-text">
+        <h2 className="text-sm font-semibold text-white">
           ⏳ Čeká na schválení ({needsReview.length})
         </h2>
       </div>
 
       {/* Bulk action toolbar — sticky-ish on top of list */}
-      <div className="bg-white border border-off2 rounded-lg p-3 mb-3 flex items-center gap-3 flex-wrap">
-        <label className="inline-flex items-center gap-2 text-[12px] text-text2 cursor-pointer">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3 mb-3 flex items-center gap-3 flex-wrap">
+        <label className="inline-flex items-center gap-2 text-[12px] text-zinc-400 cursor-pointer">
           <input
             type="checkbox"
             checked={allSelected}
@@ -196,7 +196,7 @@ export function DiscoveryQueue({ needsReview }: DiscoveryQueueProps) {
               type="button"
               onClick={() => bulkAction('reject')}
               disabled={busy !== null}
-              className="bg-white border border-off2 text-text2 rounded-full px-4 py-1.5 text-[12px] font-medium hover:border-terra hover:text-terra disabled:opacity-40"
+              className="bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-full px-4 py-1.5 text-[12px] font-medium hover:border-terra hover:text-amber-400 disabled:opacity-40"
             >
               {busy === 'reject' ? '...' : `✕ Zamítnout označené (${selected.size})`}
             </button>
@@ -204,7 +204,7 @@ export function DiscoveryQueue({ needsReview }: DiscoveryQueueProps) {
               type="button"
               onClick={() => setSelected(new Set())}
               disabled={busy !== null}
-              className="text-text3 hover:text-text text-[12px] px-2"
+              className="text-zinc-500 hover:text-white text-[12px] px-2"
             >
               Zrušit výběr
             </button>
@@ -212,12 +212,12 @@ export function DiscoveryQueue({ needsReview }: DiscoveryQueueProps) {
         )}
 
         {progress && (
-          <span className="text-[11px] text-olive-dark bg-olive-bg border border-olive-border rounded px-2 py-1 ml-auto">
+          <span className="text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-2 py-1 ml-auto">
             {progress}
           </span>
         )}
         {error && (
-          <span className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1 ml-auto">
+          <span className="text-[11px] text-red-400 bg-red-500/100/10 border border-red-500/20 rounded px-2 py-1 ml-auto">
             ⚠ {error}
           </span>
         )}
@@ -227,13 +227,13 @@ export function DiscoveryQueue({ needsReview }: DiscoveryQueueProps) {
       {job && (
         <div className={`mb-3 rounded-lg p-4 border ${
           job.status === 'completed'
-            ? 'bg-olive-bg border-olive-border'
+            ? 'bg-emerald-500/10 border-emerald-500/20'
             : job.status === 'failed'
-            ? 'bg-red-50 border-red-200'
-            : 'bg-olive-bg/50 border-olive-border'
+            ? 'bg-red-500/10 border-red-500/20'
+            : 'bg-emerald-500/10/50 border-emerald-500/20'
         }`}>
           <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
-            <div className="text-[13px] font-semibold text-olive-dark">
+            <div className="text-[13px] font-semibold text-emerald-400">
               {job.status === 'completed'
                 ? `✓ Bulk schválení dokončeno (${job.succeeded}/${job.total})`
                 : job.status === 'failed'
@@ -241,14 +241,14 @@ export function DiscoveryQueue({ needsReview }: DiscoveryQueueProps) {
                 : `⏳ Schvaluji ${job.processed} z ${job.total}`
               }
             </div>
-            <div className="text-[11px] text-text2">
+            <div className="text-[11px] text-zinc-400">
               ✅ {job.succeeded} úspěšně {job.failed > 0 && `· ❌ ${job.failed} selhalo`}
             </div>
           </div>
 
           {/* Progress bar */}
           {job.total > 0 && (
-            <div className="w-full bg-white/50 rounded-full h-2 mb-2 overflow-hidden">
+            <div className="w-full bg-zinc-900/50 rounded-full h-2 mb-2 overflow-hidden">
               <div
                 className={`h-2 transition-all duration-500 ${
                   job.status === 'failed' ? 'bg-red-400' : 'bg-olive'
@@ -258,27 +258,27 @@ export function DiscoveryQueue({ needsReview }: DiscoveryQueueProps) {
             </div>
           )}
 
-          <div className="flex items-center justify-between text-[11px] text-text3">
+          <div className="flex items-center justify-between text-[11px] text-zinc-500">
             <span>
               {job.current_item && isJobActive && (
-                <>Aktuálně: <strong className="text-text2">{job.current_item}</strong></>
+                <>Aktuálně: <strong className="text-zinc-400">{job.current_item}</strong></>
               )}
             </span>
             <span>{pct} %</span>
           </div>
 
           {isJobActive && (
-            <div className="mt-2 text-[10px] text-text3">
+            <div className="mt-2 text-[10px] text-zinc-500">
               💡 Můžeš zavřít tab — běží na pozadí. Vrať se za ~{Math.ceil((job.total - job.processed) * 30 / 60)} min.
             </div>
           )}
 
           {job.errors.length > 0 && (
             <details className="mt-2">
-              <summary className="cursor-pointer text-[11px] text-terra">
+              <summary className="cursor-pointer text-[11px] text-amber-400">
                 {job.errors.length} chyb — zobrazit
               </summary>
-              <ul className="mt-1 text-[11px] text-text3 space-y-0.5 ml-4">
+              <ul className="mt-1 text-[11px] text-zinc-500 space-y-0.5 ml-4">
                 {job.errors.slice(0, 8).map((e, i) => (
                   <li key={i} className="truncate">• {e.reason}</li>
                 ))}

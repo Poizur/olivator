@@ -21,11 +21,11 @@ interface Source {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  enabled: { label: 'Aktivní', color: 'bg-olive-bg border-olive-border text-olive-dark' },
-  disabled: { label: 'Vypnuto', color: 'bg-off border-off2 text-text2' },
-  suggested: { label: 'Návrh', color: 'bg-terra-bg border-terra/30 text-terra' },
-  rejected: { label: 'Zamítnuto', color: 'bg-off border-off2 text-text3' },
-  failing: { label: 'Selhává', color: 'bg-red-50 border-red-200 text-red-700' },
+  enabled: { label: 'Aktivní', color: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' },
+  disabled: { label: 'Vypnuto', color: 'bg-zinc-800/40 border-zinc-800 text-zinc-400' },
+  suggested: { label: 'Návrh', color: 'bg-amber-500/100/10 border-terra/30 text-amber-400' },
+  rejected: { label: 'Zamítnuto', color: 'bg-zinc-800/40 border-zinc-800 text-zinc-500' },
+  failing: { label: 'Selhává', color: 'bg-red-500/10 border-red-500/20 text-red-400' },
 }
 
 export function SourcesAdmin({ initialSources }: { initialSources: Source[] }) {
@@ -57,12 +57,12 @@ export function SourcesAdmin({ initialSources }: { initialSources: Source[] }) {
   return (
     <div>
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3 mb-4 text-sm">
+        <div className="bg-red-500/100/10 border border-red-500/20 text-red-400 rounded-lg px-4 py-3 mb-4 text-sm">
           ⚠ {error}
         </div>
       )}
       {success && (
-        <div className="bg-olive-bg border border-olive-border text-olive-dark rounded-lg px-4 py-3 mb-4 text-sm">
+        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg px-4 py-3 mb-4 text-sm">
           ✓ {success}
         </div>
       )}
@@ -101,7 +101,7 @@ export function SourcesAdmin({ initialSources }: { initialSources: Source[] }) {
       {/* List */}
       <div className="space-y-2">
         {sources.length === 0 && (
-          <div className="bg-white border border-off2 rounded-lg p-6 text-center text-text3 text-sm">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 text-center text-zinc-500 text-sm">
             Zatím žádný e-shop. Přidej první výše.
           </div>
         )}
@@ -210,8 +210,8 @@ function AddSourceForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="bg-white border border-off2 rounded-[var(--radius-card)] p-5 mb-4 space-y-3">
-      <div className="text-base font-semibold text-text mb-1">Přidat e-shop</div>
+    <form onSubmit={onSubmit} className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-5 mb-4 space-y-3">
+      <div className="text-base font-semibold text-white mb-1">Přidat e-shop</div>
 
       <div>
         <Label>Doména *</Label>
@@ -220,11 +220,11 @@ function AddSourceForm({
           value={domain}
           onChange={e => setDomain(e.target.value)}
           placeholder="shop.foo.cz nebo foo.cz"
-          className="w-full px-3 py-2 border border-off2 rounded-lg text-sm focus:outline-none focus:border-olive"
+          className="w-full px-3 py-2 border border-zinc-800 rounded-lg text-sm focus:outline-none focus:border-olive"
           required
         />
         {dupHint && (
-          <div className="mt-1 text-[12px] text-terra bg-terra-bg border border-terra/30 rounded px-2 py-1">
+          <div className="mt-1 text-[12px] text-amber-400 bg-amber-500/100/10 border border-terra/30 rounded px-2 py-1">
             ⚠ Doména {normalized} už je v registru — zkontroluj seznam pod formulářem
           </div>
         )}
@@ -238,7 +238,7 @@ function AddSourceForm({
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="Foo Olive Oil"
-            className="w-full px-3 py-2 border border-off2 rounded-lg text-sm"
+            className="w-full px-3 py-2 border border-zinc-800 rounded-lg text-sm"
           />
         </div>
         <div>
@@ -246,7 +246,7 @@ function AddSourceForm({
           <select
             value={crawlerType}
             onChange={e => setCrawlerType(e.target.value)}
-            className="w-full px-3 py-2 border border-off2 rounded-lg text-sm"
+            className="w-full px-3 py-2 border border-zinc-800 rounded-lg text-sm"
           >
             <option value="shoptet_sitemap">Shoptet (sitemap.xml)</option>
             <option value="shoptet_category">Shoptet (kategorie)</option>
@@ -263,7 +263,7 @@ function AddSourceForm({
             value={categoryUrl}
             onChange={e => setCategoryUrl(e.target.value)}
             placeholder="https://foo.cz/kategorie/olivovy-olej/"
-            className="w-full px-3 py-2 border border-off2 rounded-lg text-sm font-mono"
+            className="w-full px-3 py-2 border border-zinc-800 rounded-lg text-sm font-mono"
           />
         </div>
       )}
@@ -273,7 +273,7 @@ function AddSourceForm({
         <select
           value={status}
           onChange={e => setStatus(e.target.value)}
-          className="px-3 py-2 border border-off2 rounded-lg text-sm"
+          className="px-3 py-2 border border-zinc-800 rounded-lg text-sm"
         >
           <option value="enabled">Aktivní (agent ho prochází)</option>
           <option value="suggested">Návrh (čeká, neprochází)</option>
@@ -285,8 +285,8 @@ function AddSourceForm({
       {testResult && (
         <div className={`text-[12px] rounded-lg px-3 py-2 ${
           testResult.error
-            ? 'bg-red-50 border border-red-200 text-red-700'
-            : 'bg-olive-bg border border-olive-border text-olive-dark'
+            ? 'bg-red-500/100/10 border border-red-500/20 text-red-400'
+            : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
         }`}>
           {testResult.error
             ? `❌ ${testResult.error}`
@@ -295,12 +295,12 @@ function AddSourceForm({
         </div>
       )}
 
-      <div className="flex items-center gap-2 pt-2 border-t border-off">
+      <div className="flex items-center gap-2 pt-2 border-t border-zinc-800">
         <button
           type="button"
           onClick={onTest}
           disabled={testing || !domain.trim()}
-          className="bg-off border border-off2 text-text rounded-full px-4 py-1.5 text-[12px] font-medium hover:bg-off2 disabled:opacity-40"
+          className="bg-zinc-800/40 border border-zinc-800 text-white rounded-full px-4 py-1.5 text-[12px] font-medium hover:bg-zinc-800 disabled:opacity-40"
         >
           {testing ? '🧪 Testuji...' : '🧪 Otestovat crawler'}
         </button>
@@ -314,7 +314,7 @@ function AddSourceForm({
         <button
           type="button"
           onClick={onClose}
-          className="text-text3 hover:text-text text-[12px] px-2"
+          className="text-zinc-500 hover:text-white text-[12px] px-2"
         >
           Zrušit
         </button>
@@ -418,7 +418,7 @@ function SourceRow({
   }
 
   return (
-    <div className="bg-white border border-off2 rounded-lg p-4">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -426,17 +426,17 @@ function SourceRow({
               href={`https://${s.domain}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[14px] font-medium text-text hover:text-olive truncate"
+              className="text-[14px] font-medium text-white hover:text-olive truncate"
             >
               {s.name ?? s.domain}
             </a>
             <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border ${status.color}`}>
               {status.label}
             </span>
-            <span className="text-[11px] text-text3">{s.domain}</span>
+            <span className="text-[11px] text-zinc-500">{s.domain}</span>
           </div>
-          <div className="text-[11px] text-text3 mt-1 flex items-center gap-2 flex-wrap">
-            <code className="bg-off px-1.5 py-0.5 rounded">{s.crawler_type}</code>
+          <div className="text-[11px] text-zinc-500 mt-1 flex items-center gap-2 flex-wrap">
+            <code className="bg-zinc-800/40 px-1.5 py-0.5 rounded">{s.crawler_type}</code>
             {s.last_scan_url_count != null && (
               <span>· naposled <strong>{s.last_scan_url_count}</strong> URL</span>
             )}
@@ -446,10 +446,10 @@ function SourceRow({
             {s.source && <span>· zdroj: {s.source}</span>}
           </div>
           {s.reasoning && (
-            <div className="text-[12px] text-text2 italic mt-1">{s.reasoning}</div>
+            <div className="text-[12px] text-zinc-400 italic mt-1">{s.reasoning}</div>
           )}
           {s.last_scan_error && (
-            <div className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1 mt-1">
+            <div className="text-[11px] text-red-400 bg-red-500/100/10 border border-red-500/20 rounded px-2 py-1 mt-1">
               ⚠ {s.last_scan_error}
             </div>
           )}
@@ -471,7 +471,7 @@ function SourceRow({
                 type="button"
                 onClick={testCrawler}
                 disabled={busy !== null}
-                className="bg-off border border-off2 text-text rounded-full px-3 py-1 text-[11px] font-medium hover:border-olive-light disabled:opacity-40"
+                className="bg-zinc-800/40 border border-zinc-800 text-white rounded-full px-3 py-1 text-[11px] font-medium hover:border-olive3 disabled:opacity-40"
               >
                 {busy === 'test' ? '🧪...' : '🧪 Test'}
               </button>
@@ -487,7 +487,7 @@ function SourceRow({
                 type="button"
                 onClick={() => patch('disable', { status: 'disabled' })}
                 disabled={busy !== null}
-                className="text-text2 hover:text-terra text-[11px] px-2 py-1"
+                className="text-zinc-400 hover:text-amber-400 text-[11px] px-2 py-1"
               >
                 Vypnout
               </button>
@@ -497,7 +497,7 @@ function SourceRow({
             type="button"
             onClick={deleteSource}
             disabled={busy !== null}
-            className="text-text3 hover:text-red-600 text-[11px] px-2 py-1"
+            className="text-zinc-500 hover:text-red-400 text-[11px] px-2 py-1"
           >
             ✕
           </button>
@@ -508,7 +508,7 @@ function SourceRow({
 }
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <div className="text-[11px] uppercase tracking-wider text-text3 mb-1">{children}</div>
+  return <div className="text-[11px] uppercase tracking-wider text-zinc-500 mb-1">{children}</div>
 }
 
 function ProspectorButton({

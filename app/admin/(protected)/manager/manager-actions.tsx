@@ -41,12 +41,12 @@ export function ManagerActions() {
         {running ? '🤔 Analyzuji…' : '🚀 Spustit Manager teď'}
       </button>
       {summary && (
-        <span className="text-[11px] text-olive-dark bg-olive-bg border border-olive-border rounded px-3 py-1.5">
+        <span className="text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-3 py-1.5">
           {summary}
         </span>
       )}
       {error && (
-        <span className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
+        <span className="text-[11px] text-red-400 bg-red-500/100/10 border border-red-500/20 rounded px-2 py-1">
           ⚠ {error}
         </span>
       )}

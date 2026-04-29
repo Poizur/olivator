@@ -100,7 +100,7 @@ export function SettingsForm({ initialValues, defs }: SettingsFormProps) {
               checked={values.discovery_auto_publish === true || values.discovery_auto_publish === 'true'}
               onChange={e => update('discovery_auto_publish', e.target.checked)}
             />
-            <span className="text-[13px] text-text2">
+            <span className="text-[13px] text-zinc-400">
               {values.discovery_auto_publish ? 'Zapnuto — nálezy se publikují automaticky' : 'Vypnuto — vše čeká na schválení'}
             </span>
           </label>
@@ -116,7 +116,7 @@ export function SettingsForm({ initialValues, defs }: SettingsFormProps) {
                 className={`text-xs px-3 py-1.5 rounded-full border transition-colors cursor-pointer ${
                   enabledShops.includes(s.slug)
                     ? 'bg-olive text-white border-olive'
-                    : 'bg-white border-off2 text-text2 hover:border-olive-light hover:text-olive'
+                    : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-olive3 hover:text-olive'
                 }`}
               >
                 {s.label}
@@ -132,14 +132,14 @@ export function SettingsForm({ initialValues, defs }: SettingsFormProps) {
             onChange={e => update('discovery_schedule_cron', e.target.value)}
             className={`${inputCls} font-mono w-48`}
           />
-          <span className="text-[11px] text-text3 ml-2">
-            Default <code className="bg-off px-1 rounded">0 4 * * 1</code> = pondělí 4:00 UTC
+          <span className="text-[11px] text-zinc-500 ml-2">
+            Default <code className="bg-zinc-800/40 px-1 rounded">0 4 * * 1</code> = pondělí 4:00 UTC
           </span>
         </Field>
       </Section>
 
       {/* Sticky save bar */}
-      <div className="sticky bottom-4 bg-white border border-off2 rounded-[var(--radius-card)] p-4 shadow-sm flex items-center gap-3 flex-wrap">
+      <div className="sticky bottom-4 bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-4 shadow-sm flex items-center gap-3 flex-wrap">
         <button
           type="button"
           onClick={onSave}
@@ -149,12 +149,12 @@ export function SettingsForm({ initialValues, defs }: SettingsFormProps) {
           {saving ? '💾 Ukládám...' : '💾 Uložit nastavení'}
         </button>
         {status && (
-          <span className="text-[12px] text-olive-dark bg-olive-bg border border-olive-border rounded px-2 py-1">
+          <span className="text-[12px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-2 py-1">
             {status}
           </span>
         )}
         {error && (
-          <span className="text-[12px] text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
+          <span className="text-[12px] text-red-400 bg-red-500/100/10 border border-red-500/20 rounded px-2 py-1">
             ⚠ {error}
           </span>
         )}
@@ -164,14 +164,14 @@ export function SettingsForm({ initialValues, defs }: SettingsFormProps) {
 }
 
 const inputCls =
-  'px-3 py-2 border border-off2 rounded-lg text-sm focus:outline-none focus:border-olive'
+  'px-3 py-2 border border-zinc-800 rounded-lg text-sm focus:outline-none focus:border-olive'
 
 function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 space-y-4">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-6 space-y-4">
       <div>
-        <div className="text-base font-semibold text-text">{title}</div>
-        {subtitle && <div className="text-xs text-text3 mt-0.5">{subtitle}</div>}
+        <div className="text-base font-semibold text-white">{title}</div>
+        {subtitle && <div className="text-xs text-zinc-500 mt-0.5">{subtitle}</div>}
       </div>
       {children}
     </div>
@@ -189,8 +189,8 @@ function Field({
 }) {
   return (
     <div>
-      <div className="text-sm font-medium text-text2 mb-1">{label}</div>
-      {desc && <div className="text-[11px] text-text3 mb-2 leading-relaxed">{desc}</div>}
+      <div className="text-sm font-medium text-zinc-400 mb-1">{label}</div>
+      {desc && <div className="text-[11px] text-zinc-500 mb-2 leading-relaxed">{desc}</div>}
       {children}
     </div>
   )

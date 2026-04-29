@@ -1,8 +1,7 @@
-// Admin dashboard — real-data overview. Metric cards, click chart, activity
-// feed, "needs attention" tasks. No mock data.
+// Admin dashboard — dark theme, real-data overview.
 
 import Link from 'next/link'
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight, ArrowUp, ArrowDown, Plus } from 'lucide-react'
 import { getSiteStats, getAllRetailers } from '@/lib/data'
 import { supabaseAdmin } from '@/lib/supabase'
 import { BulkFetchImagesButton } from './bulk-fetch-images'
@@ -27,12 +26,13 @@ function startOfDay(d: Date): Date {
 }
 
 function fmtCZK(n: number): string {
-  return `${Math.round(n).toLocaleString('cs-CZ').replace(/ /g, ' ')} Kč`
+  return `${Math.round(n).toLocaleString('cs-CZ').replace(/ /g, ' ')} Kč`
 }
 
-function fmtDate(s: string): string {
+function fmtDayShort(s: string): string {
   const d = new Date(s)
-  return `${d.getDate()}. ${d.getMonth() + 1}.`
+  const days = ['Ne', 'Po', 'Út', 'St', 'Čt', 'Pá', 'So']
+  return days[d.getDay()] ?? ''
 }
 
 function fmtRelative(iso: string): string {
@@ -48,6 +48,7 @@ async function getClickStats(): Promise<{
   prev7d: number
   byDay: DailyClicks[]
   estCommission7d: number
+  prevCommission7d: number
 }> {
   const now = new Date()
   const start7 = startOfDay(new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000))
@@ -59,13 +60,12 @@ async function getClickStats(): Promise<{
     .gte('clicked_at', startPrev.toISOString())
 
   const clicks = (rows ?? []) as ClickRow[]
-  const last7d = clicks.filter((c) => new Date(c.clicked_at) >= start7).length
-  const prev7d = clicks.filter((c) => {
+  const last = clicks.filter((c) => new Date(c.clicked_at) >= start7)
+  const prev = clicks.filter((c) => {
     const t = new Date(c.clicked_at)
     return t >= startPrev && t < start7
-  }).length
+  })
 
-  // Build per-day counts for last 7 days
   const byDay: DailyClicks[] = []
   for (let i = 6; i >= 0; i--) {
     const day = startOfDay(new Date(now.getTime() - i * 24 * 60 * 60 * 1000))
@@ -77,40 +77,38 @@ async function getClickStats(): Promise<{
     byDay.push({ date: day.toISOString().slice(0, 10), count })
   }
 
-  // Estimate commission: for clicks in last 7d, look up cheapest offer × commission_pct
-  const productIds7d = [
-    ...new Set(clicks.filter((c) => new Date(c.clicked_at) >= start7).map((c) => c.product_id).filter(Boolean) as string[]),
-  ]
-  let estCommission7d = 0
-  if (productIds7d.length > 0) {
+  // Commission: cheapest offer × commission_pct for clicked products
+  async function commissionFor(rows: ClickRow[]): Promise<number> {
+    const ids = [...new Set(rows.map((c) => c.product_id).filter(Boolean) as string[])]
+    if (ids.length === 0) return 0
     const { data: offers } = await supabaseAdmin
       .from('product_offers')
       .select('product_id, price, commission_pct')
-      .in('product_id', productIds7d)
+      .in('product_id', ids)
     const byProduct = new Map<string, { price: number; pct: number }>()
     for (const o of offers ?? []) {
       const pid = o.product_id as string
       const price = Number(o.price) || 0
       const pct = Number(o.commission_pct) || 0
       const existing = byProduct.get(pid)
-      if (!existing || price < existing.price) {
-        byProduct.set(pid, { price, pct })
-      }
+      if (!existing || price < existing.price) byProduct.set(pid, { price, pct })
     }
-    for (const c of clicks.filter((c) => new Date(c.clicked_at) >= start7)) {
+    let total = 0
+    for (const c of rows) {
       if (!c.product_id) continue
       const o = byProduct.get(c.product_id)
       if (!o) continue
-      estCommission7d += o.price * (o.pct / 100)
+      total += o.price * (o.pct / 100)
     }
+    return total
   }
 
-  return { last7d, prev7d, byDay, estCommission7d }
+  const [estCommission7d, prevCommission7d] = await Promise.all([commissionFor(last), commissionFor(prev)])
+
+  return { last7d: last.length, prev7d: prev.length, byDay, estCommission7d, prevCommission7d }
 }
 
-async function getActivityFeed(): Promise<
-  Array<{ kind: 'discovery' | 'bulk' | 'manager'; ts: string; title: string; subtitle?: string }>
-> {
+async function getActivityFeed() {
   const [discoveryRes, bulkRes, managerRes] = await Promise.all([
     supabaseAdmin
       .from('discovery_candidates')
@@ -129,7 +127,7 @@ async function getActivityFeed(): Promise<
       .limit(3),
   ])
 
-  type FeedItem = { kind: 'discovery' | 'bulk' | 'manager'; ts: string; title: string; subtitle?: string }
+  type FeedItem = { kind: 'discovery' | 'bulk' | 'manager'; ts: string; title: string; subtitle?: string; tone: 'olive' | 'amber' | 'red' }
   const items: FeedItem[] = []
 
   for (const d of discoveryRes.data ?? []) {
@@ -137,7 +135,8 @@ async function getActivityFeed(): Promise<
       kind: 'discovery',
       ts: d.scraped_at as string,
       title: `Nový kandidát: ${d.suggested_name ?? '(bez názvu)'}`,
-      subtitle: `${d.source_domain ?? '—'} · ${d.status}`,
+      subtitle: `${d.source_domain ?? '—'}`,
+      tone: 'olive',
     })
   }
   for (const b of bulkRes.data ?? []) {
@@ -146,6 +145,7 @@ async function getActivityFeed(): Promise<
       ts: b.created_at as string,
       title: `Bulk job: ${b.type}`,
       subtitle: `${b.total} položek · ${b.status}`,
+      tone: b.status === 'failed' ? 'red' : 'amber',
     })
   }
   for (const m of managerRes.data ?? []) {
@@ -153,6 +153,7 @@ async function getActivityFeed(): Promise<
       kind: 'manager',
       ts: m.generated_at as string,
       title: 'Manager report vygenerován',
+      tone: 'olive',
     })
   }
 
@@ -176,7 +177,7 @@ async function getNeedsAttention() {
   return { drafts, missingTemplates, offersWithoutAffiliate }
 }
 
-function deltaPct(curr: number, prev: number): { value: number; positive: boolean } | null {
+function delta(curr: number, prev: number): { value: number; positive: boolean } | null {
   if (prev === 0 && curr === 0) return null
   if (prev === 0) return { value: 100, positive: true }
   const v = ((curr - prev) / prev) * 100
@@ -192,115 +193,142 @@ export default async function AdminDashboardPage() {
     getNeedsAttention(),
   ])
 
-  const clickDelta = deltaPct(clickStats.last7d, clickStats.prev7d)
+  const clickDelta = delta(clickStats.last7d, clickStats.prev7d)
+  const commissionDelta = delta(clickStats.estCommission7d, clickStats.prevCommission7d)
   const maxBar = Math.max(1, ...clickStats.byDay.map((d) => d.count))
 
-  const cards = [
+  const cards: Array<{
+    label: string
+    value: string
+    delta: ReturnType<typeof delta>
+    sub?: string
+    href: string
+  }> = [
     {
       label: 'Aktivní produkty',
       value: stats.totalProducts.toString(),
+      delta: null,
       sub: `${attention.drafts} v draftu`,
       href: '/admin/products',
     },
     {
-      label: 'Kliky · 7 dní',
+      label: 'Prokliky · 7 dní',
       value: clickStats.last7d.toString(),
-      sub: clickDelta
-        ? `${clickDelta.positive ? '↑' : '↓'} ${clickDelta.value} % vs. předchozí týden`
-        : 'bez srovnání',
       delta: clickDelta,
+      sub: clickDelta ? 'vs minulý týden' : 'bez srovnání',
       href: '/admin/products',
     },
     {
-      label: 'Provize odhad · 7 dní',
+      label: 'Provize (odhad)',
       value: fmtCZK(clickStats.estCommission7d),
-      sub: 'cena × % provize z kliknutých olejů',
+      delta: commissionDelta,
+      sub: commissionDelta ? 'vs minulý týden' : 'cena × % provize',
       href: '/admin/retailers',
     },
     {
       label: 'Prodejci',
       value: retailers.length.toString(),
-      sub: `${attention.missingTemplates.length} bez affiliate šablony`,
+      delta: null,
+      sub: `${attention.missingTemplates.length} bez šablony`,
       href: '/admin/retailers',
     },
   ]
+
+  const today = new Date().toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
   return (
     <div>
       {/* Page header */}
       <div className="flex items-end justify-between mb-8 flex-wrap gap-4">
         <div>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl text-text mb-1.5">
+          <h1 className="font-[family-name:var(--font-display)] text-3xl text-white mb-1.5">
             Přehled
           </h1>
-          <p className="text-[13px] text-text2">
-            {new Date().toLocaleDateString('cs-CZ', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-            <span className="mx-1.5 text-text3">·</span>
+          <p className="text-[13px] text-zinc-500">
+            <span className="capitalize">{today}</span>
+            <span className="mx-1.5 text-zinc-700">·</span>
             posledních 7 dní
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {attention.drafts > 0 && (
+            <Link
+              href="/admin/products?status=draft"
+              className="text-[13px] text-zinc-300 border border-zinc-800 hover:border-zinc-700 bg-zinc-900 hover:bg-zinc-800/50 rounded-md px-3.5 py-2 transition-colors"
+            >
+              Schválit drafty <span className="text-zinc-500">{attention.drafts}</span>
+            </Link>
+          )}
           <Link
-            href="/admin/products?status=draft"
-            className="text-[13px] text-text2 border border-off2 rounded-full px-4 py-2 hover:border-olive/40 hover:text-text transition-colors"
+            href="/admin/products/import"
+            className="inline-flex items-center gap-1.5 text-[13px] text-zinc-200 border border-zinc-700 hover:border-zinc-600 bg-zinc-900 hover:bg-zinc-800 rounded-md px-3.5 py-2 transition-colors"
           >
-            Schválit drafty
-          </Link>
-          <Link
-            href="/admin/products"
-            className="text-[13px] bg-olive text-white rounded-full px-4 py-2 font-medium hover:bg-olive2 transition-colors"
-          >
-            + Přidat produkt
+            <Plus size={14} strokeWidth={2} />
+            Přidat produkt
           </Link>
         </div>
       </div>
 
       {/* Metric cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
         {cards.map((c) => (
           <Link
             key={c.label}
             href={c.href}
-            className="group bg-white border border-off2 rounded-xl p-5 hover:border-olive/40 transition-colors"
+            className="group bg-zinc-900 border border-zinc-800 rounded-xl p-5 hover:border-zinc-700 transition-colors"
           >
             <div className="flex items-start justify-between mb-3">
-              <span className="text-[11px] font-medium tracking-wide text-text3">{c.label}</span>
-              <ArrowUpRight size={14} strokeWidth={1.75} className="text-text3 group-hover:text-olive transition-colors" />
+              <span className="text-[12px] text-zinc-400">{c.label}</span>
+              <ArrowUpRight size={14} strokeWidth={1.75} className="text-zinc-700 group-hover:text-zinc-400 transition-colors" />
             </div>
-            <div className="text-[28px] font-medium text-text tabular-nums tracking-tight leading-none mb-2">
+            <div className="text-[40px] font-medium text-white tabular-nums tracking-tight leading-none mb-3">
               {c.value}
             </div>
-            <div className={`text-[11px] ${c.delta ? (c.delta.positive ? 'text-green-600' : 'text-red-500') : 'text-text3'}`}>
-              {c.sub}
+            <div className="flex items-center gap-1.5 text-[11px]">
+              {c.delta && (
+                <span className={`inline-flex items-center gap-0.5 font-medium ${c.delta.positive ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {c.delta.positive ? <ArrowUp size={10} strokeWidth={2.5} /> : <ArrowDown size={10} strokeWidth={2.5} />}
+                  {c.delta.value} %
+                </span>
+              )}
+              <span className="text-zinc-500">{c.sub}</span>
             </div>
           </Link>
         ))}
       </div>
 
-      {/* Chart + Activity feed */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-3 mb-6">
+      {/* Chart + Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-3 mb-3">
         {/* Click chart */}
-        <div className="bg-white border border-off2 rounded-xl p-5">
-          <div className="flex items-center justify-between mb-5">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+          <div className="flex items-start justify-between mb-6">
             <div>
-              <h2 className="text-[13px] font-medium text-text">Prokliky podle dne</h2>
-              <p className="text-[11px] text-text3 mt-0.5">posledních 7 dní · {clickStats.last7d} celkem</p>
+              <h2 className="text-[14px] font-medium text-white">Prokliky podle dne</h2>
+              <p className="text-[11px] text-zinc-500 mt-0.5">posledních 7 dní · {clickStats.last7d} celkem</p>
             </div>
+            <Link href="/admin/products" className="text-[12px] text-olive3 hover:text-olive-light transition-colors">
+              Detail →
+            </Link>
           </div>
-          <div className="flex items-end gap-2 h-[140px]">
-            {clickStats.byDay.map((d) => {
+          <div className="flex items-end gap-2 h-[160px]">
+            {clickStats.byDay.map((d, i) => {
               const pct = (d.count / maxBar) * 100
+              const isPeak = d.count === maxBar && d.count > 0
               return (
-                <div key={d.date} className="flex-1 flex flex-col items-center gap-1.5">
-                  <div className="flex-1 w-full flex items-end">
+                <div key={d.date} className="flex-1 flex flex-col items-center gap-2">
+                  <div className="flex-1 w-full flex items-end relative">
                     <div
-                      className="w-full bg-olive/80 hover:bg-olive transition-colors rounded-t-sm"
-                      style={{ height: `${pct}%`, minHeight: d.count > 0 ? '2px' : '0' }}
+                      className={`w-full rounded-t-sm transition-colors ${
+                        isPeak ? 'bg-olive3' : 'bg-olive3/30'
+                      }`}
+                      style={{ height: `${pct}%`, minHeight: d.count > 0 ? '3px' : '0' }}
                       title={`${d.date}: ${d.count} kliků`}
                     />
                   </div>
-                  <div className="text-[10px] text-text3 tabular-nums">{fmtDate(d.date)}</div>
-                  <div className="text-[10px] text-text2 tabular-nums font-medium">{d.count}</div>
+                  <div className="text-[10px] text-zinc-500 tabular-nums">{fmtDayShort(d.date)}</div>
+                  <div className={`text-[11px] tabular-nums ${i === clickStats.byDay.length - 1 ? 'text-white font-medium' : 'text-zinc-400'}`}>
+                    {d.count}
+                  </div>
                 </div>
               )
             })}
@@ -308,27 +336,31 @@ export default async function AdminDashboardPage() {
         </div>
 
         {/* Activity feed */}
-        <div className="bg-white border border-off2 rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[13px] font-medium text-text">Aktivita</h2>
-            <span className="text-[11px] text-text3">posledních {activity.length}</span>
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-[14px] font-medium text-white">Aktivita</h2>
+            <Link href="/admin/bulk-jobs" className="text-[12px] text-olive3 hover:text-olive-light transition-colors">
+              Vše →
+            </Link>
           </div>
           {activity.length === 0 ? (
-            <p className="text-[12px] text-text3 italic">Zatím žádná aktivita.</p>
+            <p className="text-[12px] text-zinc-500 italic">Zatím žádná aktivita.</p>
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-4">
               {activity.map((item, i) => {
-                const dotColor =
-                  item.kind === 'discovery' ? 'bg-blue-500' : item.kind === 'bulk' ? 'bg-amber-500' : 'bg-olive'
+                const dot =
+                  item.tone === 'red' ? 'bg-red-500/100' : item.tone === 'amber' ? 'bg-amber-500/100' : 'bg-emerald-500'
                 return (
                   <li key={i} className="flex items-start gap-3">
-                    <span className={`shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 ${dotColor}`} />
+                    <span className={`shrink-0 w-2 h-2 rounded-full mt-1.5 ${dot}`} />
                     <div className="flex-1 min-w-0">
-                      <div className="text-[12px] text-text leading-snug truncate">{item.title}</div>
-                      {item.subtitle && (
-                        <div className="text-[11px] text-text3 truncate">{item.subtitle}</div>
-                      )}
-                      <div className="text-[10px] text-text3 mt-0.5">{fmtRelative(item.ts)}</div>
+                      <div className="text-[13px] text-white font-medium leading-snug">
+                        {item.title}
+                      </div>
+                      <div className="text-[11px] text-zinc-500 mt-0.5">
+                        {item.subtitle ? <>{item.subtitle} · </> : null}
+                        {fmtRelative(item.ts)}
+                      </div>
                     </div>
                   </li>
                 )
@@ -342,46 +374,46 @@ export default async function AdminDashboardPage() {
       {(attention.drafts > 0 ||
         attention.missingTemplates.length > 0 ||
         attention.offersWithoutAffiliate > 0) && (
-        <div className="bg-white border border-off2 rounded-xl p-5 mb-6">
-          <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-3">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-3">
+          <div className="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-3">
             — Vyžaduje pozornost
           </div>
-          <ul className="divide-y divide-off">
+          <ul className="divide-y divide-zinc-800">
             {attention.drafts > 0 && (
-              <li className="py-2.5 flex items-center justify-between">
+              <li className="py-3 flex items-center justify-between">
                 <div>
-                  <div className="text-[13px] text-text">{attention.drafts} produktů v draftu</div>
-                  <div className="text-[11px] text-text3">Schvál nebo zamítni před tím, než se objeví na webu</div>
+                  <div className="text-[13px] text-white">{attention.drafts} produktů v draftu</div>
+                  <div className="text-[11px] text-zinc-500 mt-0.5">Schvál nebo zamítni před tím, než se objeví na webu</div>
                 </div>
-                <Link href="/admin/products?status=draft" className="text-[12px] text-olive hover:text-olive2 font-medium">
+                <Link href="/admin/products?status=draft" className="text-[12px] text-olive3 hover:text-olive-light font-medium transition-colors">
                   Otevřít →
                 </Link>
               </li>
             )}
             {attention.missingTemplates.length > 0 && (
-              <li className="py-2.5 flex items-center justify-between">
+              <li className="py-3 flex items-center justify-between">
                 <div>
-                  <div className="text-[13px] text-text">
+                  <div className="text-[13px] text-white">
                     {attention.missingTemplates.length} prodejců bez affiliate šablony
                   </div>
-                  <div className="text-[11px] text-text3 truncate max-w-[400px]">
+                  <div className="text-[11px] text-zinc-500 mt-0.5 truncate max-w-[480px]">
                     {attention.missingTemplates.map((r: Record<string, unknown>) => r.name as string).join(', ')}
                   </div>
                 </div>
-                <Link href="/admin/retailers" className="text-[12px] text-olive hover:text-olive2 font-medium">
+                <Link href="/admin/retailers" className="text-[12px] text-olive3 hover:text-olive-light font-medium transition-colors">
                   Otevřít →
                 </Link>
               </li>
             )}
             {attention.offersWithoutAffiliate > 0 && (
-              <li className="py-2.5 flex items-center justify-between">
+              <li className="py-3 flex items-center justify-between">
                 <div>
-                  <div className="text-[13px] text-text">
+                  <div className="text-[13px] text-white">
                     {attention.offersWithoutAffiliate} nabídek bez affiliate URL
                   </div>
-                  <div className="text-[11px] text-text3">Bez affiliate URL nedostáváš provizi z prokliku</div>
+                  <div className="text-[11px] text-zinc-500 mt-0.5">Bez affiliate URL nedostáváš provizi z prokliku</div>
                 </div>
-                <Link href="/admin/retailers" className="text-[12px] text-olive hover:text-olive2 font-medium">
+                <Link href="/admin/retailers" className="text-[12px] text-olive3 hover:text-olive-light font-medium transition-colors">
                   Opravit →
                 </Link>
               </li>
@@ -391,26 +423,26 @@ export default async function AdminDashboardPage() {
       )}
 
       {/* Quick actions */}
-      <div className="bg-white border border-off2 rounded-xl p-5">
-        <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-3">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+        <div className="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-3">
           — Rychlé akce
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
             href="/admin/discovery"
-            className="text-[12px] bg-off text-text2 hover:bg-olive-bg hover:text-olive border border-off2 hover:border-olive/30 rounded-full px-3.5 py-1.5 transition-colors"
+            className="text-[12px] text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 rounded-md px-3.5 py-1.5 transition-colors"
           >
             Discovery návrhy
           </Link>
           <Link
             href="/admin/retailers/new"
-            className="text-[12px] bg-off text-text2 hover:bg-olive-bg hover:text-olive border border-off2 hover:border-olive/30 rounded-full px-3.5 py-1.5 transition-colors"
+            className="text-[12px] text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 rounded-md px-3.5 py-1.5 transition-colors"
           >
             + Nový prodejce
           </Link>
           <Link
             href="/admin/quality"
-            className="text-[12px] bg-off text-text2 hover:bg-olive-bg hover:text-olive border border-off2 hover:border-olive/30 rounded-full px-3.5 py-1.5 transition-colors"
+            className="text-[12px] text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 rounded-md px-3.5 py-1.5 transition-colors"
           >
             Kvalita dat
           </Link>

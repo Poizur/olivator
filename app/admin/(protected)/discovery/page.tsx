@@ -49,11 +49,11 @@ export default async function DiscoveryPage() {
     <div>
       <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">— Discovery</div>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl text-text mb-1">
+          <div className="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-1.5">— Discovery</div>
+          <h1 className="font-[family-name:var(--font-display)] text-3xl text-white mb-1">
             Návrhy nových olejů
           </h1>
-          <p className="text-[13px] text-text2 max-w-[720px]">
+          <p className="text-[13px] text-zinc-400 max-w-[720px]">
             Fronta olejů které agent našel na e-shopech a čekají na tvé schválení.
             Spravuješ je v{' '}
             <Link href="/admin/discovery/sources" className="text-olive hover:underline">
@@ -105,8 +105,8 @@ export default async function DiscoveryPage() {
 
       {rejected.length > 0 && (
         <Section title={`🗑 Zamítnuté — historie (${rejected.length})`} subtle>
-          <details className="bg-white border border-off2 rounded-lg p-4">
-            <summary className="cursor-pointer text-sm text-text2">
+          <details className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+            <summary className="cursor-pointer text-sm text-zinc-400">
               Zobrazit zamítnuté (jen pro audit, bez akce)
             </summary>
             <div className="mt-3 space-y-2">
@@ -117,10 +117,10 @@ export default async function DiscoveryPage() {
       )}
 
       {all.length === 0 && (
-        <div className="bg-white border border-off2 rounded-lg p-8 text-center">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-8 text-center">
           <div className="text-2xl mb-2">🤖</div>
-          <div className="text-sm text-text2 mb-4">Agent ještě nehledal nové oleje.</div>
-          <p className="text-xs text-text3">
+          <div className="text-sm text-zinc-400 mb-4">Agent ještě nehledal nové oleje.</div>
+          <p className="text-xs text-zinc-500">
             Klikni nahoře na <strong>🚀 Najít nové oleje</strong> nebo nastav týdenní automatické
             spouštění v Nastavení.
           </p>
@@ -132,16 +132,16 @@ export default async function DiscoveryPage() {
 
 function Stat({ label, value, color }: { label: string; value: number; color: string }) {
   const colorClasses: Record<string, string> = {
-    text: 'text-text',
-    olive: 'text-olive-dark',
-    terra: 'text-terra',
-    text3: 'text-text3',
-    red: 'text-red-600',
+    text: 'text-white',
+    olive: 'text-emerald-400',
+    terra: 'text-amber-400',
+    text3: 'text-zinc-500',
+    red: 'text-red-400',
   }
   return (
-    <div className="bg-white border border-off2 rounded-lg p-3">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3">
       <div className={`text-2xl font-semibold ${colorClasses[color] ?? ''}`}>{value}</div>
-      <div className="text-[11px] text-text3 mt-0.5">{label}</div>
+      <div className="text-[11px] text-zinc-500 mt-0.5">{label}</div>
     </div>
   )
 }
@@ -159,7 +159,7 @@ function Section({
     <div className="mb-6">
       <h2
         className={`text-sm font-semibold mb-3 ${
-          subtle ? 'text-text2' : 'text-text'
+          subtle ? 'text-zinc-400' : 'text-white'
         }`}
       >
         {title}

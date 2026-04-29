@@ -71,7 +71,7 @@ export function calculateCompleteness(p: Product): CompletenessResult {
 
 /** Tailwind classes for badge color based on weighted percent. */
 export function completenessColor(percent: number): { bg: string; text: string } {
-  if (percent >= 85) return { bg: 'bg-olive-bg', text: 'text-olive-dark' }
-  if (percent >= 60) return { bg: 'bg-amber-50', text: 'text-amber-700' }
-  return { bg: 'bg-red-50', text: 'text-red-700' }
+  if (percent >= 85) return { bg: 'bg-emerald-500/10', text: 'text-emerald-400' }
+  if (percent >= 60) return { bg: 'bg-amber-500/10', text: 'text-amber-400' }
+  return { bg: 'bg-red-500/10', text: 'text-red-400' }
 }

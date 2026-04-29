@@ -40,11 +40,11 @@ export default async function ManagerPage() {
     <div>
       <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">— Obsah</div>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl text-text mb-1">
+          <div className="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-1.5">— Obsah</div>
+          <h1 className="font-[family-name:var(--font-display)] text-3xl text-white mb-1">
             Týdenní reporty
           </h1>
-          <p className="text-[13px] text-text2 max-w-[640px]">
+          <p className="text-[13px] text-zinc-400 max-w-[640px]">
             Manager agent týdně sbírá data napříč zdroji (affiliate kliky, kvalita, discovery,
             completeness), Claude analyzuje a posílá strategický report s konkrétními akcemi.
             Cron pondělí 5:00 UTC po discovery + prospect.
@@ -54,15 +54,15 @@ export default async function ManagerPage() {
       </div>
 
       {reports.length === 0 && (
-        <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-8 text-center">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-8 text-center">
           <div className="text-2xl mb-2">📋</div>
-          <div className="text-sm font-medium text-text mb-1">Zatím žádný report</div>
-          <div className="text-xs text-text3 mb-4">
+          <div className="text-sm font-medium text-white mb-1">Zatím žádný report</div>
+          <div className="text-xs text-zinc-500 mb-4">
             Klikni „Spustit Manager teď" pro první analýzu, nebo počkej na pondělí 5:00 UTC.
           </div>
-          <div className="text-[11px] text-text3 italic mt-4 bg-off rounded-lg px-3 py-2 inline-block">
-            Pokud vidíš tuto zprávu i po spuštění → tabulka <code className="bg-white px-1 rounded">manager_reports</code> možná neexistuje.
-            Aplikuj migraci <code className="bg-white px-1 rounded">supabase/migrations/20260428_manager_reports.sql</code>.
+          <div className="text-[11px] text-zinc-500 italic mt-4 bg-zinc-800/40 rounded-lg px-3 py-2 inline-block">
+            Pokud vidíš tuto zprávu i po spuštění → tabulka <code className="bg-zinc-800 px-1 rounded">manager_reports</code> možná neexistuje.
+            Aplikuj migraci <code className="bg-zinc-800 px-1 rounded">supabase/migrations/20260428_manager_reports.sql</code>.
           </div>
         </div>
       )}

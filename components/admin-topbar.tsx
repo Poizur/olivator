@@ -1,8 +1,9 @@
-// Slim topbar for admin pages. Shows the current section title (derived from
-// path), an "admin only" badge, and the logout button. Sidebar handles
-// navigation, so this is intentionally minimal.
+// Slim dark topbar for admin pages. Search/command palette trigger,
+// settings/notifications icons, avatar.
 
 import { headers } from 'next/headers'
+import { Settings, Bell } from 'lucide-react'
+import { AdminCommandPalette } from './admin-command-palette'
 import { AdminBarLogout } from './admin-bar-logout'
 
 const SECTION_TITLES: Record<string, string> = {
@@ -35,15 +36,33 @@ export async function AdminTopbar() {
   const title = pickTitle(pathname)
 
   return (
-    <div className="h-12 border-b border-off2 bg-white flex items-center justify-between px-6 sticky top-0 z-40">
-      <div className="text-[13px] text-text2">
-        <span className="text-text3">Admin</span>
-        <span className="mx-2 text-off2">/</span>
-        <span className="text-text font-medium">{title}</span>
+    <div className="h-14 border-b border-zinc-800/80 bg-zinc-950 flex items-center gap-3 px-5 sticky top-0 z-40">
+      {/* Search / command palette trigger */}
+      <div className="flex-1 max-w-[640px]">
+        <AdminCommandPalette currentTitle={title} />
       </div>
-      <div className="flex items-center gap-3">
-        <span className="text-[11px] text-text3 hidden md:inline">vidíš jen ty</span>
-        <AdminBarLogout variant="light" />
+
+      <div className="ml-auto flex items-center gap-1.5">
+        <button
+          type="button"
+          aria-label="Nastavení"
+          className="w-9 h-9 rounded-md flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 transition-colors border border-transparent hover:border-zinc-800"
+        >
+          <Settings size={16} strokeWidth={1.75} />
+        </button>
+        <button
+          type="button"
+          aria-label="Notifikace"
+          className="relative w-9 h-9 rounded-md flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 transition-colors border border-transparent hover:border-zinc-800"
+        >
+          <Bell size={16} strokeWidth={1.75} />
+        </button>
+        <div className="w-9 h-9 rounded-full bg-olive3/15 border border-olive3/40 flex items-center justify-center text-[12px] font-semibold text-olive3 ml-1">
+          MN
+        </div>
+        <div className="ml-2">
+          <AdminBarLogout variant="dark-ghost" />
+        </div>
       </div>
     </div>
   )

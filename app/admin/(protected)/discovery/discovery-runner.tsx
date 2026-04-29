@@ -115,12 +115,12 @@ export function DiscoveryRunner() {
 
       {/* Live progress while running */}
       {running && progress && (
-        <div className="text-[12px] bg-olive-bg border border-olive-border rounded-lg px-3 py-2 w-full">
-          <div className="font-semibold text-olive-dark mb-1.5">
+        <div className="text-[12px] bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 w-full">
+          <div className="font-semibold text-emerald-400 mb-1.5">
             Nalezeno {progress.total}{' '}
             {progress.total === 1 ? 'produkt' : progress.total < 5 ? 'produkty' : 'produktů'}
           </div>
-          <div className="grid grid-cols-2 gap-1 text-[11px] text-text2">
+          <div className="grid grid-cols-2 gap-1 text-[11px] text-zinc-400">
             {progress.auto_published > 0 && (
               <div>✅ <strong>{progress.auto_published}</strong> automaticky publikováno</div>
             )}
@@ -131,12 +131,12 @@ export function DiscoveryRunner() {
               <div>⏳ <strong>{progress.needs_review}</strong> ke schválení</div>
             )}
             {progress.failed > 0 && (
-              <div className="text-terra">❌ <strong>{progress.failed}</strong> selhalo</div>
+              <div className="text-amber-400">❌ <strong>{progress.failed}</strong> selhalo</div>
             )}
           </div>
           {progress.recent.length > 0 && (
-            <div className="mt-2 pt-2 border-t border-olive-border/50">
-              <div className="text-[10px] uppercase tracking-wider text-text3 mb-1">Poslední</div>
+            <div className="mt-2 pt-2 border-t border-emerald-500/20/50">
+              <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Poslední</div>
               {progress.recent.slice(0, 3).map((r, i) => (
                 <div key={i} className="text-[11px] truncate">
                   {r.status === 'auto_published' ? '✅' : r.status === 'needs_review' ? '⏳' : '🔗'}{' '}
@@ -149,24 +149,24 @@ export function DiscoveryRunner() {
       )}
 
       {error && (
-        <div className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 w-full">
+        <div className="text-[11px] text-red-400 bg-red-500/100/10 border border-red-500/20 rounded-lg px-3 py-2 w-full">
           ⚠ {error}
         </div>
       )}
 
       {result && (
-        <div className="text-[11px] text-olive-dark bg-olive-bg border border-olive-border rounded-lg px-3 py-2 w-full">
+        <div className="text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2 w-full">
           ✓ Hotovo · {result.shopsCrawled} shopů · {result.totalUrlsFound} URL ·{' '}
           {result.newCandidates} kandidátů · {result.autoPublished} auto · {result.needsReview} k review
           {result.shopErrors.length > 0 && (
-            <div className="text-terra mt-1">
+            <div className="text-amber-400 mt-1">
               ⚠ {result.shopErrors.length} shopů selhalo
             </div>
           )}
           {result.errors && result.errors.length > 0 && (
             <details className="mt-2">
               <summary className="cursor-pointer text-[10px]">Chyby ({result.errors.length})</summary>
-              <ul className="mt-1 text-[10px] text-text3 space-y-0.5">
+              <ul className="mt-1 text-[10px] text-zinc-500 space-y-0.5">
                 {result.errors.slice(0, 5).map((e, i) => (
                   <li key={i} className="truncate">• {e}</li>
                 ))}

@@ -83,11 +83,11 @@ export default async function QualityPage() {
     <div>
       <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">— Discovery</div>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl text-text mb-1">
+          <div className="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-1.5">— Discovery</div>
+          <h1 className="font-[family-name:var(--font-display)] text-3xl text-white mb-1">
             Kvalita dat
           </h1>
-          <p className="text-[13px] text-text2 max-w-[640px]">
+          <p className="text-[13px] text-zinc-400 max-w-[640px]">
             Quality Audit Agent kontroluje produkty proti pravidlům odvozeným z dosavadních
             chyb. Auto-fix opravuje co lze (re-extract acidity, migrate image, recalc Score),
             zbytek je flagovaný k ručnímu review.
@@ -130,8 +130,8 @@ export default async function QualityPage() {
 
       {resolved.length > 0 && (
         <Section title={`✅ Vyřešené (${resolved.length})`} subtle>
-          <details className="bg-white border border-off2 rounded-lg p-4">
-            <summary className="cursor-pointer text-sm text-text2">Zobrazit historii</summary>
+          <details className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+            <summary className="cursor-pointer text-sm text-zinc-400">Zobrazit historii</summary>
             <div className="mt-3 space-y-2">
               {resolved.slice(0, 30).map(i => <IssueRow key={i.id} issue={i} />)}
             </div>
@@ -140,20 +140,20 @@ export default async function QualityPage() {
       )}
 
       {issues.length === 0 && (
-        <div className="bg-white border border-off2 rounded-lg p-8 text-center">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-8 text-center">
           <div className="text-2xl mb-2">🎉</div>
-          <div className="text-sm text-text2 mb-2">
+          <div className="text-sm text-zinc-400 mb-2">
             Žádné nálezy. Klikni <strong>🔍 Spustit audit</strong> pro kontrolu všech produktů.
           </div>
-          <p className="text-xs text-text3">
+          <p className="text-xs text-zinc-500">
             Quality Agent prochází každý produkt proti 10 pravidlům (Score, acidity, popis,
             obrázek, certifikace, …) a flagne issues co potřebují tvou akci.
           </p>
         </div>
       )}
 
-      <div className="mt-12 pt-6 border-t border-off2">
-        <h2 className="text-base font-semibold text-text mb-3">
+      <div className="mt-12 pt-6 border-t border-zinc-800">
+        <h2 className="text-base font-semibold text-white mb-3">
           📚 Aktivní pravidla
         </h2>
         <RulesSummary />
@@ -174,29 +174,29 @@ async function RulesSummary() {
       {(rules ?? []).map(r => (
         <div
           key={r.rule_id}
-          className="bg-white border border-off2 rounded-lg p-3 flex items-start gap-3"
+          className="bg-zinc-900 border border-zinc-800 rounded-lg p-3 flex items-start gap-3"
         >
           <span
             className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded shrink-0 mt-0.5 ${
               r.severity === 'error'
-                ? 'bg-red-100 text-red-700'
+                ? 'bg-red-100 text-red-400'
                 : r.severity === 'warning'
-                ? 'bg-terra-bg text-terra'
-                : 'bg-off text-text2'
+                ? 'bg-amber-500/100/10 text-amber-400'
+                : 'bg-zinc-800/40 text-zinc-400'
             }`}
           >
             {r.severity as string}
           </span>
           <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-medium text-text">
+            <div className="text-[13px] font-medium text-white">
               {r.name as string}
               {r.has_auto_fix && (
-                <span className="ml-2 text-[10px] bg-olive-bg text-olive-dark border border-olive-border rounded px-1.5 py-0.5">
+                <span className="ml-2 text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded px-1.5 py-0.5">
                   AUTO-FIX
                 </span>
               )}
             </div>
-            <div className="text-[11px] text-text3 mt-0.5">{r.description as string}</div>
+            <div className="text-[11px] text-zinc-500 mt-0.5">{r.description as string}</div>
           </div>
         </div>
       ))}
@@ -206,17 +206,17 @@ async function RulesSummary() {
 
 function Stat({ label, value, color }: { label: string; value: number; color: string }) {
   const colorClasses: Record<string, string> = {
-    red: 'text-red-600',
-    terra: 'text-terra',
-    olive: 'text-olive-dark',
-    text: 'text-text',
-    text2: 'text-text2',
-    text3: 'text-text3',
+    red: 'text-red-400',
+    terra: 'text-amber-400',
+    olive: 'text-emerald-400',
+    text: 'text-white',
+    text2: 'text-zinc-400',
+    text3: 'text-zinc-500',
   }
   return (
-    <div className="bg-white border border-off2 rounded-lg p-3">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3">
       <div className={`text-2xl font-semibold ${colorClasses[color] ?? ''}`}>{value}</div>
-      <div className="text-[11px] text-text3 mt-0.5">{label}</div>
+      <div className="text-[11px] text-zinc-500 mt-0.5">{label}</div>
     </div>
   )
 }
@@ -224,7 +224,7 @@ function Stat({ label, value, color }: { label: string; value: number; color: st
 function Section({ title, subtle, children }: { title: string; subtle?: boolean; children: React.ReactNode }) {
   return (
     <div className="mb-6">
-      <h2 className={`text-sm font-semibold mb-3 ${subtle ? 'text-text2' : 'text-text'}`}>
+      <h2 className={`text-sm font-semibold mb-3 ${subtle ? 'text-zinc-400' : 'text-white'}`}>
         {title}
       </h2>
       {children}

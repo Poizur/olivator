@@ -116,11 +116,11 @@ export function ImagePanel({ productId, currentImageUrl, currentSource, ean }: I
   const hasImage = !!currentImageUrl
 
   return (
-    <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-6">
       <div className="flex items-start justify-between mb-4 gap-4">
         <div>
-          <div className="text-sm font-semibold text-text">Produktová fotka</div>
-          <div className="text-xs text-text3 mt-0.5">
+          <div className="text-sm font-semibold text-white">Produktová fotka</div>
+          <div className="text-xs text-zinc-500 mt-0.5">
             {hasImage
               ? `Uloženo ze zdroje: ${currentSource ?? 'neznámý'}`
               : 'Žádná fotka. Nejlepší zdroj: oficiální web značky nebo produktová fotka z Rohlík/Košík. OFF je fallback.'}
@@ -129,17 +129,17 @@ export function ImagePanel({ productId, currentImageUrl, currentSource, ean }: I
       </div>
 
       <div className="flex items-center gap-4 mb-4">
-        <div className="w-32 h-32 bg-off rounded-xl flex items-center justify-center overflow-hidden shrink-0">
+        <div className="w-32 h-32 bg-zinc-800/40 rounded-xl flex items-center justify-center overflow-hidden shrink-0">
           {hasImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={currentImageUrl!} alt="Produkt" className="w-full h-full object-contain" />
           ) : (
-            <span className="font-[family-name:var(--font-display)] text-4xl italic text-text3/40 leading-none">—</span>
+            <span className="font-[family-name:var(--font-display)] text-4xl italic text-zinc-500/40 leading-none">—</span>
           )}
         </div>
-        <div className="flex-1 text-xs text-text3 leading-relaxed">
+        <div className="flex-1 text-xs text-zinc-500 leading-relaxed">
           <div className="mb-1">
-            EAN: <span className="font-mono text-text2">{ean}</span>
+            EAN: <span className="font-mono text-zinc-400">{ean}</span>
           </div>
           {hasImage && (
             <a
@@ -157,9 +157,9 @@ export function ImagePanel({ productId, currentImageUrl, currentSource, ean }: I
       {/* Two input paths */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Manual URL — primary CTA since it gives best quality */}
-        <div className="bg-olive-bg/40 border border-olive-border rounded-lg p-3">
-          <div className="text-xs font-medium text-text mb-1">Ručně z URL (doporučeno)</div>
-          <div className="text-[11px] text-text3 mb-2 leading-relaxed">
+        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3">
+          <div className="text-xs font-medium text-white mb-1">Ručně z URL (doporučeno)</div>
+          <div className="text-[11px] text-zinc-500 mb-2 leading-relaxed">
             Nejlepší kvalita — z webu značky nebo eshopu. Pravým klikem na fotku → zkopíruj URL obrázku.
           </div>
           <div className="flex gap-2">
@@ -168,7 +168,7 @@ export function ImagePanel({ productId, currentImageUrl, currentSource, ean }: I
               value={manualUrl}
               onChange={e => setManualUrl(e.target.value)}
               placeholder="https://..."
-              className="flex-1 px-2.5 py-1.5 border border-off2 rounded text-xs focus:outline-none focus:border-olive"
+              className="flex-1 px-2.5 py-1.5 border border-zinc-800 rounded text-xs focus:outline-none focus:border-olive"
             />
             <button
               type="button"
@@ -182,9 +182,9 @@ export function ImagePanel({ productId, currentImageUrl, currentSource, ean }: I
         </div>
 
         {/* OFF — secondary, with preview */}
-        <div className="bg-off rounded-lg p-3">
-          <div className="text-xs font-medium text-text mb-1">📦 Z Open Food Facts (fallback)</div>
-          <div className="text-[11px] text-text3 mb-2 leading-relaxed">
+        <div className="bg-zinc-800/40 rounded-lg p-3">
+          <div className="text-xs font-medium text-white mb-1">📦 Z Open Food Facts (fallback)</div>
+          <div className="text-[11px] text-zinc-500 mb-2 leading-relaxed">
             14k+ olejů v databázi, ale kvalita fotek kolísá (user-uploaded).
           </div>
 
@@ -193,16 +193,16 @@ export function ImagePanel({ productId, currentImageUrl, currentSource, ean }: I
               type="button"
               onClick={onPreviewOFF}
               disabled={loading}
-              className="bg-white border border-off2 rounded-full px-3 py-1.5 text-[12px] font-medium hover:border-olive-light hover:text-olive transition-colors"
+              className="bg-zinc-900 border border-zinc-800 rounded-full px-3 py-1.5 text-[12px] font-medium hover:border-olive3 hover:text-olive transition-colors"
             >
               🔍 Zobrazit náhled
             </button>
           )}
           {preview.kind === 'loading' && (
-            <div className="text-[12px] text-text3">Načítám náhled...</div>
+            <div className="text-[12px] text-zinc-500">Načítám náhled...</div>
           )}
           {preview.kind === 'none' && (
-            <div className="text-[12px] text-terra">
+            <div className="text-[12px] text-amber-400">
               OFF nemá fotku pro tento EAN. Použij ruční URL nebo jiný zdroj.
               <button
                 onClick={() => setPreview({ kind: 'idle' })}
@@ -213,7 +213,7 @@ export function ImagePanel({ productId, currentImageUrl, currentSource, ean }: I
             </div>
           )}
           {preview.kind === 'err' && (
-            <div className="text-[12px] text-red-600">
+            <div className="text-[12px] text-red-400">
               Chyba: {preview.reason}
               <button
                 onClick={() => setPreview({ kind: 'idle' })}
@@ -225,7 +225,7 @@ export function ImagePanel({ productId, currentImageUrl, currentSource, ean }: I
           )}
           {preview.kind === 'preview' && (
             <div>
-              <div className="w-full h-32 bg-white rounded border border-off2 mb-2 flex items-center justify-center overflow-hidden">
+              <div className="w-full h-32 bg-zinc-900 rounded border border-zinc-800 mb-2 flex items-center justify-center overflow-hidden">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={preview.url} alt="Náhled OFF" className="max-w-full max-h-full object-contain" />
               </div>
@@ -241,7 +241,7 @@ export function ImagePanel({ productId, currentImageUrl, currentSource, ean }: I
                 <button
                   type="button"
                   onClick={onRejectPreview}
-                  className="bg-white border border-off2 rounded-full px-3 py-1.5 text-[11px] font-medium hover:border-terra hover:text-terra transition-colors"
+                  className="bg-zinc-900 border border-zinc-800 rounded-full px-3 py-1.5 text-[11px] font-medium hover:border-terra hover:text-amber-400 transition-colors"
                 >
                   ✕ Zamítnout
                 </button>
@@ -257,7 +257,7 @@ export function ImagePanel({ productId, currentImageUrl, currentSource, ean }: I
             type="button"
             onClick={onRemove}
             disabled={loading}
-            className="text-xs text-red-600 hover:underline disabled:opacity-40"
+            className="text-xs text-red-400 hover:underline disabled:opacity-40"
           >
             Smazat fotku
           </button>
@@ -265,12 +265,12 @@ export function ImagePanel({ productId, currentImageUrl, currentSource, ean }: I
       )}
 
       {status && (
-        <div className="mt-3 text-xs text-olive-dark bg-olive-bg border border-olive-border rounded-lg px-3 py-2">
+        <div className="mt-3 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
           ✓ {status}
         </div>
       )}
       {error && (
-        <div className="mt-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+        <div className="mt-3 text-xs text-red-400 bg-red-500/100/10 border border-red-500/20 rounded-lg px-3 py-2">
           ⚠ {error}
         </div>
       )}

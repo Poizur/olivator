@@ -21,13 +21,13 @@ interface Candidate {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  pending: { label: 'Čeká', color: 'bg-off border-off2 text-text2' },
-  needs_review: { label: 'Ke schválení', color: 'bg-terra-bg border-terra/30 text-terra' },
-  auto_published: { label: 'Auto-publikováno', color: 'bg-olive-bg border-olive-border text-olive-dark' },
-  auto_added_offer: { label: 'Nový offer', color: 'bg-olive-bg border-olive-border text-olive-dark' },
-  approved: { label: 'Schváleno', color: 'bg-olive-bg border-olive-border text-olive-dark' },
-  rejected: { label: 'Zamítnuto', color: 'bg-off border-off2 text-text3' },
-  failed: { label: 'Selhalo', color: 'bg-red-50 border-red-200 text-red-700' },
+  pending: { label: 'Čeká', color: 'bg-zinc-800/40 border-zinc-800 text-zinc-400' },
+  needs_review: { label: 'Ke schválení', color: 'bg-amber-500/100/10 border-terra/30 text-amber-400' },
+  auto_published: { label: 'Auto-publikováno', color: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' },
+  auto_added_offer: { label: 'Nový offer', color: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' },
+  approved: { label: 'Schváleno', color: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' },
+  rejected: { label: 'Zamítnuto', color: 'bg-zinc-800/40 border-zinc-800 text-zinc-500' },
+  failed: { label: 'Selhalo', color: 'bg-red-500/10 border-red-500/20 text-red-400' },
 }
 
 export function CandidateRow({ candidate }: { candidate: Candidate }) {
@@ -76,13 +76,13 @@ export function CandidateRow({ candidate }: { candidate: Candidate }) {
   }
 
   return (
-    <div className="bg-white border border-off2 rounded-lg p-3 flex items-start gap-3">
+    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-3 flex items-start gap-3">
       {imageUrl && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={imageUrl}
           alt={name}
-          className="w-16 h-16 object-contain bg-off rounded shrink-0"
+          className="w-16 h-16 object-contain bg-zinc-800/40 rounded shrink-0"
           loading="lazy"
         />
       )}
@@ -92,7 +92,7 @@ export function CandidateRow({ candidate }: { candidate: Candidate }) {
             href={candidate.source_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[14px] font-medium text-text hover:text-olive truncate"
+            className="text-[14px] font-medium text-white hover:text-olive truncate"
           >
             {name}
           </a>
@@ -100,21 +100,21 @@ export function CandidateRow({ candidate }: { candidate: Candidate }) {
             {status.label}
           </span>
         </div>
-        <div className="text-[11px] text-text3 mt-0.5">
+        <div className="text-[11px] text-zinc-500 mt-0.5">
           {candidate.source_domain}
           {price && ` · ${price} Kč`}
           {volumeMl && ` · ${volumeMl} ml`}
           {ean && ` · EAN ${ean}`}
         </div>
         {candidate.reasoning && (
-          <div className="text-[11px] text-text2 mt-1 italic">{candidate.reasoning}</div>
+          <div className="text-[11px] text-zinc-400 mt-1 italic">{candidate.reasoning}</div>
         )}
       </div>
       <div className="flex items-center gap-1 shrink-0">
         {candidate.resulting_product_id && (
           <Link
             href={`/admin/products/${candidate.resulting_product_id}`}
-            className="text-[11px] text-olive hover:text-olive-dark px-2 py-1"
+            className="text-[11px] text-olive hover:text-emerald-400 px-2 py-1"
             title="Otevřít produkt"
           >
             Otevřít →
@@ -134,7 +134,7 @@ export function CandidateRow({ candidate }: { candidate: Candidate }) {
               type="button"
               onClick={reject}
               disabled={busy !== null}
-              className="text-text3 hover:text-terra px-2 py-1 text-[11px]"
+              className="text-zinc-500 hover:text-amber-400 px-2 py-1 text-[11px]"
               title="Zamítnout"
             >
               ✕
@@ -156,7 +156,7 @@ export function CandidateRow({ candidate }: { candidate: Candidate }) {
               type="button"
               onClick={reject}
               disabled={busy !== null}
-              className="text-text3 hover:text-terra px-2 py-1 text-[11px]"
+              className="text-zinc-500 hover:text-amber-400 px-2 py-1 text-[11px]"
               title="Zamítnout — neukazuje se v aktivní queue, zůstane v historii"
             >
               ✕
@@ -165,7 +165,7 @@ export function CandidateRow({ candidate }: { candidate: Candidate }) {
         )}
       </div>
       {error && (
-        <span className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
+        <span className="text-[11px] text-red-400 bg-red-500/100/10 border border-red-500/20 rounded px-2 py-1">
           ⚠ {error}
         </span>
       )}

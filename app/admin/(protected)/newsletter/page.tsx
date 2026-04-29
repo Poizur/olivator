@@ -42,23 +42,23 @@ export default async function NewsletterAdminPage() {
   return (
     <div>
       <div className="mb-6">
-        <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">— Obsah</div>
-        <h1 className="font-[family-name:var(--font-display)] text-3xl text-text mb-1">
+        <div className="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-1.5">— Obsah</div>
+        <h1 className="font-[family-name:var(--font-display)] text-3xl text-white mb-1">
           Newsletter
         </h1>
-        <p className="text-[13px] text-text2 max-w-[640px]">
+        <p className="text-[13px] text-zinc-400 max-w-[640px]">
           Newsletter signups z homepage hero boxu a footeru. Synchronizuji do Resend Audiences,
-          pokud máš nastavený <code className="bg-off rounded px-1 text-[12px]">NEWSLETTER_AUDIENCE_ID</code>.
+          pokud máš nastavený <code className="bg-zinc-800/40 rounded px-1 text-[12px]">NEWSLETTER_AUDIENCE_ID</code>.
         </p>
       </div>
 
       {signups.length === 0 ? (
-        <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-8 text-center">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-8 text-center">
           <div className="text-2xl mb-2">📭</div>
-          <div className="text-sm font-medium text-text mb-1">Zatím žádné přihlášky</div>
-          <div className="text-xs text-text3 mb-4">
+          <div className="text-sm font-medium text-white mb-1">Zatím žádné přihlášky</div>
+          <div className="text-xs text-zinc-500 mb-4">
             Pokud nejsou ani po pár dnech, zkontroluj že migrace
-            <code className="bg-off rounded px-1 mx-1 text-[12px]">20260428_newsletter_signups.sql</code>
+            <code className="bg-zinc-800/40 rounded px-1 mx-1 text-[12px]">20260428_newsletter_signups.sql</code>
             byla aplikována v Supabase.
           </div>
         </div>
@@ -71,33 +71,33 @@ export default async function NewsletterAdminPage() {
             <Stat label="Synchronizováno do Resend" value={synced} />
           </div>
 
-          <div className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] overflow-hidden">
             <table className="w-full text-[13px]">
-              <thead className="bg-off">
+              <thead className="bg-zinc-800/40">
                 <tr>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text3">Email</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text3">Zdroj</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text3">Resend ID</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text3">Stav</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text3">Datum</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Email</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Zdroj</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Resend ID</th>
+                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Stav</th>
+                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Datum</th>
                 </tr>
               </thead>
               <tbody>
                 {signups.map((s) => (
-                  <tr key={s.id} className="border-t border-off">
-                    <td className="px-4 py-2.5 font-mono text-[12px] text-text">{s.email}</td>
-                    <td className="px-4 py-2.5 text-text2">{s.source ?? '—'}</td>
-                    <td className="px-4 py-2.5 font-mono text-[10px] text-text3">{s.resend_contact_id ? s.resend_contact_id.slice(0, 12) + '…' : '—'}</td>
+                  <tr key={s.id} className="border-t border-zinc-800">
+                    <td className="px-4 py-2.5 font-mono text-[12px] text-white">{s.email}</td>
+                    <td className="px-4 py-2.5 text-zinc-400">{s.source ?? '—'}</td>
+                    <td className="px-4 py-2.5 font-mono text-[10px] text-zinc-500">{s.resend_contact_id ? s.resend_contact_id.slice(0, 12) + '…' : '—'}</td>
                     <td className="px-4 py-2.5">
                       {s.unsubscribed ? (
-                        <span className="text-[10px] bg-red-50 text-red-700 border border-red-200 rounded-full px-2 py-0.5 font-medium">odhlášen</span>
+                        <span className="text-[10px] bg-red-500/100/10 text-red-400 border border-red-500/20 rounded-full px-2 py-0.5 font-medium">odhlášen</span>
                       ) : s.confirmed ? (
-                        <span className="text-[10px] bg-olive-bg text-olive-dark border border-olive-border rounded-full px-2 py-0.5 font-medium">aktivní</span>
+                        <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full px-2 py-0.5 font-medium">aktivní</span>
                       ) : (
-                        <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 font-medium">čeká</span>
+                        <span className="text-[10px] bg-amber-500/100/10 text-amber-400 border border-amber-500/20 rounded-full px-2 py-0.5 font-medium">čeká</span>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-right text-[12px] text-text3 tabular-nums">
+                    <td className="px-4 py-2.5 text-right text-[12px] text-zinc-500 tabular-nums">
                       {new Date(s.created_at).toLocaleDateString('cs-CZ', {
                         day: 'numeric',
                         month: 'short',
@@ -117,9 +117,9 @@ export default async function NewsletterAdminPage() {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="bg-off/40 rounded-lg p-3">
-      <div className="text-[10px] uppercase tracking-wider text-text3 mb-1">{label}</div>
-      <div className="text-lg font-semibold text-text tabular-nums">{value}</div>
+    <div className="bg-zinc-900/40 rounded-lg p-3">
+      <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">{label}</div>
+      <div className="text-lg font-semibold text-white tabular-nums">{value}</div>
     </div>
   )
 }

@@ -54,7 +54,7 @@ export function StatusActions({ productId, currentStatus, publicUrl }: StatusAct
   const statusBadge = (() => {
     if (currentStatus === 'active') {
       return (
-        <span className="inline-flex items-center gap-1.5 bg-olive-bg text-olive-dark border border-olive-border rounded-full px-4 py-2.5 text-sm font-medium">
+        <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full px-4 py-2.5 text-sm font-medium">
           <span className="w-2 h-2 rounded-full bg-olive-dark"></span>
           Aktivní na webu
         </span>
@@ -62,14 +62,14 @@ export function StatusActions({ productId, currentStatus, publicUrl }: StatusAct
     }
     if (currentStatus === 'draft') {
       return (
-        <span className="inline-flex items-center gap-1.5 bg-terra-bg text-terra border border-terra/30 rounded-full px-4 py-2.5 text-sm font-medium">
+        <span className="inline-flex items-center gap-1.5 bg-amber-500/100/10 text-amber-400 border border-terra/30 rounded-full px-4 py-2.5 text-sm font-medium">
           <span className="w-2 h-2 rounded-full bg-terra"></span>
           Draft
         </span>
       )
     }
     return (
-      <span className="inline-flex items-center gap-1.5 bg-off border border-off2 text-text2 rounded-full px-4 py-2.5 text-sm font-medium">
+      <span className="inline-flex items-center gap-1.5 bg-zinc-800/40 border border-zinc-800 text-zinc-400 rounded-full px-4 py-2.5 text-sm font-medium">
         <span className="w-2 h-2 rounded-full bg-text3"></span>
         Neaktivní
       </span>
@@ -114,7 +114,7 @@ export function StatusActions({ productId, currentStatus, publicUrl }: StatusAct
             void changeStatus('inactive', 'unpublish')
           }}
           disabled={busy !== null}
-          className="inline-flex items-center gap-2 bg-off border border-off2 text-text2 rounded-full px-4 py-2.5 text-sm font-medium hover:border-terra hover:text-terra disabled:opacity-40 transition-colors"
+          className="inline-flex items-center gap-2 bg-zinc-800/40 border border-zinc-800 text-zinc-400 rounded-full px-4 py-2.5 text-sm font-medium hover:border-terra hover:text-amber-400 disabled:opacity-40 transition-colors"
         >
           {busy === 'unpublish' ? '⏳ Stahuji...' : '○ Stáhnout z webu'}
         </button>
@@ -128,7 +128,7 @@ export function StatusActions({ productId, currentStatus, publicUrl }: StatusAct
         className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition-colors ${
           currentStatus === 'active'
             ? 'bg-olive text-white hover:bg-olive-dark'
-            : 'bg-white border border-off2 text-text2 hover:border-olive-light hover:text-olive'
+            : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:border-olive3 hover:text-olive'
         }`}
         title={currentStatus === 'active' ? 'Otevřít produkt na webu' : 'Náhled (produkt není veřejný)'}
       >
@@ -139,7 +139,7 @@ export function StatusActions({ productId, currentStatus, publicUrl }: StatusAct
       {/* Back to list — same pill style */}
       <Link
         href="/admin/products"
-        className="inline-flex items-center gap-2 bg-white border border-off2 text-text2 rounded-full px-4 py-2.5 text-sm font-medium hover:border-olive-light hover:text-olive transition-colors"
+        className="inline-flex items-center gap-2 bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-full px-4 py-2.5 text-sm font-medium hover:border-olive3 hover:text-olive transition-colors"
         title="Zpět na seznam produktů"
       >
         ← Zpět
@@ -150,14 +150,14 @@ export function StatusActions({ productId, currentStatus, publicUrl }: StatusAct
         type="button"
         onClick={deleteProduct}
         disabled={busy !== null}
-        className="inline-flex items-center gap-2 bg-white border border-off2 text-text3 rounded-full px-4 py-2.5 text-sm font-medium hover:border-red-300 hover:text-red-700 hover:bg-red-50 disabled:opacity-40 transition-colors"
+        className="inline-flex items-center gap-2 bg-zinc-900 border border-zinc-800 text-zinc-500 rounded-full px-4 py-2.5 text-sm font-medium hover:border-red-300 hover:text-red-400 hover:bg-red-500/10 disabled:opacity-40 transition-colors"
         title="Smazat produkt navždy z databáze"
       >
         🗑 Smazat
       </button>
 
       {error && (
-        <span className="text-[11px] text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
+        <span className="text-[11px] text-red-400 bg-red-500/100/10 border border-red-500/20 rounded px-2 py-1">
           ⚠ {error}
         </span>
       )}
