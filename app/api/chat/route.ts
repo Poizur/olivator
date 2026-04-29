@@ -52,9 +52,38 @@ async function getTopProducts(): Promise<ProductContext[]> {
   })
 }
 
+function flavorSummary(fp: Record<string, number>): string {
+  // Pojmenuj nejvýraznější chutě + lehkost. Bez dat → prázdný řetězec.
+  const axes: Array<[keyof typeof labels, number]> = [
+    ['spicy', fp.spicy ?? 0],
+    ['bitter', fp.bitter ?? 0],
+    ['herbal', fp.herbal ?? 0],
+    ['fruity', fp.fruity ?? 0],
+    ['mild', fp.mild ?? 0],
+    ['nutty', fp.nutty ?? 0],
+    ['buttery', fp.buttery ?? 0],
+  ]
+  const labels = {
+    spicy: 'palčivost',
+    bitter: 'hořkost',
+    herbal: 'travnatost',
+    fruity: 'ovocnost',
+    mild: 'jemnost',
+    nutty: 'oříšky',
+    buttery: 'máslovost',
+  } as const
+  if (axes.every(([, v]) => v === 0)) return ''
+  const parts = axes
+    .filter(([, v]) => v >= 40)
+    .map(([k, v]) => `${labels[k]} ${v}`)
+  if (parts.length === 0) return ''
+  return parts.join(', ')
+}
+
 function buildSystemPrompt(products: ProductContext[]): string {
   const catalog = products
     .map((p) => {
+      const flavor = flavorSummary(p.flavorProfile)
       const parts = [
         `• ${p.name} (Score ${p.score}`,
         p.origin ? `, ${p.origin}` : '',
@@ -62,7 +91,7 @@ function buildSystemPrompt(products: ProductContext[]): string {
         p.acidity != null ? `, kyselost ${p.acidity}%` : '',
         p.certifications.length > 0 ? `, ${p.certifications.join('/')}` : '',
         p.price ? `, ${Math.round(p.price)} Kč` : '',
-        p.retailer ? ` u ${p.retailer}` : '',
+        flavor ? ` | chuť: ${flavor}` : '',
         `): /olej/${p.slug}`,
       ]
       return parts.join('')
@@ -72,14 +101,29 @@ function buildSystemPrompt(products: ProductContext[]): string {
   return `Jsi AI Sommelier Olivatoru — největšího srovnávače olivových olejů v ČR.
 Odpovídáš přirozenou češtinou, tón je přátelský ale odborný (jako znalý kamarád, ne obchodník).
 
+JAK INTERPRETOVAT CHUŤOVÝ PROFIL (každá osa 0-100):
+- "palčivost" = pálivost v krku (oleocanthal). VYSOKÁ palčivost = výrazný, ostrý olej. NÍZKÁ = hladký.
+- "hořkost" = hořkost (early harvest, polyfenoly). VYSOKÁ = intenzivní. NÍZKÁ = jemný.
+- "jemnost" = lehkost a hladkost. VYSOKÁ jemnost = lehký, mírný. NÍZKÁ = výrazný.
+- "travnatost", "ovocnost" = aromatika. Vysoká = výrazná vůně.
+- "máslovost", "oříšky" = krémovost a zralost.
+
+KLÍČOVÉ MAPOVÁNÍ uživatelských požadavků:
+- "lehký" → hledej VYSOKOU jemnost (mild ≥ 60) + nízkou palčivost a hořkost
+- "výrazný/intenzivní" → vysoká palčivost a hořkost (≥ 60)
+- "ovocný/svěží" → vysoká ovocnost a travnatost
+- "do salátu" → spíš jemnější (mild 50+), fruity OK, low spicy
+- "na vaření/smažení" → low polyfenoly OK, jemnější profil
+- "polyfenoly/zdravý" → > 400 mg/kg polyfenoly + tolerance hořkosti
+
 PRAVIDLA:
 - Nikdy nevymýšlej produkty — používej POUZE níže uvedený katalog
+- Olivator Score je kvalita CELKEM (kyselost+polyfenoly+certifikace+cena). NENÍ to indikátor lehkosti chuti!
+- Vysoké Score ≠ "lehký olej". Lehkost = jemnost + nízká palčivost.
 - Vždy doporuč MAX 3 produkty s cenami a odkazem
-- Uváděj Olivator Score (číslo 0–100)
-- Pokud se ptají na polyfenoly, kyselost nebo certifikace — odpověz odborně ale srozumitelně
+- Pokud žádný olej v katalogu nesplňuje uživatelův požadavek (např. "lehký do 200 Kč"), řekni to upřímně + nabídni nejbližší
 - Odpověz stručně (max 5–6 vět + seznam doporučení)
-- Affiliate link: /go/[retailer-slug]/[product-slug] — NEpoužívej, odkazuj na /olej/[slug]
-- Pokud otázka není o olivových olejích, přesměruj na katalog: olivator.cz/srovnavac
+- Odkazuj na /olej/[slug], nikdy /go/
 
 AKTUÁLNÍ KATALOG (top ${products.length} olejů dle Score):
 ${catalog}`
