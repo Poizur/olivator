@@ -15,14 +15,18 @@ type NavLink = { href: string; label: string }
 type NavGroup = { label: string; items: NavLink[] }
 type NavEntry = NavLink | NavGroup
 
+// Zjednodušený menu — bez emoji, méně skupin, jen relevantní pro admina
+// na public stránkách (rychlé skoky do nejčastějších sekcí).
 const NAV: NavEntry[] = [
   { href: '/admin', label: 'Přehled' },
   {
     label: 'Katalog',
     items: [
       { href: '/admin/products', label: 'Produkty' },
+      { href: '/admin/regions', label: 'Regiony' },
+      { href: '/admin/brands', label: 'Značky' },
+      { href: '/admin/cultivars', label: 'Odrůdy' },
       { href: '/admin/retailers', label: 'Prodejci' },
-      { href: '/admin/faq', label: 'FAQ' },
     ],
   },
   {
@@ -30,26 +34,17 @@ const NAV: NavEntry[] = [
     items: [
       { href: '/admin/discovery', label: 'Návrhy' },
       { href: '/admin/discovery/sources', label: 'E-shopy' },
-      { href: '/admin/bulk-jobs', label: 'Historie' },
-    ],
-  },
-  {
-    label: 'Kontrola',
-    items: [
       { href: '/admin/quality', label: 'Kvalita' },
-      { href: '/admin/manager', label: '📊 Manager' },
-      { href: '/admin/newsletter', label: '📬 Newsletter' },
     ],
   },
   {
-    label: 'Content',
+    label: 'Obsah',
     items: [
-      { href: '/admin/regions', label: '🌍 Regiony' },
-      { href: '/admin/brands', label: '🫒 Značky' },
-      { href: '/admin/cultivars', label: '🌿 Odrůdy' },
+      { href: '/admin/faq', label: 'FAQ' },
+      { href: '/admin/newsletter', label: 'Newsletter' },
     ],
   },
-  { href: '/admin/nastaveni', label: '⚙ Nastavení' },
+  { href: '/admin/nastaveni', label: 'Nastavení' },
 ]
 
 const isGroup = (e: NavEntry): e is NavGroup => 'items' in e
@@ -64,23 +59,44 @@ function findActive(pathname: string): NavLink | null {
   return matches[0] ?? null
 }
 
+/**
+ * WordPress-style "Upravit tuto stránku" — pro každou public detail stránku
+ * vrátí admin URL kde se obsah upravuje. Klik na to admin pošle rovnou na
+ * správný edit form bez hledání v navigaci.
+ */
 async function getEditLink(pathname: string): Promise<{ href: string; label: string } | null> {
-  // Product detail: /olej/[slug] → admin editor
+  // Product detail: /olej/[slug] → /admin/products/[id]
   const productMatch = pathname.match(/^\/olej\/([^/]+)\/?$/)
   if (productMatch) {
     const slug = productMatch[1]
     const { data } = await supabaseAdmin
       .from('products')
-      .select('id, name')
+      .select('id')
       .eq('slug', slug)
       .maybeSingle()
     if (data?.id) {
-      return {
-        href: `/admin/products/${data.id as string}`,
-        label: '✏ Upravit tento olej',
-      }
+      return { href: `/admin/products/${data.id as string}`, label: 'Upravit olej' }
     }
   }
+
+  // Region detail: /oblast/[slug] → /admin/regions/[slug]
+  const regionMatch = pathname.match(/^\/oblast\/([^/]+)\/?$/)
+  if (regionMatch) {
+    return { href: `/admin/regions/${regionMatch[1]}`, label: 'Upravit oblast' }
+  }
+
+  // Brand detail: /znacka/[slug] → /admin/brands/[slug]
+  const brandMatch = pathname.match(/^\/znacka\/([^/]+)\/?$/)
+  if (brandMatch) {
+    return { href: `/admin/brands/${brandMatch[1]}`, label: 'Upravit značku' }
+  }
+
+  // Cultivar detail: /odruda/[slug] → /admin/cultivars/[slug]
+  const cultivarMatch = pathname.match(/^\/odruda\/([^/]+)\/?$/)
+  if (cultivarMatch) {
+    return { href: `/admin/cultivars/${cultivarMatch[1]}`, label: 'Upravit odrůdu' }
+  }
+
   return null
 }
 
@@ -110,7 +126,7 @@ export async function AdminBar() {
       <div aria-hidden className="h-9" />
       <div className="fixed top-0 left-0 right-0 z-[60] bg-text text-white text-[12px] font-medium border-b border-black/20 shadow-sm">
         <div className="max-w-[1280px] mx-auto px-5 h-9 flex items-center gap-1">
-          <span className="text-[13px] mr-2 shrink-0">🌿 Olivator Admin</span>
+          <span className="text-[13px] mr-2 shrink-0 font-medium">Olivator Admin</span>
           <span className="opacity-30 shrink-0">|</span>
 
           {/* DESKTOP NAV */}
@@ -175,7 +191,7 @@ export async function AdminBar() {
               className={`${baseTab} ${inactiveTab} flex items-center gap-1`}
               title="Otevřít veřejnou homepage"
             >
-              🌐 Zobrazit web
+              Zobrazit web
             </Link>
             {edit && (
               <>
@@ -238,7 +254,7 @@ export async function AdminBar() {
               })}
               <div className="border-t border-white/10 mt-1 pt-1">
                 <Link href="/" className="block px-3 py-1.5 text-[12px] hover:bg-white/10 text-white/90">
-                  🌐 Zobrazit web
+                  Zobrazit web
                 </Link>
                 {edit && (
                   <Link
