@@ -91,6 +91,11 @@ export async function AdminBar() {
   const headersList = await headers()
   const pathname = headersList.get('x-pathname') || headersList.get('next-url') || ''
 
+  // Defense-in-depth: pokud root layout pathname check selhal a vrátil prázdný
+  // řetězec, ale jsme ve skutečnosti na /admin, bail out tady. AdminBar je
+  // pro PUBLIC stránky (Wordpress-style), na adminu má vlastní sidebar.
+  if (pathname.startsWith('/admin')) return null
+
   const active = findActive(pathname)
   const edit = await getEditLink(pathname)
 

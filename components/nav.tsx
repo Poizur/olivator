@@ -16,6 +16,10 @@ export function Nav({ hasAdminBar = false }: { hasAdminBar?: boolean }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
 
+  // Defense-in-depth: Nav je veřejný hlavička, na /admin se nemá zobrazovat.
+  // Pokud root layout pathname check selhal, tady to chytíme klientsky.
+  if (pathname.startsWith('/admin')) return null
+
   return (
     <>
       <nav className={`sticky ${hasAdminBar ? 'top-9' : 'top-0'} z-50 bg-white/88 backdrop-blur-xl border-b border-black/8`}>

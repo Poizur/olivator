@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -32,12 +33,16 @@ function formatReply(text: string) {
 }
 
 export function SommelierChat() {
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Defense-in-depth: floating chat se na /admin nemá zobrazovat
+  if (pathname.startsWith('/admin')) return null
 
   useEffect(() => {
     if (open && messages.length === 0) {

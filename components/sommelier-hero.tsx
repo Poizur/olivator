@@ -241,22 +241,22 @@ export function SommelierHero({
                 </span>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {topPicks.map((p, i) => (
                   <Link
                     key={p.id}
                     href={`/olej/${p.slug}`}
-                    className="flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-3 transition-colors group"
+                    className="flex items-center gap-3 bg-black/15 hover:bg-black/25 border border-white/15 rounded-xl p-3 transition-colors group"
                   >
-                    <div className="text-[11px] font-bold text-white/60 tabular-nums w-4 shrink-0">{i + 1}</div>
-                    <div className="w-12 h-12 shrink-0 bg-white/95 rounded-lg overflow-hidden">
-                      <ProductImage product={p} fallbackSize="text-2xl" sizes="48px" />
+                    <div className="text-[12px] font-bold text-white/85 tabular-nums w-4 shrink-0">{i + 1}</div>
+                    <div className="w-14 h-14 shrink-0 bg-white rounded-lg overflow-hidden">
+                      <ProductImage product={p} fallbackSize="text-2xl" sizes="56px" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[13px] font-semibold leading-tight truncate group-hover:text-olive4 transition-colors">
+                      <div className="text-[13px] font-semibold text-white leading-tight line-clamp-2 group-hover:text-olive4 transition-colors">
                         {p.name}
                       </div>
-                      <div className="text-[11px] text-white/60 truncate">
+                      <div className="text-[11px] text-white/85 truncate mt-0.5">
                         {p.cheapestOffer ? (
                           <span>{countryName(p.originCountry)} · {formatPrice(p.cheapestOffer.price)}</span>
                         ) : (
@@ -264,7 +264,7 @@ export function SommelierHero({
                         )}
                       </div>
                     </div>
-                    <div className="text-[11px] font-bold tabular-nums bg-terra rounded-full px-2 py-0.5 shrink-0">
+                    <div className="text-[11px] font-bold text-white tabular-nums bg-terra rounded-full px-2 py-0.5 shrink-0">
                       {p.olivatorScore}
                     </div>
                   </Link>
@@ -273,7 +273,7 @@ export function SommelierHero({
 
               <Link
                 href="/srovnavac"
-                className="mt-4 block text-center text-[12px] text-white/70 hover:text-white border border-white/20 rounded-lg py-2 transition-colors"
+                className="mt-4 block text-center text-[12px] text-white/85 hover:text-white border border-white/30 rounded-lg py-2 transition-colors"
               >
                 Celý žebříček →
               </Link>

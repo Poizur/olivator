@@ -44,11 +44,11 @@ export default async function Home() {
   const productLookup: Record<string, ProductWithOffer> = {}
   for (const p of allProducts) productLookup[p.slug] = p
 
-  // Top 9 olejů této chvíle (catalog teaser)
-  const topNine = [...allProducts]
+  // Top 12 olejů této chvíle (catalog teaser — 3×4 grid)
+  const topTwelve = [...allProducts]
     .filter((p) => p.cheapestOffer != null)
     .sort((a, b) => b.olivatorScore - a.olivatorScore)
-    .slice(0, 9)
+    .slice(0, 12)
 
   return (
     <>
@@ -62,16 +62,16 @@ export default async function Home() {
         productLookup={productLookup}
       />
 
-      {/* ─── TOP 9 OLEJŮ TÉTO CHVÍLE ─────────────────────────────── */}
+      {/* ─── TOP 12 OLEJŮ TÉTO CHVÍLE ────────────────────────────── */}
       <section className="px-6 md:px-10 py-16">
         <div className="max-w-[1280px] mx-auto">
           <div className="flex items-end justify-between mb-8 flex-wrap gap-4">
             <div>
               <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
-                — Top devítka
+                — Tucet nejlepších
               </div>
               <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text leading-tight">
-                Devět olejů, na které sázíme.
+                Dvanáct olejů, na které sázíme.
               </h2>
               <p className="text-[14px] text-text2 mt-1.5 max-w-[460px]">
                 Nejvyšší Score napříč katalogem. Aktualizováno denně podle nových cen a nově přidaných produktů.
@@ -85,8 +85,8 @@ export default async function Home() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {topNine.map((p, i) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+            {topTwelve.map((p, i) => (
               <TopProductCard key={p.id} product={p} rank={i + 1} />
             ))}
           </div>
@@ -455,42 +455,37 @@ function TopProductCard({ product, rank }: { product: ProductWithOffer; rank: nu
   return (
     <Link
       href={`/olej/${product.slug}`}
-      className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_16px_40px_rgba(0,0,0,0.06)] hover:-translate-y-1 hover:border-olive-light"
+      className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_12px_32px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:border-olive-light"
     >
-      <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+      <div className="px-3 pt-2.5 pb-1 flex items-center justify-between">
         <span className="text-[10px] font-bold tracking-widest uppercase text-text3">
           #{rank}
         </span>
-        <span className="text-[11px] font-bold bg-terra text-white rounded-full px-2.5 py-0.5 tabular-nums">
+        <span className="text-[11px] font-bold bg-terra text-white rounded-full px-2 py-0.5 tabular-nums">
           {product.olivatorScore}
         </span>
       </div>
 
-      <div className="h-44 bg-gradient-to-br from-off to-white relative">
-        <ProductImage product={product} fallbackSize="text-[56px]" sizes="(max-width: 768px) 100vw, 350px" />
+      <div className="h-32 bg-gradient-to-br from-off to-white relative">
+        <ProductImage product={product} fallbackSize="text-[44px]" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px" />
       </div>
 
-      <div className="p-3.5 flex-1 flex flex-col">
-        <div className="text-[10px] text-text3 mb-0.5 uppercase tracking-widest font-medium">
+      <div className="p-3 flex-1 flex flex-col">
+        <div className="text-[9px] text-text3 mb-0.5 uppercase tracking-widest font-medium">
           {countryName(product.originCountry)}
         </div>
-        <div className="text-[13px] font-semibold text-text leading-tight mb-2 line-clamp-2">
+        <div className="text-[12px] font-semibold text-text leading-tight mb-2 line-clamp-2">
           {product.name}
         </div>
 
         {product.cheapestOffer && (
-          <div className="mt-auto flex items-center justify-between pt-2 border-t border-off">
-            <div>
-              <div className="text-sm font-bold text-text">
-                {formatPrice(product.cheapestOffer.price)}
-              </div>
-              <div className="text-[10px] text-text3">
-                {formatPricePer100ml(product.cheapestOffer.price, product.volumeMl)}
-              </div>
+          <div className="mt-auto pt-2 border-t border-off">
+            <div className="text-[13px] font-bold text-text leading-tight">
+              {formatPrice(product.cheapestOffer.price)}
             </div>
-            <span className="text-[11px] text-olive group-hover:text-olive2 font-semibold">
-              Detail →
-            </span>
+            <div className="text-[10px] text-text3">
+              {formatPricePer100ml(product.cheapestOffer.price, product.volumeMl)}
+            </div>
           </div>
         )}
       </div>

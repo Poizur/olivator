@@ -1,14 +1,18 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useCompare } from '@/lib/compare-context'
 import { trackCompareOpen } from '@/lib/analytics'
 
 export function CompareBar() {
+  const pathname = usePathname()
   const { items, removeItem, clearAll } = useCompare()
   const empty = 5 - items.length
 
   if (items.length === 0) return null
+  // Defense-in-depth: compare bar je veřejný UI, na /admin se nezobrazuje
+  if (pathname.startsWith('/admin')) return null
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-off2 px-10 py-3 flex items-center gap-3 z-[2000] shadow-[0_-4px_24px_rgba(0,0,0,.1)] animate-[slideUp_0.3s_ease-out]">
