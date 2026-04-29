@@ -34,6 +34,7 @@ export interface RelatedRecipeCard {
 export interface ProductTableRow {
   slug: string
   name: string
+  imageUrl: string | null        // primární thumbnail (Supabase Storage)
   cultivarLabel: string | null   // "Coratina" nebo "Coratina + Frantoio"
   cultivarSlugs: string[]        // pro přesné filtrování (ne substring na label)
   brandSlug: string | null
@@ -52,7 +53,7 @@ export interface ProductTableRow {
 }
 
 export interface CtaConfig {
-  label: string         // "Spustit quiz"
+  label: string         // "Najít můj olej"
   href: string          // "/quiz"
-  description: string   // "Nevíte který? Quiz vám doporučí za 60 sekund."
+  description: string   // "Nevíte který? Najdeme ho za 60 sekund podle vaší chuti."
 }

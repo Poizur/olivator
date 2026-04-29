@@ -3,7 +3,7 @@ import { getProductsWithOffers } from '@/lib/data'
 import { QuizWizard } from '@/components/quiz-wizard'
 
 export const metadata: Metadata = {
-  title: 'Najdi svůj olej — Quiz | Olivator',
+  title: 'Najdi svůj olej | Olivator',
   description: 'Odpověz na 5 otázek a dostaneš 3 olivové oleje šité přesně na míru tvým preferencím.',
   alternates: { canonical: 'https://olivator.cz/quiz' },
 }

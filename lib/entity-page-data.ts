@@ -116,6 +116,7 @@ export async function loadEntityProducts(productIds: string[]): Promise<ProductT
     return {
       slug: p.slug,
       name: p.name,
+      imageUrl: p.imageUrl ?? null,
       cultivarLabel: cultivars.names.length > 0 ? cultivars.names.join(' + ') : null,
       cultivarSlugs: cultivars.slugs,
       brandSlug: meta.brandSlug,

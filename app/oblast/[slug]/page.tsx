@@ -12,7 +12,6 @@ import {
   loadCultivarsByRegion,
   loadBrandsByRegion,
   formatPriceRange,
-  formatHarvest,
 } from '@/lib/entity-page-data'
 
 import { EntityKpiGrid } from '@/components/entity-page/entity-kpi-grid'
@@ -176,7 +175,10 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
       label: 'Nejvyšší skóre',
       value: kpis.topScore != null ? `${kpis.topScore}/100` : '—',
     },
-    { label: 'Sklizeň', value: formatHarvest(kpis.latestHarvest) },
+    {
+      label: 'Průměr polyfenolů',
+      value: kpis.avgPolyphenols != null ? `${kpis.avgPolyphenols} mg/kg` : '—',
+    },
     { label: 'Cenové rozpětí', value: formatPriceRange(kpis.priceRange) },
   ]
 
@@ -256,8 +258,8 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
           {/* Blok 3 — CTA */}
           <EntityCtaStripe
             cta={{
-              description: `Nevíte, který olej z ${region.name} je pro vás? Quiz vám doporučí za 60 sekund.`,
-              label: 'Spustit quiz',
+              description: `Nevíte, který olej z ${region.name} je pro vás? Najdeme ho za 60 sekund podle vaší chuti.`,
+              label: 'Najít můj olej',
               href: '/quiz',
             }}
           />

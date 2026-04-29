@@ -60,7 +60,7 @@ export function Nav({ hasAdminBar = false }: { hasAdminBar?: boolean }) {
               href="/quiz"
               className="hidden sm:block text-[13px] text-text2 hover:text-olive transition-colors whitespace-nowrap"
             >
-              Quiz
+              Najít olej
             </Link>
             <Link
               href="/oblibene"
