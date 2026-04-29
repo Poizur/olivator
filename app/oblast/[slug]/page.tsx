@@ -261,7 +261,9 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
 
           {/* Blok 6 — Unique: Terroir */}
           <RegionTerroir
+            regionSlug={region.slug}
             regionName={region.name}
+            countryCode={region.country_code}
             countryName={country}
             terroir={region.terroir}
             farmPhotos={photos.slice(1, 5).map((p) => ({ url: p.url, alt: p.alt_text }))}
