@@ -57,6 +57,7 @@ export function SommelierHero({
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const resultsEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -136,6 +137,7 @@ export function SommelierHero({
             <div className="relative max-w-[640px]">
               <div className="flex gap-2 items-center bg-white border border-off2 rounded-full pl-5 pr-2 py-2 shadow-[0_4px_24px_rgba(0,0,0,0.04)] focus-within:border-olive focus-within:shadow-[0_4px_24px_rgba(45,106,79,0.12)] transition-all">
                 <input
+                  ref={inputRef}
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -145,9 +147,16 @@ export function SommelierHero({
                   className="flex-1 text-[15px] outline-none placeholder:text-text3 bg-transparent py-2"
                 />
                 <button
-                  onClick={() => send()}
-                  disabled={!input.trim() || loading}
-                  className="bg-olive text-white rounded-full px-5 py-2.5 text-[14px] font-semibold disabled:opacity-40 hover:bg-olive2 transition-colors whitespace-nowrap inline-flex items-center gap-1.5"
+                  onClick={() => {
+                    // Když je input prázdný, focusneme ho místo "rozbitého" disabled stavu
+                    if (!input.trim()) {
+                      inputRef.current?.focus()
+                      return
+                    }
+                    send()
+                  }}
+                  disabled={loading}
+                  className="bg-olive text-white rounded-full px-5 py-2.5 text-[14px] font-semibold hover:bg-olive2 transition-colors whitespace-nowrap inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-wait"
                 >
                   {loading ? '…' : (
                     <>
