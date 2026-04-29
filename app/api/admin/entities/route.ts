@@ -11,16 +11,37 @@ const TABLE: Record<string, string> = {
   cultivar: 'cultivars',
 }
 
-// Per-entity field whitelist — schema differs:
-// - regions: bez story / philosophy / website_url (nejsou tam tyhle sloupce)
-// - brands: má všechno
-// - cultivars: bez country_code / story / philosophy / website_url
-const COMMON_FIELDS = ['name', 'description_long', 'description_short', 'meta_title', 'meta_description', 'focus_keyword', 'status']
+// Per-entity field whitelist — schema differs.
+// Po migraci 20260429_entity_redesign rozšířeno o nová pole pro 8-blokovou
+// kostru (terroir, timeline, flavor_profile, pairing, ...).
+const COMMON_FIELDS = ['name', 'description_long', 'description_short', 'meta_title', 'meta_description', 'focus_keyword', 'status', 'tldr']
 
 const ALLOWED_FIELDS_BY_TYPE: Record<string, Set<string>> = {
-  region: new Set([...COMMON_FIELDS, 'country_code']),
-  brand: new Set([...COMMON_FIELDS, 'country_code', 'story', 'philosophy', 'website_url']),
-  cultivar: new Set([...COMMON_FIELDS]),
+  region: new Set([...COMMON_FIELDS, 'country_code', 'terroir']),
+  brand: new Set([
+    ...COMMON_FIELDS,
+    'country_code',
+    'story',
+    'philosophy',
+    'website_url',
+    'founded_year',
+    'generation',
+    'hectares',
+    'headquarters',
+    'timeline',
+  ]),
+  cultivar: new Set([
+    ...COMMON_FIELDS,
+    'nickname',
+    'intensity_score',
+    'primary_use',
+    'pairing_pros',
+    'pairing_cons',
+    // flavor_profile mění admin přes svůj override — zachováme možnost,
+    // ale auto_filled_at se vyčistí v nastavení (NULL = admin zapsal ručně)
+    'flavor_profile',
+    'auto_filled_at',
+  ]),
 }
 
 export async function PATCH(req: Request) {

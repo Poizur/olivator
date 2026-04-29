@@ -2,13 +2,10 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
 import { EntityEditForm } from '@/components/entity-edit-form'
+import { EntityFaqEditor } from '@/components/entity-faq-editor'
 
 async function getRegion(slug: string) {
-  const { data } = await supabaseAdmin
-    .from('regions')
-    .select('*')
-    .eq('slug', slug)
-    .single()
+  const { data } = await supabaseAdmin.from('regions').select('*').eq('slug', slug).single()
   return data
 }
 
@@ -22,12 +19,25 @@ async function getEntityPhotos(entityId: string) {
   return data ?? []
 }
 
+async function getFaqs(entityId: string) {
+  const { data } = await supabaseAdmin
+    .from('entity_faqs')
+    .select('id, question, answer, sort_order')
+    .eq('entity_type', 'region')
+    .eq('entity_id', entityId)
+    .order('sort_order')
+  return data ?? []
+}
+
 export default async function EditRegionPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const region = await getRegion(slug)
   if (!region) notFound()
 
-  const photos = await getEntityPhotos(region.id)
+  const [photos, faqs] = await Promise.all([
+    getEntityPhotos(region.id),
+    getFaqs(region.id),
+  ])
 
   return (
     <div className="p-8 max-w-3xl">
@@ -61,7 +71,7 @@ export default async function EditRegionPage({ params }: { params: Promise<{ slu
                   </span>
                 )}
                 {p.source_attribution && (
-                  <p className="text-[10px] text-text3 mt-0.5">{p.source_attribution} / Unsplash</p>
+                  <p className="text-[10px] text-text3 mt-0.5">{p.source_attribution}</p>
                 )}
               </div>
             ))}
@@ -78,8 +88,16 @@ export default async function EditRegionPage({ params }: { params: Promise<{ slu
           description_long: region.description_long,
           meta_title: region.meta_title,
           meta_description: region.meta_description,
+          tldr: region.tldr,
+          terroir: region.terroir,
         }}
         publicUrl={`/oblast/${region.slug}`}
+      />
+
+      <EntityFaqEditor
+        entityType="region"
+        entityId={region.id}
+        initialFaqs={faqs}
       />
     </div>
   )

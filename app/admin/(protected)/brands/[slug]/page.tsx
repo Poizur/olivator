@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
 import { EntityEditForm } from '@/components/entity-edit-form'
+import { EntityFaqEditor } from '@/components/entity-faq-editor'
 
 async function getBrand(slug: string) {
   const { data } = await supabaseAdmin
@@ -22,12 +23,25 @@ async function getEntityPhotos(entityId: string) {
   return data ?? []
 }
 
+async function getFaqs(entityId: string) {
+  const { data } = await supabaseAdmin
+    .from('entity_faqs')
+    .select('id, question, answer, sort_order')
+    .eq('entity_type', 'brand')
+    .eq('entity_id', entityId)
+    .order('sort_order')
+  return data ?? []
+}
+
 export default async function EditBrandPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const brand = await getBrand(slug)
   if (!brand) notFound()
 
-  const photos = await getEntityPhotos(brand.id)
+  const [photos, faqs] = await Promise.all([
+    getEntityPhotos(brand.id),
+    getFaqs(brand.id),
+  ])
 
   return (
     <div className="p-8 max-w-3xl">
@@ -77,11 +91,23 @@ export default async function EditBrandPage({ params }: { params: Promise<{ slug
           description_long: brand.description_long,
           meta_title: brand.meta_title,
           meta_description: brand.meta_description,
+          tldr: brand.tldr,
           story: brand.story,
           philosophy: brand.philosophy,
           website_url: brand.website_url,
+          founded_year: brand.founded_year,
+          generation: brand.generation,
+          hectares: brand.hectares,
+          headquarters: brand.headquarters,
+          timeline: brand.timeline,
         }}
         publicUrl={`/znacka/${brand.slug}`}
+      />
+
+      <EntityFaqEditor
+        entityType="brand"
+        entityId={brand.id}
+        initialFaqs={faqs}
       />
     </div>
   )

@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
 import { EntityEditForm } from '@/components/entity-edit-form'
+import { EntityFaqEditor } from '@/components/entity-faq-editor'
 
 async function getCultivar(slug: string) {
   const { data } = await supabaseAdmin
@@ -10,6 +11,16 @@ async function getCultivar(slug: string) {
     .eq('slug', slug)
     .single()
   return data
+}
+
+async function getFaqs(entityId: string) {
+  const { data } = await supabaseAdmin
+    .from('entity_faqs')
+    .select('id, question, answer, sort_order')
+    .eq('entity_type', 'cultivar')
+    .eq('entity_id', entityId)
+    .order('sort_order')
+  return data ?? []
 }
 
 async function getEntityPhotos(entityId: string) {
@@ -35,9 +46,10 @@ export default async function EditCultivarPage({ params }: { params: Promise<{ s
   const cultivar = await getCultivar(slug)
   if (!cultivar) notFound()
 
-  const [photos, productCount] = await Promise.all([
+  const [photos, productCount, faqs] = await Promise.all([
     getEntityPhotos(cultivar.id),
     getCultivarProductCount(slug),
+    getFaqs(cultivar.id),
   ])
 
   return (
@@ -88,8 +100,22 @@ export default async function EditCultivarPage({ params }: { params: Promise<{ s
           description_long: cultivar.description_long,
           meta_title: cultivar.meta_title,
           meta_description: cultivar.meta_description,
+          tldr: cultivar.tldr,
+          nickname: cultivar.nickname,
+          intensity_score: cultivar.intensity_score,
+          primary_use: cultivar.primary_use,
+          pairing_pros: cultivar.pairing_pros,
+          pairing_cons: cultivar.pairing_cons,
+          flavor_profile: cultivar.flavor_profile,
+          auto_filled_at: cultivar.auto_filled_at,
         }}
         publicUrl={`/odruda/${cultivar.slug}`}
+      />
+
+      <EntityFaqEditor
+        entityType="cultivar"
+        entityId={cultivar.id}
+        initialFaqs={faqs}
       />
     </div>
   )
