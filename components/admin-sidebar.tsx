@@ -5,6 +5,8 @@
 import { headers } from 'next/headers'
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
+import { AdminCommandPalette } from './admin-command-palette'
+import { AdminBarLogout } from './admin-bar-logout'
 
 type NavLink = { href: string; label: string; badge?: number; badgeTone?: 'amber' | 'red' | 'olive' }
 type NavSection = { group?: string; items: NavLink[] }
@@ -102,7 +104,7 @@ export async function AdminSidebar() {
   return (
     <aside className="hidden lg:flex w-[240px] shrink-0 bg-off border-r border-off2 flex-col sticky top-0 h-screen text-text2">
       {/* Brand */}
-      <div className="px-5 py-5 border-b border-off2">
+      <div className="px-5 pt-5 pb-3">
         <Link href="/admin" className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-olive-bg border border-olive-border flex items-center justify-center">
             <div className="w-2 h-2 rounded-full bg-olive" />
@@ -116,6 +118,11 @@ export async function AdminSidebar() {
             </div>
           </div>
         </Link>
+      </div>
+
+      {/* Command palette / search */}
+      <div className="px-3 pb-3 border-b border-off2">
+        <AdminCommandPalette />
       </div>
 
       {/* Nav */}
@@ -173,8 +180,8 @@ export async function AdminSidebar() {
         ))}
       </nav>
 
-      {/* Footer link to public site */}
-      <div className="px-2.5 py-3 border-t border-off2">
+      {/* Footer: web + admin profile + logout */}
+      <div className="border-t border-off2 px-2.5 py-3 space-y-0.5">
         <Link
           href="/"
           className="flex items-center justify-between px-2.5 py-1.5 text-[12px] text-text2 hover:text-text transition-colors rounded-md hover:bg-off"
@@ -182,6 +189,13 @@ export async function AdminSidebar() {
           <span>Zobrazit web</span>
           <span className="text-text3">→</span>
         </Link>
+        <div className="flex items-center gap-2.5 px-2.5 py-1.5">
+          <div className="w-7 h-7 rounded-full bg-olive-bg border border-olive-border flex items-center justify-center text-[11px] font-semibold text-olive shrink-0">
+            MN
+          </div>
+          <div className="flex-1 min-w-0 text-[12px] text-text2">Admin</div>
+          <AdminBarLogout variant="dark-ghost" />
+        </div>
       </div>
     </aside>
   )

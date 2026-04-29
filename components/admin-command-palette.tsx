@@ -41,7 +41,7 @@ function normalize(s: string): string {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 }
 
-export function AdminCommandPalette({ currentTitle }: { currentTitle: string }) {
+export function AdminCommandPalette({ currentTitle = '' }: { currentTitle?: string }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -157,8 +157,8 @@ export function AdminCommandPalette({ currentTitle }: { currentTitle: string }) 
         >
           <Search size={14} strokeWidth={1.75} className="text-text3 shrink-0" />
           <span className="flex-1 text-left truncate">
-            Hledat sekce, produkty…
-            <span className="ml-2 text-text3">· {currentTitle}</span>
+            Hledat…
+            {currentTitle && <span className="ml-2 text-text3">· {currentTitle}</span>}
           </span>
           <kbd className="hidden md:inline-flex items-center gap-0.5 text-[10px] font-mono text-text3 bg-off2 border border-off2 rounded px-1.5 py-0.5">
             <span>⌘</span>
@@ -188,7 +188,7 @@ export function AdminCommandPalette({ currentTitle }: { currentTitle: string }) 
 
       {/* Dropdown menu */}
       {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-[80] bg-white border border-off2 rounded-md shadow-2xl overflow-hidden">
+        <div className="absolute left-0 top-[calc(100%+6px)] z-[80] w-[420px] max-w-[calc(100vw-2rem)] bg-white border border-off2 rounded-md shadow-2xl overflow-hidden">
           <div className="max-h-[480px] overflow-y-auto py-2">
             {flatList.length === 0 ? (
               <div className="px-4 py-6 text-center text-[13px] text-text3">
