@@ -4,7 +4,7 @@
 // then updates products.image_url.
 
 import sharp from 'sharp'
-import Anthropic from '@anthropic-ai/sdk'
+import { callClaude, extractText } from './anthropic'
 import { supabaseAdmin } from './supabase'
 
 const OFF_BASE = 'https://world.openfoodfacts.org/api/v2/product'
@@ -18,12 +18,10 @@ export async function generateImageAltText(
   productName: string
 ): Promise<string> {
   const fallback = productName
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return fallback
+  if (!process.env.ANTHROPIC_API_KEY) return fallback
 
-  const client = new Anthropic({ apiKey })
   try {
-    const res = await client.messages.create({
+    const res = await callClaude({
       model: 'claude-haiku-4-5',
       max_tokens: 200,
       system: `Jsi accessibility/SEO copywriter pro e-shop s olivovými oleji.
@@ -45,10 +43,7 @@ Generuješ alt text pro fotografii produktu. Pravidla:
         },
       ],
     })
-    const text = res.content
-      .filter((b) => b.type === 'text')
-      .map((b) => (b as { type: 'text'; text: string }).text)
-      .join('')
+    const text = extractText(res)
       .trim()
       .replace(/^["'„"]+|["'""]+$/g, '')
     if (!text || text.length < 10) return fallback

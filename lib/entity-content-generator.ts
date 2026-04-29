@@ -2,39 +2,19 @@
 // Generates Czech editorial text (600–2000 words depending on entity type).
 // Uses claude-sonnet-4-20250514; all calls have retry with exponential backoff.
 
-import Anthropic from '@anthropic-ai/sdk'
+import { callClaude as callClaudeShared, extractText } from './anthropic'
 import { applyCzechTypographyFixes } from './czech-style'
 
 const MODEL = 'claude-sonnet-4-20250514'
 
-function getClient(): Anthropic {
-  const key = process.env.ANTHROPIC_API_KEY
-  if (!key) throw new Error('ANTHROPIC_API_KEY missing')
-  return new Anthropic({ apiKey: key })
-}
-
 async function callClaude(prompt: string, maxTokens: number): Promise<string> {
-  const client = getClient()
-  for (let i = 0; i < 4; i++) {
-    try {
-      const res = await client.messages.create({
-        model: MODEL,
-        max_tokens: maxTokens,
-        system: ENTITY_SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: prompt }],
-      })
-      const text = res.content.find((b) => b.type === 'text')?.text ?? ''
-      return applyCzechTypographyFixes(text.trim()).fixed
-    } catch (err: unknown) {
-      const status = (err as { status?: number }).status
-      if (status === 529 && i < 3) {
-        await new Promise((r) => setTimeout(r, [5000, 15000, 30000][i]))
-        continue
-      }
-      throw err
-    }
-  }
-  throw new Error('Claude API: max retries exceeded')
+  const res = await callClaudeShared({
+    model: MODEL,
+    max_tokens: maxTokens,
+    system: ENTITY_SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: prompt }],
+  })
+  return applyCzechTypographyFixes(extractText(res).trim()).fixed
 }
 
 const ENTITY_SYSTEM_PROMPT = `Jsi hlavní editor Olivator.cz — největšího srovnávače olivových olejů v ČR.

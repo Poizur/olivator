@@ -275,34 +275,71 @@ export async function publishCandidate(
     .maybeSingle()
   if (!retailer) throw new Error(`Retailer ${retailerSlug} not found`)
 
-  // Create product (status='draft' initially)
-  const { data: created, error: prodErr } = await supabaseAdmin
-    .from('products')
-    .upsert(
-      {
-        ean: scraped.ean || null,
-        name: scraped.name,
-        slug: scraped.slug,
-        name_short: scraped.brand,
-        origin_country: scraped.originCountry,
-        origin_region: scraped.originRegion,
-        type: scraped.type ?? 'evoo',
-        acidity: scraped.acidity,
-        peroxide_value: scraped.peroxideValue,
-        volume_ml: scraped.volumeMl,
-        packaging: scraped.packaging,
-        certifications: detectedCerts,
-        description_short: scraped.descriptionShort,
-        source_url: scraped.url,
-        raw_description: scraped.rawDescription,
-        status: 'draft',
-      },
-      { onConflict: 'slug' }
-    )
-    .select('id')
-    .single()
-  if (prodErr || !created) throw new Error(`Product upsert failed: ${prodErr?.message}`)
-  const productId = created.id as string
+  // Create product (status='draft' initially).
+  // CLAUDE.md BUG-008: EAN je master klíč — pokud máme EAN, upsert na EAN
+  // (zabrání duplicitě když dva e-shopy normalizují název odlišně do jiného
+  // slugu). Bez EAN fallback na slug.
+  const productPayload = {
+    ean: scraped.ean || null,
+    name: scraped.name,
+    slug: scraped.slug,
+    name_short: scraped.brand,
+    origin_country: scraped.originCountry,
+    origin_region: scraped.originRegion,
+    type: scraped.type ?? 'evoo',
+    acidity: scraped.acidity,
+    peroxide_value: scraped.peroxideValue,
+    volume_ml: scraped.volumeMl,
+    packaging: scraped.packaging,
+    certifications: detectedCerts,
+    description_short: scraped.descriptionShort,
+    source_url: scraped.url,
+    raw_description: scraped.rawDescription,
+    status: 'draft',
+  }
+
+  let productId: string
+
+  if (scraped.ean) {
+    // 1) EAN je master — pokud existuje, vrátíme jeho ID místo INSERT.
+    const { data: existing } = await supabaseAdmin
+      .from('products')
+      .select('id')
+      .eq('ean', scraped.ean)
+      .maybeSingle()
+
+    if (existing) {
+      // Update existující řádek (může mít jiný slug z dřívějšího scrape).
+      // Slug NEPŘEPISUJEME — jiné odkazy + admin URL by se rozbily.
+      const { name_short, ...updatable } = productPayload
+      void name_short
+      const { error: updateErr } = await supabaseAdmin
+        .from('products')
+        .update({ ...updatable, slug: undefined })
+        .eq('id', existing.id)
+      if (updateErr) throw new Error(`Product update failed: ${updateErr.message}`)
+      productId = existing.id as string
+    } else {
+      // Nový produkt s EAN — insert
+      const { data: created, error: prodErr } = await supabaseAdmin
+        .from('products')
+        .insert(productPayload)
+        .select('id')
+        .single()
+      if (prodErr || !created) throw new Error(`Product insert failed: ${prodErr?.message}`)
+      productId = created.id as string
+    }
+  } else {
+    // Bez EAN — fallback na slug-based upsert (farm-direct produkty
+    // často nemají EAN, ale ze stejného shopu se opakuje stejný slug)
+    const { data: created, error: prodErr } = await supabaseAdmin
+      .from('products')
+      .upsert(productPayload, { onConflict: 'slug' })
+      .select('id')
+      .single()
+    if (prodErr || !created) throw new Error(`Product upsert failed: ${prodErr?.message}`)
+    productId = created.id as string
+  }
 
   // Create offer
   if (scraped.price) {
@@ -711,6 +748,24 @@ export async function runDiscoveryAgent(): Promise<DiscoveryRunResult> {
   const crawlResults = await crawlShops(enabledShops)
   result.shopsCrawled = crawlResults.length
 
+  // HOIST: dedup query běží JEN JEDNOU pro celý běh, ne per-shop.
+  // Dříve jsme ji volali uvnitř for (cr of crawlResults) — 5 shopů × 2 dotazy
+  // = 10 zbytečných round-tripů. S rostoucí DB to byl perf killer.
+  const { data: existingOffers } = await supabaseAdmin
+    .from('product_offers')
+    .select('product_url')
+  const offerUrls = new Set((existingOffers ?? []).map(o => o.product_url as string))
+
+  const { data: existingCandidates } = await supabaseAdmin
+    .from('discovery_candidates')
+    .select('source_url, status')
+  const candidateUrls = new Set(
+    (existingCandidates ?? [])
+      .filter(c => c.status !== 'failed')
+      .map(c => c.source_url as string)
+  )
+  const seenUrls = new Set([...offerUrls, ...candidateUrls])
+
   for (const cr of crawlResults) {
     if (cr.error) {
       result.shopErrors.push({ shop: cr.shopSlug, error: cr.error })
@@ -718,26 +773,7 @@ export async function runDiscoveryAgent(): Promise<DiscoveryRunResult> {
     }
     result.totalUrlsFound += cr.urls.length
 
-    // Dedup: skip URLs already seen
-    //   - As existing offer (already linked to product)
-    //   - As candidate in queue (pending / auto_published / etc.) UNLESS it
-    //     was rejected or failed long ago (allow retry of failed)
-    const { data: existingOffers } = await supabaseAdmin
-      .from('product_offers')
-      .select('product_url')
-    const offerUrls = new Set((existingOffers ?? []).map(o => o.product_url as string))
-
-    const { data: existingCandidates } = await supabaseAdmin
-      .from('discovery_candidates')
-      .select('source_url, status')
-    const candidateUrls = new Set(
-      (existingCandidates ?? [])
-        // Allow re-processing only if previously failed (transient errors should retry)
-        .filter(c => c.status !== 'failed')
-        .map(c => c.source_url as string)
-    )
-
-    const seenUrls = new Set([...offerUrls, ...candidateUrls])
+    // Dedup: skip URLs already seen (hoistnuto před lock)
     const newUrls = cr.urls.filter(u => !seenUrls.has(u))
 
     let processedFromShop = 0

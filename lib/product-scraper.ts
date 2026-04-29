@@ -430,8 +430,64 @@ function dedupeImages(images: ScrapedImage[]): ScrapedImage[] {
   return out
 }
 
+/**
+ * SSRF guard — odmítá URL, které by skraper mohl použít k oslovení interních
+ * služeb (cloud metadata service, lokální DB, internal mikroservices).
+ * Blokuje:
+ * - non-http(s) schémata (file:, ftp:, gopher:, ...)
+ * - hostname ve formě IP adresy v privátních / loopback / link-local rozsazích
+ * - hostname v internal TLD (.local, .internal, .arpa)
+ *
+ * Pozn: defense-in-depth. Pokud by hostname rezolvoval na privátní IP teprve
+ * při DNS lookupu, fetch by tam šel — ale to by chtělo dotaz na DNS přímo.
+ * Tady chytíme alespoň literal IP.
+ */
+function isPublicUrl(rawUrl: string): { ok: true } | { ok: false; reason: string } {
+  let parsed: URL
+  try {
+    parsed = new URL(rawUrl)
+  } catch {
+    return { ok: false, reason: 'malformed URL' }
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return { ok: false, reason: `bad protocol ${parsed.protocol}` }
+  }
+  const host = parsed.hostname.toLowerCase()
+  // Internal TLDs
+  if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal') || host.endsWith('.arpa')) {
+    return { ok: false, reason: `internal hostname ${host}` }
+  }
+  // Literal IPv4
+  const ipv4 = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  if (ipv4) {
+    const [a, b] = ipv4.slice(1).map(Number)
+    // 10.0.0.0/8
+    if (a === 10) return { ok: false, reason: 'private IPv4 (10.x)' }
+    // 127.0.0.0/8 (loopback)
+    if (a === 127) return { ok: false, reason: 'loopback IPv4' }
+    // 169.254.0.0/16 (link-local + AWS metadata 169.254.169.254)
+    if (a === 169 && b === 254) return { ok: false, reason: 'link-local IPv4' }
+    // 172.16.0.0/12
+    if (a === 172 && b >= 16 && b <= 31) return { ok: false, reason: 'private IPv4 (172.16-31)' }
+    // 192.168.0.0/16
+    if (a === 192 && b === 168) return { ok: false, reason: 'private IPv4 (192.168)' }
+    // 0.0.0.0/8 a 100.64.0.0/10 (CGNAT)
+    if (a === 0) return { ok: false, reason: '0.x IPv4' }
+    if (a === 100 && b >= 64 && b <= 127) return { ok: false, reason: 'CGNAT IPv4' }
+  }
+  // IPv6 loopback / link-local — basic check
+  if (host === '::1' || host.startsWith('fe80:') || host.startsWith('fc') || host.startsWith('fd')) {
+    return { ok: false, reason: 'private/loopback IPv6' }
+  }
+  return { ok: true }
+}
+
 /** Main entrypoint. Fetches the URL and extracts as much as possible. */
 export async function scrapeProductPage(url: string): Promise<ScrapedProduct> {
+  const guard = isPublicUrl(url)
+  if (!guard.ok) {
+    throw new Error(`SSRF guard: ${guard.reason}`)
+  }
   const res = await fetch(url, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (compatible; Olivator/1.0; +https://olivator.cz)',
@@ -440,7 +496,20 @@ export async function scrapeProductPage(url: string): Promise<ScrapedProduct> {
     signal: AbortSignal.timeout(15_000),
   })
   if (!res.ok) throw new Error(`Fetch failed: HTTP ${res.status}`)
+  // Content-Type check — odmítáme binární přílohy / PDF / images, čekáme HTML
+  const contentType = res.headers.get('content-type') ?? ''
+  if (!contentType.toLowerCase().includes('text/') && !contentType.includes('html')) {
+    throw new Error(`Bad Content-Type: ${contentType}`)
+  }
+  // Velikostní strop — chrání před HTML bombou (100+ MB)
+  const contentLength = Number(res.headers.get('content-length') ?? '0')
+  if (contentLength > 5 * 1024 * 1024) {
+    throw new Error(`Response too large: ${contentLength} B`)
+  }
   const html = await res.text()
+  if (html.length > 5 * 1024 * 1024) {
+    throw new Error(`Response body too large: ${html.length} B`)
+  }
   const $ = cheerio.load(html)
   const domain = extractDomain(url)
 

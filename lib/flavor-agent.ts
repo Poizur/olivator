@@ -2,7 +2,7 @@
 // Reads raw_description + name + structured facts, outputs 7 axes on 0-100 scale.
 // Uses Haiku (cheap, fast). Deterministic low-temperature output.
 
-import Anthropic from '@anthropic-ai/sdk'
+import { callClaude, extractText } from './anthropic'
 
 const MODEL = 'claude-haiku-4-5'
 
@@ -29,12 +29,6 @@ export interface FlavorProfile {
 
 export interface FlavorProfileWithReasoning extends FlavorProfile {
   reasoning: string // 1-2 sentences explaining the call
-}
-
-function getClient(): Anthropic {
-  const key = process.env.ANTHROPIC_API_KEY
-  if (!key) throw new Error('ANTHROPIC_API_KEY missing')
-  return new Anthropic({ apiKey: key })
 }
 
 const SYSTEM_PROMPT = `Jsi senzorický analytik olivových olejů. Z popisu produktu odhadneš 7 chuťových os na stupnici 0-100.
@@ -95,8 +89,6 @@ Vrať POUZE JSON (žádný markdown, žádný text okolo):
 Hodnoty JSOU čísla 0-100 (ne desetinná). Reasoning: 1-2 věty česky.`
 
 export async function estimateFlavorProfile(input: FlavorInput): Promise<FlavorProfileWithReasoning> {
-  const client = getClient()
-
   const lines: string[] = []
   lines.push(`Název: ${input.name}`)
   if (input.type) lines.push(`Typ: ${input.type}`)
@@ -119,48 +111,32 @@ export async function estimateFlavorProfile(input: FlavorInput): Promise<FlavorP
 
   const userContent = lines.join('\n')
 
-  // Retry wrapper for 529 Overloaded (per CLAUDE.md BUG-017)
-  const retries = [5000, 15000, 30000]
-  let lastErr: unknown = null
-  for (let attempt = 0; attempt <= retries.length; attempt++) {
-    try {
-      const res = await client.messages.create({
-        model: MODEL,
-        max_tokens: 512,
-        temperature: 0.2, // lower temp = more consistent estimates
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userContent }],
-      })
-      const text = res.content
-        .filter(b => b.type === 'text')
-        .map(b => (b as { type: 'text'; text: string }).text)
-        .join('')
-      const cleaned = text
-        .replace(/^```(?:json)?\s*/, '')
-        .replace(/\s*```\s*$/, '')
-        .trim()
-      const parsed = JSON.parse(cleaned) as FlavorProfileWithReasoning
+  // Retry pro 529 Overloaded je v callClaude wrapperu (lib/anthropic.ts).
+  const res = await callClaude({
+    model: MODEL,
+    max_tokens: 512,
+    temperature: 0.2, // lower temp = more consistent estimates
+    system: SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: userContent }],
+  })
+  const text = extractText(res)
+  const cleaned = text
+    .replace(/^```(?:json)?\s*/, '')
+    .replace(/\s*```\s*$/, '')
+    .trim()
+  const parsed = JSON.parse(cleaned) as FlavorProfileWithReasoning
 
-      // Validate: all 7 axes present as numbers 0-100
-      const axes = ['fruity', 'herbal', 'bitter', 'spicy', 'mild', 'nutty', 'buttery'] as const
-      for (const axis of axes) {
-        const v = parsed[axis]
-        if (typeof v !== 'number' || v < 0 || v > 100) {
-          throw new Error(`Invalid ${axis}: ${v}`)
-        }
-        // Clamp to integer in case Haiku returned decimals
-        parsed[axis] = Math.round(v)
-      }
-      if (typeof parsed.reasoning !== 'string') parsed.reasoning = ''
-
-      return parsed
-    } catch (err) {
-      lastErr = err
-      const isOverloaded =
-        err instanceof Anthropic.APIError && (err.status === 529 || err.status === 503)
-      if (!isOverloaded || attempt >= retries.length) break
-      await new Promise(r => setTimeout(r, retries[attempt]))
+  // Validate: all 7 axes present as numbers 0-100
+  const axes = ['fruity', 'herbal', 'bitter', 'spicy', 'mild', 'nutty', 'buttery'] as const
+  for (const axis of axes) {
+    const v = parsed[axis]
+    if (typeof v !== 'number' || v < 0 || v > 100) {
+      throw new Error(`Invalid ${axis}: ${v}`)
     }
+    // Clamp to integer in case Haiku returned decimals
+    parsed[axis] = Math.round(v)
   }
-  throw lastErr instanceof Error ? lastErr : new Error('Flavor estimation failed')
+  if (typeof parsed.reasoning !== 'string') parsed.reasoning = ''
+
+  return parsed
 }

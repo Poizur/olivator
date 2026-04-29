@@ -2,17 +2,11 @@
 // Implements the system prompt from CLAUDE.md section 16 with stricter
 // constraints + auto-retry when output is too short.
 
-import Anthropic from '@anthropic-ai/sdk'
+import { callClaude as callClaudeShared, extractText } from './anthropic'
 import { applyCzechTypographyFixes } from './czech-style'
 
 const MODEL = 'claude-sonnet-4-20250514'
 const MIN_LONG_WORDS = 250 // below this we auto-retry once with feedback
-
-function getClient(): Anthropic {
-  const key = process.env.ANTHROPIC_API_KEY
-  if (!key) throw new Error('ANTHROPIC_API_KEY missing')
-  return new Anthropic({ apiKey: key })
-}
 
 const SYSTEM_PROMPT = `Jsi hlavní editor Olivator.cz — největšího srovnávače olivových olejů v ČR.
 Piš přirozenou češtinou, aktivním hlasem, přítomným časem.
@@ -214,50 +208,32 @@ function countWords(text: string): number {
 }
 
 async function callClaude(
-  client: Anthropic,
   input: ContentInput,
   retryFeedback?: string
 ): Promise<ContentOutput> {
-  // Retry wrapper for 529 Overloaded (per CLAUDE.md BUG-017)
-  const retries = [5000, 15000, 30000, 60000]
-  let lastErr: unknown = null
-  for (let attempt = 0; attempt <= retries.length; attempt++) {
-    try {
-      const res = await client.messages.create({
-        model: MODEL,
-        max_tokens: 2048,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: buildUserPrompt(input, retryFeedback) }],
-      })
-      const text = res.content
-        .filter(b => b.type === 'text')
-        .map(b => (b as { type: 'text'; text: string }).text)
-        .join('')
-      const cleaned = text
-        .replace(/^```(?:json)?\s*/, '')
-        .replace(/\s*```\s*$/, '')
-        .trim()
-      const parsed = JSON.parse(cleaned) as ContentOutput
-      if (!parsed.shortDescription || !parsed.longDescription) {
-        throw new Error('Claude vrátil neúplný JSON')
-      }
-      // Apply safe Czech typography autofixes (non-breaking spaces before units, etc.)
-      // These are corrections Claude frequently misses. Applied silently before returning.
-      const shortFix = applyCzechTypographyFixes(parsed.shortDescription)
-      const longFix = applyCzechTypographyFixes(parsed.longDescription)
-      return {
-        shortDescription: shortFix.fixed,
-        longDescription: longFix.fixed,
-      }
-    } catch (err) {
-      lastErr = err
-      const isOverloaded =
-        err instanceof Anthropic.APIError && (err.status === 529 || err.status === 503)
-      if (!isOverloaded || attempt >= retries.length) break
-      await new Promise(r => setTimeout(r, retries[attempt]))
-    }
+  // 529 retry je v callClaudeShared (lib/anthropic.ts)
+  const res = await callClaudeShared({
+    model: MODEL,
+    max_tokens: 2048,
+    system: SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: buildUserPrompt(input, retryFeedback) }],
+  })
+  const text = extractText(res)
+  const cleaned = text
+    .replace(/^```(?:json)?\s*/, '')
+    .replace(/\s*```\s*$/, '')
+    .trim()
+  const parsed = JSON.parse(cleaned) as ContentOutput
+  if (!parsed.shortDescription || !parsed.longDescription) {
+    throw new Error('Claude vrátil neúplný JSON')
   }
-  throw lastErr instanceof Error ? lastErr : new Error('Claude API failed')
+  // Czech typography autofixes (NBSP before units, …)
+  const shortFix = applyCzechTypographyFixes(parsed.shortDescription)
+  const longFix = applyCzechTypographyFixes(parsed.longDescription)
+  return {
+    shortDescription: shortFix.fixed,
+    longDescription: longFix.fixed,
+  }
 }
 
 // Banned phrases Claude refuses to let go of. Detected in output for auto-retry.
@@ -326,7 +302,6 @@ Generuješ meta description pro Google snippet.
 Vrať POUZE jeden řádek meta description, žádný JSON, žádné uvozovky kolem. Žádný úvod ani závěr.`
 
 export async function generateMetaDescription(input: MetaDescriptionInput): Promise<string> {
-  const client = getClient()
   const lines: string[] = [
     `Název: ${input.name}`,
   ]
@@ -340,19 +315,15 @@ export async function generateMetaDescription(input: MetaDescriptionInput): Prom
   if (input.certifications.length > 0) lines.push(`Certifikace: ${input.certifications.join(', ').toUpperCase()}`)
   if (input.olivatorScore != null) lines.push(`Olivator Score: ${input.olivatorScore}/100`)
 
-  const res = await client.messages.create({
+  const res = await callClaudeShared({
     model: 'claude-haiku-4-5',
     max_tokens: 250,
     system: META_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: lines.join('\n') }],
   })
-  const text = res.content
-    .filter((b) => b.type === 'text')
-    .map((b) => (b as { type: 'text'; text: string }).text)
-    .join('')
+  const text = extractText(res)
     .trim()
-    .replace(/^["'„"]+|["'""]+$/g, '') // strip surrounding quotes if model adds them
-  // Apply Czech typography (NBSP after single-letter prepositions, etc.)
+    .replace(/^["'„"]+|["'""]+$/g, '')
   const { fixed } = applyCzechTypographyFixes(text)
   return fixed
 }
@@ -360,10 +331,8 @@ export async function generateMetaDescription(input: MetaDescriptionInput): Prom
 export async function generateProductDescriptions(
   input: ContentInput
 ): Promise<ContentOutput> {
-  const client = getClient()
-
   // First attempt
-  let result = await callClaude(client, input)
+  let result = await callClaude(input)
   let wordCount = countWords(result.longDescription)
   let bannedHits = detectBannedPhrases(
     `${result.shortDescription}\n${result.longDescription}`,
@@ -390,7 +359,7 @@ export async function generateProductDescriptions(
       feedbackParts.push(`Délka: měl jsi ${wordCount} slov, minimum je ${MIN_LONG_WORDS}. Rozveď konkrétními daty, ne vatou.`)
     }
 
-    result = await callClaude(client, input, feedbackParts.join('\n'))
+    result = await callClaude(input, feedbackParts.join('\n'))
     wordCount = countWords(result.longDescription)
     bannedHits = detectBannedPhrases(
       `${result.shortDescription}\n${result.longDescription}`,

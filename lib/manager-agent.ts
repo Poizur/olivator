@@ -7,7 +7,7 @@
 //
 // Cron: pondělí 5:00 UTC (po discovery 4:00 + prospect 4:30).
 
-import Anthropic from '@anthropic-ai/sdk'
+import { callClaude as callClaudeShared, extractText } from './anthropic'
 import { supabaseAdmin } from './supabase'
 import { calculateCompleteness } from './completeness'
 import type { Product } from './types'
@@ -49,12 +49,6 @@ export interface ManagerReport {
   metrics: ManagerMetrics
   aiAnalysis: string
   suggestedActions: SuggestedAction[]
-}
-
-function getClient(): Anthropic {
-  const key = process.env.ANTHROPIC_API_KEY
-  if (!key) throw new Error('ANTHROPIC_API_KEY missing')
-  return new Anthropic({ apiKey: key })
 }
 
 interface AffiliateClickRow {
@@ -271,7 +265,6 @@ async function callClaude(metrics: ManagerMetrics): Promise<{
   aiAnalysis: string
   suggestedActions: SuggestedAction[]
 }> {
-  const client = getClient()
   const userMessage = `Metriky za týden ${metrics.periodStart} až ${metrics.periodEnd}:
 
 KATALOG
@@ -296,17 +289,13 @@ QUALITY
 
 Vrať JSON s ai_analysis (4-6 vět) + 3 actions.`
 
-  const res = await client.messages.create({
+  const res = await callClaudeShared({
     model: MODEL,
     max_tokens: 1500,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: userMessage }],
   })
-  const text = res.content
-    .filter((b) => b.type === 'text')
-    .map((b) => (b as { type: 'text'; text: string }).text)
-    .join('')
-    .trim()
+  const text = extractText(res).trim()
   const cleaned = text.replace(/^```(?:json)?\s*/, '').replace(/\s*```\s*$/, '').trim()
   const parsed = JSON.parse(cleaned) as {
     ai_analysis?: string

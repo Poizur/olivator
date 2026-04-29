@@ -2,7 +2,7 @@
 // Runs once at import time; facts stored in products.extracted_facts JSONB.
 // Used later by content-agent to guarantee specifics appear in AI rewrite.
 
-import Anthropic from '@anthropic-ai/sdk'
+import { callClaude, extractText } from './anthropic'
 
 // Haiku is 5x cheaper than Sonnet, plenty for structured extraction.
 const MODEL = 'claude-haiku-4-5'
@@ -16,12 +16,6 @@ export interface ExtractedFact {
   value: string
   importance: FactImportance
   source: FactSource
-}
-
-function getClient(): Anthropic {
-  const key = process.env.ANTHROPIC_API_KEY
-  if (!key) throw new Error('ANTHROPIC_API_KEY missing')
-  return new Anthropic({ apiKey: key })
 }
 
 const EXTRACTION_SYSTEM = `Jsi extrakční engine pro specifické technické detaily olivových olejů.
@@ -134,10 +128,8 @@ export async function extractFactsFromText(
 ): Promise<ExtractedFact[]> {
   if (!rawText || rawText.trim().length < 30) return []
 
-  const client = getClient()
-
   try {
-    const res = await client.messages.create({
+    const res = await callClaude({
       model: MODEL,
       max_tokens: 1024,
       system: EXTRACTION_SYSTEM,
@@ -149,10 +141,7 @@ export async function extractFactsFromText(
       ],
     })
 
-    const text = res.content
-      .filter(b => b.type === 'text')
-      .map(b => (b as { type: 'text'; text: string }).text)
-      .join('')
+    const text = extractText(res)
 
     const cleaned = text
       .replace(/^```(?:json)?\s*/, '')

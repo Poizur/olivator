@@ -1,24 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { runDiscoveryAgent } from '@/lib/discovery-agent'
 import { sendDiscoverySummary } from '@/lib/email'
+import { checkCronAuth } from '@/lib/cron-auth'
 
 export const maxDuration = 300
 export const dynamic = 'force-dynamic'
 
-/** Cron-triggered discovery run. Authenticated by X-Cron-Secret header
- *  (or ?secret query param) matching CRON_SECRET env. Railway cron service
- *  hits this endpoint on schedule defined in railway.toml or env. */
+/** Cron-triggered discovery run. Auth: x-cron-secret HEADER only
+ *  (žádný query string — logoval by se v CDN/Railway access logs). */
 export async function GET(request: NextRequest) {
-  const secret = process.env.CRON_SECRET
-  if (!secret) {
-    return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 500 })
-  }
-  const provided =
-    request.headers.get('x-cron-secret') ||
-    request.nextUrl.searchParams.get('secret')
-  if (provided !== secret) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authError = checkCronAuth(request)
+  if (authError) return authError
 
   try {
     const result = await runDiscoveryAgent()

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
+import { callClaude, extractText } from '@/lib/anthropic'
 import { supabaseAdmin } from '@/lib/supabase'
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 const MODEL = 'claude-haiku-4-5-20251001'
 
 interface ProductContext {
@@ -102,16 +101,14 @@ export async function POST(req: NextRequest) {
     const products = await getTopProducts()
     const systemPrompt = buildSystemPrompt(products)
 
-    const response = await anthropic.messages.create({
+    const response = await callClaude({
       model: MODEL,
       max_tokens: 600,
       system: systemPrompt,
       messages: history,
     })
 
-    const text =
-      response.content[0]?.type === 'text' ? response.content[0].text : ''
-
+    const text = extractText(response)
     return NextResponse.json({ reply: text })
   } catch (err) {
     console.error('[chat] error', err)
