@@ -47,6 +47,7 @@ export function AdminCommandPalette({ currentTitle }: { currentTitle: string }) 
   const [query, setQuery] = useState('')
   const [products, setProducts] = useState<ProductHit[]>([])
   const [highlight, setHighlight] = useState(0)
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Open on ⌘K / Ctrl+K
@@ -62,6 +63,19 @@ export function AdminCommandPalette({ currentTitle }: { currentTitle: string }) 
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  // Click outside to close
+  useEffect(() => {
+    if (!open) return
+    function onClick(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [open])
+
+  // Focus input when open
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 30)
     if (!open) {
@@ -133,111 +147,103 @@ export function AdminCommandPalette({ currentTitle }: { currentTitle: string }) 
   }
 
   return (
-    <>
-      {/* Trigger — looks like a search input in the topbar */}
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="w-full flex items-center gap-3 h-9 px-3 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-md text-[13px] text-zinc-500 hover:text-zinc-300 transition-colors"
-      >
-        <Search size={14} strokeWidth={1.75} className="text-zinc-500 shrink-0" />
-        <span className="flex-1 text-left truncate">
-          Hledat produkty, sekce…
-          <span className="ml-2 text-zinc-600">· {currentTitle}</span>
-        </span>
-        <kbd className="hidden md:inline-flex items-center gap-0.5 text-[10px] font-mono text-zinc-500 bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5">
-          <span>⌘</span>
-          <span>K</span>
-        </kbd>
-      </button>
-
-      {/* Modal */}
-      {open && (
-        <>
-          <div
-            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
-            onClick={() => setOpen(false)}
+    <div ref={wrapperRef} className="relative w-full">
+      {/* Trigger / collapsed state */}
+      {!open ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="w-full flex items-center gap-3 h-9 px-3 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-md text-[13px] text-zinc-500 hover:text-zinc-300 transition-colors"
+        >
+          <Search size={14} strokeWidth={1.75} className="text-zinc-500 shrink-0" />
+          <span className="flex-1 text-left truncate">
+            Hledat sekce, produkty…
+            <span className="ml-2 text-zinc-600">· {currentTitle}</span>
+          </span>
+          <kbd className="hidden md:inline-flex items-center gap-0.5 text-[10px] font-mono text-zinc-500 bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5">
+            <span>⌘</span>
+            <span>K</span>
+          </kbd>
+        </button>
+      ) : (
+        <div className="w-full flex items-center gap-3 h-9 px-3 bg-zinc-900 border border-zinc-700 rounded-md text-[13px] focus-within:border-olive3/50">
+          <Search size={14} strokeWidth={1.75} className="text-zinc-500 shrink-0" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              setHighlight(0)
+            }}
+            onKeyDown={onListKey}
+            placeholder="Napiš co hledáš…"
+            className="flex-1 bg-transparent outline-none text-white placeholder:text-zinc-500"
           />
-          <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4 pointer-events-none">
-            <div className="pointer-events-auto w-full max-w-[600px] bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden">
-              {/* Input */}
-              <div className="flex items-center gap-3 px-4 h-12 border-b border-zinc-800">
-                <Search size={16} strokeWidth={1.75} className="text-zinc-500 shrink-0" />
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={query}
-                  onChange={(e) => {
-                    setQuery(e.target.value)
-                    setHighlight(0)
-                  }}
-                  onKeyDown={onListKey}
-                  placeholder="Hledat produkty, sekce, nastavení…"
-                  className="flex-1 bg-transparent outline-none text-[14px] text-white placeholder:text-zinc-500"
-                />
-                <kbd className="text-[10px] font-mono text-zinc-500 bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5">
-                  Esc
-                </kbd>
-              </div>
-
-              {/* Results */}
-              <div className="max-h-[420px] overflow-y-auto py-2">
-                {flatList.length === 0 ? (
-                  <div className="px-4 py-6 text-center text-[13px] text-zinc-500">
-                    Žádné výsledky pro „{query}"
-                  </div>
-                ) : (
-                  Object.entries(grouped).map(([groupName, items]) => (
-                    <div key={groupName} className="mb-2 last:mb-0">
-                      <div className="text-[10px] font-semibold tracking-widest uppercase text-zinc-500 px-4 py-1">
-                        {groupName}
-                      </div>
-                      {items.map((item) => {
-                        const flatIndex = flatList.indexOf(item)
-                        const isActive = flatIndex === highlight
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onMouseEnter={() => setHighlight(flatIndex)}
-                            onClick={() => navigate(item.href)}
-                            className={`w-full flex items-center justify-between px-4 py-2 text-[13px] text-left transition-colors ${
-                              isActive
-                                ? 'bg-white/5 text-white'
-                                : 'text-zinc-300 hover:bg-white/5'
-                            }`}
-                          >
-                            <span className="truncate">{item.label}</span>
-                            {isActive && (
-                              <span className="text-[11px] text-zinc-500 ml-3 shrink-0">↵</span>
-                            )}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Footer hint */}
-              <div className="border-t border-zinc-800 px-4 py-2 flex items-center gap-4 text-[10px] text-zinc-500">
-                <span className="flex items-center gap-1">
-                  <kbd className="bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5">↑↓</kbd>
-                  navigovat
-                </span>
-                <span className="flex items-center gap-1">
-                  <kbd className="bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5">↵</kbd>
-                  otevřít
-                </span>
-                <span className="flex items-center gap-1">
-                  <kbd className="bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5">esc</kbd>
-                  zavřít
-                </span>
-              </div>
-            </div>
-          </div>
-        </>
+          <kbd className="text-[10px] font-mono text-zinc-500 bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5">
+            esc
+          </kbd>
+        </div>
       )}
-    </>
+
+      {/* Dropdown menu */}
+      {open && (
+        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-[80] bg-zinc-900 border border-zinc-800 rounded-md shadow-2xl overflow-hidden">
+          <div className="max-h-[480px] overflow-y-auto py-2">
+            {flatList.length === 0 ? (
+              <div className="px-4 py-6 text-center text-[13px] text-zinc-500">
+                Žádné výsledky pro „{query}"
+              </div>
+            ) : (
+              Object.entries(grouped).map(([groupName, items]) => (
+                <div key={groupName} className="mb-1.5 last:mb-0">
+                  <div className="text-[10px] font-semibold tracking-widest uppercase text-zinc-500 px-3 py-1">
+                    {groupName}
+                  </div>
+                  {items.map((item) => {
+                    const flatIndex = flatList.indexOf(item)
+                    const isActive = flatIndex === highlight
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onMouseEnter={() => setHighlight(flatIndex)}
+                        onClick={() => navigate(item.href)}
+                        className={`w-full flex items-center justify-between px-3 py-1.5 text-[13px] text-left transition-colors ${
+                          isActive
+                            ? 'bg-white/5 text-white'
+                            : 'text-zinc-300 hover:bg-white/5'
+                        }`}
+                      >
+                        <span className="truncate">{item.label}</span>
+                        {isActive && (
+                          <span className="text-[11px] text-zinc-500 ml-3 shrink-0">↵</span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Footer hint */}
+          <div className="border-t border-zinc-800 px-3 py-1.5 flex items-center gap-3 text-[10px] text-zinc-500">
+            <span className="flex items-center gap-1">
+              <kbd className="bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5">↑↓</kbd>
+              navigovat
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5">↵</kbd>
+              otevřít
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5">esc</kbd>
+              zavřít
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
