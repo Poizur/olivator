@@ -233,7 +233,7 @@ export function SommelierHero({
 
           {/* RIGHT: Top 3 této chvíle */}
           <aside className="lg:sticky lg:top-20">
-            <div className="bg-gradient-to-br from-olive-dark to-olive2 rounded-[var(--radius-card)] p-6 text-white">
+            <div className="bg-olive-dark rounded-[var(--radius-card)] p-6 text-white">
               <div className="flex items-center gap-1.5 mb-5">
                 <Trophy size={14} strokeWidth={1.75} className="text-white/80" />
                 <span className="text-[10px] font-bold tracking-widest uppercase text-white/80">

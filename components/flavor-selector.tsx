@@ -152,7 +152,7 @@ export function FlavorSelector({ totalProducts }: { totalProducts: number }) {
           </div>
 
           {/* Live result */}
-          <div className="bg-gradient-to-br from-olive-dark to-olive2 rounded-[var(--radius-card)] p-8 text-white flex flex-col justify-center">
+          <div className="bg-olive-dark rounded-[var(--radius-card)] p-8 text-white flex flex-col justify-center">
             <div className="text-[10px] font-bold tracking-widest uppercase text-white/70 mb-3">
               {loading ? 'Hledám…' : 'Tvému profilu odpovídá'}
             </div>
@@ -172,7 +172,7 @@ export function FlavorSelector({ totalProducts }: { totalProducts: number }) {
                 href={resultsHref}
                 className="block text-center bg-white text-olive-dark rounded-full px-5 py-3 text-[14px] font-semibold hover:bg-olive-bg transition-colors"
               >
-                Zobrazit {count > 12 ? 'top 12' : 'všechny'} →
+                Zobrazit {count === 1 ? 'olej' : `všech ${count}`} →
               </Link>
             )}
           </div>
