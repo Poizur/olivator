@@ -17,7 +17,7 @@ const TABLE: Record<string, string> = {
 const COMMON_FIELDS = ['name', 'description_long', 'description_short', 'meta_title', 'meta_description', 'focus_keyword', 'status', 'tldr']
 
 const ALLOWED_FIELDS_BY_TYPE: Record<string, Set<string>> = {
-  region: new Set([...COMMON_FIELDS, 'country_code', 'terroir']),
+  region: new Set([...COMMON_FIELDS, 'country_code', 'terroir', 'map_image_url']),
   brand: new Set([
     ...COMMON_FIELDS,
     'country_code',

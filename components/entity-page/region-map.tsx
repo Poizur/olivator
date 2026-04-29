@@ -1,5 +1,8 @@
-// SVG mini-mapa země s zvýrazněním regionu.
-// Použití: blok 6 RegionTerroir (oblast page).
+// Mapa regionu pro blok 6 RegionTerroir.
+// Priorita:
+//   1. mapImageUrl — admin nahrál vlastní obrázek (preferováno, viz admin form)
+//   2. SVG fallback z lib/region-maps.ts (zjednodušená země s markerem)
+//   3. Generická olive ikona
 
 import { getRegionMap } from '@/lib/region-maps'
 
@@ -8,9 +11,38 @@ interface Props {
   regionName: string
   countryCode: string
   countryName: string
+  /** Volitelně: URL admin-nahraného obrázku mapy. */
+  mapImageUrl?: string | null
 }
 
-export function RegionMap({ regionSlug, regionName, countryCode, countryName }: Props) {
+export function RegionMap({
+  regionSlug,
+  regionName,
+  countryCode,
+  countryName,
+  mapImageUrl,
+}: Props) {
+  // 1. Admin upload má vždy přednost
+  if (mapImageUrl) {
+    return (
+      <div className="aspect-square bg-white rounded-[var(--radius-card)] border border-off2 flex flex-col p-4">
+        <div className="flex-1 flex items-center justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={mapImageUrl}
+            alt={`Mapa ${regionName}`}
+            className="max-w-full max-h-full object-contain"
+            loading="lazy"
+          />
+        </div>
+        <div className="text-center mt-2 shrink-0">
+          <div className="text-[12px] font-medium text-text">{regionName}</div>
+          <div className="text-[10px] text-text3">{countryName}</div>
+        </div>
+      </div>
+    )
+  }
+
   const map = getRegionMap(regionSlug, countryCode)
 
   if (!map) {

@@ -36,6 +36,7 @@ export interface EntityEditData {
   timeline?: TimelineMilestone[] | null
   // region-only
   terroir?: RegionTerroir | null
+  map_image_url?: string | null
   // cultivar-only
   nickname?: string | null
   intensity_score?: number | null
@@ -73,6 +74,7 @@ export function EntityEditForm({ entity, publicUrl, entityId }: Props) {
     nickname: entity.nickname ?? '',
     intensity_score: entity.intensity_score ?? '',
     primary_use: entity.primary_use ?? '',
+    map_image_url: entity.map_image_url ?? '',
   })
 
   const [terroir, setTerroir] = useState<RegionTerroir>({
@@ -133,6 +135,7 @@ export function EntityEditForm({ entity, publicUrl, entityId }: Props) {
         if (terroir.soil) cleanTerroir.soil = terroir.soil
         if (terroir.tradition) cleanTerroir.tradition = terroir.tradition
         payload.terroir = cleanTerroir
+        payload.map_image_url = data.map_image_url || null
       }
 
       if (entity.entityType === 'cultivar') {
@@ -290,6 +293,43 @@ export function EntityEditForm({ entity, publicUrl, entityId }: Props) {
       {entity.entityType === 'region' && (
         <div className="space-y-3 border-t border-off2 pt-6">
           <h3 className="text-sm font-medium text-text">Terroir (blok 6 na webu)</h3>
+
+          {/* Mapa regionu — URL na obrázek (Wikimedia, vlastní upload) */}
+          <div>
+            <label className="block text-xs font-medium text-text2 mb-1">
+              Mapa regionu — URL obrázku (SVG/PNG)
+            </label>
+            <input
+              value={data.map_image_url}
+              onChange={(e) => set('map_image_url', e.target.value)}
+              className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text"
+              placeholder="https://upload.wikimedia.org/.../Apulia.svg"
+            />
+            <p className="text-xs text-text3 mt-1">
+              Když není vyplněno, web použije zjednodušený SVG outline. Doporučeno:
+              {' '}
+              <a
+                href="https://commons.wikimedia.org/wiki/Category:SVG_maps_of_regions_of_Italy"
+                target="_blank"
+                rel="noopener"
+                className="text-olive border-b border-olive-border"
+              >
+                Wikimedia Commons SVG mapy
+              </a>
+              .
+            </p>
+            {data.map_image_url && (
+              <div className="mt-2 inline-block bg-white border border-off2 rounded-lg p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={data.map_image_url}
+                  alt="Náhled mapy"
+                  className="w-32 h-32 object-contain"
+                />
+              </div>
+            )}
+          </div>
+
           <div>
             <label className="block text-xs font-medium text-text2 mb-1">Klima</label>
             <textarea
