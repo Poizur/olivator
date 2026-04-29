@@ -1,0 +1,159 @@
+import { notFound } from 'next/navigation'
+import Link from 'next/link'
+import type { Metadata } from 'next'
+import { supabaseAdmin } from '@/lib/supabase'
+import { getProductsByIds, getCheapestOffer } from '@/lib/data'
+import { ListCard } from '@/components/list-card'
+import { countryFlag, countryName } from '@/lib/utils'
+
+export const revalidate = 3600
+
+interface RegionRow {
+  slug: string
+  name: string
+  country_code: string
+  description_long: string | null
+  meta_title: string | null
+  meta_description: string | null
+}
+
+async function getRegion(slug: string): Promise<RegionRow | null> {
+  const { data } = await supabaseAdmin
+    .from('regions')
+    .select('slug, name, country_code, description_long, meta_title, meta_description')
+    .eq('slug', slug)
+    .single()
+  return data ?? null
+}
+
+async function getRegionProductIds(slug: string): Promise<string[]> {
+  const { data } = await supabaseAdmin
+    .from('products')
+    .select('id')
+    .eq('region_slug', slug)
+    .eq('status', 'active')
+    .order('olivator_score', { ascending: false })
+  return (data ?? []).map((r: { id: string }) => r.id)
+}
+
+export async function generateStaticParams() {
+  const { data } = await supabaseAdmin.from('regions').select('slug')
+  return (data ?? []).map((r: { slug: string }) => ({ slug: r.slug }))
+}
+
+// Czech genitive forms for "z [region]" — needed for H1 grammar
+const GENITIVE: Record<string, string> = {
+  kreta: 'Kréty',
+  peloponnes: 'Peloponésu',
+  apulie: 'Apulie',
+  korfu: 'Korfu',
+  zakynthos: 'Zakynthosu',
+  toskánsko: 'Toskánska',
+  sicilie: 'Sicílie',
+  kalabrie: 'Kalábrie',
+  andalusie: 'Andalusie',
+  lesbos: 'Lesbosu',
+  alentejo: 'Alenteja',
+  katalansko: 'Katalánska',
+  estremadura: 'Estremadury',
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params
+  const region = await getRegion(slug)
+  if (!region) return { title: 'Nenalezeno' }
+
+  // Strip "| Olivator" suffix if present — layout template adds it automatically
+  const rawTitle = region.meta_title ?? `Olivový olej z ${GENITIVE[slug] ?? region.name}`
+  const title = rawTitle.replace(/\s*\|\s*Olivator\s*$/i, '')
+  const description = region.meta_description ?? `Olivové oleje z regionu ${region.name}. Srovnání, Score a ceny.`
+  const url = `https://olivator.cz/oblast/${slug}`
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { type: 'website', locale: 'cs_CZ', url, siteName: 'Olivator', title, description },
+  }
+}
+
+function renderDescription(text: string) {
+  return text.split('\n').map((line, i) => {
+    if (line.startsWith('## ')) {
+      return <h2 key={i} className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mt-10 mb-3">{line.slice(3)}</h2>
+    }
+    if (line.startsWith('### ')) {
+      return <h3 key={i} className="text-lg font-medium text-text mt-6 mb-2">{line.slice(4)}</h3>
+    }
+    if (line.trim() === '') return <div key={i} className="h-3" />
+    return <p key={i} className="text-[15px] text-text2 font-light leading-relaxed">{line}</p>
+  })
+}
+
+export default async function RegionPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const region = await getRegion(slug)
+  if (!region) notFound()
+
+  const productIds = await getRegionProductIds(slug)
+  const products = await getProductsByIds(productIds)
+  const offers = await Promise.all(products.map((p) => getCheapestOffer(p.id)))
+
+  const flag = countryFlag(region.country_code)
+  const country = countryName(region.country_code)
+
+  return (
+    <div className="max-w-[1080px] mx-auto px-10 py-10">
+      {/* Breadcrumb */}
+      <div className="text-xs text-text3 mb-7">
+        <Link href="/" className="text-olive">Olivator</Link>
+        {' › '}
+        <span>{region.name}</span>
+      </div>
+
+      {/* Hero */}
+      <div className="mb-10">
+        <div className="text-5xl mb-4">{flag}</div>
+        <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-text mb-2">
+          Olivový olej z {GENITIVE[region.slug] ?? region.name}
+        </h1>
+        <p className="text-sm text-text3">{country} · {products.length} produktů v katalogu</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-12">
+        {/* Editorial content */}
+        <div className="min-w-0">
+          {region.description_long ? (
+            <div>{renderDescription(region.description_long)}</div>
+          ) : (
+            <p className="text-text2 font-light italic">Popis regionu se připravuje…</p>
+          )}
+        </div>
+
+        {/* Sidebar — produkty */}
+        <aside className="lg:border-l lg:border-off2 lg:pl-8">
+          <h2 className="font-[family-name:var(--font-display)] text-xl font-normal text-text mb-4">
+            Olivové oleje z {GENITIVE[region.slug] ?? region.name}
+          </h2>
+          {products.length === 0 ? (
+            <p className="text-sm text-text3">Žádné aktivní produkty.</p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {products.slice(0, 8).map((p, i) => (
+                <ListCard key={p.id} product={p} offer={offers[i] ?? undefined} rank={i + 1} />
+              ))}
+            </div>
+          )}
+          {products.length > 8 && (
+            <Link
+              href={`/srovnavac?region=${slug}`}
+              className="mt-4 block text-center text-sm text-olive border border-olive rounded-lg py-2 hover:bg-olive4 transition-colors"
+            >
+              Zobrazit všech {products.length} produktů →
+            </Link>
+          )}
+        </aside>
+      </div>
+    </div>
+  )
+}

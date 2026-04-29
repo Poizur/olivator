@@ -41,6 +41,14 @@ const NAV: NavEntry[] = [
       { href: '/admin/newsletter', label: '📬 Newsletter' },
     ],
   },
+  {
+    label: 'Content',
+    items: [
+      { href: '/admin/regions', label: '🌍 Regiony' },
+      { href: '/admin/brands', label: '🫒 Značky' },
+      { href: '/admin/cultivars', label: '🌿 Odrůdy' },
+    ],
+  },
   { href: '/admin/nastaveni', label: '⚙ Nastavení' },
 ]
 

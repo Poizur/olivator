@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getProducts, getProductBySlug, getOffersForProduct, getProductGallery, getProductCustomFAQs, getActiveGeneralFAQs, getVariantProducts } from '@/lib/data'
+import { getProducts, getProductBySlug, getOffersForProduct, getProductGallery, getProductCustomFAQs, getActiveGeneralFAQs, getVariantProducts, getProductEntityLinks } from '@/lib/data'
+import { extractBrandSlug, extractRegionSlug } from '@/lib/entity-extractor'
 import { countryFlag, countryName, typeLabel, certLabel, formatPrice, formatPricePer100ml } from '@/lib/utils'
 import { productSchema, breadcrumbSchema, faqSchema } from '@/lib/schema'
 import { generateProductFAQ } from '@/lib/product-faq'
@@ -66,13 +67,17 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const product = await getProductBySlug(slug)
   if (!product) notFound()
 
-  const [offers, gallery, customFAQs, dbGeneralFAQs, variants, allProducts] = await Promise.all([
+  const brandSlug = extractBrandSlug(product.name)
+  const regionSlug = extractRegionSlug(product.originCountry, product.originRegion)
+
+  const [offers, gallery, customFAQs, dbGeneralFAQs, variants, allProducts, entityLinks] = await Promise.all([
     getOffersForProduct(product.id),
     getProductGallery(product.id),
     getProductCustomFAQs(product.id),
     getActiveGeneralFAQs(),
     getVariantProducts(product.id),
     getProducts(),
+    getProductEntityLinks(product.id, brandSlug, regionSlug),
   ])
   const cheapest = offers[0]
 
@@ -485,6 +490,45 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </div>
         </section>
       )}
+      {/* Cross-linky — region / značka / odrůda */}
+      {(entityLinks.region || entityLinks.brand || entityLinks.cultivars.length > 0) && (
+        <section className="mt-8 max-w-[720px] mx-auto mb-8">
+          <h2 className="font-[family-name:var(--font-display)] text-xl font-normal text-text mb-4">
+            Prozkoumejte více
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {entityLinks.region && (
+              <Link
+                href={`/oblast/${entityLinks.region.slug}`}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-olive4 border border-olive5 rounded-full text-sm text-olive hover:bg-olive5 transition-colors"
+              >
+                <span>🌍</span>
+                <span>Region: {entityLinks.region.name}</span>
+              </Link>
+            )}
+            {entityLinks.brand && (
+              <Link
+                href={`/znacka/${entityLinks.brand.slug}`}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-olive4 border border-olive5 rounded-full text-sm text-olive hover:bg-olive5 transition-colors"
+              >
+                <span>🫒</span>
+                <span>Značka: {entityLinks.brand.name}</span>
+              </Link>
+            )}
+            {entityLinks.cultivars.map((c) => (
+              <Link
+                key={c.slug}
+                href={`/odruda/${c.slug}`}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-olive4 border border-olive5 rounded-full text-sm text-olive hover:bg-olive5 transition-colors"
+              >
+                <span>🌿</span>
+                <span>Odrůda: {c.name}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       </div>
     </div>
   )

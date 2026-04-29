@@ -869,5 +869,45 @@ export async function deleteOffer(id: string) {
   if (error) throw error
 }
 
+// ── Entity cross-links (region / brand / cultivar) ─────────────────────────
+
+export interface ProductEntityLinks {
+  region: { slug: string; name: string } | null
+  brand: { slug: string; name: string } | null
+  cultivars: Array<{ slug: string; name: string }>
+}
+
+export async function getProductEntityLinks(productId: string, brandSlug: string | null, regionSlug: string | null): Promise<ProductEntityLinks> {
+  const [regionRow, brandRow, cultivarLinks] = await Promise.all([
+    regionSlug
+      ? supabaseAdmin.from('regions').select('slug, name').eq('slug', regionSlug).single().then((r) => r.data)
+      : Promise.resolve(null),
+    brandSlug
+      ? supabaseAdmin.from('brands').select('slug, name').eq('slug', brandSlug).single().then((r) => r.data)
+      : Promise.resolve(null),
+    supabaseAdmin
+      .from('product_cultivars')
+      .select('cultivar_slug')
+      .eq('product_id', productId)
+      .then((r) => r.data ?? []),
+  ])
+
+  const cultivarSlugs = cultivarLinks.map((c: { cultivar_slug: string }) => c.cultivar_slug)
+  let cultivars: Array<{ slug: string; name: string }> = []
+  if (cultivarSlugs.length > 0) {
+    const { data } = await supabaseAdmin
+      .from('cultivars')
+      .select('slug, name')
+      .in('slug', cultivarSlugs)
+    cultivars = data ?? []
+  }
+
+  return {
+    region: regionRow ? { slug: regionRow.slug, name: regionRow.name } : null,
+    brand: brandRow ? { slug: brandRow.slug, name: brandRow.name } : null,
+    cultivars,
+  }
+}
+
 // ── Articles, Rankings — still from static data (no CMS yet) ──────────
 export { ARTICLES, RANKINGS, getArticles, getArticleBySlug, getRankings, getRankingBySlug } from './static-content'
