@@ -457,33 +457,40 @@ function TopProductCard({ product, rank }: { product: ProductWithOffer; rank: nu
       href={`/olej/${product.slug}`}
       className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_12px_32px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:border-olive-light"
     >
-      <div className="px-3 pt-2.5 pb-1 flex items-center justify-between">
-        <span className="text-[10px] font-bold tracking-widest uppercase text-text3">
+      {/* Foto dominuje — portrait aspect 3:4 jako Shoptet karta.
+          Lahve jsou na výšku, takže obrázek si teď vezme proporčně víc místa. */}
+      <div className="relative aspect-[3/4] bg-gradient-to-br from-off to-white">
+        {/* Rank + Score překryvy */}
+        <span className="absolute top-2.5 left-2.5 z-10 text-[10px] font-bold tracking-widest uppercase text-text3 bg-white/85 backdrop-blur-sm rounded px-1.5 py-0.5">
           #{rank}
         </span>
-        <span className="text-[11px] font-bold bg-terra text-white rounded-full px-2 py-0.5 tabular-nums">
+        <span className="absolute top-2.5 right-2.5 z-10 text-[11px] font-bold bg-terra text-white rounded-full px-2 py-0.5 tabular-nums shadow-sm">
           {product.olivatorScore}
         </span>
+        <div className="absolute inset-0 p-3">
+          <ProductImage
+            product={product}
+            fallbackSize="text-[64px]"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 240px"
+          />
+        </div>
       </div>
 
-      <div className="h-32 bg-gradient-to-br from-off to-white relative">
-        <ProductImage product={product} fallbackSize="text-[44px]" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px" />
-      </div>
-
+      {/* Textová část — kompaktní */}
       <div className="p-3 flex-1 flex flex-col">
         <div className="text-[9px] text-text3 mb-0.5 uppercase tracking-widest font-medium">
           {countryName(product.originCountry)}
         </div>
-        <div className="text-[12px] font-semibold text-text leading-tight mb-2 line-clamp-2">
+        <div className="text-[12px] font-semibold text-text leading-tight mb-2 line-clamp-2 min-h-[2.4em]">
           {product.name}
         </div>
 
         {product.cheapestOffer && (
           <div className="mt-auto pt-2 border-t border-off">
-            <div className="text-[13px] font-bold text-text leading-tight">
+            <div className="text-[14px] font-bold text-text leading-tight tabular-nums">
               {formatPrice(product.cheapestOffer.price)}
             </div>
-            <div className="text-[10px] text-text3">
+            <div className="text-[10px] text-text3 tabular-nums">
               {formatPricePer100ml(product.cheapestOffer.price, product.volumeMl)}
             </div>
           </div>

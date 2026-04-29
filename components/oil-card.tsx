@@ -26,9 +26,12 @@ export function OilCard({ product, offer, isTop }: OilCardProps) {
         </div>
       )}
       <Link href={`/olej/${product.slug}`}>
-        <div className="h-[180px] bg-gradient-to-br from-off to-white flex items-center justify-center relative">
-          <ProductImage product={product} fallbackSize="text-[80px]" sizes="(max-width: 768px) 50vw, 300px" />
-          <div className="absolute bottom-3 right-3 bg-terra text-white text-[11px] font-semibold px-2.5 py-1 rounded-full">
+        {/* Portrait poměr 3:4 — lahve jsou na výšku, foto si zaslouží místo */}
+        <div className="relative aspect-[3/4] bg-gradient-to-br from-off to-white">
+          <div className="absolute inset-0 p-3">
+            <ProductImage product={product} fallbackSize="text-[80px]" sizes="(max-width: 768px) 50vw, 300px" />
+          </div>
+          <div className="absolute bottom-3 right-3 bg-terra text-white text-[11px] font-semibold px-2.5 py-1 rounded-full shadow-sm">
             Score {product.olivatorScore}
           </div>
         </div>
