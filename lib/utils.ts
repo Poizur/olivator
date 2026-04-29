@@ -36,6 +36,10 @@ export function countryFlag(code: string): string {
     HR: '\u{1F1ED}\u{1F1F7}',
     PT: '\u{1F1F5}\u{1F1F9}',
     TR: '\u{1F1F9}\u{1F1F7}',
+    MA: '\u{1F1F2}\u{1F1E6}',
+    TN: '\u{1F1F9}\u{1F1F3}',
+    IL: '\u{1F1EE}\u{1F1F1}',
+    US: '\u{1F1FA}\u{1F1F8}',
   }
   return flags[code] || code
 }

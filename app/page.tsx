@@ -14,7 +14,7 @@ import { SommelierHero } from '@/components/sommelier-hero'
 import { FlavorSelector } from '@/components/flavor-selector'
 import { RegionAtlas } from '@/components/region-atlas'
 import { BrandStrip } from '@/components/brand-strip'
-import { countryName, formatPrice, formatPricePer100ml } from '@/lib/utils'
+import { countryName, countryFlag, formatPrice, formatPricePer100ml } from '@/lib/utils'
 import type { Product, ProductOffer } from '@/lib/types'
 
 export const revalidate = 3600
@@ -461,12 +461,21 @@ function TopProductCard({ product, rank }: { product: ProductWithOffer; rank: nu
           Aspekt 4:5 (užší/vyšší než 3:4) protože lahve mají natural portrait.
           bg-white sjednotí s bílým paddingem v product fotech (žádná viditelná hranice). */}
       <div className="relative aspect-[4/5] bg-white overflow-hidden">
-        {/* Rank + Score překryvy */}
-        <span className="absolute top-2.5 left-2.5 z-10 text-[10px] font-bold tracking-widest uppercase text-text bg-white/90 backdrop-blur-sm rounded px-1.5 py-0.5">
+        {/* Rank vlevo nahoře */}
+        <span className="absolute top-2.5 left-2.5 z-10 text-[11px] font-bold tracking-widest uppercase text-text bg-white/90 backdrop-blur-sm rounded px-2 py-1 shadow-sm">
           #{rank}
         </span>
-        <span className="absolute top-2.5 right-2.5 z-10 text-[11px] font-bold bg-terra text-white rounded-full px-2 py-0.5 tabular-nums shadow-sm">
+        {/* Score VĚTŠÍ — vpravo nahoře, výraznější terra pill */}
+        <span className="absolute top-2.5 right-2.5 z-10 text-[15px] font-bold bg-terra text-white rounded-full w-11 h-11 flex items-center justify-center tabular-nums shadow-md">
           {product.olivatorScore}
+        </span>
+        {/* Vlajka země — levý dolní roh přes obrázek */}
+        <span
+          className="absolute bottom-2.5 left-2.5 z-10 text-[20px] leading-none bg-white/90 backdrop-blur-sm rounded px-1.5 py-1 shadow-sm"
+          aria-label={countryName(product.originCountry)}
+          title={countryName(product.originCountry)}
+        >
+          {countryFlag(product.originCountry)}
         </span>
         {/* Obrázek vyplňuje celou kartu, mírný hover scale */}
         <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
@@ -478,7 +487,7 @@ function TopProductCard({ product, rank }: { product: ProductWithOffer; rank: nu
         </div>
       </div>
 
-      {/* Textová část — kompaktní */}
+      {/* Textová část */}
       <div className="p-3 flex-1 flex flex-col">
         <div className="text-[9px] text-text3 mb-0.5 uppercase tracking-widest font-medium">
           {countryName(product.originCountry)}
@@ -488,11 +497,12 @@ function TopProductCard({ product, rank }: { product: ProductWithOffer; rank: nu
         </div>
 
         {product.cheapestOffer && (
-          <div className="mt-auto pt-2 border-t border-off">
-            <div className="text-[14px] font-bold text-text leading-tight tabular-nums">
+          <div className="mt-auto pt-2 border-t border-off flex items-baseline gap-2 flex-wrap">
+            <div className="text-[15px] font-bold text-text leading-tight tabular-nums">
               {formatPrice(product.cheapestOffer.price)}
             </div>
-            <div className="text-[10px] text-text3 tabular-nums">
+            {/* Cena za 100 ml — TERRA badge, mnohem viditelnější */}
+            <div className="text-[10px] font-semibold text-terra bg-terra-bg rounded px-1.5 py-0.5 tabular-nums">
               {formatPricePer100ml(product.cheapestOffer.price, product.volumeMl)}
             </div>
           </div>
