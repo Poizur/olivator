@@ -2,9 +2,27 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
-import { getProductsByIds, getCheapestOffer } from '@/lib/data'
-import { ListCard } from '@/components/list-card'
 import { countryName } from '@/lib/utils'
+import {
+  loadEntityProducts,
+  computeProductKpis,
+  loadEntityFaqs,
+  loadEntityRecipes,
+  splitDescriptionToAccordion,
+  loadCultivarsByRegion,
+  loadBrandsByRegion,
+  formatPriceRange,
+  formatHarvest,
+} from '@/lib/entity-page-data'
+
+import { EntityKpiGrid } from '@/components/entity-page/entity-kpi-grid'
+import { EntityCtaStripe } from '@/components/entity-page/entity-cta-stripe'
+import { EntityProductsTable } from '@/components/entity-page/entity-products-table'
+import { EntityTrustRow } from '@/components/entity-page/entity-trust-row'
+import { EntityRelatedContent } from '@/components/entity-page/entity-related-content'
+import { EntitySeoAccordion } from '@/components/entity-page/entity-seo-accordion'
+import { RegionTerroir } from '@/components/entity-page/region-terroir'
+import { FaqJsonLd, PlaceJsonLd } from '@/components/entity-page/entity-jsonld'
 
 export const revalidate = 3600
 
@@ -14,24 +32,28 @@ interface RegionRow {
   name: string
   country_code: string
   description_long: string | null
+  description_short: string | null
   meta_title: string | null
   meta_description: string | null
+  terroir: { climate?: string; soil?: string; tradition?: string } | null
+  tldr: string | null
 }
 
 async function getRegion(slug: string): Promise<RegionRow | null> {
   const { data } = await supabaseAdmin
     .from('regions')
-    .select('id, slug, name, country_code, description_long, meta_title, meta_description')
+    .select(
+      'id, slug, name, country_code, description_long, description_short, meta_title, meta_description, terroir, tldr'
+    )
     .eq('slug', slug)
     .single()
-  return data ?? null
+  return (data as RegionRow | null) ?? null
 }
 
 interface EntityPhoto {
   url: string
   alt_text: string | null
   source_attribution: string | null
-  is_primary: boolean
 }
 
 async function getEntityPhotos(entityId: string): Promise<EntityPhoto[]> {
@@ -60,7 +82,6 @@ export async function generateStaticParams() {
   return (data ?? []).map((r: { slug: string }) => ({ slug: r.slug }))
 }
 
-// Czech genitive forms for "z [region]" — needed for H1 grammar
 const GENITIVE: Record<string, string> = {
   kreta: 'Kréty',
   peloponnes: 'Peloponésu',
@@ -82,10 +103,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const region = await getRegion(slug)
   if (!region) return { title: 'Nenalezeno' }
 
-  // Strip "| Olivator" suffix if present — layout template adds it automatically
   const rawTitle = region.meta_title ?? `Olivový olej z ${GENITIVE[slug] ?? region.name}`
   const title = rawTitle.replace(/\s*\|\s*Olivator\s*$/i, '')
-  const description = region.meta_description ?? `Olivové oleje z regionu ${region.name}. Srovnání, Score a ceny.`
+  const description =
+    region.meta_description ?? `Olivové oleje z regionu ${region.name}. Srovnání, Score a ceny.`
   const url = `https://olivator.cz/oblast/${slug}`
 
   return {
@@ -96,131 +117,181 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-function renderDescription(text: string, galleryPhotos: EntityPhoto[] = []) {
-  let photoIndex = 0
-  return text.split('\n').map((line, i) => {
-    if (line.startsWith('## ')) {
-      const photo = galleryPhotos[photoIndex]
-      if (photo) {
-        photoIndex++
-        return (
-          <div key={i} className="mt-10 mb-3">
-            <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-4">{line.slice(3)}</h2>
-            <div className="relative aspect-[16/7] rounded-xl overflow-hidden mb-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photo.url} alt={photo.alt_text ?? ''} className="w-full h-full object-cover" loading="lazy" />
-              {photo.source_attribution && (
-                <p className="absolute bottom-1.5 right-2 text-[9px] text-white/70 bg-black/30 backdrop-blur-sm rounded px-1.5 py-0.5">
-                  © {photo.source_attribution}
-                </p>
-              )}
-            </div>
-          </div>
-        )
-      }
-      return <h2 key={i} className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mt-10 mb-3">{line.slice(3)}</h2>
-    }
-    if (line.startsWith('### ')) {
-      return <h3 key={i} className="text-lg font-medium text-text mt-6 mb-2">{line.slice(4)}</h3>
-    }
-    if (line.trim() === '') return <div key={i} className="h-3" />
-    return <p key={i} className="text-[15px] text-text2 font-light leading-relaxed">{line}</p>
-  })
-}
-
 export default async function RegionPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const region = await getRegion(slug)
   if (!region) notFound()
 
-  const [productIds, photos] = await Promise.all([
+  const [productIds, photos, faqs, recipes] = await Promise.all([
     getRegionProductIds(slug),
     getEntityPhotos(region.id),
+    loadEntityFaqs('region', region.id),
+    loadEntityRecipes('region', slug),
   ])
-  const products = await getProductsByIds(productIds)
-  const offers = await Promise.all(products.map((p) => getCheapestOffer(p.id)))
+
+  const heroPhoto = photos[0] ?? null
+  const products = await loadEntityProducts(productIds)
+  const kpis = computeProductKpis(products)
 
   const country = countryName(region.country_code)
-  const heroPhoto = photos[0] ?? null
-  const galleryPhotos = photos.slice(1)
+  const titleH1 = `Olivový olej z ${GENITIVE[region.slug] ?? region.name}`
+
+  // Filtry: nabídneme top odrůdy v regionu jako chip filtry tabulky
+  const cultivarCounts = new Map<string, number>()
+  for (const p of products) {
+    if (!p.cultivarLabel) continue
+    // cultivarLabel může být "Coratina + Frantoio" — rozdělíme
+    for (const c of p.cultivarLabel.split('+').map((s) => s.trim())) {
+      cultivarCounts.set(c, (cultivarCounts.get(c) ?? 0) + 1)
+    }
+  }
+  const filterChips = Array.from(cultivarCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([label, count]) => ({ key: label, label, count }))
+
+  // Křížení — odrůdy a značky z tohoto regionu
+  const [cultivars, brands] = await Promise.all([
+    loadCultivarsByRegion(slug),
+    loadBrandsByRegion(slug),
+  ])
+
+  const kpiItems = [
+    { label: 'Olejů v katalogu', value: String(kpis.count) },
+    {
+      label: 'Nejvyšší skóre',
+      value: kpis.topScore != null ? `${kpis.topScore}/100` : '—',
+    },
+    { label: 'Sklizeň', value: formatHarvest(kpis.latestHarvest) },
+    { label: 'Cenové rozpětí', value: formatPriceRange(kpis.priceRange) },
+  ]
+
+  const accordionSections = splitDescriptionToAccordion(region.description_long)
+  const tldr = region.tldr ?? region.description_short ?? null
+
+  const url = `https://olivator.cz/oblast/${slug}`
 
   return (
-    <div className="max-w-[1080px] mx-auto px-10 py-10">
-      {/* Breadcrumb */}
-      <div className="text-xs text-text3 mb-7">
-        <Link href="/" className="text-olive">Olivator</Link>
-        {' › '}
-        <span>{region.name}</span>
-      </div>
+    <>
+      {/* JSON-LD */}
+      <PlaceJsonLd
+        name={region.name}
+        description={tldr ?? `Olivový olej z regionu ${region.name}.`}
+        countryName={country}
+        url={url}
+        imageUrl={heroPhoto?.url ?? null}
+      />
+      <FaqJsonLd faqs={faqs} />
 
-      {/* Hero */}
-      {heroPhoto ? (
-        <div className="mb-10 relative rounded-2xl overflow-hidden h-64">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={heroPhoto.url}
-            alt={heroPhoto.alt_text ?? region.name}
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-          <div className="absolute bottom-0 left-0 p-6">
-            <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-white mb-1">
-              Olivový olej z {GENITIVE[region.slug] ?? region.name}
-            </h1>
-            <p className="text-sm text-white/80">{country} · {products.length} produktů v katalogu</p>
-          </div>
-          {heroPhoto.source_attribution && (
-            <p className="absolute bottom-2 right-3 text-[10px] text-white/50">
-              © {heroPhoto.source_attribution} / Unsplash
-            </p>
-          )}
-        </div>
-      ) : (
-        <div className="mb-10">
-          <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
-            — {country}
-          </div>
-          <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-text mb-2">
-            Olivový olej z {GENITIVE[region.slug] ?? region.name}
-          </h1>
-          <p className="text-sm text-text3">{products.length} produktů v katalogu</p>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-12">
-        {/* Editorial content — gallery photos injected after each H2 */}
-        <div className="min-w-0">
-          {region.description_long ? (
-            <div>{renderDescription(region.description_long, galleryPhotos)}</div>
-          ) : (
-            <p className="text-text2 font-light italic">Popis regionu se připravuje…</p>
-          )}
-        </div>
-
-        {/* Sidebar — produkty */}
-        <aside className="lg:border-l lg:border-off2 lg:pl-8">
-          <h2 className="font-[family-name:var(--font-display)] text-xl font-normal text-text mb-4">
-            Olivové oleje z {GENITIVE[region.slug] ?? region.name}
-          </h2>
-          {products.length === 0 ? (
-            <p className="text-sm text-text3">Žádné aktivní produkty.</p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {products.slice(0, 8).map((p, i) => (
-                <ListCard key={p.id} product={p} offer={offers[i] ?? undefined} rank={i + 1} compact />
-              ))}
-            </div>
-          )}
-          {products.length > 8 && (
-            <Link
-              href={`/srovnavac?region=${slug}`}
-              className="mt-4 block text-center text-sm text-olive border border-olive rounded-lg py-2 hover:bg-olive4 transition-colors"
-            >
-              Zobrazit všech {products.length} produktů →
+      <div className="bg-off pb-16">
+        {/* Breadcrumb */}
+        <div className="max-w-[1280px] mx-auto px-6 md:px-10 pt-6 pb-3">
+          <div className="text-xs text-text3">
+            <Link href="/" className="text-olive">
+              Olivator
             </Link>
-          )}
-        </aside>
+            {' › '}
+            <span>{region.name}</span>
+          </div>
+        </div>
+
+        {/* Blok 1 — Hero */}
+        <section className="px-6 md:px-10 mb-6">
+          <div className="max-w-[1280px] mx-auto">
+            {heroPhoto ? (
+              <div className="relative rounded-[var(--radius-card)] overflow-hidden h-56 md:h-64">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={heroPhoto.url}
+                  alt={heroPhoto.alt_text ?? region.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                <div className="absolute bottom-0 left-0 p-6">
+                  <h1 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl font-normal text-white mb-1">
+                    {titleH1}
+                  </h1>
+                  <p className="text-sm text-white/85">
+                    {country} · {kpis.count} olejů v katalogu
+                  </p>
+                </div>
+                {heroPhoto.source_attribution && (
+                  <p className="absolute bottom-2 right-3 text-[10px] text-white/50">
+                    © {heroPhoto.source_attribution}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 md:p-8">
+                <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
+                  — {country}
+                </div>
+                <h1 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl font-normal text-text mb-2">
+                  {titleH1}
+                </h1>
+                <p className="text-sm text-text3">{kpis.count} olejů v katalogu</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <div className="space-y-6">
+          {/* Blok 2 — KPI */}
+          <EntityKpiGrid items={kpiItems} />
+
+          {/* Blok 3 — CTA */}
+          <EntityCtaStripe
+            cta={{
+              description: `Nevíte, který olej z ${region.name} je pro vás? Quiz vám doporučí za 60 sekund.`,
+              label: 'Spustit quiz',
+              href: '/quiz',
+            }}
+          />
+
+          {/* Blok 4 — Tabulka */}
+          <EntityProductsTable
+            products={products}
+            entityType="region"
+            filters={filterChips}
+            filterField="cultivarLabel"
+          />
+
+          {/* Blok 5 — Důvěra */}
+          <EntityTrustRow tldr={tldr} entityKind="oblast" />
+
+          {/* Blok 6 — Unique: Terroir */}
+          <RegionTerroir
+            regionName={region.name}
+            countryName={country}
+            terroir={region.terroir}
+            farmPhotos={photos.slice(1, 5).map((p) => ({ url: p.url, alt: p.alt_text }))}
+          />
+
+          {/* Blok 7 — Křížení */}
+          <EntityRelatedContent
+            recipes={recipes}
+            chipSections={[
+              {
+                title: `Odrůdy z ${region.name}`,
+                chips: cultivars.map((c) => ({
+                  href: `/odruda/${c.slug}`,
+                  label: c.name,
+                })),
+              },
+              {
+                title: `Značky z ${region.name}`,
+                chips: brands.map((b) => ({
+                  href: `/znacka/${b.slug}`,
+                  label: b.name,
+                })),
+              },
+            ]}
+          />
+
+          {/* Blok 8 — SEO akordeon */}
+          <EntitySeoAccordion tldr={tldr} sections={accordionSections} faqs={faqs} />
+        </div>
       </div>
-    </div>
+    </>
   )
 }
