@@ -246,17 +246,20 @@ export function SommelierHero({
                   <Link
                     key={p.id}
                     href={`/olej/${p.slug}`}
-                    className="flex items-center gap-3 bg-black/15 hover:bg-black/25 border border-white/15 rounded-xl p-3 transition-colors group"
+                    className="flex items-center gap-3 bg-black/15 hover:bg-black/25 border border-white/15 rounded-xl p-2.5 transition-colors group"
                   >
-                    <div className="text-[12px] font-bold text-white/85 tabular-nums w-4 shrink-0">{i + 1}</div>
-                    <div className="w-14 h-14 shrink-0 bg-white rounded-lg overflow-hidden">
-                      <ProductImage product={p} fallbackSize="text-2xl" sizes="56px" />
+                    <div className="text-[12px] font-bold text-white/85 tabular-nums w-4 shrink-0 text-center">
+                      {i + 1}
                     </div>
-                    <div className="flex-1 min-w-0">
+                    {/* Větší foto — obrázky prodávají, portrait aspect 3:4 */}
+                    <div className="w-16 h-20 shrink-0 bg-white rounded-lg overflow-hidden">
+                      <ProductImage product={p} fallbackSize="text-3xl" sizes="64px" />
+                    </div>
+                    <div className="flex-1 min-w-0 py-0.5">
                       <div className="text-[13px] font-semibold text-white leading-tight line-clamp-2 group-hover:text-olive4 transition-colors">
                         {p.name}
                       </div>
-                      <div className="text-[11px] text-white/85 truncate mt-0.5">
+                      <div className="text-[11px] text-white/85 truncate mt-1">
                         {p.cheapestOffer ? (
                           <span>{countryName(p.originCountry)} · {formatPrice(p.cheapestOffer.price)}</span>
                         ) : (

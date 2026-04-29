@@ -28,8 +28,9 @@ export function ListCard({ product, offer, rank, compact = false }: ListCardProp
           {rank}
         </div>
 
-        <div className="w-16 h-20 bg-off rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
-          <ProductImage product={product} fallbackSize="text-4xl" sizes="80px" />
+        {/* Větší foto — obrázky prodávají, portrait aspect 3:4 (60×80) */}
+        <div className="w-20 h-[6.5rem] bg-off rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+          <ProductImage product={product} fallbackSize="text-5xl" sizes="80px" />
         </div>
 
         <div className="flex-1 min-w-0">
@@ -113,8 +114,9 @@ function CompactCard({ product, offer, rank }: { product: Product; offer?: Produ
         }`}>
           {rank}
         </div>
-        <div className="w-12 h-14 bg-off rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
-          <ProductImage product={product} fallbackSize="text-2xl" sizes="48px" />
+        {/* Foto — větší pro lepší vizibilitu (15×20 = 60×80px) */}
+        <div className="w-15 h-20 bg-off rounded-lg flex items-center justify-center shrink-0 overflow-hidden" style={{ width: '3.75rem' }}>
+          <ProductImage product={product} fallbackSize="text-3xl" sizes="60px" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-[10px] text-text3 mb-0.5 uppercase tracking-widest font-medium truncate">

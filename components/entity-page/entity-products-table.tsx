@@ -193,9 +193,9 @@ export function EntityProductsTable({ products, entityType, filters = [], filter
               {sorted.map((p) => (
                 <tr key={p.slug} className="border-b border-off last:border-b-0 hover:bg-off/50">
                   <td className="px-4 py-3">
-                    <Link href={`/olej/${p.slug}`} className="flex items-center gap-3 group">
-                      {/* Náhled lahve — bez obrázku padá na šedý placeholder */}
-                      <div className="w-12 h-14 shrink-0 bg-off rounded-lg overflow-hidden flex items-center justify-center">
+                    <Link href={`/olej/${p.slug}`} className="flex items-center gap-4 group">
+                      {/* Náhled lahve — větší (obrázky prodávají) */}
+                      <div className="w-16 h-20 shrink-0 bg-off rounded-lg overflow-hidden flex items-center justify-center">
                         {p.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -205,7 +205,7 @@ export function EntityProductsTable({ products, entityType, filters = [], filter
                             loading="lazy"
                           />
                         ) : (
-                          <span className="text-[20px] opacity-30">🫒</span>
+                          <span className="text-[28px] opacity-30">🫒</span>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
@@ -264,12 +264,12 @@ export function EntityProductsTable({ products, entityType, filters = [], filter
                   onClick={() => setExpandedRow(expanded ? null : p.slug)}
                   className="w-full px-4 py-3 flex items-start gap-3 text-left"
                 >
-                  <div className="w-10 h-12 shrink-0 bg-off rounded-md overflow-hidden flex items-center justify-center">
+                  <div className="w-14 h-18 shrink-0 bg-off rounded-md overflow-hidden flex items-center justify-center" style={{ height: '4.5rem' }}>
                     {p.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={p.imageUrl} alt={p.name} className="w-full h-full object-contain" loading="lazy" />
                     ) : (
-                      <span className="text-[16px] opacity-30">🫒</span>
+                      <span className="text-[22px] opacity-30">🫒</span>
                     )}
                   </div>
                   <span className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded-full tabular-nums shrink-0 mt-0.5 ${scorePillClass(p.olivatorScore)}`}>
