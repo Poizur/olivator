@@ -23,62 +23,112 @@ interface CultivarLink {
 }
 
 /**
- * Načte produkty pro entitu + cheapestOffer + linky na odrůdy.
+ * Načte produkty pro entitu + cheapestOffer + linky na odrůdy + reálný brand/region/country.
  * Vrací data pro EntityProductsTable.
+ *
+ * Předtím loader plnil brandName=p.nameShort (display name produktu, ne značky)
+ * a regionSlug/originCountry vůbec — filtry v tabulce nefungovaly.
  */
 export async function loadEntityProducts(productIds: string[]): Promise<ProductTableRow[]> {
   if (productIds.length === 0) return []
 
   const products = await getProductsByIds(productIds)
+  const ids = products.map((p) => p.id)
 
   // Cheapest offers paralelně
   const offers = await Promise.all(products.map((p) => getCheapestOffer(p.id)))
 
-  // Cultivar linky pro tyto produkty
-  const { data: cultivarLinks } = await supabaseAdmin
+  // Cultivar linky pro tyto produkty (s reálnými jmény)
+  const cultivarLinksPromise = supabaseAdmin
     .from('product_cultivars')
     .select('product_id, cultivar_slug, cultivars!inner(name)')
-    .in('product_id', products.map((p) => p.id))
+    .in('product_id', ids)
 
-  const cultivarsByProduct = new Map<string, string[]>()
+  // Skutečný brand/region/country per produkt (NENÍ v Product type)
+  const productMetaPromise = supabaseAdmin
+    .from('products')
+    .select('id, brand_slug, region_slug, origin_country, brands!left(name), regions!left(name)')
+    .in('id', ids)
+
+  const [{ data: cultivarLinks }, { data: productMeta }] = await Promise.all([
+    cultivarLinksPromise,
+    productMetaPromise,
+  ])
+
+  const cultivarsByProduct = new Map<string, { names: string[]; slugs: string[] }>()
   for (const link of (cultivarLinks ?? []) as unknown as Array<{
     product_id: string
     cultivar_slug: string
     cultivars: { name: string } | { name: string }[] | null
   }>) {
-    const list = cultivarsByProduct.get(link.product_id) ?? []
+    const entry = cultivarsByProduct.get(link.product_id) ?? { names: [], slugs: [] }
     const cultivar = Array.isArray(link.cultivars) ? link.cultivars[0] : link.cultivars
-    list.push(cultivar?.name ?? link.cultivar_slug)
-    cultivarsByProduct.set(link.product_id, list)
+    entry.names.push(cultivar?.name ?? link.cultivar_slug)
+    entry.slugs.push(link.cultivar_slug)
+    cultivarsByProduct.set(link.product_id, entry)
   }
 
-  // Brand + region jména pro lookup
-  const brandSlugs = Array.from(
-    new Set(
-      products
-        .map((p) => p.nameShort)  // u nás brand_slug není v Product type — fallback
-        .filter(Boolean)
-    )
-  )
+  // Lookup mapa pro brand/region/country
+  const metaByProduct = new Map<
+    string,
+    {
+      brandSlug: string | null
+      brandName: string | null
+      regionSlug: string | null
+      regionName: string | null
+      originCountry: string | null
+    }
+  >()
+  for (const row of (productMeta ?? []) as unknown as Array<{
+    id: string
+    brand_slug: string | null
+    region_slug: string | null
+    origin_country: string | null
+    brands: { name: string } | { name: string }[] | null
+    regions: { name: string } | { name: string }[] | null
+  }>) {
+    const brand = Array.isArray(row.brands) ? row.brands[0] : row.brands
+    const region = Array.isArray(row.regions) ? row.regions[0] : row.regions
+    metaByProduct.set(row.id, {
+      brandSlug: row.brand_slug,
+      brandName: brand?.name ?? null,
+      regionSlug: row.region_slug,
+      regionName: region?.name ?? null,
+      originCountry: row.origin_country,
+    })
+  }
 
   return products.map((p, i) => {
     const offer = offers[i]
-    const cultivars = cultivarsByProduct.get(p.id) ?? []
+    const cultivars = cultivarsByProduct.get(p.id) ?? { names: [], slugs: [] }
+    const meta = metaByProduct.get(p.id) ?? {
+      brandSlug: null,
+      brandName: null,
+      regionSlug: null,
+      regionName: null,
+      originCountry: null,
+    }
+    // Bezpečný výpočet pricePer100ml: chrání před volumeMl=0 (nedáno) → Infinity
+    const pricePer100ml =
+      offer?.price && p.volumeMl && p.volumeMl > 0
+        ? (offer.price / p.volumeMl) * 100
+        : null
     return {
       slug: p.slug,
       name: p.name,
-      cultivarLabel: cultivars.length > 0 ? cultivars.join(' + ') : null,
-      brandSlug: null, // dohodneme v page-level loaderech
-      brandName: p.nameShort || null,
-      regionSlug: null,
-      regionName: p.originRegion || null,
+      cultivarLabel: cultivars.names.length > 0 ? cultivars.names.join(' + ') : null,
+      cultivarSlugs: cultivars.slugs,
+      brandSlug: meta.brandSlug,
+      brandName: meta.brandName ?? p.nameShort ?? null,
+      regionSlug: meta.regionSlug,
+      regionName: meta.regionName ?? p.originRegion ?? null,
+      originCountry: meta.originCountry ?? p.originCountry ?? null,
       harvestYear: p.harvestYear,
       olivatorScore: p.olivatorScore,
       acidity: p.acidity,
       polyphenols: p.polyphenols,
       price: offer?.price ?? null,
-      pricePer100ml:
-        offer?.price && p.volumeMl ? (offer.price / p.volumeMl) * 100 : null,
+      pricePer100ml,
       retailerName: offer?.retailer.name ?? null,
       type: p.type,
     } satisfies ProductTableRow
@@ -172,11 +222,21 @@ export async function loadEntityRecipes(
 
 /**
  * Rozsekne dlouhý markdown-light text na sekce podle ## nadpisů.
- * První kus před prvním ## se ignoruje (je to úvodní odstavec — ten necháváme
- * v editorial bloku pod heroem).
+ * - První kus před prvním ## se v normální cestě ignoruje (je to úvodní
+ *   odstavec — ten je v editorial bloku pod heroem).
+ * - FALLBACK: pokud text neobsahuje žádné ## nadpisy, vrátíme jednu sekci
+ *   "Detail" s celým obsahem, aby se nezavalil entire content do nicoty.
  */
 export function splitDescriptionToAccordion(text: string | null): AccordionSection[] {
   if (!text) return []
+  const trimmed = text.trim()
+  if (!trimmed) return []
+
+  // Žádné H2 nadpisy → jediná sekce s celým obsahem
+  if (!trimmed.includes('## ')) {
+    return [{ title: 'Detail', body: trimmed }]
+  }
+
   const lines = text.split('\n')
   const sections: AccordionSection[] = []
   let currentTitle: string | null = null
@@ -252,6 +312,75 @@ export async function loadBrandsByRegion(regionSlug: string): Promise<
     result.push({ slug: b.slug, name: b.name })
   }
   return result
+}
+
+/**
+ * Polyfenol comparison pro VarietyProfile blok — top 6 odrůd dle průměru
+ * polyphenols, plus aktuální odrůda i kdyby nebyla v top 6.
+ *
+ * Předtím: N+1 query (50 cultivars × 2 dotazy = 100+ roundtripů na render).
+ * Teď: 1 dotaz s join + agregace v JS.
+ */
+export async function loadCultivarPolyphenolStats(currentSlug: string): Promise<
+  Array<{
+    cultivarSlug: string
+    cultivarName: string
+    avgPolyphenols: number
+    isCurrent: boolean
+  }>
+> {
+  // Jedna query: všechny aktivní produkty + cultivar joinem přes link tabulku
+  const { data } = await supabaseAdmin
+    .from('product_cultivars')
+    .select('cultivar_slug, cultivars!inner(name), products!inner(polyphenols, status)')
+    .eq('products.status', 'active')
+    .not('products.polyphenols', 'is', null)
+
+  if (!data) return []
+
+  // Agregace v JS — přijatelné pro <2000 produktů, lehčí než RPC
+  const accum = new Map<string, { name: string; sum: number; count: number }>()
+  for (const row of data as unknown as Array<{
+    cultivar_slug: string
+    cultivars: { name: string } | { name: string }[] | null
+    products: { polyphenols: number | null } | { polyphenols: number | null }[] | null
+  }>) {
+    const cultivar = Array.isArray(row.cultivars) ? row.cultivars[0] : row.cultivars
+    const product = Array.isArray(row.products) ? row.products[0] : row.products
+    const poly = product?.polyphenols
+    if (!cultivar?.name || typeof poly !== 'number' || poly <= 0) continue
+    const entry = accum.get(row.cultivar_slug) ?? { name: cultivar.name, sum: 0, count: 0 }
+    entry.sum += poly
+    entry.count += 1
+    accum.set(row.cultivar_slug, entry)
+  }
+
+  const sorted = Array.from(accum.entries())
+    .map(([slug, { name, sum, count }]) => ({
+      slug,
+      name,
+      avg: sum / count,
+    }))
+    .filter((s) => s.avg > 0)
+    .sort((a, b) => b.avg - a.avg)
+
+  const top = sorted.slice(0, 6)
+
+  // Pokud aktuální odrůda není v top 6, vlož ji a re-sort dle avg
+  if (!top.some((s) => s.slug === currentSlug)) {
+    const current = sorted.find((s) => s.slug === currentSlug)
+    if (current) {
+      top.push(current)
+      top.sort((a, b) => b.avg - a.avg)
+    }
+  }
+
+  return top.map((s) => ({
+    cultivarSlug: s.slug,
+    cultivarName: s.name,
+    avgPolyphenols: s.avg,
+    isCurrent: s.slug === currentSlug,
+  }))
 }
 
 /** Pomocný formátter cenového rozpětí. */

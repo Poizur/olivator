@@ -23,7 +23,7 @@ interface Props {
   /** Pre-vypočítané filtry. Klíč = co se filtruje, např. cultivar slug nebo type. */
   filters?: FilterChip[]
   /** Které pole produktu se filtruje proti chip.key. */
-  filterField?: 'cultivarLabel' | 'type' | 'regionSlug'
+  filterField?: 'cultivarLabel' | 'cultivarSlugs' | 'type' | 'regionSlug' | 'originCountry'
 }
 
 function scorePillClass(score: number | null): string {
@@ -47,11 +47,16 @@ export function EntityProductsTable({ products, entityType, filters = [], filter
   const filtered = useMemo(() => {
     if (activeFilter === 'all' || !filterField) return products
     return products.filter((p) => {
-      const v = p[filterField as keyof ProductTableRow]
-      // Pro cultivarLabel filtrujeme substring match (může jich být víc)
-      if (filterField === 'cultivarLabel' && typeof v === 'string') {
-        return v.toLowerCase().includes(activeFilter.toLowerCase())
+      // Array fields (cultivarSlugs) — exact match v poli
+      if (filterField === 'cultivarSlugs') {
+        return Array.isArray(p.cultivarSlugs) && p.cultivarSlugs.includes(activeFilter)
       }
+      // String label (legacy) — case-insensitive substring
+      if (filterField === 'cultivarLabel' && typeof p.cultivarLabel === 'string') {
+        return p.cultivarLabel.toLowerCase().includes(activeFilter.toLowerCase())
+      }
+      // Ostatní (type, regionSlug, originCountry) — přesná shoda
+      const v = p[filterField as keyof ProductTableRow]
       return v === activeFilter
     })
   }, [products, activeFilter, filterField])

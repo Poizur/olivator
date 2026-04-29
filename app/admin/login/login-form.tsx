@@ -3,9 +3,23 @@
 import { useState, type FormEvent } from 'react'
 import { useSearchParams } from 'next/navigation'
 
+/**
+ * Validuje redirect target — povolíme pouze interní cesty začínající `/admin`.
+ * Zabraňuje open-redirect: `?redirect=//evil.com` nebo `?redirect=https://evil.com`
+ * by jinak po loginu poslal admina na phishing.
+ */
+function safeRedirect(raw: string | null): string {
+  if (!raw) return '/admin'
+  // Musí začínat `/`, ne `//` (chrání proti protocol-relative URL)
+  if (!raw.startsWith('/') || raw.startsWith('//')) return '/admin'
+  // Musí směřovat do /admin sekce
+  if (!raw.startsWith('/admin')) return '/admin'
+  return raw
+}
+
 export function LoginForm() {
   const searchParams = useSearchParams()
-  const redirect = searchParams.get('redirect') || '/admin'
+  const redirect = safeRedirect(searchParams.get('redirect'))
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)

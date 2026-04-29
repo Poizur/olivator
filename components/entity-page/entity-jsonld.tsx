@@ -6,6 +6,24 @@
 
 import type { FaqItem } from './types'
 
+/**
+ * Bezpečně serializuje JSON-LD pro <script>. Zabraňuje XSS přes admin-edited
+ * obsah (FAQ odpovědi, terroir text, timeline labely):
+ * - </script> v textu by ukončil tag a otevřel injection bod
+ * - HTML komentáře <!-- a --> taky
+ * - U+2028/U+2029 prolomí JS parser ve starších browserech
+ */
+function safeJsonLd(data: unknown): string {
+  // U+2028 (line sep) a U+2029 (paragraph sep) prolomí JS parser ve starších
+  // browserech když jsou v <script>. Použijeme String.fromCharCode v RegExp.
+  return JSON.stringify(data)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(new RegExp(String.fromCharCode(0x2028), 'g'), '\\u2028')
+    .replace(new RegExp(String.fromCharCode(0x2029), 'g'), '\\u2029')
+}
+
 export function FaqJsonLd({ faqs }: { faqs: FaqItem[] }) {
   if (faqs.length === 0) return null
   const data = {
@@ -23,7 +41,7 @@ export function FaqJsonLd({ faqs }: { faqs: FaqItem[] }) {
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(data) }}
     />
   )
 }
@@ -53,7 +71,7 @@ export function PlaceJsonLd({ name, description, countryName, url, imageUrl }: P
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(data) }}
     />
   )
 }
@@ -98,7 +116,7 @@ export function OrganizationJsonLd({
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(data) }}
     />
   )
 }
@@ -140,7 +158,7 @@ export function ArticleJsonLd({
   return (
     <script
       type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(data) }}
     />
   )
 }

@@ -130,7 +130,7 @@ export const COUNTRY_MAPS: Record<string, CountryMap> = {
 export const REGION_POSITIONS: Record<string, RegionPosition> = {
   // Itálie
   apulie: { countryCode: 'IT', cx: 70, cy: 65, r: 6 },
-  toskánsko: { countryCode: 'IT', cx: 45, cy: 35, r: 6 },
+  toskansko: { countryCode: 'IT', cx: 45, cy: 35, r: 6 },
   sicilie: { countryCode: 'IT', cx: 27, cy: 91, r: 7 },
   kalabrie: { countryCode: 'IT', cx: 60, cy: 78, r: 5 },
   // Řecko
@@ -147,6 +147,14 @@ export const REGION_POSITIONS: Record<string, RegionPosition> = {
   alentejo: { countryCode: 'PT', cx: 50, cy: 70, r: 7 },
 }
 
+/** Normalize slug pro lookup: lowercase + strip diakritiky. */
+function normalizeSlug(slug: string): string {
+  return slug
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+}
+
 /**
  * Vrací data pro vykreslení mapy regionu — country path + position markeru.
  * Pokud region nebo země nejsou v datasetu, vrátí null.
@@ -155,7 +163,7 @@ export function getRegionMap(
   regionSlug: string,
   countryCode?: string | null
 ): { country: CountryMap; position: RegionPosition } | null {
-  const position = REGION_POSITIONS[regionSlug]
+  const position = REGION_POSITIONS[normalizeSlug(regionSlug)]
   if (position) {
     const country = COUNTRY_MAPS[position.countryCode]
     if (country) return { country, position }

@@ -82,13 +82,15 @@ export async function generateStaticParams() {
   return (data ?? []).map((r: { slug: string }) => ({ slug: r.slug }))
 }
 
+// Genitivní tvary regionů — slug bez diakritiky pro spolehlivý lookup
+// (DB slug 'toskansko' nematchne klíč 'toskánsko' s diakritikou).
 const GENITIVE: Record<string, string> = {
   kreta: 'Kréty',
   peloponnes: 'Peloponésu',
   apulie: 'Apulie',
   korfu: 'Korfu',
   zakynthos: 'Zakynthosu',
-  toskánsko: 'Toskánska',
+  toskansko: 'Toskánska',
   sicilie: 'Sicílie',
   kalabrie: 'Kalábrie',
   andalusie: 'Andalusie',
@@ -98,12 +100,24 @@ const GENITIVE: Record<string, string> = {
   estremadura: 'Estremadury',
 }
 
+/** Normalize slug pro lookup: lowercase + strip diakritiky. */
+function normalizeSlug(slug: string): string {
+  return slug
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+}
+
+function genitive(slug: string, fallbackName: string): string {
+  return GENITIVE[normalizeSlug(slug)] ?? fallbackName
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const region = await getRegion(slug)
   if (!region) return { title: 'Nenalezeno' }
 
-  const rawTitle = region.meta_title ?? `Olivový olej z ${GENITIVE[slug] ?? region.name}`
+  const rawTitle = region.meta_title ?? `Olivový olej z ${genitive(slug, region.name)}`
   const title = rawTitle.replace(/\s*\|\s*Olivator\s*$/i, '')
   const description =
     region.meta_description ?? `Olivové oleje z regionu ${region.name}. Srovnání, Score a ceny.`
@@ -134,7 +148,7 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
   const kpis = computeProductKpis(products)
 
   const country = countryName(region.country_code)
-  const titleH1 = `Olivový olej z ${GENITIVE[region.slug] ?? region.name}`
+  const titleH1 = `Olivový olej z ${genitive(region.slug, region.name)}`
 
   // Filtry: nabídneme top odrůdy v regionu jako chip filtry tabulky
   const cultivarCounts = new Map<string, number>()

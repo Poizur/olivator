@@ -127,6 +127,69 @@ function parseJson<T>(raw: string): T {
   }
 }
 
+/**
+ * Defenzivní normalizace AI výstupu — i když Claude vynechá pole,
+ * vrátíme bezpečné defaulty aby UI nepadalo na .length undefined.
+ */
+function normalizeRegion(raw: Partial<RegionExtrasOutput>): RegionExtrasOutput {
+  return {
+    tldr: typeof raw.tldr === 'string' ? raw.tldr : '',
+    terroir: {
+      climate: raw.terroir?.climate ?? '',
+      soil: raw.terroir?.soil ?? '',
+      tradition: raw.terroir?.tradition ?? '',
+    },
+    faqs: Array.isArray(raw.faqs)
+      ? raw.faqs.filter(
+          (f): f is { question: string; answer: string } =>
+            typeof f?.question === 'string' && typeof f?.answer === 'string'
+        )
+      : [],
+  }
+}
+
+function normalizeBrand(raw: Partial<BrandExtrasOutput>): BrandExtrasOutput {
+  return {
+    tldr: typeof raw.tldr === 'string' ? raw.tldr : '',
+    timeline: Array.isArray(raw.timeline)
+      ? raw.timeline.filter(
+          (m): m is { year: number; label: string; description?: string } =>
+            typeof m?.year === 'number' && typeof m?.label === 'string'
+        )
+      : [],
+    faqs: Array.isArray(raw.faqs)
+      ? raw.faqs.filter(
+          (f): f is { question: string; answer: string } =>
+            typeof f?.question === 'string' && typeof f?.answer === 'string'
+        )
+      : [],
+  }
+}
+
+function normalizeCultivar(raw: Partial<CultivarExtrasOutput>): CultivarExtrasOutput {
+  const validUses = ['cooking', 'finishing', 'dipping', 'frying', 'universal']
+  const primary_use = validUses.includes(raw.primary_use as string)
+    ? (raw.primary_use as CultivarExtrasOutput['primary_use'])
+    : ''
+  return {
+    tldr: typeof raw.tldr === 'string' ? raw.tldr : '',
+    nickname: typeof raw.nickname === 'string' ? raw.nickname : '',
+    primary_use,
+    pairing_pros: Array.isArray(raw.pairing_pros)
+      ? raw.pairing_pros.filter((s): s is string => typeof s === 'string')
+      : [],
+    pairing_cons: Array.isArray(raw.pairing_cons)
+      ? raw.pairing_cons.filter((s): s is string => typeof s === 'string')
+      : [],
+    faqs: Array.isArray(raw.faqs)
+      ? raw.faqs.filter(
+          (f): f is { question: string; answer: string } =>
+            typeof f?.question === 'string' && typeof f?.answer === 'string'
+        )
+      : [],
+  }
+}
+
 function formatProducts(products: BaseInput['topProducts']): string {
   return products
     .slice(0, 5)
@@ -172,7 +235,7 @@ PRAVIDLA:
 - Vrať pouze JSON, nic jiného.`
 
   const raw = await callClaude(prompt)
-  return parseJson<RegionExtrasOutput>(raw)
+  return normalizeRegion(parseJson<Partial<RegionExtrasOutput>>(raw))
 }
 
 export async function generateBrandExtras(input: BrandExtrasInput): Promise<BrandExtrasOutput> {
@@ -205,7 +268,7 @@ PRAVIDLA:
 - Vrať pouze JSON, nic jiného.`
 
   const raw = await callClaude(prompt)
-  return parseJson<BrandExtrasOutput>(raw)
+  return normalizeBrand(parseJson<Partial<BrandExtrasOutput>>(raw))
 }
 
 export async function generateCultivarExtras(
@@ -240,5 +303,5 @@ PRAVIDLA:
 - Vrať pouze JSON, nic jiného.`
 
   const raw = await callClaude(prompt)
-  return parseJson<CultivarExtrasOutput>(raw)
+  return normalizeCultivar(parseJson<Partial<CultivarExtrasOutput>>(raw))
 }

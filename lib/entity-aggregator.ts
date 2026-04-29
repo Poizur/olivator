@@ -113,11 +113,17 @@ export async function recomputeCultivar(slug: string): Promise<boolean> {
   const agg = aggregateCultivarFromProducts(products as ProductForAgg[])
   if (!agg) return false
 
-  // 4. Update — nastavíme auto_filled_at = now() jako marker
+  // 4. MERGE existující flavor_profile s nově vypočteným.
+  // Předtím: replace přepsal celý sloupec → ztráta klíčů z předchozích běhů
+  // (např. když nový produkt měl jen pikantnost, mandlové se ztratily).
+  // Teď zachováme dosavadní hodnoty a přepíšeme jen klíče, které máme nové.
+  const existing = (fp ?? {}) as Record<string, number>
+  const merged = { ...existing, ...agg.flavorProfile }
+
   const { error: updateErr } = await supabaseAdmin
     .from('cultivars')
     .update({
-      flavor_profile: agg.flavorProfile,
+      flavor_profile: merged,
       intensity_score: agg.intensityScore,
       auto_filled_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

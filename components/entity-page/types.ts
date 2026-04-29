@@ -35,10 +35,12 @@ export interface ProductTableRow {
   slug: string
   name: string
   cultivarLabel: string | null   // "Coratina" nebo "Coratina + Frantoio"
+  cultivarSlugs: string[]        // pro přesné filtrování (ne substring na label)
   brandSlug: string | null
   brandName: string | null
   regionSlug: string | null
   regionName: string | null
+  originCountry: string | null   // ISO kód (GR, IT, ...) pro filtr na cultivar page
   harvestYear: number | null
   olivatorScore: number | null
   acidity: number | null

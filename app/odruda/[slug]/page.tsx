@@ -9,6 +9,7 @@ import {
   loadEntityFaqs,
   loadEntityRecipes,
   splitDescriptionToAccordion,
+  loadCultivarPolyphenolStats,
 } from '@/lib/entity-page-data'
 
 import { EntityKpiGrid } from '@/components/entity-page/entity-kpi-grid'
@@ -141,121 +142,29 @@ export default async function CultivarPage({
   const products = await loadEntityProducts(productIds)
   const kpis = computeProductKpis(products)
 
-  // Filtry: filtrujeme podle země původu
+  // Filtry: agregujeme podle země původu z už načtených products
+  // (originCountry je teď v ProductTableRow díky fixed loadEntityProducts)
   const countryCounts = new Map<string, number>()
-  // Načteme pro tabulku country info per produkt
-  const { data: productCountries } = await supabaseAdmin
-    .from('products')
-    .select('id, origin_country')
-    .in('id', productIds)
-  const countryByProduct = new Map<string, string>()
-  for (const row of (productCountries ?? []) as Array<{ id: string; origin_country: string | null }>) {
-    if (row.origin_country) countryByProduct.set(row.id, row.origin_country)
-  }
-  // Annotate products s country pro filter
-  const productsWithCountry = products.map((p) => {
-    // Najdeme původní product id (podle slug)
-    return p
-  })
-  for (const country of countryByProduct.values()) {
-    countryCounts.set(country, (countryCounts.get(country) ?? 0) + 1)
+  for (const p of products) {
+    if (p.originCountry) {
+      countryCounts.set(p.originCountry, (countryCounts.get(p.originCountry) ?? 0) + 1)
+    }
   }
   const filterChips = Array.from(countryCounts.entries())
     .sort((a, b) => b[1] - a[1])
     .map(([code, count]) => ({ key: code, label: countryName(code), count }))
 
-  // Polyfenol comparison s ostatními odrůdami — top 5 nejvíc populárních + tahle
-  const { data: polyComparisonRaw } = await supabaseAdmin.rpc('cultivar_avg_polyphenols')
-    .then(
-      (res) => res,
-      () => ({ data: null })  // Pokud RPC neexistuje, fallback níže
-    )
+  // Polyfenol comparison — jedna SQL query s GROUP BY místo N+1.
+  // Bere všechny produkty s polyphenols, joinuje cultivar links, agreguje.
+  const polyphenolComparison = await loadCultivarPolyphenolStats(slug)
 
-  let polyphenolComparison: Array<{
-    cultivarSlug: string
-    cultivarName: string
-    avgPolyphenols: number
-    isCurrent: boolean
-  }> = []
-
-  if (polyComparisonRaw && Array.isArray(polyComparisonRaw)) {
-    polyphenolComparison = (polyComparisonRaw as Array<{
-      slug: string
-      name: string
-      avg: number
-    }>)
-      .filter((r) => r.avg > 0)
-      .sort((a, b) => b.avg - a.avg)
-      .slice(0, 6)
-      .map((r) => ({
-        cultivarSlug: r.slug,
-        cultivarName: r.name,
-        avgPolyphenols: r.avg,
-        isCurrent: r.slug === slug,
-      }))
-  } else {
-    // Fallback: spočítáme manuálně
-    const { data: allCultivars } = await supabaseAdmin
-      .from('cultivars')
-      .select('slug, name')
-      .limit(50)
-
-    if (allCultivars) {
-      const stats = await Promise.all(
-        allCultivars.map(async (c: { slug: string; name: string }) => {
-          const { data: links } = await supabaseAdmin
-            .from('product_cultivars')
-            .select('product_id')
-            .eq('cultivar_slug', c.slug)
-          const ids = (links ?? []).map((l: { product_id: string }) => l.product_id)
-          if (ids.length === 0) return { slug: c.slug, name: c.name, avg: 0 }
-          const { data: prods } = await supabaseAdmin
-            .from('products')
-            .select('polyphenols')
-            .in('id', ids)
-            .eq('status', 'active')
-            .not('polyphenols', 'is', null)
-          const polys = (prods ?? [])
-            .map((p: { polyphenols: number | null }) => p.polyphenols)
-            .filter((v): v is number => v != null)
-          if (polys.length === 0) return { slug: c.slug, name: c.name, avg: 0 }
-          return {
-            slug: c.slug,
-            name: c.name,
-            avg: polys.reduce((s, v) => s + v, 0) / polys.length,
-          }
-        })
-      )
-      polyphenolComparison = stats
-        .filter((s) => s.avg > 0)
-        .sort((a, b) => b.avg - a.avg)
-        .slice(0, 6)
-        .map((s) => ({
-          cultivarSlug: s.slug,
-          cultivarName: s.name,
-          avgPolyphenols: s.avg,
-          isCurrent: s.slug === slug,
-        }))
-
-      // Pokud aktuální odrůda není mezi top 6, přidáme ji navíc
-      if (!polyphenolComparison.some((p) => p.isCurrent)) {
-        const current = stats.find((s) => s.slug === slug)
-        if (current && current.avg > 0) {
-          polyphenolComparison.push({
-            cultivarSlug: current.slug,
-            cultivarName: current.name,
-            avgPolyphenols: current.avg,
-            isCurrent: true,
-          })
-        }
-      }
-    }
-  }
-
-  // Země pěstování — z products
+  // Země pěstování — z naších products
   const countriesGrown = Array.from(
     new Set(
-      Array.from(countryByProduct.values()).map((c) => countryName(c))
+      products
+        .map((p) => p.originCountry)
+        .filter((c): c is string => !!c)
+        .map((c) => countryName(c))
     )
   )
 
@@ -388,7 +297,7 @@ export default async function CultivarPage({
             products={products}
             entityType="cultivar"
             filters={filterChips}
-            filterField="regionSlug"
+            filterField="originCountry"
           />
 
           <EntityTrustRow tldr={tldr} entityKind="odrůda" />
