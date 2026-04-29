@@ -457,20 +457,22 @@ function TopProductCard({ product, rank }: { product: ProductWithOffer; rank: nu
       href={`/olej/${product.slug}`}
       className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_12px_32px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:border-olive-light"
     >
-      {/* Foto dominuje — portrait aspect 3:4 jako Shoptet karta.
-          Lahve jsou na výšku, takže obrázek si teď vezme proporčně víc místa. */}
-      <div className="relative aspect-[3/4] bg-gradient-to-br from-off to-white">
+      {/* Foto vyplňuje celý prostor — bez vnitřního paddingu.
+          Aspekt 4:5 (užší/vyšší než 3:4) protože lahve mají natural portrait.
+          bg-white sjednotí s bílým paddingem v product fotech (žádná viditelná hranice). */}
+      <div className="relative aspect-[4/5] bg-white overflow-hidden">
         {/* Rank + Score překryvy */}
-        <span className="absolute top-2.5 left-2.5 z-10 text-[10px] font-bold tracking-widest uppercase text-text3 bg-white/85 backdrop-blur-sm rounded px-1.5 py-0.5">
+        <span className="absolute top-2.5 left-2.5 z-10 text-[10px] font-bold tracking-widest uppercase text-text bg-white/90 backdrop-blur-sm rounded px-1.5 py-0.5">
           #{rank}
         </span>
         <span className="absolute top-2.5 right-2.5 z-10 text-[11px] font-bold bg-terra text-white rounded-full px-2 py-0.5 tabular-nums shadow-sm">
           {product.olivatorScore}
         </span>
-        <div className="absolute inset-0 p-3">
+        {/* Obrázek vyplňuje celou kartu, mírný hover scale */}
+        <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
           <ProductImage
             product={product}
-            fallbackSize="text-[64px]"
+            fallbackSize="text-[80px]"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 240px"
           />
         </div>

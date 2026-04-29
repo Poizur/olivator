@@ -26,9 +26,9 @@ export function OilCard({ product, offer, isTop }: OilCardProps) {
         </div>
       )}
       <Link href={`/olej/${product.slug}`}>
-        {/* Portrait poměr 3:4 — lahve jsou na výšku, foto si zaslouží místo */}
-        <div className="relative aspect-[3/4] bg-gradient-to-br from-off to-white">
-          <div className="absolute inset-0 p-3">
+        {/* Portrait poměr 4:5 — bez paddingu, bg-white pro hladký přechod do photo whitespace */}
+        <div className="relative aspect-[4/5] bg-white overflow-hidden">
+          <div className="absolute inset-0 transition-transform duration-300 hover:scale-105">
             <ProductImage product={product} fallbackSize="text-[80px]" sizes="(max-width: 768px) 50vw, 300px" />
           </div>
           <div className="absolute bottom-3 right-3 bg-terra text-white text-[11px] font-semibold px-2.5 py-1 rounded-full shadow-sm">
