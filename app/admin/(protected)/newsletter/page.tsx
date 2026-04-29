@@ -42,10 +42,11 @@ export default async function NewsletterAdminPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="font-[family-name:var(--font-display)] text-3xl text-text mb-2">
-          📬 Newsletter
+        <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">— Obsah</div>
+        <h1 className="font-[family-name:var(--font-display)] text-3xl text-text mb-1">
+          Newsletter
         </h1>
-        <p className="text-sm text-text3 max-w-[640px]">
+        <p className="text-[13px] text-text2 max-w-[640px]">
           Newsletter signups z homepage hero boxu a footeru. Synchronizuji do Resend Audiences,
           pokud máš nastavený <code className="bg-off rounded px-1 text-[12px]">NEWSLETTER_AUDIENCE_ID</code>.
         </p>

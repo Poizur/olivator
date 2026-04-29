@@ -38,11 +38,12 @@ export default async function AdminRegionsPage() {
   const [regions, productCounts] = await Promise.all([getRegions(), getProductCountsByRegion()])
 
   return (
-    <div className="p-8 max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
+    <div>
+      <div className="flex items-end justify-between mb-6 flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-text">🌍 Regiony</h1>
-          <p className="text-sm text-text3 mt-0.5">{regions.length} regionů</p>
+          <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">— Katalog</div>
+          <h1 className="font-[family-name:var(--font-display)] text-3xl text-text">Regiony</h1>
+          <p className="text-[13px] text-text2 mt-1">{regions.length} regionů v katalogu</p>
         </div>
       </div>
 
@@ -60,7 +61,7 @@ export default async function AdminRegionsPage() {
                 {r.country_code} · {productCounts[r.slug] ?? 0} produktů
                 {r.description_long
                   ? ` · text ${r.description_long.length} znaků`
-                  : ' · ⚠ bez textu'}
+                  : ' · bez textu'}
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">

@@ -40,14 +40,14 @@ export function BulkFetchImagesButton() {
         type="button"
         onClick={onRun}
         disabled={running}
-        className="bg-off text-text rounded-full px-4 py-2 text-[13px] font-medium hover:bg-off2 disabled:opacity-40 transition-colors"
+        className="text-[12px] bg-off text-text2 hover:bg-olive-bg hover:text-olive border border-off2 hover:border-olive/30 rounded-full px-3.5 py-1.5 disabled:opacity-40 transition-colors"
       >
-        {running ? '⏳ Načítám...' : '📷 Doplnit chybějící fotky'}
+        {running ? 'Načítám…' : 'Doplnit chybějící fotky'}
       </button>
 
       {error && (
         <span className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5 w-full">
-          ⚠ {error}
+          {error}
         </span>
       )}
       {result && (

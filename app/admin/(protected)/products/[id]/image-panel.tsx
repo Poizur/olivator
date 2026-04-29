@@ -134,7 +134,7 @@ export function ImagePanel({ productId, currentImageUrl, currentSource, ean }: I
             // eslint-disable-next-line @next/next/no-img-element
             <img src={currentImageUrl!} alt="Produkt" className="w-full h-full object-contain" />
           ) : (
-            <span className="text-4xl">🫒</span>
+            <span className="font-[family-name:var(--font-display)] text-4xl italic text-text3/40 leading-none">—</span>
           )}
         </div>
         <div className="flex-1 text-xs text-text3 leading-relaxed">
@@ -158,7 +158,7 @@ export function ImagePanel({ productId, currentImageUrl, currentSource, ean }: I
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Manual URL — primary CTA since it gives best quality */}
         <div className="bg-olive-bg/40 border border-olive-border rounded-lg p-3">
-          <div className="text-xs font-medium text-text mb-1">🔗 Ručně z URL (doporučeno)</div>
+          <div className="text-xs font-medium text-text mb-1">Ručně z URL (doporučeno)</div>
           <div className="text-[11px] text-text3 mb-2 leading-relaxed">
             Nejlepší kvalita — z webu značky nebo eshopu. Pravým klikem na fotku → zkopíruj URL obrázku.
           </div>

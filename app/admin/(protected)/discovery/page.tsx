@@ -49,14 +49,15 @@ export default async function DiscoveryPage() {
     <div>
       <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
         <div>
+          <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">— Discovery</div>
           <h1 className="font-[family-name:var(--font-display)] text-3xl text-text mb-1">
             Návrhy nových olejů
           </h1>
-          <p className="text-sm text-text3 max-w-[720px]">
+          <p className="text-[13px] text-text2 max-w-[720px]">
             Fronta olejů které agent našel na e-shopech a čekají na tvé schválení.
             Spravuješ je v{' '}
             <Link href="/admin/discovery/sources" className="text-olive hover:underline">
-              📋 E-shopech
+              Zdrojích
             </Link>
             .
           </p>

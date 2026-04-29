@@ -69,10 +69,11 @@ export default async function BulkJobsPage() {
   return (
     <div>
       <div className="mb-6">
+        <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">— Discovery</div>
         <h1 className="font-[family-name:var(--font-display)] text-3xl text-text mb-1">
-          Historie hromadných úloh
+          Historie běhů
         </h1>
-        <p className="text-sm text-text3 max-w-[640px]">
+        <p className="text-[13px] text-text2 max-w-[640px]">
           Záznam všech hromadných operací (schvalování, zamítání). Užitečné pro debug —
           vidíš co kdy běželo a co selhalo.
         </p>

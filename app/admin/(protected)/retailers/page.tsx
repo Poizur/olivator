@@ -18,11 +18,15 @@ export default async function AdminRetailersPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-[family-name:var(--font-display)] text-3xl text-text">Prodejci</h1>
+      <div className="flex items-end justify-between mb-6 flex-wrap gap-4">
+        <div>
+          <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">— Obchod</div>
+          <h1 className="font-[family-name:var(--font-display)] text-3xl text-text">Prodejci</h1>
+          <p className="text-[13px] text-text2 mt-1">{retailers.length} aktivních partnerů</p>
+        </div>
         <Link
           href="/admin/retailers/new"
-          className="bg-olive text-white rounded-full px-4 py-2 text-[13px] font-medium hover:bg-olive-dark transition-colors"
+          className="bg-olive text-white rounded-full px-4 py-2 text-[13px] font-medium hover:bg-olive2 transition-colors"
         >
           + Nový prodejce
         </Link>

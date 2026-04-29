@@ -340,7 +340,7 @@ export function ProductForm({
             }}
             className="bg-olive text-white rounded-full px-4 py-1.5 text-[13px] font-medium hover:bg-olive-dark transition-colors"
           >
-            ✨ Spočítat automaticky
+            Spočítat automaticky
           </button>
           <span className="text-[11px] text-text3 leading-tight">
             Použije kyselost, certifikace, polyfenoly + peroxidové číslo a cenu
@@ -544,7 +544,7 @@ function RewriteButton({
           disabled={loading}
           className="bg-olive-bg text-olive-dark border border-olive-border rounded-full px-4 py-1.5 text-[13px] font-medium hover:bg-olive-border disabled:opacity-40 transition-colors"
         >
-          {loading ? '✨ Přepisuji... (~5-10s)' : '✨ Přepsat AI'}
+          {loading ? 'Přepisuji… (~5-10s)' : 'Přepsat AI'}
         </button>
         <span className="text-[11px] text-text3 leading-tight flex-1">
           Claude vygeneruje unikátní SEO popis. Po generování systém automaticky
@@ -592,7 +592,7 @@ function RewriteButton({
 
           {validation.errors > 0 && (
             <div className="mt-2 pt-2 border-t border-current/20 text-[11px]">
-              <strong>Doporučení:</strong> klikni znovu na &ldquo;✨ Přepsat AI&rdquo;.
+              <strong>Doporučení:</strong> klikni znovu na &ldquo;Přepsat AI&rdquo;.
               Claude občas vrátí zakázané fráze — druhý pokus je často lepší.
               Nebo uprav text ručně před uložením.
             </div>
@@ -641,7 +641,7 @@ function FlavorAiButton({
         disabled={loading}
         className="bg-olive text-white rounded-full px-4 py-1.5 text-[13px] font-medium hover:bg-olive-dark disabled:opacity-40 transition-colors"
       >
-        {loading ? '✨ Odhaduji chuť...' : '✨ Spočítat automaticky'}
+        {loading ? 'Odhaduji chuť…' : 'Spočítat automaticky'}
       </button>
       <span className="text-[11px] text-text3 leading-tight flex-1">
         Claude přečte popis produktu z e-shopu + parametry (odrůda, polyfenoly, původ) a odhadne

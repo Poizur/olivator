@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { getAllProductsAdmin } from '@/lib/data'
-import { countryFlag, typeLabel, extractBrand } from '@/lib/utils'
+import { typeLabel, extractBrand } from '@/lib/utils'
 import { calculateCompleteness, completenessColor } from '@/lib/completeness'
 
 function CompletenessBadge({ result }: { result: ReturnType<typeof calculateCompleteness> }) {
@@ -105,14 +105,17 @@ export default async function AdminProductsPage({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-[family-name:var(--font-display)] text-3xl text-text">Produkty</h1>
+      <div className="flex items-end justify-between mb-6 flex-wrap gap-4">
+        <div>
+          <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">— Katalog</div>
+          <h1 className="font-[family-name:var(--font-display)] text-3xl text-text">Produkty</h1>
+        </div>
         <div className="flex gap-2">
           <Link
             href="/admin/products/import"
-            className="bg-olive text-white rounded-full px-4 py-2 text-[13px] font-medium hover:bg-olive-dark transition-colors"
+            className="bg-olive text-white rounded-full px-4 py-2 text-[13px] font-medium hover:bg-olive2 transition-colors"
           >
-            📥 Import z URL
+            Import z URL
           </Link>
         </div>
       </div>
@@ -215,13 +218,13 @@ export default async function AdminProductsPage({
                         loading="lazy"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-base">🫒</div>
+                      <div className="w-full h-full flex items-center justify-center font-[family-name:var(--font-display)] text-base italic text-text3/40">{p.name.charAt(0)}</div>
                     )}
                   </Link>
                 </td>
                 <td className="px-3 py-3">
                   <div className="text-sm font-medium text-text">
-                    {countryFlag(p.originCountry)} {p.name}
+                    {p.name}
                   </div>
                   <div className="text-xs text-text3">
                     {p.originRegion}{p.volumeMl ? ` · ${p.volumeMl} ml` : ''}

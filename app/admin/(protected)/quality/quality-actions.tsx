@@ -117,7 +117,7 @@ export function QualityActions() {
           className="bg-white border border-off2 text-text2 rounded-full px-4 py-2 text-[13px] font-medium hover:border-olive-light hover:text-olive disabled:opacity-40 transition-colors"
           title="HEAD request na všechny affiliate URLs — 404/410 deaktivuje, znovu-žijící reaktivuje. Cron běží denně automaticky."
         >
-          {running === 'links' ? '🔗 Kontroluju…' : '🔗 Zkontrolovat odkazy'}
+          {running === 'links' ? 'Kontroluju…' : 'Zkontrolovat odkazy'}
         </button>
         <button
           type="button"

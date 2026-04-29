@@ -239,7 +239,7 @@ export function ImportForm() {
           <div className="border-t border-off pt-4 flex items-center justify-between">
             <div className="text-xs text-text3">
               Vytvoří se <strong>draft</strong> — po uložení zkontroluj a vyplň chybějící pole.
-              Pak můžeš spustit <strong>✨ Přepsat AI</strong> pro unikátní SEO texty.
+              Pak můžeš spustit <strong>Přepsat AI</strong> pro unikátní SEO texty.
             </div>
             <button
               type="button"

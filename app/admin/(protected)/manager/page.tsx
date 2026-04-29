@@ -40,10 +40,11 @@ export default async function ManagerPage() {
     <div>
       <div className="flex items-start justify-between mb-6 gap-4 flex-wrap">
         <div>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl text-text mb-2">
-            📊 Týdenní reporty
+          <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">— Obsah</div>
+          <h1 className="font-[family-name:var(--font-display)] text-3xl text-text mb-1">
+            Týdenní reporty
           </h1>
-          <p className="text-sm text-text3 max-w-[640px]">
+          <p className="text-[13px] text-text2 max-w-[640px]">
             Manager agent týdně sbírá data napříč zdroji (affiliate kliky, kvalita, discovery,
             completeness), Claude analyzuje a posílá strategický report s konkrétními akcemi.
             Cron pondělí 5:00 UTC po discovery + prospect.

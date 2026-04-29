@@ -37,11 +37,12 @@ export default async function AdminCultivarsPage() {
   const [cultivars, productCounts] = await Promise.all([getCultivars(), getProductCountsByCultivar()])
 
   return (
-    <div className="p-8 max-w-4xl">
-      <div className="flex items-center justify-between mb-6">
+    <div>
+      <div className="flex items-end justify-between mb-6 flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-text">🫒 Odrůdy</h1>
-          <p className="text-sm text-text3 mt-0.5">{cultivars.length} odrůd</p>
+          <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">— Katalog</div>
+          <h1 className="font-[family-name:var(--font-display)] text-3xl text-text">Odrůdy</h1>
+          <p className="text-[13px] text-text2 mt-1">{cultivars.length} odrůd v katalogu</p>
         </div>
       </div>
 
@@ -59,7 +60,7 @@ export default async function AdminCultivarsPage() {
                 {productCounts[c.slug] ?? 0} produktů
                 {c.description_long
                   ? ` · text ${c.description_long.length} znaků`
-                  : ' · ⚠ bez textu'}
+                  : ' · bez textu'}
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">

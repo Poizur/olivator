@@ -75,7 +75,7 @@ export default async function RootLayout({
   return (
     <html lang="cs" className={`${playfair.variable} ${inter.variable}`}>
       <body className="min-h-screen flex flex-col antialiased">
-        <AdminBar />
+        {!isAdminPage ? <AdminBar /> : null}
         <WishlistProvider>
           <CompareProvider>
             {!isAdminPage ? <Nav /> : null}
