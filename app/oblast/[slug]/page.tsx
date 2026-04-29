@@ -96,9 +96,28 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-function renderDescription(text: string) {
+function renderDescription(text: string, galleryPhotos: EntityPhoto[] = []) {
+  let photoIndex = 0
   return text.split('\n').map((line, i) => {
     if (line.startsWith('## ')) {
+      const photo = galleryPhotos[photoIndex]
+      if (photo) {
+        photoIndex++
+        return (
+          <div key={i} className="mt-10 mb-3">
+            <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-4">{line.slice(3)}</h2>
+            <div className="relative aspect-[16/7] rounded-xl overflow-hidden mb-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photo.url} alt={photo.alt_text ?? ''} className="w-full h-full object-cover" loading="lazy" />
+              {photo.source_attribution && (
+                <p className="absolute bottom-1.5 right-2 text-[9px] text-white/70 bg-black/30 backdrop-blur-sm rounded px-1.5 py-0.5">
+                  © {photo.source_attribution}
+                </p>
+              )}
+            </div>
+          </div>
+        )
+      }
       return <h2 key={i} className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mt-10 mb-3">{line.slice(3)}</h2>
     }
     if (line.startsWith('### ')) {
@@ -168,33 +187,11 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
         </div>
       )}
 
-      {/* Photo gallery — additional photos beyond hero */}
-      {galleryPhotos.length > 0 && (
-        <div className="mb-12 grid grid-cols-2 md:grid-cols-3 gap-3">
-          {galleryPhotos.map((p, i) => (
-            <div key={i} className="relative aspect-[4/3] rounded-xl overflow-hidden bg-off">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={p.url}
-                alt={p.alt_text ?? `${region.name} ${i + 2}`}
-                className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                loading="lazy"
-              />
-              {p.source_attribution && (
-                <p className="absolute bottom-1.5 right-2 text-[9px] text-white/70 bg-black/30 backdrop-blur-sm rounded px-1.5 py-0.5">
-                  © {p.source_attribution}
-                </p>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-12">
-        {/* Editorial content */}
+        {/* Editorial content — gallery photos injected after each H2 */}
         <div className="min-w-0">
           {region.description_long ? (
-            <div>{renderDescription(region.description_long)}</div>
+            <div>{renderDescription(region.description_long, galleryPhotos)}</div>
           ) : (
             <p className="text-text2 font-light italic">Popis regionu se připravuje…</p>
           )}

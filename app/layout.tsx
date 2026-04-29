@@ -10,6 +10,7 @@ import { WishlistProvider } from '@/lib/wishlist-context'
 import { CompareBar } from '@/components/compare-bar'
 import { AdminBar } from '@/components/admin-bar'
 import { SommelierChat } from '@/components/sommelier-chat'
+import { isAdminAuthenticated } from '@/lib/admin-auth'
 import './globals.css'
 
 const playfair = Playfair_Display({
@@ -71,14 +72,15 @@ export default async function RootLayout({
   const headersList = await headers()
   const pathname = headersList.get('x-pathname') ?? ''
   const isAdminPage = pathname.startsWith('/admin')
+  const isAdmin = !isAdminPage && await isAdminAuthenticated()
 
   return (
     <html lang="cs" className={`${playfair.variable} ${inter.variable}`}>
       <body className="min-h-screen flex flex-col antialiased">
-        {!isAdminPage ? <AdminBar /> : null}
+        {isAdmin ? <AdminBar /> : null}
         <WishlistProvider>
           <CompareProvider>
-            {!isAdminPage ? <Nav /> : null}
+            {!isAdminPage ? <Nav hasAdminBar={isAdmin} /> : null}
             <main className="flex-1">{children}</main>
             {!isAdminPage ? <Footer /> : null}
             {!isAdminPage ? <CompareBar /> : null}

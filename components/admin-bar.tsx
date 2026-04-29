@@ -101,12 +101,7 @@ export async function AdminBar() {
 
   return (
     <>
-      {/* Push sticky Nav and any sticky elements below the admin bar. */}
-      <style dangerouslySetInnerHTML={{ __html: `
-        nav.sticky { top: 2.25rem !important; }
-        .sticky.top-\\[72px\\] { top: 6.5rem !important; }
-      ` }} />
-      {/* Spacer so content isn't hidden behind fixed bar */}
+      {/* Spacer so the fixed bar doesn't cover content below */}
       <div aria-hidden className="h-9" />
       <div className="fixed top-0 left-0 right-0 z-[60] bg-text text-white text-[12px] font-medium border-b border-black/20 shadow-sm">
         <div className="max-w-[1280px] mx-auto px-5 h-9 flex items-center gap-1">

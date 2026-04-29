@@ -12,13 +12,13 @@ const links = [
   { href: '/metodika', label: 'Metodika' },
 ]
 
-export function Nav() {
+export function Nav({ hasAdminBar = false }: { hasAdminBar?: boolean }) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-white/88 backdrop-blur-xl border-b border-black/8">
+      <nav className={`sticky ${hasAdminBar ? 'top-9' : 'top-0'} z-50 bg-white/88 backdrop-blur-xl border-b border-black/8`}>
         <div className="max-w-[1280px] mx-auto h-[52px] flex items-center px-6 md:px-10 gap-8">
           <Link
             href="/"
@@ -87,7 +87,7 @@ export function Nav() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="md:hidden fixed inset-0 top-[52px] bg-white z-40 px-6 pt-6 pb-10">
+        <div className={`md:hidden fixed inset-0 ${hasAdminBar ? 'top-[88px]' : 'top-[52px]'} bg-white z-40 px-6 pt-6 pb-10`}>
           <div className="flex flex-col gap-1">
             {links.map(l => (
               <Link
