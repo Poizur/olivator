@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { EntityExtrasModal } from './entity-extras-modal'
 
 export interface TimelineMilestone {
   year: number
@@ -48,9 +49,13 @@ export interface EntityEditData {
 interface Props {
   entity: EntityEditData
   publicUrl: string
+  /** UUID entity — použito pro AI extras modal (při create FAQ). */
+  entityId?: string
 }
 
-export function EntityEditForm({ entity, publicUrl }: Props) {
+export function EntityEditForm({ entity, publicUrl, entityId }: Props) {
+  const [extrasOpen, setExtrasOpen] = useState(false)
+
   const [data, setData] = useState({
     name: entity.name,
     status: entity.status,
@@ -217,6 +222,14 @@ export function EntityEditForm({ entity, publicUrl }: Props) {
         >
           {importing ? '⏳ Importuji…' : '📷 Import fotek (Unsplash)'}
         </button>
+        {entityId && (
+          <button
+            onClick={() => setExtrasOpen(true)}
+            className="px-4 py-2 bg-white border border-olive-border text-olive rounded-lg text-sm hover:bg-olive-bg"
+          >
+            ✨ Vygenerovat doplňky
+          </button>
+        )}
         <a
           href={publicUrl}
           target="_blank"
@@ -563,6 +576,17 @@ export function EntityEditForm({ entity, publicUrl }: Props) {
         {saved && <span className="text-sm text-green-600">✓ Uloženo</span>}
         {error && <span className="text-sm text-red-500">{error}</span>}
       </div>
+
+      {/* AI extras modal */}
+      {entityId && (
+        <EntityExtrasModal
+          entityType={entity.entityType}
+          slug={entity.slug}
+          entityId={entityId}
+          isOpen={extrasOpen}
+          onClose={() => setExtrasOpen(false)}
+        />
+      )}
     </div>
   )
 }

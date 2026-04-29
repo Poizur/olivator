@@ -92,6 +92,7 @@ export default async function EditRegionPage({ params }: { params: Promise<{ slu
           terroir: region.terroir,
         }}
         publicUrl={`/oblast/${region.slug}`}
+        entityId={region.id}
       />
 
       <EntityFaqEditor

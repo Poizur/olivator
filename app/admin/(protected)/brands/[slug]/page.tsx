@@ -102,6 +102,7 @@ export default async function EditBrandPage({ params }: { params: Promise<{ slug
           timeline: brand.timeline,
         }}
         publicUrl={`/znacka/${brand.slug}`}
+        entityId={brand.id}
       />
 
       <EntityFaqEditor

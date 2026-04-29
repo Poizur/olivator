@@ -110,6 +110,7 @@ export default async function EditCultivarPage({ params }: { params: Promise<{ s
           auto_filled_at: cultivar.auto_filled_at,
         }}
         publicUrl={`/odruda/${cultivar.slug}`}
+        entityId={cultivar.id}
       />
 
       <EntityFaqEditor
