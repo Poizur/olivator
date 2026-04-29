@@ -600,6 +600,23 @@ export async function publishCandidate(
     console.warn('[discovery] AI rewrite failed, leaving as draft:', err)
   }
 
+  // ── ENTITY LINKING ──
+  // Extract brand_slug + region_slug + cultivar links pro nový produkt
+  // a recompute aggregate dat (cultivar.flavor_profile, intensity).
+  // Best-effort — selhání nesmí blokovat publish.
+  try {
+    const { linkAndRecomputeForProduct } = await import('@/lib/entity-aggregator')
+    await linkAndRecomputeForProduct(
+      productId,
+      scraped.name,
+      scraped.originCountry,
+      scraped.originRegion,
+      scraped.rawDescription
+    )
+  } catch (err) {
+    console.warn('[discovery] entity linking failed:', err)
+  }
+
   // ── PRE-PUBLISH GATE ──
   // Run full quality audit + auto-fix. If errors remain, leave product as
   // draft and surface reasoning in discovery_candidates. Prevents pipeline
