@@ -1,238 +1,131 @@
 import Link from 'next/link'
-import { getProductsWithOffers, getSiteStats } from '@/lib/data'
+import {
+  getProductsWithOffers,
+  getSiteStats,
+  getRegionTiles,
+  getBrandTiles,
+} from '@/lib/data'
 import { getArticles } from '@/lib/static-content'
-import { pickOilOfDay, pickThreeCurated, pickScoreFeature } from '@/lib/home-picks'
+import { pickOilOfDay, pickScoreFeature } from '@/lib/home-picks'
 import { NewsletterSignup } from '@/components/newsletter-signup'
 import { ProductImage } from '@/components/product-image'
+import { SommelierHero } from '@/components/sommelier-hero'
+import { FlavorSelector } from '@/components/flavor-selector'
+import { RegionAtlas } from '@/components/region-atlas'
+import { BrandStrip } from '@/components/brand-strip'
 import { countryFlag, countryName, formatPrice, formatPricePer100ml } from '@/lib/utils'
 import type { Product, ProductOffer } from '@/lib/types'
 
-// Homepage rotuje denně (revalidate = 1 hodina, ale dailySeed je per-day)
 export const revalidate = 3600
 
 type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
 
 export default async function Home() {
-  const [allProducts, stats] = await Promise.all([
+  const [allProducts, stats, regions, brands] = await Promise.all([
     getProductsWithOffers(),
     getSiteStats(),
+    getRegionTiles(),
+    getBrandTiles(),
   ])
+
   const oilOfDay = pickOilOfDay(allProducts)
-  const curated = pickThreeCurated(allProducts)
   const scoreFeature = pickScoreFeature(allProducts)
   const articles = getArticles()
-  const heroArticle = articles[0]
-  const restArticles = articles.slice(1, 4)
+
+  // Top 3 by Score for hero sidebar
+  const topPicks = [...allProducts]
+    .filter((p) => p.cheapestOffer != null && p.olivatorScore >= 60)
+    .sort((a, b) => b.olivatorScore - a.olivatorScore)
+    .slice(0, 3)
+
+  // Lookup table for AI sommelier reply → product card
+  const productLookup: Record<string, ProductWithOffer> = {}
+  for (const p of allProducts) productLookup[p.slug] = p
+
+  // Top 9 olejů této chvíle (catalog teaser)
+  const topNine = [...allProducts]
+    .filter((p) => p.cheapestOffer != null)
+    .sort((a, b) => b.olivatorScore - a.olivatorScore)
+    .slice(0, 9)
 
   return (
     <>
-      {/* ─── HERO ──────────────────────────────────────────────── */}
-      <section className="relative px-6 md:px-10 pt-16 pb-20 text-center bg-white overflow-hidden">
-        {/* Subtle background gradient */}
-        <div
-          aria-hidden
-          className="absolute inset-0 -z-10 bg-gradient-to-b from-olive-bg/30 via-white to-white"
-        />
+      {/* ─── HERO: AI Sommelier inline ─────────────────────────────── */}
+      <SommelierHero
+        totalProducts={stats.totalProducts}
+        activeRetailers={stats.activeRetailers}
+        regionCount={regions.length}
+        brandCount={brands.length}
+        topPicks={topPicks}
+        productLookup={productLookup}
+      />
 
-        <div className="inline-flex items-center gap-2 text-[11px] font-medium text-olive bg-olive-bg px-3.5 py-1.5 rounded-full mb-6 tracking-wide">
-          <span className="relative flex w-2 h-2">
-            <span className="animate-ping absolute inline-flex w-full h-full rounded-full bg-olive opacity-50" />
-            <span className="relative inline-flex w-2 h-2 rounded-full bg-olive" />
-          </span>
-          {stats.totalProducts} olejů · {stats.activeRetailers} prodejců · ceny aktualizované dnes
-        </div>
-
-        <h1 className="font-[family-name:var(--font-display)] text-5xl md:text-[72px] font-normal leading-[1.02] tracking-tight text-text mb-5">
-          Najdi svůj<br />
-          <em className="text-olive italic">dokonalý olej.</em>
-        </h1>
-
-        <p className="text-[17px] text-text2 font-light leading-relaxed max-w-[520px] mx-auto mb-9">
-          Bez reklam, bez sponzoringu, bez bla bla.{' '}
-          <span className="block md:inline">Vlastní Score, kurátorský výběr, AI Sommelier.</span>
-        </p>
-
-        <div className="flex flex-col items-center gap-3">
-          <Link
-            href="/quiz"
-            className="group inline-flex items-center gap-2.5 bg-olive text-white rounded-full px-7 py-3.5 text-[15px] font-semibold transition-all hover:bg-olive2 hover:scale-[1.02] shadow-[0_4px_24px_rgba(45,106,79,0.25)]"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-            Najdeme ti olej
-            <span className="text-white/60 text-[12px] font-normal">· 5 otázek</span>
-          </Link>
-          <Link
-            href="/srovnavac"
-            className="text-[13px] text-text3 hover:text-text transition-colors"
-          >
-            nebo procházet katalog ↓
-          </Link>
-        </div>
-      </section>
-
-      {/* ─── OLEJ DNE ─────────────────────────────────────────── */}
-      {oilOfDay && (
-        <section className="px-6 md:px-10 py-14 max-w-[960px] mx-auto">
-          <div className="flex items-center justify-center gap-2 mb-7">
-            <span className="text-2xl">🏆</span>
-            <span className="text-[10px] font-bold tracking-widest uppercase text-text2">
-              Olej dne
-            </span>
-            <span className="text-[11px] text-text3">
-              · vybráno automaticky podle Score / cena
-            </span>
+      {/* ─── TOP 9 OLEJŮ TÉTO CHVÍLE ─────────────────────────────── */}
+      <section className="px-6 md:px-10 py-16">
+        <div className="max-w-[1280px] mx-auto">
+          <div className="flex items-end justify-between mb-8 flex-wrap gap-4">
+            <div>
+              <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
+                🏆 Top devítka
+              </div>
+              <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text leading-tight">
+                Devět olejů, na které sázíme.
+              </h2>
+              <p className="text-[14px] text-text2 mt-1.5 max-w-[460px]">
+                Nejvyšší Score napříč katalogem. Aktualizováno denně podle nových cen a nově přidaných produktů.
+              </p>
+            </div>
+            <Link
+              href="/srovnavac"
+              className="text-[13px] text-olive border-b border-olive-border hover:text-olive2 whitespace-nowrap"
+            >
+              Celý žebříček ({stats.totalProducts}) →
+            </Link>
           </div>
 
-          <Link
-            href={`/olej/${oilOfDay.slug}`}
-            className="block bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden transition-all hover:shadow-[0_24px_60px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:border-olive-light"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-[280px_1fr]">
-              {/* Foto */}
-              <div className="aspect-[4/5] md:aspect-auto bg-gradient-to-br from-olive-bg/40 to-off relative">
-                <ProductImage
-                  product={oilOfDay}
-                  fallbackSize="text-[100px]"
-                  sizes="(max-width: 768px) 100vw, 280px"
-                />
-                <div className="absolute top-4 left-4 bg-terra text-white rounded-full px-3 py-1 text-xs font-bold tabular-nums shadow-md">
-                  {oilOfDay.olivatorScore}/100
-                </div>
-              </div>
-
-              {/* Info */}
-              <div className="p-6 md:p-8 flex flex-col">
-                <div className="text-[12px] text-text3 mb-2 flex items-center gap-1.5">
-                  <span>{countryFlag(oilOfDay.originCountry)}</span>
-                  <span>
-                    {oilOfDay.originRegion ? `${oilOfDay.originRegion}, ` : ''}
-                    {countryName(oilOfDay.originCountry)}
-                  </span>
-                </div>
-
-                <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-3xl text-text leading-tight mb-3">
-                  {oilOfDay.name}
-                </h2>
-
-                {/* Hlavní fakty */}
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {oilOfDay.acidity != null && (
-                    <span className="text-[11px] bg-olive-bg text-olive-dark border border-olive-border rounded-full px-2.5 py-0.5">
-                      kyselost {oilOfDay.acidity} %
-                    </span>
-                  )}
-                  {oilOfDay.polyphenols != null && (
-                    <span className="text-[11px] bg-amber-50 text-amber-800 border border-amber-200 rounded-full px-2.5 py-0.5">
-                      {oilOfDay.polyphenols} mg/kg polyfenolů
-                    </span>
-                  )}
-                  {oilOfDay.certifications.slice(0, 2).map(c => (
-                    <span key={c} className="text-[11px] bg-off text-text2 border border-off2 rounded-full px-2.5 py-0.5 uppercase font-medium">
-                      {c}
-                    </span>
-                  ))}
-                </div>
-
-                {/* Cena */}
-                {oilOfDay.cheapestOffer && (
-                  <div className="mt-auto pt-4 border-t border-off flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <div className="text-2xl font-bold text-text tracking-tight">
-                        {formatPrice(oilOfDay.cheapestOffer.price)}
-                      </div>
-                      <div className="text-[11px] text-text3">
-                        {formatPricePer100ml(oilOfDay.cheapestOffer.price, oilOfDay.volumeMl)} ·
-                        u {oilOfDay.cheapestOffer.retailer.name}
-                      </div>
-                    </div>
-                    <div className="bg-olive text-white rounded-full px-5 py-2 text-[13px] font-semibold whitespace-nowrap">
-                      Detail oleje →
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Link>
-        </section>
-      )}
-
-      {/* ─── PROČ OLIVATOR ───────────────────────────────────── */}
-      <section className="bg-off/60 px-6 md:px-10 py-16">
-        <div className="max-w-[1080px] mx-auto">
-          <div className="text-center mb-10">
-            <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
-              Co děláme jinak
-            </div>
-            <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text">
-              Oproti běžným srovnávačům
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              {
-                emoji: '📊',
-                title: 'Vlastní Score',
-                body: '4 kritéria, 100 bodů, transparentní breakdown.',
-                cta: { href: '/metodika', label: 'Jak počítáme' },
-              },
-              {
-                emoji: '🤖',
-                title: 'AI Sommelier',
-                body: '"Lehký řecký do 300 Kč" — najde ti olej za 5 sekund.',
-                cta: { href: '#sommelier', label: 'Otevřít chat' },
-              },
-              {
-                emoji: '🚫',
-                title: 'Žádná reklama',
-                body: 'Není sponsored, není provize-driven výběr.',
-                cta: { href: '/o-projektu', label: 'O projektu' },
-              },
-              {
-                emoji: '🌍',
-                title: '18 prodejců',
-                body: 'Cena se mění, my hlídáme. Aktualizace každý den.',
-                cta: { href: '/srovnavac', label: 'Procházet katalog' },
-              },
-            ].map((d) => (
-              <div
-                key={d.title}
-                className="bg-white border border-off2 rounded-[var(--radius-card)] p-5 flex flex-col hover:border-olive-light transition-colors"
-              >
-                <div className="text-3xl mb-3">{d.emoji}</div>
-                <div className="text-base font-semibold text-text mb-1.5">{d.title}</div>
-                <div className="text-[13px] text-text2 leading-relaxed mb-4 flex-1">{d.body}</div>
-                <Link
-                  href={d.cta.href}
-                  className="text-[12px] text-olive hover:text-olive2 font-medium"
-                >
-                  {d.cta.label} →
-                </Link>
-              </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {topNine.map((p, i) => (
+              <TopProductCard key={p.id} product={p} rank={i + 1} />
             ))}
           </div>
         </div>
       </section>
 
-      {/* ─── SCORE EXPLAINER ────────────────────────────────── */}
-      {scoreFeature && (
-        <section className="px-6 md:px-10 py-16 max-w-[960px] mx-auto">
-          <div className="text-center mb-10">
-            <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
-              Jak vzniká Score
-            </div>
-            <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text mb-3">
-              Žádná magie. 4 čísla.
-            </h2>
-            <p className="text-[15px] text-text2 max-w-[480px] mx-auto">
-              Vyzkoušej si to na konkrétním produktu. <strong className="text-text">{scoreFeature.name}</strong> dostala <strong className="text-text">{scoreFeature.olivatorScore}/100</strong>. Tady je proč:
-            </p>
-          </div>
+      {/* ─── FLAVOR SELECTOR ──────────────────────────────────────── */}
+      <FlavorSelector totalProducts={stats.totalProducts} />
 
-          <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 md:p-8">
-            <div className="space-y-5">
+      {/* ─── ATLAS REGIONŮ ───────────────────────────────────────── */}
+      <RegionAtlas regions={regions} />
+
+      {/* ─── BRAND STRIP ──────────────────────────────────────────── */}
+      <BrandStrip brands={brands} />
+
+      {/* ─── SCORE BREAKDOWN — kompaktní 2-kolony ────────────────── */}
+      {scoreFeature && (
+        <section className="px-6 md:px-10 py-16">
+          <div className="max-w-[1280px] mx-auto bg-white border border-off2 rounded-[var(--radius-card)] p-8 md:p-10 grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-8 lg:gap-10 items-center">
+            <div>
+              <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
+                🔬 Jak vzniká Score
+              </div>
+              <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl font-normal text-text mb-3 leading-tight">
+                Žádná magie.<br />
+                <em className="text-olive italic">Čtyři čísla.</em>
+              </h2>
+              <p className="text-[14px] text-text2 leading-relaxed mb-5">
+                <strong className="text-text">{scoreFeature.name}</strong> dostala <strong className="text-text">{scoreFeature.olivatorScore}/100</strong>. Tady je přesný breakdown — žádné subjektivní hodnocení.
+              </p>
+              <div className="flex flex-wrap gap-3 text-[12px]">
+                <Link href={`/olej/${scoreFeature.slug}`} className="text-olive font-medium hover:text-olive2">
+                  Detail oleje →
+                </Link>
+                <Link href="/metodika" className="text-text2 hover:text-text">
+                  Detailní metodika →
+                </Link>
+              </div>
+            </div>
+
+            <div className="space-y-3">
               <ScoreBar
                 label="Kyselost"
                 weight="35 %"
@@ -274,180 +167,191 @@ export default async function Home() {
                 }
               />
             </div>
-
-            <div className="flex flex-wrap items-center justify-between gap-3 mt-7 pt-6 border-t border-off">
-              <Link
-                href={`/olej/${scoreFeature.slug}`}
-                className="text-[13px] text-olive font-medium hover:text-olive2"
-              >
-                Zobrazit {scoreFeature.name} →
-              </Link>
-              <Link
-                href="/metodika"
-                className="text-[13px] text-text2 hover:text-text"
-              >
-                Detailní metodika →
-              </Link>
-            </div>
           </div>
         </section>
       )}
 
-      {/* ─── 3 DOPORUČENÍ ───────────────────────────────────── */}
-      {(curated.health || curated.cooking || curated.gift) && (
-        <section className="px-6 md:px-10 py-16 max-w-[1080px] mx-auto">
-          <div className="text-center mb-10">
-            <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
-              Naše 3 doporučení
-            </div>
-            <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text">
-              Pro každý důvod jeden olej
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {curated.health && (
-              <CuratedCard
-                product={curated.health}
-                emoji="💚"
-                tag="Pro zdraví"
-                why={
-                  curated.health.polyphenols
-                    ? `${curated.health.polyphenols} mg/kg polyfenolů — antioxidanty na maximum`
-                    : 'Maximum antioxidantů a kvality'
-                }
-              />
-            )}
-            {curated.cooking && (
-              <CuratedCard
-                product={curated.cooking}
-                emoji="🍳"
-                tag="Pro vaření"
-                why={
-                  curated.cooking.acidity != null
-                    ? `Kyselost ${curated.cooking.acidity} % — univerzál do kuchyně`
-                    : 'Univerzál do kuchyně'
-                }
-              />
-            )}
-            {curated.gift && (
-              <CuratedCard
-                product={curated.gift}
-                emoji="🎁"
-                tag="Pro dárek"
-                why={
-                  curated.gift.certifications.length > 0
-                    ? `${curated.gift.certifications.map((c) => c.toUpperCase()).join(' · ')} · prémium prezentace`
-                    : 'Prémium prezentace, vysoké Score'
-                }
-              />
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* ─── AI SOMMELIER CTA ──────────────────────────────── */}
-      <section id="sommelier" className="px-6 md:px-10 py-16">
-        <div className="max-w-[920px] mx-auto bg-olive-dark rounded-[var(--radius-card)] px-8 md:px-12 py-12 text-center text-white">
-          <div className="text-5xl mb-4">🫒</div>
-          <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal mb-3 leading-tight">
-            Nevíš který? Zeptej se.
-          </h2>
-          <p className="text-white/70 text-[15px] mb-7 max-w-[520px] mx-auto">
-            AI Sommelier tě provede výběrem ze všech {stats.totalProducts} olejů. Zdarma, bez registrace.
-          </p>
-
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
-            {[
-              'Lehký řecký do 300 Kč',
-              'Co má nejvíc polyfenolů?',
-              'Dárek pro tátu co rád vaří',
-            ].map((q) => (
-              <span
-                key={q}
-                className="text-[12px] bg-white/10 border border-white/15 rounded-full px-3 py-1.5 text-white/85"
-              >
-                "{q}"
-              </span>
-            ))}
-          </div>
-
-          <p className="text-[12px] text-white/50">
-            Klikni na 🫒 vpravo dole — chat se otevře.
-          </p>
-        </div>
-      </section>
-
-      {/* ─── ČLÁNKY ────────────────────────────────────────── */}
-      <section className="px-6 md:px-10 py-12 max-w-[1080px] mx-auto">
-        <div className="flex items-end justify-between mb-8">
-          <div>
-            <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
-              Z olivového světa
-            </div>
-            <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text">
-              Průvodce a recepty
-            </h2>
-          </div>
-          <Link href="/pruvodce" className="text-[13px] text-olive border-b border-olive-border hover:text-olive2 whitespace-nowrap">
-            Všechny články →
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-4">
-          {/* Hero článek */}
-          {heroArticle && (
+      {/* ─── OLEJ MĚSÍCE + NEWSLETTER (combined) ─────────────────── */}
+      <section className="px-6 md:px-10 py-16 bg-off/40 border-y border-off2">
+        <div className="max-w-[1280px] mx-auto grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-8">
+          {/* Olej měsíce — actual product */}
+          {oilOfDay && (
             <Link
-              href={`/${heroArticle.category === 'recept' ? 'recept' : 'pruvodce'}/${heroArticle.slug}`}
-              className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_16px_40px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:border-olive-light"
+              href={`/olej/${oilOfDay.slug}`}
+              className="block bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden transition-all hover:shadow-[0_24px_60px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:border-olive-light"
             >
-              <div className="aspect-[16/9] bg-gradient-to-br from-olive-bg/30 to-off flex items-center justify-center text-[80px]">
-                {heroArticle.emoji}
-              </div>
-              <div className="p-6">
-                <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
-                  {heroArticle.category === 'recept' ? 'Recept' : heroArticle.category === 'zebricek' ? 'Žebříček' : 'Průvodce'}
+              <div className="grid grid-cols-1 md:grid-cols-[280px_1fr]">
+                <div className="aspect-[4/5] md:aspect-auto bg-gradient-to-br from-olive-bg/40 to-off relative">
+                  <ProductImage
+                    product={oilOfDay}
+                    fallbackSize="text-[100px]"
+                    sizes="(max-width: 768px) 100vw, 280px"
+                  />
+                  <div className="absolute top-4 left-4 bg-terra text-white rounded-full px-3 py-1 text-xs font-bold tabular-nums shadow-md">
+                    {oilOfDay.olivatorScore}/100
+                  </div>
                 </div>
-                <h3 className="font-[family-name:var(--font-display)] text-2xl text-text leading-tight mb-2">
-                  {heroArticle.title}
-                </h3>
-                <p className="text-[13px] text-text2 mb-3 leading-relaxed line-clamp-2">
-                  {heroArticle.excerpt}
-                </p>
-                <div className="text-[11px] text-text3">{heroArticle.readTime}</div>
+
+                <div className="p-6 md:p-8 flex flex-col">
+                  <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2 flex items-center gap-2">
+                    <span className="text-base">🏆</span>
+                    Olej měsíce
+                  </div>
+
+                  <div className="text-[12px] text-text3 mb-1 flex items-center gap-1.5">
+                    <span>{countryFlag(oilOfDay.originCountry)}</span>
+                    <span>
+                      {oilOfDay.originRegion ? `${oilOfDay.originRegion}, ` : ''}
+                      {countryName(oilOfDay.originCountry)}
+                    </span>
+                  </div>
+
+                  <h3 className="font-[family-name:var(--font-display)] text-2xl text-text leading-tight mb-3">
+                    {oilOfDay.name}
+                  </h3>
+
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {oilOfDay.acidity != null && (
+                      <span className="text-[11px] bg-olive-bg text-olive-dark border border-olive-border rounded-full px-2.5 py-0.5">
+                        kyselost {oilOfDay.acidity} %
+                      </span>
+                    )}
+                    {oilOfDay.polyphenols != null && (
+                      <span className="text-[11px] bg-amber-50 text-amber-800 border border-amber-200 rounded-full px-2.5 py-0.5">
+                        {oilOfDay.polyphenols} mg/kg polyfenolů
+                      </span>
+                    )}
+                    {oilOfDay.certifications.slice(0, 2).map((c) => (
+                      <span key={c} className="text-[11px] bg-off text-text2 border border-off2 rounded-full px-2.5 py-0.5 uppercase font-medium">
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+
+                  {oilOfDay.cheapestOffer && (
+                    <div className="mt-auto pt-4 border-t border-off flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <div className="text-2xl font-bold text-text tracking-tight">
+                          {formatPrice(oilOfDay.cheapestOffer.price)}
+                        </div>
+                        <div className="text-[11px] text-text3">
+                          {formatPricePer100ml(oilOfDay.cheapestOffer.price, oilOfDay.volumeMl)} ·
+                          u {oilOfDay.cheapestOffer.retailer.name}
+                        </div>
+                      </div>
+                      <div className="bg-olive text-white rounded-full px-5 py-2 text-[13px] font-semibold whitespace-nowrap">
+                        Detail →
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </Link>
           )}
 
-          {/* 3 menší */}
-          <div className="space-y-3">
-            {restArticles.map(a => (
-              <Link
-                key={a.slug}
-                href={`/${a.category === 'recept' ? 'recept' : 'pruvodce'}/${a.slug}`}
-                className="bg-white border border-off2 rounded-[var(--radius-card)] p-4 flex items-center gap-4 transition-all hover:border-olive-light hover:translate-x-1"
-              >
-                <div className="w-14 h-14 shrink-0 bg-off rounded-lg flex items-center justify-center text-3xl">
-                  {a.emoji}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1">
-                    {a.category === 'recept' ? 'Recept' : a.category === 'zebricek' ? 'Žebříček' : 'Průvodce'}
-                  </div>
-                  <div className="text-[14px] font-semibold text-text leading-snug mb-0.5 line-clamp-2">
-                    {a.title}
-                  </div>
-                  <div className="text-[11px] text-text3">{a.readTime}</div>
-                </div>
-              </Link>
-            ))}
+          {/* Newsletter signup */}
+          <div className="bg-olive-dark rounded-[var(--radius-card)] p-7 text-white flex flex-col">
+            <div className="text-2xl mb-3">📬</div>
+            <h3 className="font-[family-name:var(--font-display)] text-2xl font-normal mb-2 leading-tight">
+              Olej měsíce<br />
+              <span className="text-white/70 italic">do schránky.</span>
+            </h3>
+            <p className="text-[13px] text-white/70 mb-5 leading-relaxed">
+              Jednou měsíčně: vítěz, nejlepší slevy, nový recept. Žádný spam, odhlášení jedním klikem.
+            </p>
+            <div className="mt-auto">
+              <NewsletterSignup source="homepage" variant="dark" />
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ─── NEWSLETTER ────────────────────────────────────── */}
-      <section className="px-6 md:px-10 py-16 max-w-[1080px] mx-auto">
-        <NewsletterSignup source="homepage" variant="hero" />
+      {/* ─── ČLÁNKY ────────────────────────────────────────────── */}
+      {articles.length > 0 && (
+        <section className="px-6 md:px-10 py-16">
+          <div className="max-w-[1280px] mx-auto">
+            <div className="flex items-end justify-between mb-8">
+              <div>
+                <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
+                  📖 Z olivového světa
+                </div>
+                <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text leading-tight">
+                  Průvodce a recepty
+                </h2>
+              </div>
+              <Link href="/pruvodce" className="text-[13px] text-olive border-b border-olive-border hover:text-olive2 whitespace-nowrap">
+                Všechny články →
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {articles.slice(0, 4).map((a) => (
+                <Link
+                  key={a.slug}
+                  href={`/${a.category === 'recept' ? 'recept' : 'pruvodce'}/${a.slug}`}
+                  className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:border-olive-light hover:shadow-md hover:-translate-y-0.5"
+                >
+                  <div className="aspect-[16/10] bg-gradient-to-br from-olive-bg/30 to-off flex items-center justify-center text-6xl">
+                    {a.emoji}
+                  </div>
+                  <div className="p-4 flex-1 flex flex-col">
+                    <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
+                      {a.category === 'recept' ? 'Recept' : a.category === 'zebricek' ? 'Žebříček' : 'Průvodce'}
+                    </div>
+                    <h3 className="font-[family-name:var(--font-display)] text-lg text-text leading-tight mb-2 line-clamp-2">
+                      {a.title}
+                    </h3>
+                    <p className="text-[12px] text-text2 leading-snug line-clamp-2 mb-2 flex-1">
+                      {a.excerpt}
+                    </p>
+                    <div className="text-[11px] text-text3">{a.readTime}</div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ─── PROČ OLIVÁTOR ─ final value prop ──────────────────── */}
+      <section className="bg-olive-dark text-white py-16 px-6 md:px-10">
+        <div className="max-w-[1280px] mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-10 items-center">
+            <div>
+              <div className="text-[10px] font-bold tracking-widest uppercase text-white/60 mb-2">
+                Proč Olivátor?
+              </div>
+              <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[44px] font-normal leading-tight mb-4">
+                Bez reklam.<br />
+                <em className="text-olive4 italic">Bez kompromisů.</em>
+              </h2>
+              <p className="text-[14px] text-white/70 leading-relaxed mb-5">
+                Vlastní metodika, čtyři tvrdá čísla, denně aktualizované ceny napříč {stats.activeRetailers} prodejci. Neutřídíme oleje podle provize — třídíme je podle kvality.
+              </p>
+              <Link
+                href="/o-projektu"
+                className="inline-flex items-center gap-2 bg-white text-olive-dark rounded-full px-5 py-2.5 text-[13px] font-semibold hover:bg-olive-bg transition-colors"
+              >
+                O projektu →
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { emoji: '📊', title: 'Vlastní Score', body: '4 kritéria, 100 bodů' },
+                { emoji: '🤖', title: 'AI Sommelier', body: 'Olej za 5 sekund' },
+                { emoji: '🚫', title: 'Žádná reklama', body: 'Žádné sponsored' },
+                { emoji: '🌍', title: `${stats.activeRetailers} prodejců`, body: 'Cena denně' },
+              ].map((d) => (
+                <div key={d.title} className="bg-white/5 border border-white/10 rounded-xl p-4">
+                  <div className="text-2xl mb-2">{d.emoji}</div>
+                  <div className="text-[13px] font-semibold mb-0.5">{d.title}</div>
+                  <div className="text-[11px] text-white/60">{d.body}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </section>
     </>
   )
@@ -472,70 +376,53 @@ function ScoreBar({
   const safe = Math.max(0, Math.min(100, pct))
   return (
     <div>
-      <div className="flex items-baseline justify-between mb-1.5">
-        <div className="text-sm font-semibold text-text">
-          {label} <span className="text-text3 text-[11px] font-normal">({weight} váhy)</span>
+      <div className="flex items-baseline justify-between mb-1">
+        <div className="text-[13px] font-semibold text-text">
+          {label} <span className="text-text3 text-[11px] font-normal">({weight})</span>
         </div>
-        <div className="text-sm tabular-nums font-bold text-olive">
+        <div className="text-[13px] tabular-nums font-bold text-olive">
           {points}<span className="text-text3 font-normal">/{max}</span>
         </div>
       </div>
-      <div className="h-2 bg-off2 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-olive rounded-full transition-all"
-          style={{ width: `${safe}%` }}
-        />
+      <div className="h-1.5 bg-off2 rounded-full overflow-hidden">
+        <div className="h-full bg-olive rounded-full transition-all" style={{ width: `${safe}%` }} />
       </div>
-      <div className="text-[11px] text-text3 mt-1.5">↳ {detail}</div>
+      <div className="text-[11px] text-text3 mt-1">↳ {detail}</div>
     </div>
   )
 }
 
-function CuratedCard({
-  product,
-  emoji,
-  tag,
-  why,
-}: {
-  product: ProductWithOffer
-  emoji: string
-  tag: string
-  why: string
-}) {
+function TopProductCard({ product, rank }: { product: ProductWithOffer; rank: number }) {
   return (
     <Link
       href={`/olej/${product.slug}`}
       className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_16px_40px_rgba(0,0,0,0.06)] hover:-translate-y-1 hover:border-olive-light"
     >
-      <div className="px-5 pt-5 pb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl">{emoji}</span>
-          <span className="text-[10px] font-bold tracking-widest uppercase text-olive">
-            {tag}
-          </span>
-        </div>
+      <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+        <span className="text-[10px] font-bold tracking-widest uppercase text-text3">
+          #{rank}
+        </span>
         <span className="text-[11px] font-bold bg-terra text-white rounded-full px-2.5 py-0.5 tabular-nums">
           {product.olivatorScore}
         </span>
       </div>
 
-      <div className="aspect-square bg-gradient-to-br from-off to-white relative">
-        <ProductImage product={product} fallbackSize="text-[72px]" sizes="(max-width: 768px) 100vw, 350px" />
+      <div className="h-44 bg-gradient-to-br from-off to-white relative">
+        <ProductImage product={product} fallbackSize="text-[56px]" sizes="(max-width: 768px) 100vw, 350px" />
       </div>
 
-      <div className="p-5 flex-1 flex flex-col">
-        <div className="text-[11px] text-text3 mb-1 flex items-center gap-1">
+      <div className="p-3.5 flex-1 flex flex-col">
+        <div className="text-[10px] text-text3 mb-0.5 flex items-center gap-1">
           {countryFlag(product.originCountry)} {countryName(product.originCountry)}
         </div>
-        <div className="text-[15px] font-semibold text-text leading-tight mb-2 line-clamp-2">
+        <div className="text-[13px] font-semibold text-text leading-tight mb-2 line-clamp-2">
           {product.name}
         </div>
-        <p className="text-[12px] text-text2 leading-snug mb-3 line-clamp-2">{why}</p>
 
         {product.cheapestOffer && (
-          <div className="mt-auto flex items-center justify-between pt-3 border-t border-off">
+          <div className="mt-auto flex items-center justify-between pt-2 border-t border-off">
             <div>
-              <div className="text-base font-bold text-text">
+              <div className="text-sm font-bold text-text">
                 {formatPrice(product.cheapestOffer.price)}
               </div>
               <div className="text-[10px] text-text3">

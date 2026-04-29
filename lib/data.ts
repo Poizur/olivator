@@ -909,5 +909,84 @@ export async function getProductEntityLinks(productId: string, brandSlug: string
   }
 }
 
+// ── Homepage: regions / brands listing with photos ─────────────────────
+
+export interface RegionTile {
+  slug: string
+  name: string
+  countryCode: string
+  productCount: number
+  photoUrl: string | null
+}
+
+export interface BrandTile {
+  slug: string
+  name: string
+  countryCode: string
+  productCount: number
+  photoUrl: string | null
+}
+
+export async function getRegionTiles(): Promise<RegionTile[]> {
+  // Show all regions that have at least one active product (regardless of region status)
+  const [regionsRes, productsRes, photosRes] = await Promise.all([
+    supabaseAdmin.from('regions').select('id, slug, name, country_code'),
+    supabaseAdmin.from('products').select('region_slug').eq('status', 'active'),
+    supabaseAdmin
+      .from('entity_images')
+      .select('entity_id, url')
+      .eq('entity_type', 'region')
+      .eq('status', 'active')
+      .eq('is_primary', true),
+  ])
+
+  const counts: Record<string, number> = {}
+  for (const r of productsRes.data ?? []) {
+    if (r.region_slug) counts[r.region_slug] = (counts[r.region_slug] ?? 0) + 1
+  }
+  const photoByEntity = new Map((photosRes.data ?? []).map((p: { entity_id: string; url: string }) => [p.entity_id, p.url]))
+
+  return (regionsRes.data ?? [])
+    .map((r: { id: string; slug: string; name: string; country_code: string }) => ({
+      slug: r.slug,
+      name: r.name,
+      countryCode: r.country_code,
+      productCount: counts[r.slug] ?? 0,
+      photoUrl: photoByEntity.get(r.id) ?? null,
+    }))
+    .filter((r) => r.productCount > 0)
+    .sort((a, b) => b.productCount - a.productCount)
+}
+
+export async function getBrandTiles(): Promise<BrandTile[]> {
+  const [brandsRes, productsRes, photosRes] = await Promise.all([
+    supabaseAdmin.from('brands').select('id, slug, name, country_code'),
+    supabaseAdmin.from('products').select('brand_slug').eq('status', 'active'),
+    supabaseAdmin
+      .from('entity_images')
+      .select('entity_id, url')
+      .eq('entity_type', 'brand')
+      .eq('status', 'active')
+      .eq('is_primary', true),
+  ])
+
+  const counts: Record<string, number> = {}
+  for (const r of productsRes.data ?? []) {
+    if (r.brand_slug) counts[r.brand_slug] = (counts[r.brand_slug] ?? 0) + 1
+  }
+  const photoByEntity = new Map((photosRes.data ?? []).map((p: { entity_id: string; url: string }) => [p.entity_id, p.url]))
+
+  return (brandsRes.data ?? [])
+    .map((b: { id: string; slug: string; name: string; country_code: string }) => ({
+      slug: b.slug,
+      name: b.name,
+      countryCode: b.country_code,
+      productCount: counts[b.slug] ?? 0,
+      photoUrl: photoByEntity.get(b.id) ?? null,
+    }))
+    .filter((b) => b.productCount > 0)
+    .sort((a, b) => b.productCount - a.productCount)
+}
+
 // ── Articles, Rankings — still from static data (no CMS yet) ──────────
 export { ARTICLES, RANKINGS, getArticles, getArticleBySlug, getRankings, getRankingBySlug } from './static-content'

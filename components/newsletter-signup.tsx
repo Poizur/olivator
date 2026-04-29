@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 interface Props {
   source?: 'footer' | 'homepage' | 'product_page'
-  variant?: 'inline' | 'hero'
+  variant?: 'inline' | 'hero' | 'dark'
 }
 
 /** Newsletter signup form. Sends POST /api/newsletter, shows confirmation. */
@@ -35,6 +35,14 @@ export function NewsletterSignup({ source = 'footer', variant = 'inline' }: Prop
   }
 
   if (status === 'success') {
+    if (variant === 'dark') {
+      return (
+        <div className="text-[14px] text-olive4">
+          <div className="font-semibold mb-0.5">✓ Hotovo, jsi přihlášený</div>
+          <div className="text-[12px] text-white/60">První Olej měsíce ti přijde příští úterý.</div>
+        </div>
+      )
+    }
     return (
       <div
         className={
@@ -53,6 +61,32 @@ export function NewsletterSignup({ source = 'footer', variant = 'inline' }: Prop
           <span className="ml-1">Hotovo, jsi přihlášený. První email přijde příští týden.</span>
         )}
       </div>
+    )
+  }
+
+  if (variant === 'dark') {
+    return (
+      <form onSubmit={onSubmit} className="flex flex-col gap-2">
+        <div className="flex gap-2">
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="tvuj@email.cz"
+            className="flex-1 px-4 py-2.5 bg-white/10 border border-white/15 rounded-full text-[13px] text-white placeholder:text-white/50 focus:outline-none focus:border-white/40"
+          />
+          <button
+            type="submit"
+            disabled={status === 'sending'}
+            className="bg-white text-olive-dark rounded-full px-5 py-2.5 text-[13px] font-semibold hover:bg-olive-bg disabled:opacity-40 transition-colors whitespace-nowrap"
+          >
+            {status === 'sending' ? '…' : 'Odebírat'}
+          </button>
+        </div>
+        {status === 'error' && <div className="text-[11px] text-red-300">⚠ {errorMsg}</div>}
+        <div className="text-[10px] text-white/50">Bez spamu. Odhlásit se dá jedním klikem.</div>
+      </form>
     )
   }
 
