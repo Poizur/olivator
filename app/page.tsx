@@ -15,6 +15,7 @@ import { FlavorSelector } from '@/components/flavor-selector'
 import { RegionAtlas } from '@/components/region-atlas'
 import { BrandStrip } from '@/components/brand-strip'
 import { countryName, countryFlag, formatPrice, formatPricePer100ml } from '@/lib/utils'
+import { computeBadges, pickByCategory, type ProductBadge } from '@/lib/product-badges'
 import type { Product, ProductOffer } from '@/lib/types'
 
 export const revalidate = 3600
@@ -49,6 +50,14 @@ export default async function Home() {
     .filter((p) => p.cheapestOffer != null)
     .sort((a, b) => b.olivatorScore - a.olivatorScore)
     .slice(0, 12)
+
+  // Auto-vypočítané badges pro top 12 (Top Score / Nejvíc polyfenolů / …)
+  const badgesByProduct = computeBadges(topTwelve)
+
+  // Tipy 3 olejů — výrazný / jemný / zdravý (shoptet-style featured cards)
+  const tipVyrazny = pickByCategory(allProducts, 'vyrazny')
+  const tipJemny = pickByCategory(allProducts, 'jemny')
+  const tipZdravy = pickByCategory(allProducts, 'zdravy')
 
   return (
     <>
@@ -87,7 +96,12 @@ export default async function Home() {
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
             {topTwelve.map((p, i) => (
-              <TopProductCard key={p.id} product={p} rank={i + 1} />
+              <TopProductCard
+                key={p.id}
+                product={p}
+                rank={i + 1}
+                badge={badgesByProduct.get(p.id) ?? null}
+              />
             ))}
           </div>
         </div>
@@ -418,6 +432,22 @@ export default async function Home() {
 
 // ── Subcomponents ──────────────────────────────────────────
 
+// Tailwind class pro auto badge na produktové kartě (computeBadges)
+function badgeClass(tone: 'gold' | 'olive' | 'terra' | 'amber' | 'sage'): string {
+  switch (tone) {
+    case 'gold':
+      return 'bg-terra text-white'
+    case 'olive':
+      return 'bg-olive text-white'
+    case 'terra':
+      return 'bg-terra-bg text-terra'
+    case 'amber':
+      return 'bg-amber-100 text-amber-800'
+    case 'sage':
+      return 'bg-olive-bg text-olive-dark'
+  }
+}
+
 function ScoreBar({
   label,
   weight,
@@ -451,7 +481,15 @@ function ScoreBar({
   )
 }
 
-function TopProductCard({ product, rank }: { product: ProductWithOffer; rank: number }) {
+function TopProductCard({
+  product,
+  rank,
+  badge,
+}: {
+  product: ProductWithOffer
+  rank: number
+  badge?: ProductBadge | null
+}) {
   return (
     <Link
       href={`/olej/${product.slug}`}
@@ -461,10 +499,21 @@ function TopProductCard({ product, rank }: { product: ProductWithOffer; rank: nu
           Aspekt 4:5 (užší/vyšší než 3:4) protože lahve mají natural portrait.
           bg-white sjednotí s bílým paddingem v product fotech (žádná viditelná hranice). */}
       <div className="relative aspect-[4/5] bg-white overflow-hidden">
-        {/* Rank vlevo nahoře */}
-        <span className="absolute top-2.5 left-2.5 z-10 text-[11px] font-bold tracking-widest uppercase text-text bg-white/90 backdrop-blur-sm rounded px-2 py-1 shadow-sm">
-          #{rank}
-        </span>
+        {/* Auto badge — superlativ v čem olej vyniká (Top Score, Nejvíc polyfenolů, BIO …) */}
+        {badge && (
+          <span
+            className={`absolute top-2.5 left-2.5 z-10 text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-1 shadow-sm ${badgeClass(badge.tone)}`}
+            title={badge.hint}
+          >
+            {badge.label}
+          </span>
+        )}
+        {/* Rank — když má badge, jde do druhé pozice (pod badge) */}
+        {!badge && (
+          <span className="absolute top-2.5 left-2.5 z-10 text-[11px] font-bold tracking-widest uppercase text-text bg-white/90 backdrop-blur-sm rounded px-2 py-1 shadow-sm">
+            #{rank}
+          </span>
+        )}
         {/* Score VĚTŠÍ — vpravo nahoře, výraznější terra pill */}
         <span className="absolute top-2.5 right-2.5 z-10 text-[15px] font-bold bg-terra text-white rounded-full w-11 h-11 flex items-center justify-center tabular-nums shadow-md">
           {product.olivatorScore}

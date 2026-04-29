@@ -36,13 +36,93 @@ function extractSlugs(text: string): string[] {
   return [...new Set(slugs)]
 }
 
-function formatReply(text: string) {
-  // Strip /olej/ links from text since we render product cards separately
-  return text
-    .replace(/\(\/olej\/[\w-]+\)/g, '')
-    .replace(/\/olej\/[\w-]+/g, '')
-    .split('\n')
-    .map((line, i) => (line.trim() === '' ? <div key={i} className="h-2" /> : <p key={i}>{line}</p>))
+/**
+ * Vyčistí text od /olej/ linků a prázdných markdown odkazů []().
+ * Markdown bold **X** převede na <strong>.
+ */
+function renderInlineMarkdown(text: string): React.ReactNode[] {
+  // Strip leftovers po stripping linků
+  const cleaned = text
+    .replace(/\[\]\([^)]*\)/g, '')           // []() prázdný markdown link
+    .replace(/\(\/olej\/[\w-]+\)/g, '')      // (/olej/slug)
+    .replace(/\/olej\/[\w-]+/g, '')          // /olej/slug holé
+    .replace(/\(link\)/g, '')                // (link) leftover
+    .replace(/\s+\.\s*$/g, '.')              // " ." na konci
+    .replace(/\s+,/g, ',')                   // " ," uprostřed
+    .trim()
+
+  // Split by **bold** segments
+  const parts = cleaned.split(/(\*\*[^*]+\*\*)/g)
+  return parts
+    .filter((p) => p.length > 0)
+    .map((part, i) => {
+      const boldMatch = part.match(/^\*\*([^*]+)\*\*$/)
+      if (boldMatch) {
+        return (
+          <strong key={i} className="font-semibold text-text">
+            {boldMatch[1]}
+          </strong>
+        )
+      }
+      return <span key={i}>{part}</span>
+    })
+}
+
+interface ReplyBlock {
+  type: 'intro' | 'oil' | 'outro'
+  text: string
+  slug?: string
+}
+
+/**
+ * Rozparsuje AI odpověď na bloky:
+ *   - intro: text před prvním očíslovaným bodem
+ *   - oil: každý "1. ... 2. ... 3. ..." kus + slug toho produktu
+ *   - outro: cokoliv za posledním očíslovaným bodem
+ *
+ * Používáme pro interleaved render: text bloku → karta produktu → další blok.
+ */
+function parseReplyBlocks(text: string): ReplyBlock[] {
+  const slugs = extractSlugs(text)
+  const lines = text.split('\n')
+  const blocks: ReplyBlock[] = []
+  let currentText: string[] = []
+  let currentType: ReplyBlock['type'] = 'intro'
+  let oilIndex = 0
+
+  const flush = () => {
+    const joined = currentText.join('\n').trim()
+    if (joined.length === 0) return
+    if (currentType === 'oil') {
+      blocks.push({ type: 'oil', text: joined, slug: slugs[oilIndex] })
+      oilIndex++
+    } else {
+      blocks.push({ type: currentType, text: joined })
+    }
+    currentText = []
+  }
+
+  for (const line of lines) {
+    const isNumberedItem = /^\d+\.\s/.test(line.trim())
+    if (isNumberedItem) {
+      // Finish previous block
+      flush()
+      currentType = 'oil'
+      currentText.push(line)
+    } else if (currentType === 'oil' && line.trim() === '' && currentText.length > 0) {
+      // Empty line — pokud následuje další numbered item, ukončí současný oil blok
+      currentText.push(line)
+    } else if (currentType === 'oil' && /^\*\*/.test(line.trim()) && currentText.length > 0) {
+      // Začíná outro (např. "**Moje tip:**")
+      flush()
+      currentType = 'outro'
+      currentText.push(line)
+    } else {
+      currentText.push(line)
+    }
+  }
+  flush()
+  return blocks
 }
 
 export function SommelierHero({
@@ -283,21 +363,36 @@ export function SommelierHero({
                     </div>
                   )
                 }
-                const slugs = extractSlugs(m.content)
-                const recommended = slugs.map((s) => productLookup[s]).filter(Boolean).slice(0, 3)
 
+                // Interleaved render: text bloku → karta produktu → další blok
+                const blocks = parseReplyBlocks(m.content)
                 return (
-                  <div key={i} className="mb-5">
-                    <div className="bg-off rounded-2xl rounded-bl-sm px-4 py-3 text-[14px] text-text leading-relaxed mb-3 max-w-[90%]">
-                      {formatReply(m.content)}
-                    </div>
-                    {recommended.length > 0 && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        {recommended.map((p) => (
-                          <ProductMiniCard key={p.id} product={p} />
-                        ))}
-                      </div>
-                    )}
+                  <div key={i} className="mb-5 space-y-3">
+                    {blocks.map((block, bi) => {
+                      const product = block.slug ? productLookup[block.slug] : undefined
+                      return (
+                        <div key={bi}>
+                          {/* Text bloku — bez slug linků, s renderovaným bold */}
+                          <div className="bg-off rounded-2xl rounded-bl-sm px-4 py-3 text-[14px] text-text leading-relaxed">
+                            {block.text.split('\n').map((line, li) => {
+                              const trimmed = line.trim()
+                              if (trimmed === '') return <div key={li} className="h-2" />
+                              return (
+                                <p key={li} className="mb-1 last:mb-0">
+                                  {renderInlineMarkdown(line)}
+                                </p>
+                              )
+                            })}
+                          </div>
+                          {/* Karta produktu hned pod jeho textem */}
+                          {block.type === 'oil' && product && (
+                            <div className="mt-2">
+                              <ProductMiniCard product={product} />
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 )
               })}
