@@ -1,22 +1,22 @@
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
 
-async function getRegions() {
+async function getBrands() {
   const { data } = await supabaseAdmin
-    .from('regions')
-    .select('slug, name, country_code, status, description_long, meta_title, updated_at')
+    .from('brands')
+    .select('slug, name, country_code, status, description_long, updated_at')
     .order('name')
   return data ?? []
 }
 
-async function getProductCountsByRegion(): Promise<Record<string, number>> {
+async function getProductCountsByBrand(): Promise<Record<string, number>> {
   const { data } = await supabaseAdmin
     .from('products')
-    .select('region_slug')
+    .select('brand_slug')
     .eq('status', 'active')
   const counts: Record<string, number> = {}
   for (const row of data ?? []) {
-    if (row.region_slug) counts[row.region_slug] = (counts[row.region_slug] ?? 0) + 1
+    if (row.brand_slug) counts[row.brand_slug] = (counts[row.brand_slug] ?? 0) + 1
   }
   return counts
 }
@@ -34,45 +34,45 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-export default async function AdminRegionsPage() {
-  const [regions, productCounts] = await Promise.all([getRegions(), getProductCountsByRegion()])
+export default async function AdminBrandsPage() {
+  const [brands, productCounts] = await Promise.all([getBrands(), getProductCountsByBrand()])
 
   return (
     <div className="p-8 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-text">🌍 Regiony</h1>
-          <p className="text-sm text-text3 mt-0.5">{regions.length} regionů</p>
+          <h1 className="text-2xl font-semibold text-text">🫒 Značky</h1>
+          <p className="text-sm text-text3 mt-0.5">{brands.length} značek</p>
         </div>
       </div>
 
       <div className="bg-white border border-off2 rounded-xl divide-y divide-off2">
-        {regions.map((r) => (
-          <div key={r.slug} className="flex items-center gap-4 px-5 py-4">
+        {brands.map((b) => (
+          <div key={b.slug} className="flex items-center gap-4 px-5 py-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <Link href={`/admin/regions/${r.slug}`} className="font-medium text-text hover:text-olive">
-                  {r.name}
+                <Link href={`/admin/brands/${b.slug}`} className="font-medium text-text hover:text-olive">
+                  {b.name}
                 </Link>
-                <StatusBadge status={r.status} />
+                <StatusBadge status={b.status} />
               </div>
               <div className="text-xs text-text3">
-                {r.country_code} · {productCounts[r.slug] ?? 0} produktů
-                {r.description_long
-                  ? ` · text ${r.description_long.length} znaků`
+                {b.country_code} · {productCounts[b.slug] ?? 0} produktů
+                {b.description_long
+                  ? ` · text ${b.description_long.length} znaků`
                   : ' · ⚠ bez textu'}
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <a
-                href={`/oblast/${r.slug}`}
+                href={`/znacka/${b.slug}`}
                 target="_blank"
                 className="text-xs text-olive hover:underline"
               >
                 Náhled →
               </a>
               <Link
-                href={`/admin/regions/${r.slug}`}
+                href={`/admin/brands/${b.slug}`}
                 className="px-3 py-1.5 border border-off2 rounded-lg text-xs text-text2 hover:border-olive"
               >
                 Editovat

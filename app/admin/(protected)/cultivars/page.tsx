@@ -1,22 +1,21 @@
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
 
-async function getRegions() {
+async function getCultivars() {
   const { data } = await supabaseAdmin
-    .from('regions')
-    .select('slug, name, country_code, status, description_long, meta_title, updated_at')
+    .from('cultivars')
+    .select('slug, name, status, description_long, updated_at')
     .order('name')
   return data ?? []
 }
 
-async function getProductCountsByRegion(): Promise<Record<string, number>> {
+async function getProductCountsByCultivar(): Promise<Record<string, number>> {
   const { data } = await supabaseAdmin
-    .from('products')
-    .select('region_slug')
-    .eq('status', 'active')
+    .from('product_cultivars')
+    .select('cultivar_slug')
   const counts: Record<string, number> = {}
   for (const row of data ?? []) {
-    if (row.region_slug) counts[row.region_slug] = (counts[row.region_slug] ?? 0) + 1
+    if (row.cultivar_slug) counts[row.cultivar_slug] = (counts[row.cultivar_slug] ?? 0) + 1
   }
   return counts
 }
@@ -34,45 +33,45 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-export default async function AdminRegionsPage() {
-  const [regions, productCounts] = await Promise.all([getRegions(), getProductCountsByRegion()])
+export default async function AdminCultivarsPage() {
+  const [cultivars, productCounts] = await Promise.all([getCultivars(), getProductCountsByCultivar()])
 
   return (
     <div className="p-8 max-w-4xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-text">🌍 Regiony</h1>
-          <p className="text-sm text-text3 mt-0.5">{regions.length} regionů</p>
+          <h1 className="text-2xl font-semibold text-text">🫒 Odrůdy</h1>
+          <p className="text-sm text-text3 mt-0.5">{cultivars.length} odrůd</p>
         </div>
       </div>
 
       <div className="bg-white border border-off2 rounded-xl divide-y divide-off2">
-        {regions.map((r) => (
-          <div key={r.slug} className="flex items-center gap-4 px-5 py-4">
+        {cultivars.map((c) => (
+          <div key={c.slug} className="flex items-center gap-4 px-5 py-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <Link href={`/admin/regions/${r.slug}`} className="font-medium text-text hover:text-olive">
-                  {r.name}
+                <Link href={`/admin/cultivars/${c.slug}`} className="font-medium text-text hover:text-olive">
+                  {c.name}
                 </Link>
-                <StatusBadge status={r.status} />
+                <StatusBadge status={c.status} />
               </div>
               <div className="text-xs text-text3">
-                {r.country_code} · {productCounts[r.slug] ?? 0} produktů
-                {r.description_long
-                  ? ` · text ${r.description_long.length} znaků`
+                {productCounts[c.slug] ?? 0} produktů
+                {c.description_long
+                  ? ` · text ${c.description_long.length} znaků`
                   : ' · ⚠ bez textu'}
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <a
-                href={`/oblast/${r.slug}`}
+                href={`/odruda/${c.slug}`}
                 target="_blank"
                 className="text-xs text-olive hover:underline"
               >
                 Náhled →
               </a>
               <Link
-                href={`/admin/regions/${r.slug}`}
+                href={`/admin/cultivars/${c.slug}`}
                 className="px-3 py-1.5 border border-off2 rounded-lg text-xs text-text2 hover:border-olive"
               >
                 Editovat

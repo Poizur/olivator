@@ -9,6 +9,7 @@ import { countryFlag, countryName } from '@/lib/utils'
 export const revalidate = 3600
 
 interface BrandRow {
+  id: string
   slug: string
   name: string
   country_code: string
@@ -20,8 +21,19 @@ interface BrandRow {
 async function getBrand(slug: string): Promise<BrandRow | null> {
   const { data } = await supabaseAdmin
     .from('brands')
-    .select('slug, name, country_code, description_long, meta_title, meta_description')
+    .select('id, slug, name, country_code, description_long, meta_title, meta_description')
     .eq('slug', slug)
+    .single()
+  return data ?? null
+}
+
+async function getEntityHeroPhoto(entityId: string): Promise<{ url: string; alt_text: string | null; source_attribution: string | null } | null> {
+  const { data } = await supabaseAdmin
+    .from('entity_images')
+    .select('url, alt_text, source_attribution')
+    .eq('entity_id', entityId)
+    .eq('status', 'active')
+    .eq('is_primary', true)
     .single()
   return data ?? null
 }
@@ -77,7 +89,10 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
   const brand = await getBrand(slug)
   if (!brand) notFound()
 
-  const productIds = await getBrandProductIds(slug)
+  const [productIds, heroPhoto] = await Promise.all([
+    getBrandProductIds(slug),
+    getEntityHeroPhoto(brand.id),
+  ])
   const products = await getProductsByIds(productIds)
   const offers = await Promise.all(products.map((p) => getCheapestOffer(p.id)))
 
@@ -96,13 +111,36 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
       </div>
 
       {/* Hero */}
-      <div className="mb-10">
-        <div className="text-5xl mb-4">{flag}</div>
-        <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-text mb-2">
-          {brand.name}
-        </h1>
-        <p className="text-sm text-text3">{country} · {products.length} produktů v katalogu</p>
-      </div>
+      {heroPhoto ? (
+        <div className="mb-10 relative rounded-2xl overflow-hidden h-56">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={heroPhoto.url}
+            alt={heroPhoto.alt_text ?? brand.name}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+          <div className="absolute bottom-0 left-0 p-6">
+            <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-white mb-1">
+              {brand.name}
+            </h1>
+            <p className="text-sm text-white/80">{country} · {products.length} produktů v katalogu</p>
+          </div>
+          {heroPhoto.source_attribution && (
+            <p className="absolute bottom-2 right-3 text-[10px] text-white/50">
+              © {heroPhoto.source_attribution} / Unsplash
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="mb-10">
+          <div className="text-5xl mb-4">{flag}</div>
+          <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-text mb-2">
+            {brand.name}
+          </h1>
+          <p className="text-sm text-text3">{country} · {products.length} produktů v katalogu</p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-12">
         {/* Editorial content */}

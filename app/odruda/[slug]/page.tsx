@@ -8,6 +8,7 @@ import { ListCard } from '@/components/list-card'
 export const revalidate = 3600
 
 interface CultivarRow {
+  id: string
   slug: string
   name: string
   description_long: string | null
@@ -18,8 +19,19 @@ interface CultivarRow {
 async function getCultivar(slug: string): Promise<CultivarRow | null> {
   const { data } = await supabaseAdmin
     .from('cultivars')
-    .select('slug, name, description_long, meta_title, meta_description')
+    .select('id, slug, name, description_long, meta_title, meta_description')
     .eq('slug', slug)
+    .single()
+  return data ?? null
+}
+
+async function getEntityHeroPhoto(entityId: string): Promise<{ url: string; alt_text: string | null; source_attribution: string | null } | null> {
+  const { data } = await supabaseAdmin
+    .from('entity_images')
+    .select('url, alt_text, source_attribution')
+    .eq('entity_id', entityId)
+    .eq('status', 'active')
+    .eq('is_primary', true)
     .single()
   return data ?? null
 }
@@ -83,7 +95,10 @@ export default async function CultivarPage({ params }: { params: Promise<{ slug:
   const cultivar = await getCultivar(slug)
   if (!cultivar) notFound()
 
-  const productIds = await getCultivarProductIds(slug)
+  const [productIds, heroPhoto] = await Promise.all([
+    getCultivarProductIds(slug),
+    getEntityHeroPhoto(cultivar.id),
+  ])
   const products = await getProductsByIds(productIds)
   const offers = await Promise.all(products.map((p) => getCheapestOffer(p.id)))
 
@@ -99,13 +114,36 @@ export default async function CultivarPage({ params }: { params: Promise<{ slug:
       </div>
 
       {/* Hero */}
-      <div className="mb-10">
-        <div className="text-5xl mb-4">🫒</div>
-        <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-text mb-2">
-          Odrůda {cultivar.name}
-        </h1>
-        <p className="text-sm text-text3">{products.length} produktů s touto odrůdou v katalogu</p>
-      </div>
+      {heroPhoto ? (
+        <div className="mb-10 relative rounded-2xl overflow-hidden h-56">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={heroPhoto.url}
+            alt={heroPhoto.alt_text ?? cultivar.name}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+          <div className="absolute bottom-0 left-0 p-6">
+            <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-white mb-1">
+              Odrůda {cultivar.name}
+            </h1>
+            <p className="text-sm text-white/80">{products.length} produktů s touto odrůdou v katalogu</p>
+          </div>
+          {heroPhoto.source_attribution && (
+            <p className="absolute bottom-2 right-3 text-[10px] text-white/50">
+              © {heroPhoto.source_attribution} / Unsplash
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="mb-10">
+          <div className="text-5xl mb-4">🫒</div>
+          <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-text mb-2">
+            Odrůda {cultivar.name}
+          </h1>
+          <p className="text-sm text-text3">{products.length} produktů s touto odrůdou v katalogu</p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-12">
         {/* Editorial content */}
