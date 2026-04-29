@@ -196,12 +196,12 @@ export function SommelierHero({
         <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-10 items-start">
           {/* LEFT: Sommelier search */}
           <div>
-            <div className="inline-flex items-center gap-2 text-[11px] font-medium text-olive bg-olive-bg px-3.5 py-1.5 rounded-full mb-5 tracking-wide">
-              <span className="relative flex w-2 h-2">
+            <div className="inline-flex items-center gap-3 text-[14px] font-semibold text-olive-dark bg-olive-bg px-5 py-2.5 rounded-full mb-5 tracking-tight">
+              <span className="relative flex w-2.5 h-2.5">
                 <span className="animate-ping absolute inline-flex w-full h-full rounded-full bg-olive opacity-50" />
-                <span className="relative inline-flex w-2 h-2 rounded-full bg-olive" />
+                <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-olive" />
               </span>
-              {totalProducts} olejů · {activeRetailers} prodejců · {regionCount} regionů · {brandCount} značek
+              <span><strong>{totalProducts}</strong> olejů · <strong>{activeRetailers}</strong> prodejců · <strong>{regionCount}</strong> regionů · <strong>{brandCount}</strong> značek</span>
             </div>
 
             <h1 className="font-[family-name:var(--font-display)] text-5xl md:text-[64px] font-normal leading-[1.02] tracking-tight text-text mb-4">

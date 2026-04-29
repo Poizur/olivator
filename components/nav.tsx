@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useCompare } from '@/lib/compare-context'
 
 const links = [
   { href: '/srovnavac', label: 'Srovnávač' },
@@ -14,11 +15,14 @@ const links = [
 
 export function Nav({ hasAdminBar = false }: { hasAdminBar?: boolean }) {
   const pathname = usePathname()
+  const { items: compareItems } = useCompare()
   const [mobileOpen, setMobileOpen] = useState(false)
 
   // Defense-in-depth: Nav je veřejný hlavička, na /admin se nemá zobrazovat.
   // Pokud root layout pathname check selhal, tady to chytíme klientsky.
   if (pathname.startsWith('/admin')) return null
+
+  const compareCount = compareItems.length
 
   return (
     <>
@@ -70,12 +74,19 @@ export function Nav({ hasAdminBar = false }: { hasAdminBar?: boolean }) {
             >
               ♡
             </Link>
-            <Link
-              href="/porovnani"
-              className="bg-olive text-white border-none rounded-full px-4 py-1.5 text-xs font-medium hover:bg-olive-dark transition-colors"
-            >
-              Porovnat
-            </Link>
+            {/* Porovnat — schované při 0 olejích (nemá co porovnávat).
+                Zobrazí se jakmile uživatel přidá první olej do comparátoru. */}
+            {compareCount > 0 && (
+              <Link
+                href="/porovnani"
+                className="bg-olive text-white border-none rounded-full px-4 py-1.5 text-xs font-medium hover:bg-olive-dark transition-colors flex items-center gap-1.5"
+              >
+                Porovnat
+                <span className="bg-white/25 rounded-full px-1.5 py-0 text-[10px] tabular-nums leading-tight">
+                  {compareCount}
+                </span>
+              </Link>
+            )}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               className="md:hidden flex flex-col gap-[5px] p-1 cursor-pointer"

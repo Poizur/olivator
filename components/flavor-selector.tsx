@@ -91,32 +91,33 @@ export function FlavorSelector({ totalProducts }: { totalProducts: number }) {
   const resultsHref = `/srovnavac?${params.toString()}`
 
   return (
-    <section className="bg-off/40 border-y border-off2 py-16 px-6 md:px-10">
+    <section className="py-10 px-6 md:px-10">
       <div className="max-w-[1280px] mx-auto">
-        <div className="text-center mb-10">
-          <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
-            — Nalaď podle chuti
+        <div className="flex items-end justify-between mb-5 flex-wrap gap-3">
+          <div>
+            <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1">
+              — Nalaď podle chuti
+            </div>
+            <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-[28px] font-normal text-text leading-tight">
+              Vyber chuť, ne značku.
+            </h2>
           </div>
-          <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text mb-3">
-            Vyber chuť, ne značku.
-          </h2>
-          <p className="text-[15px] text-text2 max-w-[520px] mx-auto">
-            Posuň jezdce podle toho, co máš rád. Náš algoritmus prochází chuťové profily všech {totalProducts} olejů a hledá shodu.
+          <p className="text-[13px] text-text3 max-w-[420px]">
+            Algoritmus prochází chuťové profily všech {totalProducts} olejů a hledá shodu.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5">
           {/* Sliders */}
-          <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 md:p-8">
-            {/* Presets */}
-            <div className="mb-6">
-              <div className="text-[11px] font-bold tracking-widest uppercase text-text3 mb-2">Rychlá volba</div>
-              <div className="flex flex-wrap gap-2">
+          <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-4 md:p-5">
+            {/* Presets — chips inline */}
+            <div className="mb-4">
+              <div className="flex flex-wrap gap-1.5">
                 {PRESETS.map((p) => (
                   <button
                     key={p.label}
                     onClick={() => applyPreset(p.state)}
-                    className="text-[12px] bg-off hover:bg-olive-bg hover:text-olive border border-off2 hover:border-olive-border rounded-full px-3 py-1.5 transition-colors"
+                    className="text-[11px] bg-off hover:bg-olive-bg hover:text-olive border border-off2 hover:border-olive-border rounded-full px-2.5 py-1 transition-colors"
                   >
                     {p.label}
                   </button>
@@ -124,44 +125,43 @@ export function FlavorSelector({ totalProducts }: { totalProducts: number }) {
               </div>
             </div>
 
-            <div className="space-y-5">
+            {/* Sliders ve 2 sloupcích — kompaktnější */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3">
               <Slider label="Ovocnost" value={state.fruity} onChange={(v) => update('fruity', v)} leftLabel="neutrální" rightLabel="ovocný" />
               <Slider label="Hořkost" value={state.bitter} onChange={(v) => update('bitter', v)} leftLabel="jemný" rightLabel="hořký" />
               <Slider label="Palčivost" value={state.spicy} onChange={(v) => update('spicy', v)} leftLabel="hladký" rightLabel="palčivý" />
               <Slider label="Krémovost" value={state.mild} onChange={(v) => update('mild', v)} leftLabel="výrazný" rightLabel="máslový" />
             </div>
 
-            <div className="mt-6 pt-5 border-t border-off">
-              <div className="text-[11px] font-bold tracking-widest uppercase text-text3 mb-2">Cena</div>
-              <div className="flex flex-wrap gap-2">
-                {PRICE_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.label}
-                    onClick={() => update('maxPrice', opt.value)}
-                    className={`text-[12px] rounded-full px-3 py-1.5 border transition-colors ${
-                      state.maxPrice === opt.value
-                        ? 'bg-olive text-white border-olive'
-                        : 'bg-white text-text2 border-off2 hover:border-olive-border'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
+            <div className="mt-4 pt-3 border-t border-off flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-bold tracking-widest uppercase text-text3">Cena:</span>
+              {PRICE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.label}
+                  onClick={() => update('maxPrice', opt.value)}
+                  className={`text-[11px] rounded-full px-2.5 py-1 border transition-colors ${
+                    state.maxPrice === opt.value
+                      ? 'bg-olive text-white border-olive'
+                      : 'bg-white text-text2 border-off2 hover:border-olive-border'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Live result */}
-          <div className="bg-olive-dark rounded-[var(--radius-card)] p-8 text-white flex flex-col justify-center">
-            <div className="text-[10px] font-bold tracking-widest uppercase text-white/70 mb-3">
-              {loading ? 'Hledám…' : 'Tvému profilu odpovídá'}
+          {/* Live result — kompaktní (méně padding, menší číslo) */}
+          <div className="bg-olive-dark rounded-[var(--radius-card)] p-5 text-white flex flex-col justify-center">
+            <div className="text-[10px] font-bold tracking-widest uppercase text-white/70 mb-2">
+              {loading ? 'Hledám…' : 'Odpovídá ti'}
             </div>
-            <div className="font-[family-name:var(--font-display)] text-7xl font-normal leading-none mb-2 tabular-nums">
+            <div className="font-[family-name:var(--font-display)] text-5xl font-normal leading-none mb-1 tabular-nums">
               {count ?? '—'}
             </div>
-            <div className="text-[15px] text-white/80 mb-6">
+            <div className="text-[13px] text-white/80 mb-4">
               {count === 0
-                ? 'olejů — zkus jezdce uvolnit'
+                ? 'olejů — uvolni jezdce'
                 : count === 1
                   ? 'olej s tvojí chutí'
                   : 'olejů s tvojí chutí'}
@@ -170,7 +170,7 @@ export function FlavorSelector({ totalProducts }: { totalProducts: number }) {
             {count != null && count > 0 && (
               <Link
                 href={resultsHref}
-                className="block text-center bg-white text-olive-dark rounded-full px-5 py-3 text-[14px] font-semibold hover:bg-olive-bg transition-colors"
+                className="block text-center bg-white text-olive-dark rounded-full px-4 py-2.5 text-[13px] font-semibold hover:bg-olive-bg transition-colors"
               >
                 Zobrazit {count === 1 ? 'olej' : `všech ${count}`} →
               </Link>

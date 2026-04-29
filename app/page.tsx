@@ -107,6 +107,25 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* ─── 3 TIPY: VÝRAZNÝ / JEMNÝ / ZDRAVÝ ─────────────────────── */}
+      <section className="px-6 md:px-10 py-16 bg-off/40 border-y border-off2">
+        <div className="max-w-[1280px] mx-auto">
+          <div className="text-center mb-8">
+            <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
+              — Pro různé chutě
+            </div>
+            <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text leading-tight">
+              Tři tipy podle toho, co máš rád.
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {tipVyrazny && <FeaturedTip category="vyrazny" product={tipVyrazny} />}
+            {tipJemny && <FeaturedTip category="jemny" product={tipJemny} />}
+            {tipZdravy && <FeaturedTip category="zdravy" product={tipZdravy} />}
+          </div>
+        </div>
+      </section>
+
       {/* ─── FLAVOR SELECTOR ──────────────────────────────────────── */}
       <FlavorSelector totalProducts={stats.totalProducts} />
 
@@ -556,6 +575,76 @@ function TopProductCard({
             </div>
           </div>
         )}
+      </div>
+    </Link>
+  )
+}
+
+
+// 3 featured tipy na homepage — jeden top olej v každé chuťové kategorii
+// (výrazný/jemný/zdravý). Compact card s headline a obrázkem.
+function FeaturedTip({
+  category,
+  product,
+}: {
+  category: "vyrazny" | "jemny" | "zdravy"
+  product: ProductWithOffer
+}) {
+  const config = {
+    vyrazny: {
+      label: "Výrazný",
+      sub: "Pro silnou kuchyni",
+      bg: "bg-amber-50 border-amber-200",
+      tag: "bg-amber-100 text-amber-800",
+    },
+    jemny: {
+      label: "Jemný",
+      sub: "K jemným jídlům",
+      bg: "bg-olive-bg border-olive-border",
+      tag: "bg-olive-bg text-olive-dark",
+    },
+    zdravy: {
+      label: "Zdravý",
+      sub: "Polyfenoly nahoře",
+      bg: "bg-green-50 border-green-200",
+      tag: "bg-green-100 text-green-800",
+    },
+  } as const
+  const c = config[category]
+
+  return (
+    <Link
+      href={`/olej/${product.slug}`}
+      className={`block bg-white border ${c.bg} rounded-[var(--radius-card)] overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(0,0,0,0.06)]`}
+    >
+      <div className="grid grid-cols-[120px_1fr] gap-0">
+        <div className="aspect-square bg-white relative">
+          <ProductImage product={product} fallbackSize="text-[44px]" sizes="120px" />
+          <div className="absolute top-2 left-2 bg-terra text-white rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums">
+            {product.olivatorScore}
+          </div>
+        </div>
+        <div className="p-4 flex flex-col">
+          <div className={`inline-flex w-fit text-[10px] font-bold uppercase tracking-widest ${c.tag} rounded-full px-2 py-0.5 mb-1.5`}>
+            {c.label}
+          </div>
+          <div className="text-[10px] text-text3 mb-0.5 uppercase tracking-widest">
+            {c.sub}
+          </div>
+          <div className="text-[13px] font-semibold text-text leading-tight line-clamp-2 mb-2">
+            {product.name}
+          </div>
+          {product.cheapestOffer && (
+            <div className="mt-auto flex items-baseline gap-2">
+              <span className="text-[15px] font-bold text-text tabular-nums">
+                {formatPrice(product.cheapestOffer.price)}
+              </span>
+              <span className="text-[10px] text-text3 tabular-nums">
+                {formatPricePer100ml(product.cheapestOffer.price, product.volumeMl)}
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </Link>
   )
