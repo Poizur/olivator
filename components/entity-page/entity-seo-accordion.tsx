@@ -46,36 +46,33 @@ export function EntitySeoAccordion({ tldr, sections, faqs }: Props) {
   return (
     <section className="px-6 md:px-10">
       <div className="max-w-[920px] mx-auto">
-        {/* TL;DR info pásek */}
+        {/* Stručně — info pásek (přejmenováno z TL;DR) */}
         {tldr && (
           <div className="bg-olive-bg border-l-4 border-olive rounded-r-[var(--radius-card)] px-5 py-4 mb-6">
             <div className="text-[11px] font-bold tracking-widest uppercase text-olive-dark mb-1">
-              TL;DR
+              Stručně
             </div>
             <p className="text-[14px] text-olive-dark leading-relaxed">{tldr}</p>
           </div>
         )}
 
-        {/* Akordeon — nativní <details> */}
+        {/* Editorial sekce — všechny otevřené v kartách vedle sebe.
+            Důvod: user feedback — texty by měly být vždy přístupné, ne sbalené
+            za klikem. Sbalené zůstává jen FAQ (níže). */}
         {sections.length > 0 && (
-          <div className="space-y-2 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
             {sections.map((section, i) => (
-              <details
+              <div
                 key={i}
-                className="bg-white border border-off2 rounded-[var(--radius-card)] group"
+                className="bg-white border border-off2 rounded-[var(--radius-card)] p-5"
               >
-                <summary className="cursor-pointer list-none px-5 py-4 flex items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
-                  <span className="text-[15px] font-medium text-text">
-                    {section.title}
-                  </span>
-                  <span className="text-text3 text-[14px] group-open:rotate-180 transition-transform">
-                    ▾
-                  </span>
-                </summary>
-                <div className="px-5 pb-5 pt-1 border-t border-off">
+                <h3 className="text-[15px] font-medium text-text mb-3">
+                  {section.title}
+                </h3>
+                <div className="text-[13px] leading-relaxed">
                   {renderInline(section.body)}
                 </div>
-              </details>
+              </div>
             ))}
           </div>
         )}

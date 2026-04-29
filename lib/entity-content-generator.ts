@@ -28,7 +28,15 @@ PRAVIDLA:
 - Podepiš každou větu faktem — kyselost, polyfenoly, certifikace, odrůda, region.
 - Formát: čistý text s odstavci. Nadpisy začínají ## (H2) nebo ### (H3).
 - Minimálně 2× H2, min. 1× přirozené affiliate CTA ("Nejlevněji u X: YYY Kč").
-- Nepoužívej markdown bold/italic.`
+- Nepoužívej markdown bold/italic.
+
+EVERGREEN PRAVIDLO (KRITICKÉ):
+- Texty popisují REGION/ZNAČKU/ODRŮDU obecně, NE aktuální stav našeho katalogu.
+- ZAKÁZÁNO: "v naší nabídce", "v našem katalogu", "v našem výběru", "u nás máte na výběr",
+  "aktuálně nabízíme", "nemáme/máme bio certifikace".
+- Důvod: katalog se mění týden po týdnu. Text musí platit i za měsíc.
+- ✅ "Apulijské oleje typicky nesou DOP certifikaci u prémiových řad."
+- ❌ "Apulijské oleje v našem katalogu nenesou DOP certifikaci."`
 
 // ── Region ────────────────────────────────────────────────────────────────────
 
