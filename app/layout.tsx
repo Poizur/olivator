@@ -70,7 +70,10 @@ export default async function RootLayout({
   // Hide public Nav + Footer + CompareBar on /admin pages (admin uses dark
   // AdminBar at top + its own page content, no public chrome needed).
   const headersList = await headers()
-  const pathname = headersList.get('x-pathname') ?? ''
+  // x-pathname je nastaven middlewarem, next-url je fallback od Next.js
+  // (oba mohou být občas prázdné — bez fallbacku se admin chrome rendrá i na adminu)
+  const pathname =
+    headersList.get('x-pathname') || headersList.get('next-url') || ''
   const isAdminPage = pathname.startsWith('/admin')
   const isAdmin = !isAdminPage && await isAdminAuthenticated()
 
