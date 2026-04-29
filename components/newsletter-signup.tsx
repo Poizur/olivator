@@ -97,7 +97,7 @@ export function NewsletterSignup({ source = 'footer', variant = 'inline' }: Prop
         className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 max-w-[480px] mx-auto"
       >
         <div className="text-center mb-4">
-          <div className="text-base font-semibold text-text mb-1">📬 Olej měsíce</div>
+          <div className="text-base font-semibold text-text mb-1">Olej měsíce — newsletter</div>
           <div className="text-[13px] text-text2 leading-relaxed">
             Týdně 1 e-mail: nejlepší olej týdne, sleva nebo recept. Žádný spam.
           </div>
@@ -132,7 +132,7 @@ export function NewsletterSignup({ source = 'footer', variant = 'inline' }: Prop
   // Inline (footer) variant
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-2 max-w-[280px]">
-      <div className="text-[12px] font-semibold text-text">📬 Olej měsíce</div>
+      <div className="text-[12px] font-semibold text-text">Olej měsíce — newsletter</div>
       <div className="flex gap-1.5">
         <input
           type="email"

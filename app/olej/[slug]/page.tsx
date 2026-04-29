@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getProducts, getProductBySlug, getOffersForProduct, getProductGallery, getProductCustomFAQs, getActiveGeneralFAQs, getVariantProducts, getProductEntityLinks } from '@/lib/data'
 import { extractBrandSlug, extractRegionSlug } from '@/lib/entity-extractor'
-import { countryFlag, countryName, typeLabel, certLabel, formatPrice, formatPricePer100ml } from '@/lib/utils'
+import { countryName, typeLabel, certLabel, formatPrice, formatPricePer100ml } from '@/lib/utils'
 import { productSchema, breadcrumbSchema, faqSchema } from '@/lib/schema'
 import { generateProductFAQ } from '@/lib/product-faq'
 import { selectGeneralFAQs } from '@/lib/general-faq'
@@ -160,7 +160,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     },
     ...(product.ean
       ? [{ key: 'EAN', value: product.ean, missing: false }]
-      : [{ key: 'Původ', value: '🌾 Přímo od výrobce', missing: false }]),
+      : [{ key: 'Původ', value: 'Přímo od výrobce', missing: false }]),
   ]
 
   // Product-specific FAQs:
@@ -248,8 +248,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
         {/* Right — info */}
         <div>
-          <div className="text-[13px] text-text3 mb-1.5">
-            {countryFlag(product.originCountry)} {product.originRegion}, {countryName(product.originCountry)} &middot; {typeLabel(product.type)} &middot; {product.volumeMl} ml
+          <div className="text-[11px] text-text3 mb-2 uppercase tracking-widest font-medium">
+            {product.originRegion ? `${product.originRegion} · ` : ''}{countryName(product.originCountry)} · {typeLabel(product.type)} · {product.volumeMl} ml
           </div>
           <h1 className="font-[family-name:var(--font-display)] text-[34px] font-normal text-text leading-[1.15] mb-2 tracking-tight">
             {product.name}
@@ -276,7 +276,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             )}
             {!product.ean && (
               <span className="text-[11px] px-2.5 py-1 rounded-lg font-medium bg-terra-bg text-terra">
-                🌾 Přímo od výrobce
+                Přímo od výrobce
               </span>
             )}
           </div>
@@ -367,10 +367,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={p.imageUrl} alt={p.name} className="w-7 h-7 object-contain" loading="lazy" />
                   ) : (
-                    <span className="text-base">🫒</span>
+                    <span className="font-[family-name:var(--font-display)] text-base italic text-text3 leading-none w-7 h-7 flex items-center justify-center">
+                      {p.name.charAt(0)}
+                    </span>
                   )}
                   <span className="text-[12px] text-text">
-                    {countryFlag(p.originCountry)} {p.nameShort}
+                    {p.nameShort}
                   </span>
                   <span className="text-[10px] bg-terra/15 text-terra rounded px-1.5 py-0.5 font-semibold">
                     {p.olivatorScore}
@@ -502,8 +504,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 href={`/oblast/${entityLinks.region.slug}`}
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-olive4 border border-olive5 rounded-full text-sm text-olive hover:bg-olive5 transition-colors"
               >
-                <span>🌍</span>
-                <span>Region: {entityLinks.region.name}</span>
+                <span className="text-[10px] uppercase tracking-widest font-semibold text-olive/60">Region</span>
+                <span>{entityLinks.region.name}</span>
               </Link>
             )}
             {entityLinks.brand && (
@@ -511,8 +513,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 href={`/znacka/${entityLinks.brand.slug}`}
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-olive4 border border-olive5 rounded-full text-sm text-olive hover:bg-olive5 transition-colors"
               >
-                <span>🫒</span>
-                <span>Značka: {entityLinks.brand.name}</span>
+                <span className="text-[10px] uppercase tracking-widest font-semibold text-olive/60">Značka</span>
+                <span>{entityLinks.brand.name}</span>
               </Link>
             )}
             {entityLinks.cultivars.map((c) => (
@@ -521,8 +523,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 href={`/odruda/${c.slug}`}
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-olive4 border border-olive5 rounded-full text-sm text-olive hover:bg-olive5 transition-colors"
               >
-                <span>🌿</span>
-                <span>Odrůda: {c.name}</span>
+                <span className="text-[10px] uppercase tracking-widest font-semibold text-olive/60">Odrůda</span>
+                <span>{c.name}</span>
               </Link>
             ))}
           </div>

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useCompare } from '@/lib/compare-context'
-import { countryFlag, formatPrice, formatPricePer100ml, certLabel, typeLabel, countryName } from '@/lib/utils'
+import { formatPrice, formatPricePer100ml, certLabel, typeLabel, countryName } from '@/lib/utils'
 import type { Product, ProductOffer } from '@/lib/types'
 
 const PACKAGING_LABELS: Record<string, string> = {
@@ -195,11 +195,11 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                     loading="lazy"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-3xl">🫒</div>
+                  <div className="w-full h-full flex items-center justify-center font-[family-name:var(--font-display)] text-3xl italic text-text3/40">{item.name.charAt(0)}</div>
                 )}
                 {item.originCountry && (
-                  <div className="absolute top-1.5 left-1.5 bg-white/90 backdrop-blur-sm rounded px-1 py-0.5 text-sm leading-none shadow-sm" title={item.originCountry}>
-                    {countryFlag(item.originCountry)}
+                  <div className="absolute top-1.5 left-1.5 bg-white/90 backdrop-blur-sm rounded px-1.5 py-0.5 text-[9px] leading-none shadow-sm uppercase tracking-widest font-bold text-text2" title={countryName(item.originCountry)}>
+                    {item.originCountry}
                   </div>
                 )}
                 <div className="absolute top-1.5 right-1.5 bg-terra text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
@@ -242,9 +242,8 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
       {/* Smart suggestions — podobné oleje na základě toho, co už máš v porovnání */}
       {suggestions.length > 0 && items.length < 5 && (
         <div className="bg-olive-bg/40 border border-olive-border/30 rounded-xl p-4 mb-6">
-          <div className="text-[11px] font-semibold tracking-wider uppercase text-olive-dark mb-3 flex items-center gap-2">
-            <span>✨</span>
-            <span>{items.length === 0 ? 'Doporučujeme začít s těmito' : 'Mohlo by sednout do porovnání'}</span>
+          <div className="text-[11px] font-semibold tracking-widest uppercase text-olive-dark mb-3">
+            — {items.length === 0 ? 'Doporučujeme začít s těmito' : 'Mohlo by sednout do porovnání'}
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
             {suggestions.map((p) => {
@@ -261,11 +260,11 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={p.imageUrl} alt={p.name} className="w-full h-full object-contain p-0.5" loading="lazy" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-base">🫒</div>
+                      <div className="w-full h-full flex items-center justify-center font-[family-name:var(--font-display)] text-base italic text-text3/40">{p.name.charAt(0)}</div>
                     )}
                     {p.originCountry && (
-                      <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded text-[10px] leading-none px-0.5 shadow-sm border border-off2">
-                        {countryFlag(p.originCountry)}
+                      <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded text-[8px] leading-none px-1 py-0.5 shadow-sm border border-off2 uppercase tracking-widest font-bold text-text2">
+                        {p.originCountry}
                       </div>
                     )}
                   </div>
@@ -316,12 +315,11 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={winner.imageUrl} alt={winner.name} className="w-full h-full object-contain p-1" loading="lazy" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-3xl">🫒</div>
+                <div className="w-full h-full flex items-center justify-center font-[family-name:var(--font-display)] text-3xl italic text-text3/40">{winner.name.charAt(0)}</div>
               )}
-              <div className="absolute -top-1 -left-1 text-2xl drop-shadow-sm" aria-hidden="true">🏆</div>
               {winner.originCountry && (
-                <div className="absolute bottom-1 right-1 text-[11px] leading-none bg-white rounded shadow-sm px-0.5">
-                  {countryFlag(winner.originCountry)}
+                <div className="absolute bottom-1 right-1 bg-white rounded shadow-sm px-1 py-0.5 text-[9px] uppercase tracking-widest font-bold text-text2">
+                  {winner.originCountry}
                 </div>
               )}
             </Link>
@@ -406,11 +404,11 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain p-1" loading="lazy" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xl">🫒</div>
+                      <div className="w-full h-full flex items-center justify-center font-[family-name:var(--font-display)] text-xl italic text-text3/40">{item.name.charAt(0)}</div>
                     )}
                     {item.originCountry && (
-                      <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded text-[10px] leading-none px-0.5 shadow-sm border border-off2">
-                        {countryFlag(item.originCountry)}
+                      <div className="absolute -bottom-0.5 -right-0.5 bg-white rounded text-[8px] leading-none px-1 py-0.5 shadow-sm border border-off2 uppercase tracking-widest font-bold text-text2">
+                        {item.originCountry}
                       </div>
                     )}
                   </div>
@@ -503,11 +501,11 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain p-1.5" loading="lazy" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-2xl">🫒</div>
+                          <div className="w-full h-full flex items-center justify-center font-[family-name:var(--font-display)] text-2xl italic text-text3/40">{item.name.charAt(0)}</div>
                         )}
                         {item.originCountry && (
-                          <div className="absolute bottom-1 right-1 bg-white rounded text-[12px] leading-none px-1 py-0.5 shadow-sm border border-off2">
-                            {countryFlag(item.originCountry)}
+                          <div className="absolute bottom-1 right-1 bg-white rounded text-[9px] leading-none px-1 py-0.5 shadow-sm border border-off2 uppercase tracking-widest font-bold text-text2">
+                            {item.originCountry}
                           </div>
                         )}
                       </div>

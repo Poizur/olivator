@@ -37,10 +37,8 @@ export function ProductGallery({
   const active = images.find(i => i.id === activeId) ?? images[0]
 
   if (!active) {
-    // No images at all → show placeholder
     return (
-      <div className="bg-off rounded-[var(--radius-card)] aspect-square flex items-center justify-center text-[120px] relative overflow-hidden">
-        🫒
+      <div className="bg-off rounded-[var(--radius-card)] aspect-square flex items-center justify-center relative overflow-hidden">
         {scoreBadge && (
           <div className="absolute top-4 right-4">{scoreBadge}</div>
         )}

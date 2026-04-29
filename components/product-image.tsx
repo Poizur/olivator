@@ -8,7 +8,6 @@ interface ProductImageProps {
   sizes?: string
 }
 
-/** Shows real product image from Supabase Storage, falls back to 🫒 emoji. */
 export function ProductImage({
   product,
   className = '',
@@ -28,9 +27,13 @@ export function ProductImage({
       </div>
     )
   }
+  // Fallback: first letter of product name in display serif on neutral background
+  const initial = product.name.charAt(0).toUpperCase()
   return (
-    <div className={`w-full h-full flex items-center justify-center ${fallbackSize} ${className}`}>
-      🫒
+    <div className={`w-full h-full flex items-center justify-center ${className}`}>
+      <span className={`font-[family-name:var(--font-display)] ${fallbackSize} font-normal italic text-text3/30 leading-none select-none`}>
+        {initial}
+      </span>
     </div>
   )
 }

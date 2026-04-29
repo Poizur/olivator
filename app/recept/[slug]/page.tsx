@@ -110,7 +110,9 @@ export default async function RecipeDetailPage({ params }: { params: Promise<{ s
               className="flex items-center justify-between py-3 border-b border-olive-border last:border-b-0"
             >
               <div className="flex items-center gap-3">
-                <span className="text-2xl">🫒</span>
+                <span className="w-8 h-8 bg-olive-bg rounded-lg flex items-center justify-center font-[family-name:var(--font-display)] text-base italic text-olive leading-none">
+                  {p.name.charAt(0)}
+                </span>
                 <div>
                   <div className="text-sm font-medium text-text">{p.name}</div>
                   <div className="text-xs text-text2">Score {p.olivatorScore}</div>

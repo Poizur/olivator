@@ -137,9 +137,11 @@ export default async function CultivarPage({ params }: { params: Promise<{ slug:
         </div>
       ) : (
         <div className="mb-10">
-          <div className="text-5xl mb-4">🫒</div>
+          <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
+            — Odrůda
+          </div>
           <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-text mb-2">
-            Odrůda {cultivar.name}
+            {cultivar.name}
           </h1>
           <p className="text-sm text-text3">{products.length} produktů s touto odrůdou v katalogu</p>
         </div>

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { countryFlag, countryName } from '@/lib/utils'
+import { countryName } from '@/lib/utils'
 import type { RegionTile } from '@/lib/data'
 
 const GENITIVE: Record<string, string> = {
@@ -27,7 +27,7 @@ export function RegionAtlas({ regions }: { regions: RegionTile[] }) {
         <div className="flex items-end justify-between mb-8">
           <div>
             <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
-              🗺 Atlas regionů
+              — Atlas regionů
             </div>
             <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text leading-tight">
               Olej má adresu.
@@ -58,15 +58,16 @@ export function RegionAtlas({ regions }: { regions: RegionTile[] }) {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
                   </>
                 ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-[80px] opacity-40">
-                    {countryFlag(r.countryCode)}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="font-[family-name:var(--font-display)] text-[120px] font-normal italic text-white/15 leading-none select-none">
+                      {r.name.charAt(0)}
+                    </div>
                   </div>
                 )}
 
                 <div className="absolute inset-0 flex flex-col justify-end p-4 text-white">
-                  <div className="text-[10px] font-medium tracking-widest uppercase text-white/70 mb-1 flex items-center gap-1">
-                    <span>{countryFlag(r.countryCode)}</span>
-                    <span>{countryName(r.countryCode)}</span>
+                  <div className="text-[10px] font-medium tracking-widest uppercase text-white/60 mb-1">
+                    {countryName(r.countryCode)}
                   </div>
                   <div className="font-[family-name:var(--font-display)] text-2xl font-normal leading-tight mb-0.5">
                     {r.name}

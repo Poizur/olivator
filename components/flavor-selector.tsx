@@ -11,25 +11,21 @@ interface FlavorState {
   maxPrice: number | null
 }
 
-const PRESETS: Array<{ label: string; emoji: string; state: FlavorState }> = [
+const PRESETS: Array<{ label: string; state: FlavorState }> = [
   {
     label: 'Lehký a jemný',
-    emoji: '🌿',
     state: { fruity: 60, bitter: 20, spicy: 20, mild: 75, maxPrice: null },
   },
   {
     label: 'Ovocný a svěží',
-    emoji: '🍋',
     state: { fruity: 80, bitter: 35, spicy: 30, mild: 50, maxPrice: null },
   },
   {
     label: 'Hořký a palčivý',
-    emoji: '🌶',
     state: { fruity: 50, bitter: 75, spicy: 70, mild: 25, maxPrice: null },
   },
   {
     label: 'Univerzál do vaření',
-    emoji: '🍳',
     state: { fruity: 50, bitter: 40, spicy: 35, mild: 60, maxPrice: 350 },
   },
 ]
@@ -99,7 +95,7 @@ export function FlavorSelector({ totalProducts }: { totalProducts: number }) {
       <div className="max-w-[1280px] mx-auto">
         <div className="text-center mb-10">
           <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
-            🎚 Nalaď podle chuti
+            — Nalaď podle chuti
           </div>
           <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text mb-3">
             Vyber chuť, ne značku.
@@ -122,17 +118,17 @@ export function FlavorSelector({ totalProducts }: { totalProducts: number }) {
                     onClick={() => applyPreset(p.state)}
                     className="text-[12px] bg-off hover:bg-olive-bg hover:text-olive border border-off2 hover:border-olive-border rounded-full px-3 py-1.5 transition-colors"
                   >
-                    {p.emoji} {p.label}
+                    {p.label}
                   </button>
                 ))}
               </div>
             </div>
 
             <div className="space-y-5">
-              <Slider label="🍋 Ovocnost" value={state.fruity} onChange={(v) => update('fruity', v)} leftLabel="neutrální" rightLabel="ovocný" />
-              <Slider label="🌿 Hořkost" value={state.bitter} onChange={(v) => update('bitter', v)} leftLabel="jemný" rightLabel="hořký" />
-              <Slider label="🌶 Palčivost" value={state.spicy} onChange={(v) => update('spicy', v)} leftLabel="hladký" rightLabel="palčivý" />
-              <Slider label="🥛 Krémovost" value={state.mild} onChange={(v) => update('mild', v)} leftLabel="výrazný" rightLabel="máslový" />
+              <Slider label="Ovocnost" value={state.fruity} onChange={(v) => update('fruity', v)} leftLabel="neutrální" rightLabel="ovocný" />
+              <Slider label="Hořkost" value={state.bitter} onChange={(v) => update('bitter', v)} leftLabel="jemný" rightLabel="hořký" />
+              <Slider label="Palčivost" value={state.spicy} onChange={(v) => update('spicy', v)} leftLabel="hladký" rightLabel="palčivý" />
+              <Slider label="Krémovost" value={state.mild} onChange={(v) => update('mild', v)} leftLabel="výrazný" rightLabel="máslový" />
             </div>
 
             <div className="mt-6 pt-5 border-t border-off">

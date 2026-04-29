@@ -100,10 +100,14 @@ export function SommelierChat() {
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label="AI Sommelier"
-        className="fixed bottom-6 right-6 z-[50] w-14 h-14 rounded-full bg-olive text-white shadow-lg hover:bg-olive2 transition-all flex items-center justify-center text-2xl"
+        className="fixed bottom-6 right-6 z-[50] w-14 h-14 rounded-full bg-olive text-white shadow-lg hover:bg-olive2 transition-all flex items-center justify-center"
         style={{ boxShadow: '0 4px 20px rgba(45,106,79,0.35)' }}
       >
-        {open ? '✕' : '🫒'}
+        {open ? (
+          <span className="text-xl leading-none">✕</span>
+        ) : (
+          <span className="font-[family-name:var(--font-display)] text-base italic font-normal leading-none">AI</span>
+        )}
       </button>
 
       {/* Chat panel */}
@@ -113,10 +117,10 @@ export function SommelierChat() {
           style={{ maxHeight: 'min(520px, calc(100vh - 120px))' }}
         >
           {/* Header */}
-          <div className="px-4 py-3 bg-olive text-white flex items-center gap-2 shrink-0">
-            <span className="text-xl">🫒</span>
+          <div className="px-4 py-3 bg-olive text-white flex items-center gap-2.5 shrink-0">
+            <div className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center font-[family-name:var(--font-display)] text-sm italic">AI</div>
             <div>
-              <div className="text-sm font-semibold">AI Sommelier</div>
+              <div className="text-sm font-semibold">Sommelier</div>
               <div className="text-[10px] opacity-70">Poradím s výběrem oleje</div>
             </div>
           </div>

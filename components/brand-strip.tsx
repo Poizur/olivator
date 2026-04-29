@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { countryFlag, countryName } from '@/lib/utils'
+import { countryName } from '@/lib/utils'
 import type { BrandTile } from '@/lib/data'
 
 export function BrandStrip({ brands }: { brands: BrandTile[] }) {
@@ -11,7 +11,7 @@ export function BrandStrip({ brands }: { brands: BrandTile[] }) {
         <div className="flex items-end justify-between mb-8">
           <div>
             <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
-              🏛 Výrobci, kterým věříme
+              — Výrobci, kterým věříme
             </div>
             <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text leading-tight">
               Lidé za lahvemi.
@@ -29,7 +29,7 @@ export function BrandStrip({ brands }: { brands: BrandTile[] }) {
               href={`/znacka/${b.slug}`}
               className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden hover:border-olive-light hover:shadow-md transition-all"
             >
-              <div className="aspect-[4/3] relative bg-gradient-to-br from-olive-bg/40 to-off">
+              <div className="aspect-[4/3] relative bg-olive-dark">
                 {b.photoUrl ? (
                   <>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -41,15 +41,16 @@ export function BrandStrip({ brands }: { brands: BrandTile[] }) {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
                   </>
                 ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-5xl opacity-50">
-                    {countryFlag(b.countryCode)}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="font-[family-name:var(--font-display)] text-[80px] font-normal italic text-white/15 leading-none select-none">
+                      {b.name.charAt(0)}
+                    </div>
                   </div>
                 )}
               </div>
               <div className="p-3">
-                <div className="text-[10px] text-text3 mb-0.5 flex items-center gap-1">
-                  <span>{countryFlag(b.countryCode)}</span>
-                  <span>{countryName(b.countryCode)}</span>
+                <div className="text-[10px] text-text3 mb-0.5 uppercase tracking-widest font-medium">
+                  {countryName(b.countryCode)}
                 </div>
                 <div className="text-[14px] font-semibold text-text leading-tight mb-0.5 truncate">
                   {b.name}

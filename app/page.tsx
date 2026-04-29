@@ -9,11 +9,12 @@ import { getArticles } from '@/lib/static-content'
 import { pickOilOfDay, pickScoreFeature } from '@/lib/home-picks'
 import { NewsletterSignup } from '@/components/newsletter-signup'
 import { ProductImage } from '@/components/product-image'
+import { Trophy, BarChart3, Bot, Ban, Globe2 } from 'lucide-react'
 import { SommelierHero } from '@/components/sommelier-hero'
 import { FlavorSelector } from '@/components/flavor-selector'
 import { RegionAtlas } from '@/components/region-atlas'
 import { BrandStrip } from '@/components/brand-strip'
-import { countryFlag, countryName, formatPrice, formatPricePer100ml } from '@/lib/utils'
+import { countryName, formatPrice, formatPricePer100ml } from '@/lib/utils'
 import type { Product, ProductOffer } from '@/lib/types'
 
 export const revalidate = 3600
@@ -66,7 +67,7 @@ export default async function Home() {
           <div className="flex items-end justify-between mb-8 flex-wrap gap-4">
             <div>
               <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
-                🏆 Top devítka
+                — Top devítka
               </div>
               <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text leading-tight">
                 Devět olejů, na které sázíme.
@@ -106,7 +107,7 @@ export default async function Home() {
           <div className="max-w-[1280px] mx-auto bg-white border border-off2 rounded-[var(--radius-card)] p-8 md:p-10 grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-8 lg:gap-10 items-center">
             <div>
               <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
-                🔬 Jak vzniká Score
+                — Jak vzniká Score
               </div>
               <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl font-normal text-text mb-3 leading-tight">
                 Žádná magie.<br />
@@ -193,17 +194,14 @@ export default async function Home() {
                 </div>
 
                 <div className="p-6 md:p-8 flex flex-col">
-                  <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2 flex items-center gap-2">
-                    <span className="text-base">🏆</span>
+                  <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2 flex items-center gap-1.5">
+                    <Trophy size={14} strokeWidth={1.75} />
                     Olej měsíce
                   </div>
 
-                  <div className="text-[12px] text-text3 mb-1 flex items-center gap-1.5">
-                    <span>{countryFlag(oilOfDay.originCountry)}</span>
-                    <span>
-                      {oilOfDay.originRegion ? `${oilOfDay.originRegion}, ` : ''}
-                      {countryName(oilOfDay.originCountry)}
-                    </span>
+                  <div className="text-[12px] text-text3 mb-1 uppercase tracking-widest font-medium">
+                    {oilOfDay.originRegion ? `${oilOfDay.originRegion}, ` : ''}
+                    {countryName(oilOfDay.originCountry)}
                   </div>
 
                   <h3 className="font-[family-name:var(--font-display)] text-2xl text-text leading-tight mb-3">
@@ -251,7 +249,9 @@ export default async function Home() {
 
           {/* Newsletter signup */}
           <div className="bg-olive-dark rounded-[var(--radius-card)] p-7 text-white flex flex-col">
-            <div className="text-2xl mb-3">📬</div>
+            <div className="text-[10px] font-bold tracking-widest uppercase text-white/60 mb-4">
+              — Newsletter
+            </div>
             <h3 className="font-[family-name:var(--font-display)] text-2xl font-normal mb-2 leading-tight">
               Olej měsíce<br />
               <span className="text-white/70 italic">do schránky.</span>
@@ -273,7 +273,7 @@ export default async function Home() {
             <div className="flex items-end justify-between mb-8">
               <div>
                 <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
-                  📖 Z olivového světa
+                  — Z olivového světa
                 </div>
                 <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text leading-tight">
                   Průvodce a recepty
@@ -285,29 +285,35 @@ export default async function Home() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {articles.slice(0, 4).map((a) => (
-                <Link
-                  key={a.slug}
-                  href={`/${a.category === 'recept' ? 'recept' : 'pruvodce'}/${a.slug}`}
-                  className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:border-olive-light hover:shadow-md hover:-translate-y-0.5"
-                >
-                  <div className="aspect-[16/10] bg-gradient-to-br from-olive-bg/30 to-off flex items-center justify-center text-6xl">
-                    {a.emoji}
-                  </div>
-                  <div className="p-4 flex-1 flex flex-col">
-                    <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
-                      {a.category === 'recept' ? 'Recept' : a.category === 'zebricek' ? 'Žebříček' : 'Průvodce'}
+              {articles.slice(0, 4).map((a) => {
+                const category = a.category === 'recept' ? 'Recept' : a.category === 'zebricek' ? 'Žebříček' : 'Průvodce'
+                const initial = a.title.charAt(0).toUpperCase()
+                return (
+                  <Link
+                    key={a.slug}
+                    href={`/${a.category === 'recept' ? 'recept' : 'pruvodce'}/${a.slug}`}
+                    className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:border-olive-light hover:shadow-md hover:-translate-y-0.5"
+                  >
+                    <div className="aspect-[16/10] bg-olive-dark flex items-center justify-center relative overflow-hidden">
+                      <div className="font-[family-name:var(--font-display)] text-[120px] font-normal italic text-white/15 leading-none select-none">
+                        {initial}
+                      </div>
+                      <div className="absolute top-3 left-3 text-[9px] font-bold tracking-widest uppercase text-white/70">
+                        {category}
+                      </div>
                     </div>
-                    <h3 className="font-[family-name:var(--font-display)] text-lg text-text leading-tight mb-2 line-clamp-2">
-                      {a.title}
-                    </h3>
-                    <p className="text-[12px] text-text2 leading-snug line-clamp-2 mb-2 flex-1">
-                      {a.excerpt}
-                    </p>
-                    <div className="text-[11px] text-text3">{a.readTime}</div>
-                  </div>
-                </Link>
-              ))}
+                    <div className="p-4 flex-1 flex flex-col">
+                      <h3 className="font-[family-name:var(--font-display)] text-lg text-text leading-tight mb-2 line-clamp-2">
+                        {a.title}
+                      </h3>
+                      <p className="text-[12px] text-text2 leading-snug line-clamp-2 mb-2 flex-1">
+                        {a.excerpt}
+                      </p>
+                      <div className="text-[11px] text-text3">{a.readTime}</div>
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
           </div>
         </section>
@@ -338,13 +344,13 @@ export default async function Home() {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
-                { emoji: '📊', title: 'Vlastní Score', body: '4 kritéria, 100 bodů' },
-                { emoji: '🤖', title: 'AI Sommelier', body: 'Olej za 5 sekund' },
-                { emoji: '🚫', title: 'Žádná reklama', body: 'Žádné sponsored' },
-                { emoji: '🌍', title: `${stats.activeRetailers} prodejců`, body: 'Cena denně' },
+                { Icon: BarChart3, title: 'Vlastní Score', body: '4 kritéria, 100 bodů' },
+                { Icon: Bot, title: 'AI Sommelier', body: 'Olej za 5 sekund' },
+                { Icon: Ban, title: 'Žádná reklama', body: 'Žádné sponsored' },
+                { Icon: Globe2, title: `${stats.activeRetailers} prodejců`, body: 'Cena denně' },
               ].map((d) => (
                 <div key={d.title} className="bg-white/5 border border-white/10 rounded-xl p-4">
-                  <div className="text-2xl mb-2">{d.emoji}</div>
+                  <d.Icon size={20} strokeWidth={1.5} className="text-olive4 mb-3" />
                   <div className="text-[13px] font-semibold mb-0.5">{d.title}</div>
                   <div className="text-[11px] text-white/60">{d.body}</div>
                 </div>
@@ -412,8 +418,8 @@ function TopProductCard({ product, rank }: { product: ProductWithOffer; rank: nu
       </div>
 
       <div className="p-3.5 flex-1 flex flex-col">
-        <div className="text-[10px] text-text3 mb-0.5 flex items-center gap-1">
-          {countryFlag(product.originCountry)} {countryName(product.originCountry)}
+        <div className="text-[10px] text-text3 mb-0.5 uppercase tracking-widest font-medium">
+          {countryName(product.originCountry)}
         </div>
         <div className="text-[13px] font-semibold text-text leading-tight mb-2 line-clamp-2">
           {product.name}

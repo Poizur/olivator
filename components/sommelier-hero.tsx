@@ -2,8 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import { Trophy, ArrowRight } from 'lucide-react'
 import { ProductImage } from './product-image'
-import { formatPrice, formatPricePer100ml, countryFlag } from '@/lib/utils'
+import { formatPrice, formatPricePer100ml, countryName } from '@/lib/utils'
 import type { Product, ProductOffer } from '@/lib/types'
 
 type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
@@ -146,9 +147,14 @@ export function SommelierHero({
                 <button
                   onClick={() => send()}
                   disabled={!input.trim() || loading}
-                  className="bg-olive text-white rounded-full px-5 py-2.5 text-[14px] font-semibold disabled:opacity-40 hover:bg-olive2 transition-colors whitespace-nowrap"
+                  className="bg-olive text-white rounded-full px-5 py-2.5 text-[14px] font-semibold disabled:opacity-40 hover:bg-olive2 transition-colors whitespace-nowrap inline-flex items-center gap-1.5"
                 >
-                  {loading ? '…' : 'Zeptat se →'}
+                  {loading ? '…' : (
+                    <>
+                      Zeptat se
+                      <ArrowRight size={14} strokeWidth={2} />
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -228,8 +234,8 @@ export function SommelierHero({
           {/* RIGHT: Top 3 této chvíle */}
           <aside className="lg:sticky lg:top-20">
             <div className="bg-gradient-to-br from-olive-dark to-olive2 rounded-[var(--radius-card)] p-6 text-white">
-              <div className="flex items-center gap-2 mb-5">
-                <span className="text-lg">🏆</span>
+              <div className="flex items-center gap-1.5 mb-5">
+                <Trophy size={14} strokeWidth={1.75} className="text-white/80" />
                 <span className="text-[10px] font-bold tracking-widest uppercase text-white/80">
                   Top 3 této chvíle
                 </span>
@@ -250,12 +256,11 @@ export function SommelierHero({
                       <div className="text-[13px] font-semibold leading-tight truncate group-hover:text-olive4 transition-colors">
                         {p.name}
                       </div>
-                      <div className="text-[11px] text-white/60 truncate flex items-center gap-1.5">
-                        <span>{countryFlag(p.originCountry)}</span>
+                      <div className="text-[11px] text-white/60 truncate">
                         {p.cheapestOffer ? (
-                          <span>{formatPrice(p.cheapestOffer.price)} · {formatPricePer100ml(p.cheapestOffer.price, p.volumeMl)}</span>
+                          <span>{countryName(p.originCountry)} · {formatPrice(p.cheapestOffer.price)}</span>
                         ) : (
-                          <span>—</span>
+                          <span>{countryName(p.originCountry)}</span>
                         )}
                       </div>
                     </div>

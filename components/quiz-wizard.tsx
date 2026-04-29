@@ -156,7 +156,6 @@ function QuizResults({
   if (recommendations.length === 0) {
     return (
       <div className="max-w-[600px] mx-auto text-center py-16">
-        <div className="text-5xl mb-4">🫒</div>
         <h2 className="font-[family-name:var(--font-display)] text-2xl text-text mb-3">
           Nenašli jsme shodu
         </h2>
@@ -178,9 +177,11 @@ function QuizResults({
   return (
     <div className="max-w-[640px] mx-auto">
       <div className="text-center mb-10">
-        <div className="text-4xl mb-3">🎯</div>
+        <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
+          — Tvoje doporučení
+        </div>
         <h2 className="font-[family-name:var(--font-display)] text-3xl font-normal text-text mb-2">
-          Tvoje doporučení
+          Co jsme pro tebe vybrali
         </h2>
         <p className="text-sm text-text3">
           Z {products.filter(p => p.olivatorScore > 0).length} olejů v databázi — seřazeno dle shody
@@ -204,7 +205,9 @@ function QuizResults({
                 </div>
               )}
               <div className="flex items-start gap-4">
-                <div className="text-4xl shrink-0 mt-0.5">🫒</div>
+                <div className="w-12 h-12 shrink-0 mt-0.5 bg-off rounded-lg flex items-center justify-center font-[family-name:var(--font-display)] text-2xl italic text-olive/40 leading-none">
+                  {p.name.charAt(0)}
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-1">
                     <Link

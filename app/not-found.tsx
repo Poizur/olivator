@@ -3,7 +3,7 @@ import Link from 'next/link'
 export default function NotFound() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] px-10 text-center">
-      <span className="text-6xl mb-6">🫒</span>
+      <span className="font-[family-name:var(--font-display)] text-7xl italic text-olive/30 mb-4 leading-none">404</span>
       <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-text mb-3">
         Stránka nenalezena
       </h1>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import type { Product, ProductOffer } from '@/lib/types'
-import { countryFlag, formatPrice, formatPricePer100ml, certLabel } from '@/lib/utils'
+import { countryName, formatPrice, formatPricePer100ml, certLabel } from '@/lib/utils'
 import { useCompare } from '@/lib/compare-context'
 import { ProductImage } from './product-image'
 
@@ -21,8 +21,8 @@ export function OilCard({ product, offer, isTop }: OilCardProps) {
       isTop ? 'border-[1.5px] border-olive' : 'border-off2 hover:border-olive-light'
     }`}>
       {isTop && (
-        <div className="bg-olive text-white text-center text-[10px] font-semibold py-1.5 tracking-wider uppercase">
-          ★ Olivator volba
+        <div className="bg-olive text-white text-center text-[10px] font-semibold py-1.5 tracking-widest uppercase">
+          Olivator volba
         </div>
       )}
       <Link href={`/olej/${product.slug}`}>
@@ -33,8 +33,8 @@ export function OilCard({ product, offer, isTop }: OilCardProps) {
           </div>
         </div>
         <div className="px-4 pb-4 pt-3">
-          <div className="text-[11px] text-text3 mb-1">
-            {countryFlag(product.originCountry)} {product.originRegion}, {product.originCountry === 'GR' ? 'Řecko' : product.originCountry === 'IT' ? 'Itálie' : product.originCountry === 'ES' ? 'Španělsko' : product.originCountry === 'HR' ? 'Chorvatsko' : product.originCountry} &middot; {product.volumeMl} ml
+          <div className="text-[10px] text-text3 mb-1 uppercase tracking-widest font-medium">
+            {product.originRegion ? `${product.originRegion} · ` : ''}{countryName(product.originCountry)} · {product.volumeMl} ml
           </div>
           <div className="text-[15px] font-medium text-text leading-tight mb-2.5 tracking-tight">
             {product.name}
@@ -57,10 +57,10 @@ export function OilCard({ product, offer, isTop }: OilCardProps) {
             ))}
             {!product.ean && (
               <span
-                className="text-[10px] px-2 py-0.5 rounded-lg bg-terra-bg text-terra"
+                className="text-[10px] px-2 py-0.5 rounded-lg bg-terra-bg text-terra font-medium"
                 title="Produkt přímo od výrobce / farmy — nemá EAN z GS1"
               >
-                🌾 Od výrobce
+                Od výrobce
               </span>
             )}
           </div>
@@ -96,7 +96,7 @@ export function OilCard({ product, offer, isTop }: OilCardProps) {
               : 'bg-transparent text-olive border-olive-light hover:bg-olive-bg'
           }`}
         >
-          {inCompare ? '✓ Přidáno' : '+ Porovnat'}
+          {inCompare ? 'Přidáno' : 'Porovnat'}
         </button>
       </div>
     </div>

@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getProductsByIds, getCheapestOffer } from '@/lib/data'
 import { ListCard } from '@/components/list-card'
-import { countryFlag, countryName } from '@/lib/utils'
+import { countryName } from '@/lib/utils'
 
 export const revalidate = 3600
 
@@ -96,7 +96,6 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
   const products = await getProductsByIds(productIds)
   const offers = await Promise.all(products.map((p) => getCheapestOffer(p.id)))
 
-  const flag = countryFlag(brand.country_code)
   const country = countryName(brand.country_code)
 
   return (
@@ -134,11 +133,13 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
         </div>
       ) : (
         <div className="mb-10">
-          <div className="text-5xl mb-4">{flag}</div>
+          <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
+            — {country}
+          </div>
           <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-text mb-2">
             {brand.name}
           </h1>
-          <p className="text-sm text-text3">{country} · {products.length} produktů v katalogu</p>
+          <p className="text-sm text-text3">{products.length} produktů v katalogu</p>
         </div>
       )}
 

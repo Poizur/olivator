@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import type { Product, ProductOffer } from '@/lib/types'
-import { countryFlag, countryName, formatPrice, formatPricePer100ml, certLabel } from '@/lib/utils'
+import { countryName, formatPrice, formatPricePer100ml, certLabel } from '@/lib/utils'
 import { ProductImage } from './product-image'
 import { WishlistButton } from './wishlist-button'
 
@@ -27,8 +27,8 @@ export function ListCard({ product, offer, rank }: ListCardProps) {
         </div>
 
         <div className="flex-1 min-w-0">
-          <div className="text-[11px] text-text3 mb-0.5">
-            {countryFlag(product.originCountry)} {product.originRegion}, {countryName(product.originCountry)}
+          <div className="text-[10px] text-text3 mb-0.5 uppercase tracking-widest font-medium">
+            {product.originRegion ? `${product.originRegion} · ` : ''}{countryName(product.originCountry)}
           </div>
           <div className="text-[15px] font-medium text-text mb-1.5 tracking-tight">
             {product.name}
@@ -53,10 +53,10 @@ export function ListCard({ product, offer, rank }: ListCardProps) {
             ))}
             {!product.ean && (
               <span
-                className="text-[10px] px-[7px] py-0.5 rounded-md bg-terra-bg text-terra"
+                className="text-[10px] px-[7px] py-0.5 rounded-md bg-terra-bg text-terra font-medium"
                 title="Přímo od výrobce"
               >
-                🌾 Od výrobce
+                Od výrobce
               </span>
             )}
           </div>
