@@ -31,7 +31,8 @@ export default async function Home() {
 
   const oilOfDay = pickOilOfDay(allProducts)
   const scoreFeature = pickScoreFeature(allProducts)
-  const articles = getArticles()
+  const guides = getArticles().filter(a => a.category !== 'recept')
+  const recipes = getArticles('recept')
 
   // Top 3 by Score for hero sidebar
   const topPicks = [...allProducts]
@@ -266,32 +267,32 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ─── ČLÁNKY ────────────────────────────────────────────── */}
-      {articles.length > 0 && (
+      {/* ─── PRŮVODCE ───────────────────────────────────────────── */}
+      {guides.length > 0 && (
         <section className="px-6 md:px-10 py-16">
           <div className="max-w-[1280px] mx-auto">
             <div className="flex items-end justify-between mb-8">
               <div>
                 <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
-                  — Z olivového světa
+                  — Vzdělávání a testy
                 </div>
                 <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text leading-tight">
-                  Průvodce a recepty
+                  Průvodce olivovým olejem
                 </h2>
               </div>
               <Link href="/pruvodce" className="text-[13px] text-olive border-b border-olive-border hover:text-olive2 whitespace-nowrap">
-                Všechny články →
+                Všechny průvodce →
               </Link>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {articles.slice(0, 4).map((a) => {
-                const category = a.category === 'recept' ? 'Recept' : a.category === 'zebricek' ? 'Žebříček' : 'Průvodce'
+              {guides.slice(0, 4).map((a) => {
+                const label = a.category === 'zebricek' ? 'Žebříček' : a.category === 'srovnani' ? 'Srovnání' : a.category === 'vzdelavani' ? 'Vzdělávání' : 'Průvodce'
                 const initial = a.title.charAt(0).toUpperCase()
                 return (
                   <Link
                     key={a.slug}
-                    href={`/${a.category === 'recept' ? 'recept' : 'pruvodce'}/${a.slug}`}
+                    href={`/pruvodce/${a.slug}`}
                     className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:border-olive-light hover:shadow-md hover:-translate-y-0.5"
                   >
                     <div className="aspect-[16/10] bg-olive-dark flex items-center justify-center relative overflow-hidden">
@@ -299,7 +300,7 @@ export default async function Home() {
                         {initial}
                       </div>
                       <div className="absolute top-3 left-3 text-[9px] font-bold tracking-widest uppercase text-white/70">
-                        {category}
+                        {label}
                       </div>
                     </div>
                     <div className="p-4 flex-1 flex flex-col">
@@ -310,6 +311,58 @@ export default async function Home() {
                         {a.excerpt}
                       </p>
                       <div className="text-[11px] text-text3">{a.readTime}</div>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ─── RECEPTY ────────────────────────────────────────────── */}
+      {recipes.length > 0 && (
+        <section className="px-6 md:px-10 py-16 bg-off">
+          <div className="max-w-[1280px] mx-auto">
+            <div className="flex items-end justify-between mb-8">
+              <div>
+                <div className="text-[10px] font-bold tracking-widest uppercase text-terra mb-1.5">
+                  — V kuchyni
+                </div>
+                <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text leading-tight">
+                  Recepty s olivovým olejem
+                </h2>
+              </div>
+              <Link href="/recept" className="text-[13px] text-olive border-b border-olive-border hover:text-olive2 whitespace-nowrap">
+                Všechny recepty →
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {recipes.slice(0, 3).map((a) => {
+                const initial = a.title.charAt(0).toUpperCase()
+                return (
+                  <Link
+                    key={a.slug}
+                    href={`/recept/${a.slug}`}
+                    className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:border-terra/30 hover:shadow-md hover:-translate-y-0.5"
+                  >
+                    <div className="aspect-[16/9] bg-[#7a3b1e] flex items-center justify-center relative overflow-hidden">
+                      <div className="font-[family-name:var(--font-display)] text-[120px] font-normal italic text-white/15 leading-none select-none">
+                        {initial}
+                      </div>
+                      <div className="absolute top-3 left-3 text-[9px] font-bold tracking-widest uppercase text-white/70">
+                        Recept
+                      </div>
+                    </div>
+                    <div className="p-4 flex-1 flex flex-col">
+                      <h3 className="font-[family-name:var(--font-display)] text-lg text-text leading-tight mb-2 line-clamp-2">
+                        {a.title}
+                      </h3>
+                      <p className="text-[12px] text-text2 leading-snug line-clamp-2 mb-2 flex-1">
+                        {a.excerpt}
+                      </p>
+                      <div className="text-[11px] text-terra">{a.readTime}</div>
                     </div>
                   </Link>
                 )
