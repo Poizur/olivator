@@ -184,60 +184,6 @@ export function SommelierHero({
               </div>
             )}
 
-            {/* Inline results */}
-            {hasConversation && (
-              <div className="mt-7 max-w-[720px]">
-                {messages.map((m, i) => {
-                  if (m.role === 'user') {
-                    return (
-                      <div key={i} className="flex justify-end mb-3">
-                        <div className="bg-olive text-white rounded-2xl rounded-br-sm px-4 py-2.5 text-[14px] max-w-[80%]">
-                          {m.content}
-                        </div>
-                      </div>
-                    )
-                  }
-                  const slugs = extractSlugs(m.content)
-                  const recommended = slugs.map((s) => productLookup[s]).filter(Boolean).slice(0, 3)
-
-                  return (
-                    <div key={i} className="mb-5">
-                      <div className="bg-off rounded-2xl rounded-bl-sm px-4 py-3 text-[14px] text-text leading-relaxed mb-3 max-w-[80%]">
-                        {formatReply(m.content)}
-                      </div>
-                      {recommended.length > 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {recommended.map((p) => (
-                            <ProductMiniCard key={p.id} product={p} />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-
-                {loading && (
-                  <div className="bg-off rounded-2xl rounded-bl-sm px-4 py-3 inline-block">
-                    <span className="inline-flex gap-1">
-                      <span className="w-1.5 h-1.5 bg-text3 rounded-full animate-bounce [animation-delay:0ms]" />
-                      <span className="w-1.5 h-1.5 bg-text3 rounded-full animate-bounce [animation-delay:150ms]" />
-                      <span className="w-1.5 h-1.5 bg-text3 rounded-full animate-bounce [animation-delay:300ms]" />
-                    </span>
-                  </div>
-                )}
-
-                <div className="mt-3 flex items-center gap-3 text-[12px] text-text3">
-                  <button onClick={reset} className="hover:text-text underline">
-                    Začít znovu
-                  </button>
-                  <span>·</span>
-                  <Link href="/srovnavac" className="hover:text-text">
-                    Procházet celý katalog →
-                  </Link>
-                </div>
-                <div ref={resultsEndRef} />
-              </div>
-            )}
           </div>
 
           {/* RIGHT: Top 3 této chvíle */}
@@ -293,6 +239,125 @@ export function SommelierHero({
           </aside>
         </div>
       </div>
+
+      {/* Chat modal — overlay, otevře se po prvním send().
+          Předtím se konverzace renderovala inline v hero — rozbíjelo to layout
+          stránky. Teď má vlastní okno, podobně jako Sommelier floating chat. */}
+      {hasConversation && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4"
+          onClick={reset}
+        >
+          <div
+            className="bg-white w-full md:max-w-[720px] md:rounded-[var(--radius-card)] rounded-t-2xl shadow-2xl flex flex-col max-h-[85vh] md:max-h-[80vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-off2 flex items-center justify-between sticky top-0 bg-white z-10 rounded-t-[var(--radius-card)]">
+              <div>
+                <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-0.5">
+                  — AI Sommelier
+                </div>
+                <h3 className="text-[15px] font-semibold text-text">
+                  Náš katalog na míru tvé otázce
+                </h3>
+              </div>
+              <button
+                onClick={reset}
+                aria-label="Zavřít chat"
+                className="text-text3 hover:text-text text-2xl leading-none px-2 transition-colors"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Conversation — scrollable */}
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              {messages.map((m, i) => {
+                if (m.role === 'user') {
+                  return (
+                    <div key={i} className="flex justify-end mb-3">
+                      <div className="bg-olive text-white rounded-2xl rounded-br-sm px-4 py-2.5 text-[14px] max-w-[85%]">
+                        {m.content}
+                      </div>
+                    </div>
+                  )
+                }
+                const slugs = extractSlugs(m.content)
+                const recommended = slugs.map((s) => productLookup[s]).filter(Boolean).slice(0, 3)
+
+                return (
+                  <div key={i} className="mb-5">
+                    <div className="bg-off rounded-2xl rounded-bl-sm px-4 py-3 text-[14px] text-text leading-relaxed mb-3 max-w-[90%]">
+                      {formatReply(m.content)}
+                    </div>
+                    {recommended.length > 0 && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {recommended.map((p) => (
+                          <ProductMiniCard key={p.id} product={p} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+
+              {loading && (
+                <div className="bg-off rounded-2xl rounded-bl-sm px-4 py-3 inline-block">
+                  <span className="inline-flex gap-1">
+                    <span className="w-1.5 h-1.5 bg-text3 rounded-full animate-bounce [animation-delay:0ms]" />
+                    <span className="w-1.5 h-1.5 bg-text3 rounded-full animate-bounce [animation-delay:150ms]" />
+                    <span className="w-1.5 h-1.5 bg-text3 rounded-full animate-bounce [animation-delay:300ms]" />
+                  </span>
+                </div>
+              )}
+              <div ref={resultsEndRef} />
+            </div>
+
+            {/* Footer — input pro pokračování + utility links */}
+            <div className="border-t border-off2 px-5 py-3 sticky bottom-0 bg-white rounded-b-[var(--radius-card)]">
+              <div className="flex gap-2 items-center bg-off rounded-full pl-4 pr-2 py-1.5 mb-2 focus-within:bg-olive-bg/50 transition-colors">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && send()}
+                  placeholder="Zeptej se na něco dalšího…"
+                  disabled={loading}
+                  className="flex-1 text-[14px] outline-none placeholder:text-text3 bg-transparent py-1.5"
+                />
+                <button
+                  onClick={() => {
+                    if (!input.trim()) {
+                      inputRef.current?.focus()
+                      return
+                    }
+                    send()
+                  }}
+                  disabled={loading}
+                  className="bg-olive text-white rounded-full px-4 py-1.5 text-[13px] font-semibold hover:bg-olive2 transition-colors whitespace-nowrap inline-flex items-center gap-1 disabled:opacity-50"
+                >
+                  {loading ? '…' : (
+                    <>
+                      Poslat
+                      <ArrowRight size={12} strokeWidth={2} />
+                    </>
+                  )}
+                </button>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-text3">
+                <button onClick={reset} className="hover:text-text">
+                  Začít znovu
+                </button>
+                <Link href="/srovnavac" className="hover:text-text">
+                  Procházet celý katalog →
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
