@@ -77,15 +77,15 @@ export default async function RootLayout({
       <body className="min-h-screen flex flex-col antialiased">
         <AdminBar />
         <WishlistProvider>
-        <CompareProvider>
-          {!isAdminPage && <Nav />}
-          <main className="flex-1">{children}</main>
-          {!isAdminPage && <Footer />}
-          {!isAdminPage && <CompareBar />}
-          {!isAdminPage && <SommelierChat />}
-        </CompareProvider>
+          <CompareProvider>
+            {!isAdminPage ? <Nav /> : null}
+            <main className="flex-1">{children}</main>
+            {!isAdminPage ? <Footer /> : null}
+            {!isAdminPage ? <CompareBar /> : null}
+            {!isAdminPage ? <SommelierChat /> : null}
+            {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
+          </CompareProvider>
         </WishlistProvider>
-        {gaId && <GoogleAnalytics gaId={gaId} />}
       </body>
     </html>
   )
