@@ -12,11 +12,11 @@ export const metadata = {
  *  case, light gray sidebar. */
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-zinc-950 flex text-zinc-200">
+    <div className="min-h-screen bg-off flex text-text">
       <AdminSidebar />
       <div className="flex-1 min-w-0 flex flex-col">
         <AdminTopbar />
-        <main className="flex-1 bg-zinc-950">
+        <main className="flex-1 bg-off">
           <div className="max-w-[1280px] mx-auto px-6 md:px-10 py-8">{children}</div>
         </main>
       </div>

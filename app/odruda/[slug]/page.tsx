@@ -25,15 +25,22 @@ async function getCultivar(slug: string): Promise<CultivarRow | null> {
   return data ?? null
 }
 
-async function getEntityHeroPhoto(entityId: string): Promise<{ url: string; alt_text: string | null; source_attribution: string | null } | null> {
+interface EntityPhoto {
+  url: string
+  alt_text: string | null
+  source_attribution: string | null
+  is_primary: boolean
+}
+
+async function getEntityPhotos(entityId: string): Promise<EntityPhoto[]> {
   const { data } = await supabaseAdmin
     .from('entity_images')
-    .select('url, alt_text, source_attribution')
+    .select('url, alt_text, source_attribution, is_primary, sort_order')
     .eq('entity_id', entityId)
     .eq('status', 'active')
-    .eq('is_primary', true)
-    .single()
-  return data ?? null
+    .order('is_primary', { ascending: false })
+    .order('sort_order')
+  return (data ?? []) as EntityPhoto[]
 }
 
 async function getCultivarProductIds(slug: string): Promise<string[]> {
@@ -95,10 +102,12 @@ export default async function CultivarPage({ params }: { params: Promise<{ slug:
   const cultivar = await getCultivar(slug)
   if (!cultivar) notFound()
 
-  const [productIds, heroPhoto] = await Promise.all([
+  const [productIds, photos] = await Promise.all([
     getCultivarProductIds(slug),
-    getEntityHeroPhoto(cultivar.id),
+    getEntityPhotos(cultivar.id),
   ])
+  const heroPhoto = photos[0] ?? null
+  const galleryPhotos = photos.slice(1)
   const products = await getProductsByIds(productIds)
   const offers = await Promise.all(products.map((p) => getCheapestOffer(p.id)))
 
@@ -147,6 +156,28 @@ export default async function CultivarPage({ params }: { params: Promise<{ slug:
         </div>
       )}
 
+      {/* Photo gallery */}
+      {galleryPhotos.length > 0 && (
+        <div className="mb-12 grid grid-cols-2 md:grid-cols-3 gap-3">
+          {galleryPhotos.map((p, i) => (
+            <div key={i} className="relative aspect-[4/3] rounded-xl overflow-hidden bg-off">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={p.url}
+                alt={p.alt_text ?? `${cultivar.name} ${i + 2}`}
+                className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                loading="lazy"
+              />
+              {p.source_attribution && (
+                <p className="absolute bottom-1.5 right-2 text-[9px] text-white/70 bg-black/30 backdrop-blur-sm rounded px-1.5 py-0.5">
+                  © {p.source_attribution}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-12">
         {/* Editorial content */}
         <div className="min-w-0">
@@ -167,7 +198,7 @@ export default async function CultivarPage({ params }: { params: Promise<{ slug:
           ) : (
             <div className="flex flex-col gap-3">
               {products.slice(0, 8).map((p, i) => (
-                <ListCard key={p.id} product={p} offer={offers[i] ?? undefined} rank={i + 1} />
+                <ListCard key={p.id} product={p} offer={offers[i] ?? undefined} rank={i + 1} compact />
               ))}
             </div>
           )}

@@ -10,9 +10,15 @@ interface ListCardProps {
   product: Product
   offer?: ProductOffer
   rank: number
+  /** Compact variant for narrow sidebars (entity pages, etc) — stacks vertically. */
+  compact?: boolean
 }
 
-export function ListCard({ product, offer, rank }: ListCardProps) {
+export function ListCard({ product, offer, rank, compact = false }: ListCardProps) {
+  if (compact) {
+    return <CompactCard product={product} offer={offer} rank={rank} />
+  }
+
   return (
     <Link href={`/olej/${product.slug}`}>
       <div className="bg-white border border-off2 rounded-[var(--radius-card)] px-5 py-4 flex items-center gap-5 cursor-pointer transition-all hover:border-olive-light hover:shadow-[0_4px_16px_rgba(0,0,0,.06)]">
@@ -90,6 +96,55 @@ export function ListCard({ product, offer, rank }: ListCardProps) {
         </span>
         <WishlistButton productId={product.id} className="shrink-0" />
       </div>
+    </Link>
+  )
+}
+
+function CompactCard({ product, offer, rank }: { product: Product; offer?: ProductOffer; rank: number }) {
+  return (
+    <Link
+      href={`/olej/${product.slug}`}
+      className="block bg-white border border-off2 rounded-[var(--radius-card)] p-4 hover:border-olive-light hover:shadow-md transition-all"
+    >
+      {/* Top row: rank + image + score */}
+      <div className="flex items-start gap-3 mb-3">
+        <div className={`text-[18px] font-bold tabular-nums leading-none mt-1 shrink-0 ${
+          rank <= 3 ? 'text-terra' : 'text-text3'
+        }`}>
+          {rank}
+        </div>
+        <div className="w-12 h-14 bg-off rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+          <ProductImage product={product} fallbackSize="text-2xl" sizes="48px" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] text-text3 mb-0.5 uppercase tracking-widest font-medium truncate">
+            {product.originRegion ? `${product.originRegion} · ` : ''}{countryName(product.originCountry)}
+          </div>
+          <div className="text-[13px] font-medium text-text leading-tight line-clamp-2">
+            {product.name}
+          </div>
+        </div>
+        <div className="bg-terra text-white text-[11px] font-bold px-2 py-0.5 rounded-full tabular-nums shrink-0">
+          {product.olivatorScore}
+        </div>
+      </div>
+
+      {/* Bottom row: price + retailer */}
+      {offer && (
+        <div className="flex items-center justify-between pt-2 border-t border-off">
+          <div>
+            <div className="text-[15px] font-semibold text-text tabular-nums">
+              {formatPrice(offer.price)}
+            </div>
+            <div className="text-[10px] text-text3">
+              {formatPricePer100ml(offer.price, product.volumeMl)} · {offer.retailer.name}
+            </div>
+          </div>
+          <span className="text-[11px] text-olive font-medium">
+            Detail →
+          </span>
+        </div>
+      )}
     </Link>
   )
 }

@@ -31,7 +31,7 @@ export default async function EditBrandPage({ params }: { params: Promise<{ slug
 
   return (
     <div className="p-8 max-w-3xl">
-      <div className="text-xs text-zinc-500 mb-6">
+      <div className="text-xs text-text3 mb-6">
         <Link href="/admin" className="text-olive">Admin</Link>
         {' › '}
         <Link href="/admin/brands" className="text-olive">Značky</Link>
@@ -39,12 +39,12 @@ export default async function EditBrandPage({ params }: { params: Promise<{ slug
         {brand.name}
       </div>
 
-      <h1 className="text-2xl font-semibold text-white mb-2">{brand.name}</h1>
-      <p className="text-sm text-zinc-500 mb-8">{brand.slug} · {brand.country_code}</p>
+      <h1 className="text-2xl font-semibold text-text mb-2">{brand.name}</h1>
+      <p className="text-sm text-text3 mb-8">{brand.slug} · {brand.country_code}</p>
 
       {photos.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-sm font-medium text-zinc-400 mb-3">Fotky ({photos.length})</h2>
+          <h2 className="text-sm font-medium text-text2 mb-3">Fotky ({photos.length})</h2>
           <div className="flex gap-3 flex-wrap">
             {photos.map((p: { id: string; url: string; alt_text: string | null; is_primary: boolean; source_attribution: string | null }) => (
               <div key={p.id} className="relative">
@@ -52,7 +52,7 @@ export default async function EditBrandPage({ params }: { params: Promise<{ slug
                 <img
                   src={p.url}
                   alt={p.alt_text ?? ''}
-                  className="w-40 h-28 object-cover rounded-lg border border-zinc-800"
+                  className="w-40 h-28 object-cover rounded-lg border border-off2"
                 />
                 {p.is_primary && (
                   <span className="absolute top-1 left-1 bg-olive text-white text-[10px] px-1.5 py-0.5 rounded">
@@ -60,7 +60,7 @@ export default async function EditBrandPage({ params }: { params: Promise<{ slug
                   </span>
                 )}
                 {p.source_attribution && (
-                  <p className="text-[10px] text-zinc-500 mt-0.5">{p.source_attribution} / Unsplash</p>
+                  <p className="text-[10px] text-text3 mt-0.5">{p.source_attribution} / Unsplash</p>
                 )}
               </div>
             ))}

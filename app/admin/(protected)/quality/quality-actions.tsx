@@ -105,7 +105,7 @@ export function QualityActions() {
           type="button"
           onClick={onBulkMeta}
           disabled={running !== null}
-          className="bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-full px-4 py-2 text-[13px] font-medium hover:border-olive3 hover:text-olive disabled:opacity-40 transition-colors"
+          className="bg-white border border-off2 text-text2 rounded-full px-4 py-2 text-[13px] font-medium hover:border-olive3 hover:text-olive disabled:opacity-40 transition-colors"
           title="Manuální fix: SEO meta description pro produkty bez něj. Pro nové produkty se generuje automaticky při discovery."
         >
           {running === 'meta' ? '✏️ Generuju…' : '✏️ Doplnit SEO meta'}
@@ -114,7 +114,7 @@ export function QualityActions() {
           type="button"
           onClick={onLinkCheck}
           disabled={running !== null}
-          className="bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-full px-4 py-2 text-[13px] font-medium hover:border-olive3 hover:text-olive disabled:opacity-40 transition-colors"
+          className="bg-white border border-off2 text-text2 rounded-full px-4 py-2 text-[13px] font-medium hover:border-olive3 hover:text-olive disabled:opacity-40 transition-colors"
           title="HEAD request na všechny affiliate URLs — 404/410 deaktivuje, znovu-žijící reaktivuje. Cron běží denně automaticky."
         >
           {running === 'links' ? 'Kontroluju…' : 'Zkontrolovat odkazy'}
@@ -123,23 +123,23 @@ export function QualityActions() {
           type="button"
           onClick={onBulkVision}
           disabled={running !== null}
-          className="bg-zinc-900 border border-zinc-800 text-zinc-400 rounded-full px-4 py-2 text-[13px] font-medium hover:border-olive3 hover:text-olive disabled:opacity-40 transition-colors"
+          className="bg-white border border-off2 text-text2 rounded-full px-4 py-2 text-[13px] font-medium hover:border-olive3 hover:text-olive disabled:opacity-40 transition-colors"
           title="Manuální fix: AI vision alt text + lab scan pro existující fotky. Pro nové se dělá automaticky při discovery. Stojí ~$2 v Claude API."
         >
           {running === 'vision' ? '👁️ Vidím…' : '👁️ Doplnit vision'}
         </button>
       </div>
-      <div className="text-[11px] text-zinc-500 max-w-[420px] text-right leading-snug">
+      <div className="text-[11px] text-text3 max-w-[420px] text-right leading-snug">
         Tlačítka <strong>Doplnit</strong> jsou pojistka — pro nové produkty se vše dělá automaticky
         v discovery cronu. Klikni jen pro retroaktivní fix nebo po výpadku Claude API.
       </div>
       {summary && (
-        <span className="text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-3 py-1.5">
+        <span className="text-[11px] text-olive-dark bg-olive-bg border border-olive-border rounded px-3 py-1.5">
           {summary}
         </span>
       )}
       {error && (
-        <span className="text-[11px] text-red-400 bg-red-500/100/10 border border-red-500/20 rounded px-2 py-1">
+        <span className="text-[11px] text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1">
           ⚠ {error}
         </span>
       )}

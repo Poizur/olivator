@@ -161,7 +161,7 @@ export function GalleryManager({ productId }: { productId: string }) {
 
   if (loading) {
     return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-6 text-sm text-zinc-500 italic">
+      <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 text-sm text-text3 italic">
         Načítám galerii...
       </div>
     )
@@ -169,9 +169,9 @@ export function GalleryManager({ productId }: { productId: string }) {
 
   if (images.length === 0) {
     return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-6">
+      <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6">
         <div className="flex items-center justify-between mb-3 gap-4">
-          <div className="text-sm font-semibold text-white">Galerie fotek</div>
+          <div className="text-sm font-semibold text-text">Galerie fotek</div>
           <button
             type="button"
             onClick={onRefreshGallery}
@@ -181,14 +181,14 @@ export function GalleryManager({ productId }: { productId: string }) {
             {refreshingGallery ? '🔄 Stahuji…' : '🔄 Načíst galerii ze zdroje'}
           </button>
         </div>
-        <div className="text-xs text-zinc-500 italic bg-zinc-800/40 rounded-lg px-3 py-3 text-center">
+        <div className="text-xs text-text3 italic bg-off rounded-lg px-3 py-3 text-center">
           Žádné obrázky uložené. Klikni &ldquo;Načíst galerii ze zdroje&rdquo; pro rychlé stažení (jen obrázky, ~5–10 s) — nebo &ldquo;🔄 Rescrape&rdquo; nahoře pro plnou aktualizaci včetně textů.
         </div>
         {status && (
-          <div className="mt-2 text-[12px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-3 py-2">{status}</div>
+          <div className="mt-2 text-[12px] text-olive-dark bg-olive-bg border border-olive-border rounded px-3 py-2">{status}</div>
         )}
         {error && (
-          <div className="mt-2 text-[12px] text-red-400 bg-red-500/100/10 border border-red-500/20 rounded px-3 py-2">⚠ {error}</div>
+          <div className="mt-2 text-[12px] text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">⚠ {error}</div>
         )}
       </div>
     )
@@ -198,18 +198,18 @@ export function GalleryManager({ productId }: { productId: string }) {
   const approved = images.filter(i => i.source !== 'scraper_candidate')
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-6">
+    <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6">
       <div className="flex items-start justify-between mb-4 gap-4">
         <div>
-          <div className="text-sm font-semibold text-white">
+          <div className="text-sm font-semibold text-text">
             Galerie fotek ({images.length})
             {candidates.length > 0 && (
-              <span className="ml-2 text-[11px] bg-amber-500/100/10 text-amber-400 border border-terra/30 rounded px-2 py-0.5">
+              <span className="ml-2 text-[11px] bg-amber-50 text-amber-700 border border-terra/30 rounded px-2 py-0.5">
                 {candidates.length} čeká na výběr
               </span>
             )}
           </div>
-          <div className="text-xs text-zinc-500 mt-0.5">
+          <div className="text-xs text-text3 mt-0.5">
             Zaškrtni které fotky chceš zachovat. První s hvězdičkou bude hlavní.
             Ostatní smažeme.
           </div>
@@ -224,19 +224,19 @@ export function GalleryManager({ productId }: { productId: string }) {
           >
             {refreshingGallery ? '🔄 Stahuji…' : '🔄 Aktualizovat galerii'}
           </button>
-          <span className="text-zinc-500">·</span>
+          <span className="text-text3">·</span>
           <button
             type="button"
             onClick={() => setKeep(new Set(images.map(i => i.id)))}
-            className="text-[11px] text-olive hover:text-emerald-400"
+            className="text-[11px] text-olive hover:text-olive-dark"
           >
             Vybrat vše
           </button>
-          <span className="text-zinc-500">·</span>
+          <span className="text-text3">·</span>
           <button
             type="button"
             onClick={() => setKeep(new Set())}
-            className="text-[11px] text-zinc-400 hover:text-amber-400"
+            className="text-[11px] text-text2 hover:text-amber-700"
           >
             Zrušit vše
           </button>
@@ -245,7 +245,7 @@ export function GalleryManager({ productId }: { productId: string }) {
 
       {approved.length > 0 && (
         <>
-          <div className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">
+          <div className="text-[11px] uppercase tracking-wider text-text3 mb-2">
             Schválené ({approved.length})
           </div>
           <div className="grid grid-cols-4 md:grid-cols-6 gap-3 mb-6">
@@ -267,7 +267,7 @@ export function GalleryManager({ productId }: { productId: string }) {
 
       {candidates.length > 0 && (
         <>
-          <div className="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">
+          <div className="text-[11px] uppercase tracking-wider text-text3 mb-2">
             Nově nascrapované kandidáti ({candidates.length})
           </div>
           <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
@@ -289,9 +289,9 @@ export function GalleryManager({ productId }: { productId: string }) {
 
       {scanResult && (
         <div className={`mt-4 rounded-lg p-3 text-[12px] border ${
-          scanResult.filled.length > 0 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' :
-          scanResult.confidence === 'low' ? 'bg-zinc-800/40 border-zinc-800 text-zinc-400' :
-          'bg-amber-500/100/10 border-terra/30 text-amber-400'
+          scanResult.filled.length > 0 ? 'bg-olive-bg border-olive-border text-olive-dark' :
+          scanResult.confidence === 'low' ? 'bg-off border-off2 text-text2' :
+          'bg-amber-50 border-terra/30 text-amber-700'
         }`}>
           <div className="font-medium mb-1">
             {scanResult.filled.length > 0 ? '🧪 Lab report naskenován — data doplněna' :
@@ -305,23 +305,23 @@ export function GalleryManager({ productId }: { productId: string }) {
         </div>
       )}
 
-      <div className="mt-6 flex items-center gap-3 flex-wrap text-[11px] text-zinc-500">
+      <div className="mt-6 flex items-center gap-3 flex-wrap text-[11px] text-text3">
         <span>
-          <strong className="text-white">Vybráno: {keep.size}</strong> &middot; Nezaškrtnuté se smažou při ukládání &middot;
+          <strong className="text-text">Vybráno: {keep.size}</strong> &middot; Nezaškrtnuté se smažou při ukládání &middot;
           Hlavní = označená hvězdičkou ★ &middot; Ukládá se s formulářem (💾 Uložit změny nahoře)
         </span>
         {saving && (
-          <span className="text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-2 py-1">
+          <span className="text-olive-dark bg-olive-bg border border-olive-border rounded px-2 py-1">
             Ukládám galerii...
           </span>
         )}
         {status && (
-          <span className="text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-2 py-1">
+          <span className="text-olive-dark bg-olive-bg border border-olive-border rounded px-2 py-1">
             {status}
           </span>
         )}
         {error && (
-          <span className="text-red-400 bg-red-500/100/10 border border-red-500/20 rounded px-2 py-1">
+          <span className="text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1">
             ⚠ {error}
           </span>
         )}
@@ -350,12 +350,12 @@ function ImageTile({
   const isLabCandidate = looksLikeLabReport(img.url, img.alt_text)
   return (
     <div className={`relative rounded-lg overflow-hidden border-2 transition-all ${
-      checked ? (isPrimary ? 'border-olive ring-2 ring-olive/30' : 'border-olive') : 'border-zinc-800 opacity-50'
+      checked ? (isPrimary ? 'border-olive ring-2 ring-olive/30' : 'border-olive') : 'border-off2 opacity-50'
     } ${isLabCandidate ? 'ring-1 ring-terra/40' : ''}`}>
       <button
         type="button"
         onClick={onToggle}
-        className="block w-full aspect-square bg-zinc-800/40"
+        className="block w-full aspect-square bg-off"
         title={checked ? 'Klikni pro odstranění' : 'Klikni pro zachování'}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -369,7 +369,7 @@ function ImageTile({
 
       {/* Checkmark top-left */}
       <div className={`absolute top-1.5 left-1.5 w-5 h-5 rounded border-2 flex items-center justify-center text-[10px] font-bold pointer-events-none ${
-        checked ? 'bg-olive border-olive text-white' : 'bg-zinc-900/80 border-zinc-800 text-transparent'
+        checked ? 'bg-olive border-olive text-text' : 'bg-white/80 border-off2 text-transparent'
       }`}>
         ✓
       </div>
@@ -380,7 +380,7 @@ function ImageTile({
           type="button"
           onClick={(e) => { e.stopPropagation(); onMakePrimary() }}
           className={`absolute top-1.5 right-1.5 w-6 h-6 rounded-full text-[12px] font-bold transition-colors ${
-            isPrimary ? 'bg-terra text-white' : 'bg-zinc-900/90 text-zinc-400 hover:bg-terra hover:text-white'
+            isPrimary ? 'bg-terra text-text' : 'bg-white/90 text-text2 hover:bg-terra hover:text-text'
           }`}
           title={isPrimary ? 'Hlavní fotka' : 'Nastavit jako hlavní'}
         >
@@ -394,9 +394,9 @@ function ImageTile({
         onClick={(e) => { e.stopPropagation(); if (!scanning) onScanLab() }}
         disabled={scanning}
         className={`absolute bottom-1.5 right-1.5 px-2 py-1 rounded-full text-[10px] font-medium transition-colors ${
-          scanning ? 'bg-terra text-white animate-pulse' :
-          isLabCandidate ? 'bg-terra text-white hover:bg-terra/80' :
-          'bg-zinc-900/90 text-zinc-400 hover:bg-terra hover:text-white'
+          scanning ? 'bg-terra text-text animate-pulse' :
+          isLabCandidate ? 'bg-terra text-text hover:bg-terra/80' :
+          'bg-white/90 text-text2 hover:bg-terra hover:text-text'
         }`}
         title={isLabCandidate ? 'Vypadá jako lab report — klikni pro scan' : 'Naskenovat jako lab report'}
       >
@@ -405,7 +405,7 @@ function ImageTile({
 
       {/* Lab report badge — suggestion */}
       {isLabCandidate && !scanning && (
-        <div className="absolute bottom-1.5 left-1.5 bg-terra text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+        <div className="absolute bottom-1.5 left-1.5 bg-terra text-text text-[9px] font-bold px-1.5 py-0.5 rounded">
           LAB?
         </div>
       )}

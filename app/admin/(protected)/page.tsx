@@ -241,12 +241,12 @@ export default async function AdminDashboardPage() {
       {/* Page header */}
       <div className="flex items-end justify-between mb-8 flex-wrap gap-4">
         <div>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl text-white mb-1.5">
+          <h1 className="font-[family-name:var(--font-display)] text-3xl text-text mb-1.5">
             Přehled
           </h1>
-          <p className="text-[13px] text-zinc-500">
+          <p className="text-[13px] text-text3">
             <span className="capitalize">{today}</span>
-            <span className="mx-1.5 text-zinc-700">·</span>
+            <span className="mx-1.5 text-text3">·</span>
             posledních 7 dní
           </p>
         </div>
@@ -254,14 +254,14 @@ export default async function AdminDashboardPage() {
           {attention.drafts > 0 && (
             <Link
               href="/admin/products?status=draft"
-              className="text-[13px] text-zinc-300 border border-zinc-800 hover:border-zinc-700 bg-zinc-900 hover:bg-zinc-800/50 rounded-md px-3.5 py-2 transition-colors"
+              className="text-[13px] text-text2 border border-off2 hover:border-off2 bg-white hover:bg-off rounded-md px-3.5 py-2 transition-colors"
             >
-              Schválit drafty <span className="text-zinc-500">{attention.drafts}</span>
+              Schválit drafty <span className="text-text3">{attention.drafts}</span>
             </Link>
           )}
           <Link
             href="/admin/products/import"
-            className="inline-flex items-center gap-1.5 text-[13px] text-zinc-200 border border-zinc-700 hover:border-zinc-600 bg-zinc-900 hover:bg-zinc-800 rounded-md px-3.5 py-2 transition-colors"
+            className="inline-flex items-center gap-1.5 text-[13px] text-text border border-off2 hover:border-off2 bg-white hover:bg-off2 rounded-md px-3.5 py-2 transition-colors"
           >
             <Plus size={14} strokeWidth={2} />
             Přidat produkt
@@ -275,23 +275,23 @@ export default async function AdminDashboardPage() {
           <Link
             key={c.label}
             href={c.href}
-            className="group bg-zinc-900 border border-zinc-800 rounded-xl p-5 hover:border-zinc-700 transition-colors"
+            className="group bg-white border border-off2 rounded-xl p-5 hover:border-off2 transition-colors"
           >
             <div className="flex items-start justify-between mb-3">
-              <span className="text-[12px] text-zinc-400">{c.label}</span>
-              <ArrowUpRight size={14} strokeWidth={1.75} className="text-zinc-700 group-hover:text-zinc-400 transition-colors" />
+              <span className="text-[12px] text-text2">{c.label}</span>
+              <ArrowUpRight size={14} strokeWidth={1.75} className="text-text3 group-hover:text-text2 transition-colors" />
             </div>
-            <div className="text-[40px] font-medium text-white tabular-nums tracking-tight leading-none mb-3">
+            <div className="text-[40px] font-medium text-text tabular-nums tracking-tight leading-none mb-3">
               {c.value}
             </div>
             <div className="flex items-center gap-1.5 text-[11px]">
               {c.delta && (
-                <span className={`inline-flex items-center gap-0.5 font-medium ${c.delta.positive ? 'text-emerald-400' : 'text-red-400'}`}>
+                <span className={`inline-flex items-center gap-0.5 font-medium ${c.delta.positive ? 'text-olive-dark' : 'text-red-700'}`}>
                   {c.delta.positive ? <ArrowUp size={10} strokeWidth={2.5} /> : <ArrowDown size={10} strokeWidth={2.5} />}
                   {c.delta.value} %
                 </span>
               )}
-              <span className="text-zinc-500">{c.sub}</span>
+              <span className="text-text3">{c.sub}</span>
             </div>
           </Link>
         ))}
@@ -300,13 +300,13 @@ export default async function AdminDashboardPage() {
       {/* Chart + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-3 mb-3">
         {/* Click chart */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+        <div className="bg-white border border-off2 rounded-xl p-5">
           <div className="flex items-start justify-between mb-6">
             <div>
-              <h2 className="text-[14px] font-medium text-white">Prokliky podle dne</h2>
-              <p className="text-[11px] text-zinc-500 mt-0.5">posledních 7 dní · {clickStats.last7d} celkem</p>
+              <h2 className="text-[14px] font-medium text-text">Prokliky podle dne</h2>
+              <p className="text-[11px] text-text3 mt-0.5">posledních 7 dní · {clickStats.last7d} celkem</p>
             </div>
-            <Link href="/admin/products" className="text-[12px] text-olive3 hover:text-olive-light transition-colors">
+            <Link href="/admin/products" className="text-[12px] text-olive hover:text-olive2 transition-colors">
               Detail →
             </Link>
           </div>
@@ -319,14 +319,14 @@ export default async function AdminDashboardPage() {
                   <div className="flex-1 w-full flex items-end relative">
                     <div
                       className={`w-full rounded-t-sm transition-colors ${
-                        isPeak ? 'bg-olive3' : 'bg-olive3/30'
+                        isPeak ? 'bg-olive' : 'bg-olive'
                       }`}
                       style={{ height: `${pct}%`, minHeight: d.count > 0 ? '3px' : '0' }}
                       title={`${d.date}: ${d.count} kliků`}
                     />
                   </div>
-                  <div className="text-[10px] text-zinc-500 tabular-nums">{fmtDayShort(d.date)}</div>
-                  <div className={`text-[11px] tabular-nums ${i === clickStats.byDay.length - 1 ? 'text-white font-medium' : 'text-zinc-400'}`}>
+                  <div className="text-[10px] text-text3 tabular-nums">{fmtDayShort(d.date)}</div>
+                  <div className={`text-[11px] tabular-nums ${i === clickStats.byDay.length - 1 ? 'text-text font-medium' : 'text-text2'}`}>
                     {d.count}
                   </div>
                 </div>
@@ -336,28 +336,28 @@ export default async function AdminDashboardPage() {
         </div>
 
         {/* Activity feed */}
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+        <div className="bg-white border border-off2 rounded-xl p-5">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-[14px] font-medium text-white">Aktivita</h2>
-            <Link href="/admin/bulk-jobs" className="text-[12px] text-olive3 hover:text-olive-light transition-colors">
+            <h2 className="text-[14px] font-medium text-text">Aktivita</h2>
+            <Link href="/admin/bulk-jobs" className="text-[12px] text-olive hover:text-olive2 transition-colors">
               Vše →
             </Link>
           </div>
           {activity.length === 0 ? (
-            <p className="text-[12px] text-zinc-500 italic">Zatím žádná aktivita.</p>
+            <p className="text-[12px] text-text3 italic">Zatím žádná aktivita.</p>
           ) : (
             <ul className="space-y-4">
               {activity.map((item, i) => {
                 const dot =
-                  item.tone === 'red' ? 'bg-red-500/100' : item.tone === 'amber' ? 'bg-amber-500/100' : 'bg-emerald-500'
+                  item.tone === 'red' ? 'bg-red-500' : item.tone === 'amber' ? 'bg-amber-500' : 'bg-emerald-500'
                 return (
                   <li key={i} className="flex items-start gap-3">
                     <span className={`shrink-0 w-2 h-2 rounded-full mt-1.5 ${dot}`} />
                     <div className="flex-1 min-w-0">
-                      <div className="text-[13px] text-white font-medium leading-snug">
+                      <div className="text-[13px] text-text font-medium leading-snug">
                         {item.title}
                       </div>
-                      <div className="text-[11px] text-zinc-500 mt-0.5">
+                      <div className="text-[11px] text-text3 mt-0.5">
                         {item.subtitle ? <>{item.subtitle} · </> : null}
                         {fmtRelative(item.ts)}
                       </div>
@@ -374,18 +374,18 @@ export default async function AdminDashboardPage() {
       {(attention.drafts > 0 ||
         attention.missingTemplates.length > 0 ||
         attention.offersWithoutAffiliate > 0) && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-3">
-          <div className="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-3">
+        <div className="bg-white border border-off2 rounded-xl p-5 mb-3">
+          <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-3">
             — Vyžaduje pozornost
           </div>
-          <ul className="divide-y divide-zinc-800">
+          <ul className="divide-y divide-off2">
             {attention.drafts > 0 && (
               <li className="py-3 flex items-center justify-between">
                 <div>
-                  <div className="text-[13px] text-white">{attention.drafts} produktů v draftu</div>
-                  <div className="text-[11px] text-zinc-500 mt-0.5">Schvál nebo zamítni před tím, než se objeví na webu</div>
+                  <div className="text-[13px] text-text">{attention.drafts} produktů v draftu</div>
+                  <div className="text-[11px] text-text3 mt-0.5">Schvál nebo zamítni před tím, než se objeví na webu</div>
                 </div>
-                <Link href="/admin/products?status=draft" className="text-[12px] text-olive3 hover:text-olive-light font-medium transition-colors">
+                <Link href="/admin/products?status=draft" className="text-[12px] text-olive hover:text-olive2 font-medium transition-colors">
                   Otevřít →
                 </Link>
               </li>
@@ -393,14 +393,14 @@ export default async function AdminDashboardPage() {
             {attention.missingTemplates.length > 0 && (
               <li className="py-3 flex items-center justify-between">
                 <div>
-                  <div className="text-[13px] text-white">
+                  <div className="text-[13px] text-text">
                     {attention.missingTemplates.length} prodejců bez affiliate šablony
                   </div>
-                  <div className="text-[11px] text-zinc-500 mt-0.5 truncate max-w-[480px]">
+                  <div className="text-[11px] text-text3 mt-0.5 truncate max-w-[480px]">
                     {attention.missingTemplates.map((r: Record<string, unknown>) => r.name as string).join(', ')}
                   </div>
                 </div>
-                <Link href="/admin/retailers" className="text-[12px] text-olive3 hover:text-olive-light font-medium transition-colors">
+                <Link href="/admin/retailers" className="text-[12px] text-olive hover:text-olive2 font-medium transition-colors">
                   Otevřít →
                 </Link>
               </li>
@@ -408,12 +408,12 @@ export default async function AdminDashboardPage() {
             {attention.offersWithoutAffiliate > 0 && (
               <li className="py-3 flex items-center justify-between">
                 <div>
-                  <div className="text-[13px] text-white">
+                  <div className="text-[13px] text-text">
                     {attention.offersWithoutAffiliate} nabídek bez affiliate URL
                   </div>
-                  <div className="text-[11px] text-zinc-500 mt-0.5">Bez affiliate URL nedostáváš provizi z prokliku</div>
+                  <div className="text-[11px] text-text3 mt-0.5">Bez affiliate URL nedostáváš provizi z prokliku</div>
                 </div>
-                <Link href="/admin/retailers" className="text-[12px] text-olive3 hover:text-olive-light font-medium transition-colors">
+                <Link href="/admin/retailers" className="text-[12px] text-olive hover:text-olive2 font-medium transition-colors">
                   Opravit →
                 </Link>
               </li>
@@ -423,26 +423,26 @@ export default async function AdminDashboardPage() {
       )}
 
       {/* Quick actions */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-        <div className="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-3">
+      <div className="bg-white border border-off2 rounded-xl p-5">
+        <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-3">
           — Rychlé akce
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
             href="/admin/discovery"
-            className="text-[12px] text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 rounded-md px-3.5 py-1.5 transition-colors"
+            className="text-[12px] text-text2 hover:text-text border border-off2 hover:border-off2 rounded-md px-3.5 py-1.5 transition-colors"
           >
             Discovery návrhy
           </Link>
           <Link
             href="/admin/retailers/new"
-            className="text-[12px] text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 rounded-md px-3.5 py-1.5 transition-colors"
+            className="text-[12px] text-text2 hover:text-text border border-off2 hover:border-off2 rounded-md px-3.5 py-1.5 transition-colors"
           >
             + Nový prodejce
           </Link>
           <Link
             href="/admin/quality"
-            className="text-[12px] text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 rounded-md px-3.5 py-1.5 transition-colors"
+            className="text-[12px] text-text2 hover:text-text border border-off2 hover:border-off2 rounded-md px-3.5 py-1.5 transition-colors"
           >
             Kvalita dat
           </Link>

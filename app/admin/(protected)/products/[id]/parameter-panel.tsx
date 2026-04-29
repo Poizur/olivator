@@ -47,9 +47,9 @@ export function ParameterPanel({ extractedFacts }: ParameterPanelProps) {
   const entries = Object.entries(parameterTable)
   if (entries.length === 0) {
     return (
-      <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-6">
-        <div className="text-sm font-semibold text-white mb-1">Parametry produktu (raw)</div>
-        <div className="text-xs text-zinc-500 italic mt-2 bg-zinc-800/40 rounded-lg px-3 py-3 text-center">
+      <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6">
+        <div className="text-sm font-semibold text-text mb-1">Parametry produktu (raw)</div>
+        <div className="text-xs text-text3 italic mt-2 bg-off rounded-lg px-3 py-3 text-center">
           Zatím žádná data z parameter tabulky. Spusť &ldquo;🔄 Rescrape&rdquo; nahoře.
         </div>
       </div>
@@ -60,34 +60,34 @@ export function ParameterPanel({ extractedFacts }: ParameterPanelProps) {
   const unknownCount = entries.length - knownCount
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-6">
+    <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6">
       <div className="flex items-start justify-between mb-3 gap-4">
         <div>
-          <div className="text-sm font-semibold text-white">
-            Parametry produktu <span className="text-zinc-500 font-normal">(raw ze zdroje)</span>
+          <div className="text-sm font-semibold text-text">
+            Parametry produktu <span className="text-text3 font-normal">(raw ze zdroje)</span>
           </div>
-          <div className="text-xs text-zinc-500 mt-0.5">
-            {entries.length} klíčů celkem · <span className="text-emerald-400">{knownCount} mapovaných</span>
+          <div className="text-xs text-text3 mt-0.5">
+            {entries.length} klíčů celkem · <span className="text-olive-dark">{knownCount} mapovaných</span>
             {unknownCount > 0 && (
-              <> · <span className="text-amber-400">{unknownCount} ne-mapovaných</span></>
+              <> · <span className="text-amber-700">{unknownCount} ne-mapovaných</span></>
             )}
           </div>
         </div>
       </div>
 
-      <div className="border border-zinc-800 rounded-lg overflow-hidden">
+      <div className="border border-off2 rounded-lg overflow-hidden">
         <table className="w-full text-[12px]">
           <tbody>
             {entries.map(([label, value]) => {
               const known = isKnownKey(label)
               return (
-                <tr key={label} className="border-b border-zinc-800 last:border-b-0">
-                  <td className="px-3 py-2 text-zinc-400 font-medium align-top w-[40%]">
+                <tr key={label} className="border-b border-off2 last:border-b-0">
+                  <td className="px-3 py-2 text-text2 font-medium align-top w-[40%]">
                     {known && <span className="text-olive mr-1.5" title="Mapováno do strukturovaného úložiště">✓</span>}
-                    {!known && <span className="text-amber-400 mr-1.5" title="Není mapováno — uvidíš v extracted_facts">○</span>}
+                    {!known && <span className="text-amber-700 mr-1.5" title="Není mapováno — uvidíš v extracted_facts">○</span>}
                     {label}
                   </td>
-                  <td className="px-3 py-2 text-white">
+                  <td className="px-3 py-2 text-text">
                     {value}
                   </td>
                 </tr>
@@ -97,9 +97,9 @@ export function ParameterPanel({ extractedFacts }: ParameterPanelProps) {
         </table>
       </div>
 
-      <div className="mt-3 text-[11px] text-zinc-500 leading-snug">
+      <div className="mt-3 text-[11px] text-text3 leading-snug">
         <span className="text-olive">✓</span> mapováno do strukturovaného úložiště ·{' '}
-        <span className="text-amber-400">○</span> dostupné jen v <code className="text-zinc-400 bg-zinc-800/40 px-1 rounded">extracted_facts</code>.
+        <span className="text-amber-700">○</span> dostupné jen v <code className="text-text2 bg-off px-1 rounded">extracted_facts</code>.
         Pokud chceš nějaké &ldquo;○&rdquo; pole povýšit na strukturované, řekni Claudovi.
       </div>
     </div>

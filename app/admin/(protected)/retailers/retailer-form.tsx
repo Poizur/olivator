@@ -79,7 +79,7 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
 
   return (
     <form onSubmit={onSubmit} className="space-y-6 max-w-2xl">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-6 space-y-4">
+      <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 space-y-4">
         <div>
           <Label>Jméno</Label>
           <Input value={name} onChange={setName} required placeholder="Rohlík.cz" />
@@ -101,7 +101,7 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
             <select
               value={affiliateNetwork}
               onChange={e => setAffiliateNetwork(e.target.value)}
-              className="w-full px-3 py-2 border border-zinc-800 rounded-lg text-sm focus:outline-none focus:border-olive"
+              className="w-full px-3 py-2 border border-off2 rounded-lg text-sm focus:outline-none focus:border-olive"
             >
               <option value="">— Žádná —</option>
               <option value="Dognet">Dognet</option>
@@ -122,7 +122,7 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
           <select
             value={market}
             onChange={e => setMarket(e.target.value)}
-            className="w-full px-3 py-2 border border-zinc-800 rounded-lg text-sm focus:outline-none focus:border-olive"
+            className="w-full px-3 py-2 border border-off2 rounded-lg text-sm focus:outline-none focus:border-olive"
           >
             <option value="CZ">Česko</option>
             <option value="SK">Slovensko</option>
@@ -136,16 +136,16 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
             onChange={e => setIsActive(e.target.checked)}
             className="w-4 h-4 accent-olive"
           />
-          <label htmlFor="isActive" className="text-sm text-white cursor-pointer">
+          <label htmlFor="isActive" className="text-sm text-text cursor-pointer">
             Aktivní — zobrazí se jako zdroj nabídek na webu
           </label>
         </div>
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-6 space-y-4">
+      <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 space-y-4">
         <div>
-          <div className="text-sm font-semibold text-white">Hodnocení e-shopu (hvězdičky)</div>
-          <div className="text-xs text-zinc-400 mt-0.5">
+          <div className="text-sm font-semibold text-text">Hodnocení e-shopu (hvězdičky)</div>
+          <div className="text-xs text-text2 mt-0.5">
             Zobrazí se pod tlačítkem &ldquo;Koupit&rdquo; na produktové kartě jako trust signal.
             Můžeš zadat ručně z Heureka stránky e-shopu (např. „98% spokojenost, 4.7/5 z 523 hodnocení").
           </div>
@@ -164,7 +164,7 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
             <select
               value={ratingSource}
               onChange={e => setRatingSource(e.target.value)}
-              className="w-full px-3 py-2 border border-zinc-800 rounded-lg text-sm focus:outline-none focus:border-olive"
+              className="w-full px-3 py-2 border border-off2 rounded-lg text-sm focus:outline-none focus:border-olive"
             >
               <option value="">— Žádný —</option>
               <option value="heureka">Heureka</option>
@@ -175,11 +175,11 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
         </div>
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-6 space-y-3">
+      <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm font-semibold text-white">Affiliate šablona URL</div>
-            <div className="text-xs text-zinc-400 mt-0.5">
+            <div className="text-sm font-semibold text-text">Affiliate šablona URL</div>
+            <div className="text-xs text-text2 mt-0.5">
               Jakmile vyplníš, všechny existující nabídky tohoto prodejce automaticky
               používají affiliate routing — žádný batch update nepotřeba.
             </div>
@@ -190,10 +190,10 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
           onChange={e => setBaseTrackingUrl(e.target.value)}
           placeholder="https://ehub.cz/click/u12345?url={product_url}"
           rows={3}
-          className="w-full px-3 py-2 border border-zinc-800 rounded-lg text-sm font-mono focus:outline-none focus:border-olive"
+          className="w-full px-3 py-2 border border-off2 rounded-lg text-sm font-mono focus:outline-none focus:border-olive"
         />
         <Help>
-          Placeholder <code className="bg-zinc-800/40 px-1 rounded">{'{product_url}'}</code> bude
+          Placeholder <code className="bg-off px-1 rounded">{'{product_url}'}</code> bude
           nahrazen URL konkrétního produktu (URL-encoded).
           <br />
           Nech prázdné pokud ještě nemáš schválené partnerství — odkazy pak vedou přímo na prodejce.
@@ -201,7 +201,7 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
       </div>
 
       {error && (
-        <div className="text-xs text-red-400 bg-red-500/100/10 border border-red-500/20 rounded-lg px-3 py-2">
+        <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
           {error}
         </div>
       )}
@@ -218,7 +218,7 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
           <button
             type="button"
             onClick={() => router.push('/admin/retailers')}
-            className="bg-zinc-800/40 text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-zinc-800 transition-colors"
+            className="bg-off text-text rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-off2 transition-colors"
           >
             Zrušit
           </button>
@@ -228,7 +228,7 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
             type="button"
             onClick={onDelete}
             disabled={deleting}
-            className="text-xs text-red-400 hover:underline disabled:opacity-40"
+            className="text-xs text-red-700 hover:underline disabled:opacity-40"
           >
             {deleting ? 'Mažu...' : 'Smazat prodejce'}
           </button>
@@ -239,7 +239,7 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
 }
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <div className="text-xs font-medium text-zinc-400 mb-1">{children}</div>
+  return <div className="text-xs font-medium text-text2 mb-1">{children}</div>
 }
 function Input({
   value,
@@ -264,10 +264,10 @@ function Input({
       required={required}
       placeholder={placeholder}
       step={step}
-      className="w-full px-3 py-2 border border-zinc-800 rounded-lg text-sm focus:outline-none focus:border-olive"
+      className="w-full px-3 py-2 border border-off2 rounded-lg text-sm focus:outline-none focus:border-olive"
     />
   )
 }
 function Help({ children }: { children: React.ReactNode }) {
-  return <div className="text-[11px] text-zinc-500 mt-1 leading-relaxed">{children}</div>
+  return <div className="text-[11px] text-text3 mt-1 leading-relaxed">{children}</div>
 }

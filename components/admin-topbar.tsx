@@ -36,7 +36,7 @@ export async function AdminTopbar() {
   const title = pickTitle(pathname)
 
   return (
-    <div className="h-14 border-b border-zinc-800/80 bg-zinc-950 flex items-center gap-3 px-5 sticky top-0 z-40">
+    <div className="h-14 border-b border-off2 bg-off flex items-center gap-3 px-5 sticky top-0 z-40">
       {/* Search / command palette trigger */}
       <div className="flex-1 max-w-[640px]">
         <AdminCommandPalette currentTitle={title} />
@@ -46,18 +46,18 @@ export async function AdminTopbar() {
         <button
           type="button"
           aria-label="Nastavení"
-          className="w-9 h-9 rounded-md flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 transition-colors border border-transparent hover:border-zinc-800"
+          className="w-9 h-9 rounded-md flex items-center justify-center text-text2 hover:text-text hover:bg-off transition-colors border border-transparent hover:border-off2"
         >
           <Settings size={16} strokeWidth={1.75} />
         </button>
         <button
           type="button"
           aria-label="Notifikace"
-          className="relative w-9 h-9 rounded-md flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/5 transition-colors border border-transparent hover:border-zinc-800"
+          className="relative w-9 h-9 rounded-md flex items-center justify-center text-text2 hover:text-text hover:bg-off transition-colors border border-transparent hover:border-off2"
         >
           <Bell size={16} strokeWidth={1.75} />
         </button>
-        <div className="w-9 h-9 rounded-full bg-olive3/15 border border-olive3/40 flex items-center justify-center text-[12px] font-semibold text-olive3 ml-1">
+        <div className="w-9 h-9 rounded-full bg-olive-bg border border-olive-border flex items-center justify-center text-[12px] font-semibold text-olive ml-1">
           MN
         </div>
         <div className="ml-2">

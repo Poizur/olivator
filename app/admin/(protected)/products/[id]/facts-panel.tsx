@@ -93,11 +93,11 @@ export function FactsPanel({ productId, initialFacts }: FactsPanelProps) {
   }
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-6">
+    <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6">
       <div className="flex items-start justify-between mb-4 gap-4">
         <div>
-          <div className="text-sm font-semibold text-white">Extrahovaná fakta</div>
-          <div className="text-xs text-zinc-500 mt-0.5">
+          <div className="text-sm font-semibold text-text">Extrahovaná fakta</div>
+          <div className="text-xs text-text3 mt-0.5">
             Specifické detaily z popisu produktu. AI rewrite je MUSÍ zmínit (high).
             Můžeš přidávat vlastní.
           </div>
@@ -106,14 +106,14 @@ export function FactsPanel({ productId, initialFacts }: FactsPanelProps) {
           type="button"
           onClick={onReextract}
           disabled={extracting || saving}
-          className="bg-zinc-800/40 border border-zinc-800 rounded-full px-3 py-1.5 text-[12px] font-medium hover:border-olive3 hover:text-olive disabled:opacity-40 transition-colors whitespace-nowrap"
+          className="bg-off border border-off2 rounded-full px-3 py-1.5 text-[12px] font-medium hover:border-olive3 hover:text-olive disabled:opacity-40 transition-colors whitespace-nowrap"
         >
           {extracting ? '⏳ Extrahuji...' : '🔄 Extrahovat AI'}
         </button>
       </div>
 
       {facts.length === 0 ? (
-        <div className="text-[13px] text-zinc-500 italic text-center py-6 bg-zinc-800/40 rounded-lg">
+        <div className="text-[13px] text-text3 italic text-center py-6 bg-off rounded-lg">
           Zatím žádná fakta. Klikni &ldquo;🔄 Extrahovat AI&rdquo; pro automatické načtení z popisu,
           nebo přidej vlastní.
         </div>
@@ -122,7 +122,7 @@ export function FactsPanel({ productId, initialFacts }: FactsPanelProps) {
           {facts.map((fact, i) => (
             <div
               key={i}
-              className="grid grid-cols-[100px_1fr_1.5fr_30px] gap-2 items-center p-2 rounded-lg bg-zinc-800/40"
+              className="grid grid-cols-[100px_1fr_1.5fr_30px] gap-2 items-center p-2 rounded-lg bg-off"
             >
               <ImportanceSelect
                 value={fact.importance}
@@ -133,19 +133,19 @@ export function FactsPanel({ productId, initialFacts }: FactsPanelProps) {
                 value={fact.label}
                 onChange={e => updateFact(i, { label: e.target.value })}
                 placeholder="Název (např. Teplota lisování)"
-                className="px-2.5 py-1.5 border border-zinc-800 rounded text-[13px] bg-zinc-900 focus:outline-none focus:border-olive"
+                className="px-2.5 py-1.5 border border-off2 rounded text-[13px] bg-white focus:outline-none focus:border-olive"
               />
               <input
                 type="text"
                 value={fact.value}
                 onChange={e => updateFact(i, { value: e.target.value })}
                 placeholder="Hodnota (např. do 40 °C)"
-                className="px-2.5 py-1.5 border border-zinc-800 rounded text-[13px] bg-zinc-900 focus:outline-none focus:border-olive"
+                className="px-2.5 py-1.5 border border-off2 rounded text-[13px] bg-white focus:outline-none focus:border-olive"
               />
               <button
                 type="button"
                 onClick={() => removeFact(i)}
-                className="text-zinc-500 hover:text-amber-400 text-sm"
+                className="text-text3 hover:text-amber-700 text-sm"
                 title="Smazat"
               >
                 ✕
@@ -159,7 +159,7 @@ export function FactsPanel({ productId, initialFacts }: FactsPanelProps) {
         <button
           type="button"
           onClick={addFact}
-          className="text-[12px] text-olive hover:text-emerald-400"
+          className="text-[12px] text-olive hover:text-olive-dark"
         >
           + Přidat vlastní fakt
         </button>
@@ -176,12 +176,12 @@ export function FactsPanel({ productId, initialFacts }: FactsPanelProps) {
       </div>
 
       {status && (
-        <div className="mt-3 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
+        <div className="mt-3 text-xs text-olive-dark bg-olive-bg border border-olive-border rounded-lg px-3 py-2">
           ✓ {status}
         </div>
       )}
       {error && (
-        <div className="mt-3 text-xs text-red-400 bg-red-500/100/10 border border-red-500/20 rounded-lg px-3 py-2">
+        <div className="mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
           ⚠ {error}
         </div>
       )}
@@ -198,10 +198,10 @@ function ImportanceSelect({
 }) {
   const bg =
     value === 'high'
-      ? 'bg-red-500/100/10 text-red-400 border-red-500/20'
+      ? 'bg-red-50 text-red-700 border-red-200'
       : value === 'medium'
-      ? 'bg-amber-500/100/10 text-amber-400 border-terra/30'
-      : 'bg-zinc-800/40 text-zinc-500 border-zinc-800'
+      ? 'bg-amber-50 text-amber-700 border-terra/30'
+      : 'bg-off text-text3 border-off2'
   return (
     <select
       value={value}

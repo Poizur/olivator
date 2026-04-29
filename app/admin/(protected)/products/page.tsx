@@ -21,20 +21,20 @@ function CompletenessBadge({ result }: { result: ReturnType<typeof calculateComp
 function StatusBadge({ status }: { status: string }) {
   if (status === 'active') {
     return (
-      <span className="text-[11px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block">
+      <span className="text-[11px] bg-olive-bg text-olive-dark px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block">
         ● aktivní
       </span>
     )
   }
   if (status === 'draft') {
     return (
-      <span className="text-[11px] bg-amber-500/100/10 text-amber-400 px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block">
+      <span className="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block">
         ○ draft
       </span>
     )
   }
   return (
-    <span className="text-[11px] bg-zinc-800/40 text-zinc-500 px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block">
+    <span className="text-[11px] bg-off text-text3 px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block">
       ○ neaktivní
     </span>
   )
@@ -107,8 +107,8 @@ export default async function AdminProductsPage({
     <div>
       <div className="flex items-end justify-between mb-6 flex-wrap gap-4">
         <div>
-          <div className="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-1.5">— Katalog</div>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl text-white">Produkty</h1>
+          <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">— Katalog</div>
+          <h1 className="font-[family-name:var(--font-display)] text-3xl text-text">Produkty</h1>
         </div>
         <div className="flex gap-2">
           <Link
@@ -122,7 +122,7 @@ export default async function AdminProductsPage({
 
       {/* Status filter row */}
       <div className="mb-3">
-        <div className="text-[11px] font-semibold tracking-wider uppercase text-zinc-500 mb-1.5">Stav</div>
+        <div className="text-[11px] font-semibold tracking-wider uppercase text-text3 mb-1.5">Stav</div>
         <div className="flex gap-2 flex-wrap">
           {statusFilters.map(f => {
             const active = status === f.value || (!status && !f.value)
@@ -133,7 +133,7 @@ export default async function AdminProductsPage({
                 className={`text-[13px] px-3 py-1.5 rounded-full transition-colors ${
                   active
                     ? 'bg-olive text-white'
-                    : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:border-olive3 hover:text-olive'
+                    : 'bg-white border border-off2 text-text2 hover:border-olive3 hover:text-olive'
                 }`}
               >
                 {f.label}
@@ -145,14 +145,14 @@ export default async function AdminProductsPage({
 
       {/* Brand filter row */}
       <div className="mb-5">
-        <div className="text-[11px] font-semibold tracking-wider uppercase text-zinc-500 mb-1.5">Výrobce</div>
+        <div className="text-[11px] font-semibold tracking-wider uppercase text-text3 mb-1.5">Výrobce</div>
         <div className="flex gap-2 flex-wrap">
           <Link
             href={brandHref(undefined)}
             className={`text-[13px] px-3 py-1.5 rounded-full transition-colors ${
               !brand
                 ? 'bg-olive text-white'
-                : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:border-olive3 hover:text-olive'
+                : 'bg-white border border-off2 text-text2 hover:border-olive3 hover:text-olive'
             }`}
           >
             Všichni
@@ -164,7 +164,7 @@ export default async function AdminProductsPage({
               className={`text-[13px] px-3 py-1.5 rounded-full transition-colors ${
                 brand === b
                   ? 'bg-olive text-white'
-                  : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:border-olive3 hover:text-olive'
+                  : 'bg-white border border-off2 text-text2 hover:border-olive3 hover:text-olive'
               }`}
             >
               {b} ({count})
@@ -173,18 +173,18 @@ export default async function AdminProductsPage({
         </div>
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] overflow-hidden">
+      <div className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden">
         <table className="w-full">
-          <thead className="bg-zinc-800/40">
+          <thead className="bg-off">
             <tr>
               <th className="px-3 py-3 w-[56px]"></th>
-              <th className="text-left px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-zinc-500">Produkt</th>
-              <th className="text-left px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-zinc-500">Výrobce</th>
-              <th className="text-left px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-zinc-500 whitespace-nowrap">EAN</th>
-              <th className="text-left px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-zinc-500">Typ</th>
-              <th className="text-right px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-zinc-500">Score</th>
-              <th className="text-right px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-zinc-500 whitespace-nowrap">Kyselost</th>
-              <th className="text-center px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-zinc-500">
+              <th className="text-left px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Produkt</th>
+              <th className="text-left px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Výrobce</th>
+              <th className="text-left px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3 whitespace-nowrap">EAN</th>
+              <th className="text-left px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Typ</th>
+              <th className="text-right px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Score</th>
+              <th className="text-right px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3 whitespace-nowrap">Kyselost</th>
+              <th className="text-center px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">
                 <Link
                   href={sort === 'completeness' ? '/admin/products' : '/admin/products?sort=completeness'}
                   className={`hover:text-olive transition-colors ${sort === 'completeness' ? 'text-olive' : ''}`}
@@ -193,22 +193,22 @@ export default async function AdminProductsPage({
                   Komplet {sort === 'completeness' ? '↑' : '↕'}
                 </Link>
               </th>
-              <th className="text-center px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-zinc-500">Stav</th>
+              <th className="text-center px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Stav</th>
               <th className="px-3 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={10} className="px-4 py-10 text-center text-zinc-500 text-sm">
+                <td colSpan={10} className="px-4 py-10 text-center text-text3 text-sm">
                   Žádné produkty neodpovídají vybraným filtrům
                 </td>
               </tr>
             )}
             {filtered.map(p => (
-              <tr key={p.id} className="border-t border-zinc-800 hover:bg-zinc-900/50">
+              <tr key={p.id} className="border-t border-off2 hover:bg-off/60">
                 <td className="px-3 py-2">
-                  <Link href={`/admin/products/${p.id}`} className="block w-10 h-10 bg-zinc-800/40 rounded overflow-hidden border border-zinc-800">
+                  <Link href={`/admin/products/${p.id}`} className="block w-10 h-10 bg-off rounded overflow-hidden border border-off2">
                     {p.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -218,31 +218,31 @@ export default async function AdminProductsPage({
                         loading="lazy"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center font-[family-name:var(--font-display)] text-base italic text-zinc-500/40">{p.name.charAt(0)}</div>
+                      <div className="w-full h-full flex items-center justify-center font-[family-name:var(--font-display)] text-base italic text-text3/40">{p.name.charAt(0)}</div>
                     )}
                   </Link>
                 </td>
                 <td className="px-3 py-3">
-                  <div className="text-sm font-medium text-white">
+                  <div className="text-sm font-medium text-text">
                     {p.name}
                   </div>
-                  <div className="text-xs text-zinc-500">
+                  <div className="text-xs text-text3">
                     {p.originRegion}{p.volumeMl ? ` · ${p.volumeMl} ml` : ''}
                   </div>
                 </td>
-                <td className="px-3 py-3 text-xs text-zinc-400">
+                <td className="px-3 py-3 text-xs text-text2">
                   {extractBrand(p.name)}
                 </td>
-                <td className="px-3 py-3 text-xs text-zinc-400 font-mono whitespace-nowrap">
-                  {p.ean ?? <span className="text-zinc-500 italic">—</span>}
+                <td className="px-3 py-3 text-xs text-text2 font-mono whitespace-nowrap">
+                  {p.ean ?? <span className="text-text3 italic">—</span>}
                 </td>
-                <td className="px-3 py-3 text-xs text-zinc-400">{typeLabel(p.type)}</td>
+                <td className="px-3 py-3 text-xs text-text2">{typeLabel(p.type)}</td>
                 <td className="px-3 py-3 text-right">
-                  <span className="text-sm font-semibold text-amber-400 tabular-nums">
+                  <span className="text-sm font-semibold text-amber-700 tabular-nums">
                     {p.olivatorScore || '—'}
                   </span>
                 </td>
-                <td className="px-3 py-3 text-right text-sm text-white tabular-nums whitespace-nowrap">
+                <td className="px-3 py-3 text-right text-sm text-text tabular-nums whitespace-nowrap">
                   {p.acidity ? `${p.acidity}%` : '—'}
                 </td>
                 <td className="px-3 py-3 text-center">
@@ -254,7 +254,7 @@ export default async function AdminProductsPage({
                 <td className="px-3 py-3 text-right">
                   <Link
                     href={`/admin/products/${p.id}`}
-                    className="text-[12px] text-olive hover:text-emerald-400 whitespace-nowrap"
+                    className="text-[12px] text-olive hover:text-olive-dark whitespace-nowrap"
                   >
                     Upravit →
                   </Link>
@@ -265,7 +265,7 @@ export default async function AdminProductsPage({
         </table>
       </div>
 
-      <div className="mt-3 text-xs text-zinc-500">
+      <div className="mt-3 text-xs text-text3">
         Zobrazeno {filtered.length} z {allProducts.length} produktů
         {brand && <> &middot; výrobce: <strong>{brand}</strong></>}
       </div>

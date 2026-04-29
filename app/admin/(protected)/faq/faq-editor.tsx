@@ -112,7 +112,7 @@ export function FAQEditor({ initialFAQs }: { initialFAQs: FAQ[] }) {
   return (
     <div className="space-y-3">
       {globalError && (
-        <div className="text-[13px] text-red-400 bg-red-500/100/10 border border-red-500/20 rounded-lg px-3 py-2">
+        <div className="text-[13px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
           ⚠ {globalError}
         </div>
       )}
@@ -130,7 +130,7 @@ export function FAQEditor({ initialFAQs }: { initialFAQs: FAQ[] }) {
             type="button"
             onClick={onSeed}
             disabled={seeding}
-            className="bg-terra text-white rounded-full px-4 py-1.5 text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
+            className="bg-terra text-text rounded-full px-4 py-1.5 text-[13px] font-medium hover:opacity-90 disabled:opacity-40 transition-opacity"
           >
             {seeding ? '⏳ Seeduji...' : '🌱 Naseedovat 12 výchozích FAQ'}
           </button>
@@ -140,10 +140,10 @@ export function FAQEditor({ initialFAQs }: { initialFAQs: FAQ[] }) {
       {drafts.map((d, i) => (
         <div
           key={d.id ?? `new-${i}`}
-          className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-5"
+          className="bg-white border border-off2 rounded-[var(--radius-card)] p-5"
         >
           <div className="flex items-center gap-3 mb-3 flex-wrap">
-            <label className="text-[11px] uppercase tracking-wider text-zinc-500 flex items-center gap-2">
+            <label className="text-[11px] uppercase tracking-wider text-text3 flex items-center gap-2">
               <input
                 type="checkbox"
                 checked={d.isActive}
@@ -151,19 +151,19 @@ export function FAQEditor({ initialFAQs }: { initialFAQs: FAQ[] }) {
               />
               Zobrazit
             </label>
-            <label className="text-[11px] uppercase tracking-wider text-zinc-500 flex items-center gap-2">
+            <label className="text-[11px] uppercase tracking-wider text-text3 flex items-center gap-2">
               Pořadí
               <input
                 type="number"
                 value={d.sortOrder}
                 onChange={e => updateDraft(i, { sortOrder: Number(e.target.value) || 0 })}
-                className="w-14 px-2 py-1 border border-zinc-800 rounded text-[12px]"
+                className="w-14 px-2 py-1 border border-off2 rounded text-[12px]"
               />
             </label>
             <select
               value={d.category}
               onChange={e => updateDraft(i, { category: e.target.value })}
-              className="px-2 py-1 border border-zinc-800 rounded text-[12px] text-zinc-400"
+              className="px-2 py-1 border border-off2 rounded text-[12px] text-text2"
             >
               <option value="general">Obecné</option>
               <option value="quality">Kvalita</option>
@@ -183,7 +183,7 @@ export function FAQEditor({ initialFAQs }: { initialFAQs: FAQ[] }) {
               <button
                 type="button"
                 onClick={() => deleteDraft(i)}
-                className="text-zinc-500 hover:text-amber-400 text-[12px]"
+                className="text-text3 hover:text-amber-700 text-[12px]"
                 title="Smazat"
               >
                 ✕
@@ -197,14 +197,14 @@ export function FAQEditor({ initialFAQs }: { initialFAQs: FAQ[] }) {
               value={d.question}
               onChange={e => updateDraft(i, { question: e.target.value })}
               placeholder="Jak vybrat opravdu kvalitní olivový olej?"
-              className="w-full px-3 py-2 border border-zinc-800 rounded-lg text-[14px] font-medium focus:outline-none focus:border-olive"
+              className="w-full px-3 py-2 border border-off2 rounded-lg text-[14px] font-medium focus:outline-none focus:border-olive"
             />
             <textarea
               value={d.answer}
               onChange={e => updateDraft(i, { answer: e.target.value })}
               rows={5}
               placeholder="Podívej se na 4 věci: označení 'extra panenský'..."
-              className="w-full px-3 py-2 border border-zinc-800 rounded-lg text-[13px] leading-relaxed focus:outline-none focus:border-olive"
+              className="w-full px-3 py-2 border border-off2 rounded-lg text-[13px] leading-relaxed focus:outline-none focus:border-olive"
             />
           </div>
         </div>

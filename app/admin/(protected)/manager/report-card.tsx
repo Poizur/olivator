@@ -31,8 +31,8 @@ interface Metrics {
 }
 
 const PRIORITY_BADGE: Record<string, string> = {
-  high: 'bg-red-500/100/10 text-red-400 border-red-500/20',
-  medium: 'bg-amber-500/100/10 text-amber-400 border-amber-500/20',
+  high: 'bg-red-50 text-red-700 border-red-200',
+  medium: 'bg-amber-50 text-amber-700 border-amber-200',
   low: 'bg-blue-50 text-blue-700 border-blue-200',
 }
 
@@ -57,18 +57,18 @@ export function ReportCard({ report }: { report: ReportRow }) {
   })
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] overflow-hidden">
-      <div className="bg-emerald-500/10/40 px-6 py-3 border-b border-zinc-800">
-        <div className="text-xs text-emerald-400 font-semibold tracking-wider uppercase">
+    <div className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden">
+      <div className="bg-olive-bg/40 px-6 py-3 border-b border-off2">
+        <div className="text-xs text-olive-dark font-semibold tracking-wider uppercase">
           {report.period_start} — {report.period_end}
         </div>
-        <div className="text-[11px] text-zinc-500 mt-0.5">
+        <div className="text-[11px] text-text3 mt-0.5">
           Vygenerováno {generatedDate}
         </div>
       </div>
 
       <div className="p-6">
-        <div className="text-[14px] text-white leading-relaxed whitespace-pre-line mb-6">
+        <div className="text-[14px] text-text leading-relaxed whitespace-pre-line mb-6">
           {report.ai_analysis}
         </div>
 
@@ -87,25 +87,25 @@ export function ReportCard({ report }: { report: ReportRow }) {
 
         {actions.length > 0 && (
           <div>
-            <div className="text-[11px] font-semibold tracking-wider uppercase text-zinc-500 mb-2.5">
+            <div className="text-[11px] font-semibold tracking-wider uppercase text-text3 mb-2.5">
               Akce na příští týden
             </div>
             <ul className="space-y-2.5">
               {actions.map((a, i) => (
                 <li
                   key={i}
-                  className="border border-zinc-800 rounded-lg p-3 bg-zinc-900/30"
+                  className="border border-off2 rounded-lg p-3 bg-white/30"
                 >
                   <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                     <span className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded border ${PRIORITY_BADGE[a.priority] ?? PRIORITY_BADGE.medium}`}>
                       {a.priority}
                     </span>
-                    <span className="text-[11px] text-zinc-500">
+                    <span className="text-[11px] text-text3">
                       {CATEGORY_LABEL[a.category] ?? a.category}
                     </span>
                   </div>
-                  <div className="text-[14px] font-semibold text-white mb-1">{a.title}</div>
-                  <div className="text-[13px] text-zinc-400 leading-relaxed">{a.description}</div>
+                  <div className="text-[14px] font-semibold text-text mb-1">{a.title}</div>
+                  <div className="text-[13px] text-text2 leading-relaxed">{a.description}</div>
                 </li>
               ))}
             </ul>
@@ -128,11 +128,11 @@ function Metric({
   warning?: boolean
 }) {
   return (
-    <div className="bg-zinc-900/40 rounded-lg p-3">
-      <div className="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">{label}</div>
+    <div className="bg-off/60 rounded-lg p-3">
+      <div className="text-[10px] uppercase tracking-wider text-text3 mb-1">{label}</div>
       <div
         className={`text-lg font-semibold tabular-nums ${
-          warning ? 'text-red-400' : highlight ? 'text-emerald-400' : 'text-white'
+          warning ? 'text-red-700' : highlight ? 'text-olive-dark' : 'text-text'
         }`}
       >
         {value}

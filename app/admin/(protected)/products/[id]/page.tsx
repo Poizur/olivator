@@ -46,7 +46,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
   return (
     <div>
-      <div className="text-xs text-zinc-500 mb-4">
+      <div className="text-xs text-text3 mb-4">
         <Link href="/admin" className="text-olive">Admin</Link>
         {' › '}
         <Link href="/admin/products" className="text-olive">Produkty</Link>
@@ -55,7 +55,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
       </div>
       <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
         <div>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl text-white">
+          <h1 className="font-[family-name:var(--font-display)] text-3xl text-text">
             {productRow.name as string}
           </h1>
           {completeness && (
@@ -64,7 +64,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
                 Komplet {completeness.weightedPercent}% ({completeness.filled}/{completeness.total} polí)
               </span>
               {completeness.missing.length > 0 && (
-                <span className="text-[11px] text-zinc-500">
+                <span className="text-[11px] text-text3">
                   Chybí: {completeness.missing.slice(0, 5).map((m) => m.label).join(', ')}
                   {completeness.missing.length > 5 ? ` +${completeness.missing.length - 5}` : ''}
                 </span>

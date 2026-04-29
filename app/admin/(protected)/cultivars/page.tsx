@@ -22,9 +22,9 @@ async function getProductCountsByCultivar(): Promise<Record<string, number>> {
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    active: 'bg-emerald-500/10 text-emerald-400',
-    draft: 'bg-amber-500/100/10 text-amber-400',
-    inactive: 'bg-zinc-800/40 text-zinc-500',
+    active: 'bg-olive-bg text-olive-dark',
+    draft: 'bg-amber-50 text-amber-700',
+    inactive: 'bg-off text-text3',
   }
   return (
     <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${styles[status] ?? styles.inactive}`}>
@@ -40,23 +40,23 @@ export default async function AdminCultivarsPage() {
     <div>
       <div className="flex items-end justify-between mb-6 flex-wrap gap-4">
         <div>
-          <div className="text-[10px] font-bold tracking-widest uppercase text-zinc-500 mb-1.5">— Katalog</div>
-          <h1 className="font-[family-name:var(--font-display)] text-3xl text-white">Odrůdy</h1>
-          <p className="text-[13px] text-zinc-400 mt-1">{cultivars.length} odrůd v katalogu</p>
+          <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">— Katalog</div>
+          <h1 className="font-[family-name:var(--font-display)] text-3xl text-text">Odrůdy</h1>
+          <p className="text-[13px] text-text2 mt-1">{cultivars.length} odrůd v katalogu</p>
         </div>
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl divide-y divide-zinc-800">
+      <div className="bg-white border border-off2 rounded-xl divide-y divide-off2">
         {cultivars.map((c) => (
           <div key={c.slug} className="flex items-center gap-4 px-5 py-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
-                <Link href={`/admin/cultivars/${c.slug}`} className="font-medium text-white hover:text-olive">
+                <Link href={`/admin/cultivars/${c.slug}`} className="font-medium text-text hover:text-olive">
                   {c.name}
                 </Link>
                 <StatusBadge status={c.status} />
               </div>
-              <div className="text-xs text-zinc-500">
+              <div className="text-xs text-text3">
                 {productCounts[c.slug] ?? 0} produktů
                 {c.description_long
                   ? ` · text ${c.description_long.length} znaků`
@@ -73,7 +73,7 @@ export default async function AdminCultivarsPage() {
               </a>
               <Link
                 href={`/admin/cultivars/${c.slug}`}
-                className="px-3 py-1.5 border border-zinc-800 rounded-lg text-xs text-zinc-400 hover:border-olive"
+                className="px-3 py-1.5 border border-off2 rounded-lg text-xs text-text2 hover:border-olive"
               >
                 Editovat
               </Link>

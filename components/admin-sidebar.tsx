@@ -100,18 +100,18 @@ export async function AdminSidebar() {
     .sort((a, b) => b.href.length - a.href.length)[0]
 
   return (
-    <aside className="hidden lg:flex w-[240px] shrink-0 bg-zinc-950 border-r border-zinc-800/80 flex-col sticky top-0 h-screen text-zinc-300">
+    <aside className="hidden lg:flex w-[240px] shrink-0 bg-off border-r border-off2 flex-col sticky top-0 h-screen text-text2">
       {/* Brand */}
-      <div className="px-5 py-5 border-b border-zinc-800/80">
+      <div className="px-5 py-5 border-b border-off2">
         <Link href="/admin" className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-olive3/15 border border-olive3/30 flex items-center justify-center">
-            <div className="w-2 h-2 rounded-full bg-olive3" />
+          <div className="w-9 h-9 rounded-full bg-olive-bg border border-olive-border flex items-center justify-center">
+            <div className="w-2 h-2 rounded-full bg-olive" />
           </div>
           <div>
-            <div className="font-[family-name:var(--font-display)] text-lg text-white leading-none">
+            <div className="font-[family-name:var(--font-display)] text-lg text-text leading-none">
               Olivátor
             </div>
-            <div className="text-[10px] uppercase tracking-widest text-zinc-500 mt-1">
+            <div className="text-[10px] uppercase tracking-widest text-text3 mt-1">
               Admin
             </div>
           </div>
@@ -123,7 +123,7 @@ export async function AdminSidebar() {
         {NAV.map((section, i) => (
           <div key={i} className={section.group ? 'mt-5 first:mt-0' : ''}>
             {section.group && (
-              <div className="text-[10px] font-semibold tracking-widest uppercase text-zinc-500 px-2.5 mb-1.5">
+              <div className="text-[10px] font-semibold tracking-widest uppercase text-text3 px-2.5 mb-1.5">
                 {section.group}
               </div>
             )}
@@ -131,22 +131,22 @@ export async function AdminSidebar() {
               {section.items.map((item) => {
                 const active = activeMatch?.href === item.href
                 const dotColor = active
-                  ? 'bg-olive3'
+                  ? 'bg-olive'
                   : item.badge
                     ? item.badgeTone === 'red'
                       ? 'bg-red-500/70'
                       : item.badgeTone === 'amber'
                         ? 'bg-amber-500/70'
-                        : 'bg-olive3/70'
-                    : 'bg-zinc-700'
+                        : 'bg-olive'
+                    : 'bg-off2'
                 return (
                   <li key={item.href}>
                     <Link
                       href={item.href}
                       className={`flex items-center gap-2.5 px-2.5 py-1.5 text-[13px] rounded-md transition-colors ${
                         active
-                          ? 'bg-white/5 text-white'
-                          : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                          ? 'bg-off/60 text-text'
+                          : 'text-text2 hover:text-text hover:bg-off'
                       }`}
                     >
                       <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${dotColor}`} />
@@ -155,10 +155,10 @@ export async function AdminSidebar() {
                         <span
                           className={`text-[10px] font-semibold rounded-md px-1.5 py-0.5 tabular-nums ${
                             item.badgeTone === 'red'
-                              ? 'bg-red-500/15 text-red-400'
+                              ? 'bg-red-50 text-red-700'
                               : item.badgeTone === 'amber'
-                                ? 'bg-amber-500/15 text-amber-400'
-                                : 'bg-olive3/15 text-olive3'
+                                ? 'bg-amber-50 text-amber-700'
+                                : 'bg-olive-bg text-olive'
                           }`}
                         >
                           {item.badge}
@@ -174,13 +174,13 @@ export async function AdminSidebar() {
       </nav>
 
       {/* Footer link to public site */}
-      <div className="px-2.5 py-3 border-t border-zinc-800/80">
+      <div className="px-2.5 py-3 border-t border-off2">
         <Link
           href="/"
-          className="flex items-center justify-between px-2.5 py-1.5 text-[12px] text-zinc-400 hover:text-white transition-colors rounded-md hover:bg-white/5"
+          className="flex items-center justify-between px-2.5 py-1.5 text-[12px] text-text2 hover:text-text transition-colors rounded-md hover:bg-off"
         >
           <span>Zobrazit web</span>
-          <span className="text-zinc-600">→</span>
+          <span className="text-text3">→</span>
         </Link>
       </div>
     </aside>

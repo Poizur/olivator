@@ -40,31 +40,31 @@ export function BulkFetchImagesButton() {
         type="button"
         onClick={onRun}
         disabled={running}
-        className="text-[12px] text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 rounded-md px-3.5 py-1.5 disabled:opacity-40 transition-colors"
+        className="text-[12px] text-text2 hover:text-text border border-off2 hover:border-off2 rounded-md px-3.5 py-1.5 disabled:opacity-40 transition-colors"
       >
         {running ? 'Načítám…' : 'Doplnit chybějící fotky'}
       </button>
 
       {error && (
-        <span className="text-xs text-red-400 bg-red-500/100/10 border border-red-500/20 rounded-lg px-3 py-1.5 w-full">
+        <span className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5 w-full">
           {error}
         </span>
       )}
       {result && (
-        <div className="text-xs bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 w-full">
-          <div className="text-white">
+        <div className="text-xs bg-white border border-off2 rounded-lg px-3 py-2 w-full">
+          <div className="text-text">
             Hotovo: <strong className="text-olive">{result.succeeded} uloženo</strong>
             {result.failed > 0 && (
-              <> &middot; <span className="text-amber-400">{result.failed} selhalo</span></>
+              <> &middot; <span className="text-amber-700">{result.failed} selhalo</span></>
             )}
           </div>
           {result.failed > 0 && (
-            <details className="mt-2 text-zinc-400">
+            <details className="mt-2 text-text2">
               <summary className="cursor-pointer">Detail chyb</summary>
               <ul className="mt-1 space-y-0.5">
                 {result.results.filter(r => !r.ok).map(r => (
                   <li key={r.id}>
-                    <span className="text-white">{r.name}</span>: {r.reason}
+                    <span className="text-text">{r.name}</span>: {r.reason}
                   </li>
                 ))}
               </ul>

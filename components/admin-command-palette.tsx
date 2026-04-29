@@ -153,21 +153,21 @@ export function AdminCommandPalette({ currentTitle }: { currentTitle: string }) 
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="w-full flex items-center gap-3 h-9 px-3 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-md text-[13px] text-zinc-500 hover:text-zinc-300 transition-colors"
+          className="w-full flex items-center gap-3 h-9 px-3 bg-white border border-off2 hover:border-off2 rounded-md text-[13px] text-text3 hover:text-text2 transition-colors"
         >
-          <Search size={14} strokeWidth={1.75} className="text-zinc-500 shrink-0" />
+          <Search size={14} strokeWidth={1.75} className="text-text3 shrink-0" />
           <span className="flex-1 text-left truncate">
             Hledat sekce, produkty…
-            <span className="ml-2 text-zinc-600">· {currentTitle}</span>
+            <span className="ml-2 text-text3">· {currentTitle}</span>
           </span>
-          <kbd className="hidden md:inline-flex items-center gap-0.5 text-[10px] font-mono text-zinc-500 bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5">
+          <kbd className="hidden md:inline-flex items-center gap-0.5 text-[10px] font-mono text-text3 bg-off2 border border-off2 rounded px-1.5 py-0.5">
             <span>⌘</span>
             <span>K</span>
           </kbd>
         </button>
       ) : (
-        <div className="w-full flex items-center gap-3 h-9 px-3 bg-zinc-900 border border-zinc-700 rounded-md text-[13px] focus-within:border-olive3/50">
-          <Search size={14} strokeWidth={1.75} className="text-zinc-500 shrink-0" />
+        <div className="w-full flex items-center gap-3 h-9 px-3 bg-white border border-off2 rounded-md text-[13px] focus-within:border-olive-border">
+          <Search size={14} strokeWidth={1.75} className="text-text3 shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -178,9 +178,9 @@ export function AdminCommandPalette({ currentTitle }: { currentTitle: string }) 
             }}
             onKeyDown={onListKey}
             placeholder="Napiš co hledáš…"
-            className="flex-1 bg-transparent outline-none text-white placeholder:text-zinc-500"
+            className="flex-1 bg-transparent outline-none text-text placeholder:text-text3"
           />
-          <kbd className="text-[10px] font-mono text-zinc-500 bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5">
+          <kbd className="text-[10px] font-mono text-text3 bg-off2 border border-off2 rounded px-1.5 py-0.5">
             esc
           </kbd>
         </div>
@@ -188,16 +188,16 @@ export function AdminCommandPalette({ currentTitle }: { currentTitle: string }) 
 
       {/* Dropdown menu */}
       {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-[80] bg-zinc-900 border border-zinc-800 rounded-md shadow-2xl overflow-hidden">
+        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-[80] bg-white border border-off2 rounded-md shadow-2xl overflow-hidden">
           <div className="max-h-[480px] overflow-y-auto py-2">
             {flatList.length === 0 ? (
-              <div className="px-4 py-6 text-center text-[13px] text-zinc-500">
+              <div className="px-4 py-6 text-center text-[13px] text-text3">
                 Žádné výsledky pro „{query}"
               </div>
             ) : (
               Object.entries(grouped).map(([groupName, items]) => (
                 <div key={groupName} className="mb-1.5 last:mb-0">
-                  <div className="text-[10px] font-semibold tracking-widest uppercase text-zinc-500 px-3 py-1">
+                  <div className="text-[10px] font-semibold tracking-widest uppercase text-text3 px-3 py-1">
                     {groupName}
                   </div>
                   {items.map((item) => {
@@ -211,13 +211,13 @@ export function AdminCommandPalette({ currentTitle }: { currentTitle: string }) 
                         onClick={() => navigate(item.href)}
                         className={`w-full flex items-center justify-between px-3 py-1.5 text-[13px] text-left transition-colors ${
                           isActive
-                            ? 'bg-white/5 text-white'
-                            : 'text-zinc-300 hover:bg-white/5'
+                            ? 'bg-off/60 text-text'
+                            : 'text-text2 hover:bg-off'
                         }`}
                       >
                         <span className="truncate">{item.label}</span>
                         {isActive && (
-                          <span className="text-[11px] text-zinc-500 ml-3 shrink-0">↵</span>
+                          <span className="text-[11px] text-text3 ml-3 shrink-0">↵</span>
                         )}
                       </button>
                     )
@@ -228,17 +228,17 @@ export function AdminCommandPalette({ currentTitle }: { currentTitle: string }) 
           </div>
 
           {/* Footer hint */}
-          <div className="border-t border-zinc-800 px-3 py-1.5 flex items-center gap-3 text-[10px] text-zinc-500">
+          <div className="border-t border-off2 px-3 py-1.5 flex items-center gap-3 text-[10px] text-text3">
             <span className="flex items-center gap-1">
-              <kbd className="bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5">↑↓</kbd>
+              <kbd className="bg-off2 border border-off2 rounded px-1.5 py-0.5">↑↓</kbd>
               navigovat
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5">↵</kbd>
+              <kbd className="bg-off2 border border-off2 rounded px-1.5 py-0.5">↵</kbd>
               otevřít
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5">esc</kbd>
+              <kbd className="bg-off2 border border-off2 rounded px-1.5 py-0.5">esc</kbd>
               zavřít
             </span>
           </div>

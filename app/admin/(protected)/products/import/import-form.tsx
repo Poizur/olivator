@@ -141,15 +141,15 @@ export function ImportForm() {
   return (
     <div className="max-w-3xl">
       {/* URL input */}
-      <form onSubmit={onScrape} className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-6 mb-4">
-        <label className="block text-sm font-semibold text-white mb-2">URL produktu</label>
+      <form onSubmit={onScrape} className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 mb-4">
+        <label className="block text-sm font-semibold text-text mb-2">URL produktu</label>
         <div className="flex gap-2">
           <input
             type="url"
             value={url}
             onChange={e => setUrl(e.target.value)}
             placeholder="https://shop.reckonasbavi.cz/..."
-            className="flex-1 px-3 py-2.5 border border-zinc-800 rounded-lg text-sm focus:outline-none focus:border-olive"
+            className="flex-1 px-3 py-2.5 border border-off2 rounded-lg text-sm focus:outline-none focus:border-olive"
             required
           />
           <button
@@ -163,32 +163,32 @@ export function ImportForm() {
       </form>
 
       {error && (
-        <div className="text-sm text-red-400 bg-red-500/100/10 border border-red-500/20 rounded-lg px-4 py-3 mb-4">
+        <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-4">
           ⚠ {error}
         </div>
       )}
 
       {/* Preview */}
       {data && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-[var(--radius-card)] p-6">
+        <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6">
           <div className="flex items-start gap-5 mb-5">
             {data.imageUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={data.imageUrl}
                 alt={data.name ?? 'Produkt'}
-                className="w-32 h-32 object-contain bg-zinc-800/40 rounded-lg shrink-0"
+                className="w-32 h-32 object-contain bg-off rounded-lg shrink-0"
               />
             )}
             <div className="flex-1">
-              <div className="text-[11px] font-semibold tracking-wider uppercase text-zinc-500 mb-1">
+              <div className="text-[11px] font-semibold tracking-wider uppercase text-text3 mb-1">
                 Zdroj: {data.domain}
               </div>
-              <h2 className="text-lg font-medium text-white mb-1">{data.name ?? '—'}</h2>
-              <div className="text-sm text-zinc-400 mb-2">
+              <h2 className="text-lg font-medium text-text mb-1">{data.name ?? '—'}</h2>
+              <div className="text-sm text-text2 mb-2">
                 {data.brand ?? '—'} &middot; {data.originRegion ?? ''} {data.originCountry ?? ''} &middot; {data.volumeMl ? `${data.volumeMl} ml` : '—'}
               </div>
-              <div className="text-sm text-zinc-400">
+              <div className="text-sm text-text2">
                 Cena: <strong>{data.price ? `${data.price} ${data.currency ?? 'CZK'}` : '—'}</strong>
               </div>
             </div>
@@ -207,7 +207,7 @@ export function ImportForm() {
 
           {data.galleryImages.length > 1 && (
             <div className="mb-5">
-              <div className="text-xs font-medium text-zinc-400 mb-2">Další fotky z galerie</div>
+              <div className="text-xs font-medium text-text2 mb-2">Další fotky z galerie</div>
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {data.galleryImages.slice(1, 10).map((img, i) => (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -215,11 +215,11 @@ export function ImportForm() {
                     key={i}
                     src={img.url}
                     alt={img.alt ?? ''}
-                    className="w-20 h-20 object-contain bg-zinc-800/40 rounded shrink-0"
+                    className="w-20 h-20 object-contain bg-off rounded shrink-0"
                   />
                 ))}
                 {data.galleryImages.length > 10 && (
-                  <div className="w-20 h-20 bg-zinc-800/40 rounded flex items-center justify-center text-xs text-zinc-500 shrink-0">
+                  <div className="w-20 h-20 bg-off rounded flex items-center justify-center text-xs text-text3 shrink-0">
                     +{data.galleryImages.length - 10}
                   </div>
                 )}
@@ -229,15 +229,15 @@ export function ImportForm() {
 
           {data.descriptionShort && (
             <div className="mb-3">
-              <div className="text-xs font-medium text-zinc-400 mb-1">Popis z e-shopu</div>
-              <div className="text-[13px] text-white bg-zinc-800/40 rounded-lg p-3 leading-relaxed">
+              <div className="text-xs font-medium text-text2 mb-1">Popis z e-shopu</div>
+              <div className="text-[13px] text-text bg-off rounded-lg p-3 leading-relaxed">
                 {data.descriptionShort}
               </div>
             </div>
           )}
 
-          <div className="border-t border-zinc-800 pt-4 flex items-center justify-between">
-            <div className="text-xs text-zinc-500">
+          <div className="border-t border-off2 pt-4 flex items-center justify-between">
+            <div className="text-xs text-text3">
               Vytvoří se <strong>draft</strong> — po uložení zkontroluj a vyplň chybějící pole.
               Pak můžeš spustit <strong>Přepsat AI</strong> pro unikátní SEO texty.
             </div>
@@ -268,12 +268,12 @@ function Cell({
   mono?: boolean
 }) {
   return (
-    <div className="bg-zinc-800/40 rounded-lg px-3 py-2">
-      <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-0.5">{label}</div>
+    <div className="bg-off rounded-lg px-3 py-2">
+      <div className="text-[10px] text-text3 uppercase tracking-wider mb-0.5">{label}</div>
       {value ? (
-        <div className={`text-sm text-white ${mono ? 'font-mono text-xs' : ''}`}>{value}</div>
+        <div className={`text-sm text-text ${mono ? 'font-mono text-xs' : ''}`}>{value}</div>
       ) : (
-        <div className="text-sm text-amber-400 italic">{missing ?? 'chybí'}</div>
+        <div className="text-sm text-amber-700 italic">{missing ?? 'chybí'}</div>
       )}
     </div>
   )
