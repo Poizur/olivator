@@ -3,6 +3,17 @@ import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
 import { EntityEditForm } from '@/components/entity-edit-form'
 import { EntityFaqEditor } from '@/components/entity-faq-editor'
+import { EntityRecipeLinker } from '@/components/entity-recipe-linker'
+import { ARTICLES } from '@/lib/static-content'
+
+async function getRecipeLinks(entitySlug: string) {
+  const { data } = await supabaseAdmin
+    .from('recipe_entity_links')
+    .select('recipe_slug')
+    .eq('entity_type', 'cultivar')
+    .eq('entity_slug', entitySlug)
+  return (data ?? []).map((d: { recipe_slug: string }) => d.recipe_slug)
+}
 
 async function getCultivar(slug: string) {
   const { data } = await supabaseAdmin
@@ -46,11 +57,18 @@ export default async function EditCultivarPage({ params }: { params: Promise<{ s
   const cultivar = await getCultivar(slug)
   if (!cultivar) notFound()
 
-  const [photos, productCount, faqs] = await Promise.all([
+  const [photos, productCount, faqs, recipeLinks] = await Promise.all([
     getEntityPhotos(cultivar.id),
     getCultivarProductCount(slug),
     getFaqs(cultivar.id),
+    getRecipeLinks(cultivar.slug),
   ])
+
+  const allRecipes = ARTICLES.filter((a) => a.category === 'recept').map((a) => ({
+    slug: a.slug,
+    title: a.title,
+    excerpt: a.excerpt,
+  }))
 
   return (
     <div className="p-8 max-w-3xl">
@@ -117,6 +135,13 @@ export default async function EditCultivarPage({ params }: { params: Promise<{ s
         entityType="cultivar"
         entityId={cultivar.id}
         initialFaqs={faqs}
+      />
+
+      <EntityRecipeLinker
+        entityType="cultivar"
+        entitySlug={cultivar.slug}
+        allRecipes={allRecipes}
+        linkedSlugs={recipeLinks}
       />
     </div>
   )

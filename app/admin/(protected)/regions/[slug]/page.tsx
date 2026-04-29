@@ -3,10 +3,21 @@ import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
 import { EntityEditForm } from '@/components/entity-edit-form'
 import { EntityFaqEditor } from '@/components/entity-faq-editor'
+import { EntityRecipeLinker } from '@/components/entity-recipe-linker'
+import { ARTICLES } from '@/lib/static-content'
 
 async function getRegion(slug: string) {
   const { data } = await supabaseAdmin.from('regions').select('*').eq('slug', slug).single()
   return data
+}
+
+async function getRecipeLinks(entityType: 'region' | 'brand' | 'cultivar', entitySlug: string) {
+  const { data } = await supabaseAdmin
+    .from('recipe_entity_links')
+    .select('recipe_slug')
+    .eq('entity_type', entityType)
+    .eq('entity_slug', entitySlug)
+  return (data ?? []).map((d: { recipe_slug: string }) => d.recipe_slug)
 }
 
 async function getEntityPhotos(entityId: string) {
@@ -34,10 +45,17 @@ export default async function EditRegionPage({ params }: { params: Promise<{ slu
   const region = await getRegion(slug)
   if (!region) notFound()
 
-  const [photos, faqs] = await Promise.all([
+  const [photos, faqs, recipeLinks] = await Promise.all([
     getEntityPhotos(region.id),
     getFaqs(region.id),
+    getRecipeLinks('region', region.slug),
   ])
+
+  const allRecipes = ARTICLES.filter((a) => a.category === 'recept').map((a) => ({
+    slug: a.slug,
+    title: a.title,
+    excerpt: a.excerpt,
+  }))
 
   return (
     <div className="p-8 max-w-3xl">
@@ -99,6 +117,13 @@ export default async function EditRegionPage({ params }: { params: Promise<{ slu
         entityType="region"
         entityId={region.id}
         initialFaqs={faqs}
+      />
+
+      <EntityRecipeLinker
+        entityType="region"
+        entitySlug={region.slug}
+        allRecipes={allRecipes}
+        linkedSlugs={recipeLinks}
       />
     </div>
   )

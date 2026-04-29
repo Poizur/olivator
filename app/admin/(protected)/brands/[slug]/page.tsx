@@ -3,6 +3,17 @@ import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
 import { EntityEditForm } from '@/components/entity-edit-form'
 import { EntityFaqEditor } from '@/components/entity-faq-editor'
+import { EntityRecipeLinker } from '@/components/entity-recipe-linker'
+import { ARTICLES } from '@/lib/static-content'
+
+async function getRecipeLinks(entitySlug: string) {
+  const { data } = await supabaseAdmin
+    .from('recipe_entity_links')
+    .select('recipe_slug')
+    .eq('entity_type', 'brand')
+    .eq('entity_slug', entitySlug)
+  return (data ?? []).map((d: { recipe_slug: string }) => d.recipe_slug)
+}
 
 async function getBrand(slug: string) {
   const { data } = await supabaseAdmin
@@ -38,10 +49,17 @@ export default async function EditBrandPage({ params }: { params: Promise<{ slug
   const brand = await getBrand(slug)
   if (!brand) notFound()
 
-  const [photos, faqs] = await Promise.all([
+  const [photos, faqs, recipeLinks] = await Promise.all([
     getEntityPhotos(brand.id),
     getFaqs(brand.id),
+    getRecipeLinks(brand.slug),
   ])
+
+  const allRecipes = ARTICLES.filter((a) => a.category === 'recept').map((a) => ({
+    slug: a.slug,
+    title: a.title,
+    excerpt: a.excerpt,
+  }))
 
   return (
     <div className="p-8 max-w-3xl">
@@ -109,6 +127,13 @@ export default async function EditBrandPage({ params }: { params: Promise<{ slug
         entityType="brand"
         entityId={brand.id}
         initialFaqs={faqs}
+      />
+
+      <EntityRecipeLinker
+        entityType="brand"
+        entitySlug={brand.slug}
+        allRecipes={allRecipes}
+        linkedSlugs={recipeLinks}
       />
     </div>
   )
