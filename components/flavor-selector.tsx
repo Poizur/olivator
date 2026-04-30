@@ -127,10 +127,38 @@ export function FlavorSelector({ totalProducts }: { totalProducts: number }) {
 
             {/* Sliders ve 2 sloupcích — kompaktnější */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3">
-              <Slider label="Ovocnost" value={state.fruity} onChange={(v) => update('fruity', v)} leftLabel="neutrální" rightLabel="ovocný" />
-              <Slider label="Hořkost" value={state.bitter} onChange={(v) => update('bitter', v)} leftLabel="jemný" rightLabel="hořký" />
-              <Slider label="Palčivost" value={state.spicy} onChange={(v) => update('spicy', v)} leftLabel="hladký" rightLabel="palčivý" />
-              <Slider label="Krémovost" value={state.mild} onChange={(v) => update('mild', v)} leftLabel="výrazný" rightLabel="máslový" />
+              <Slider
+                label="Ovocnost"
+                value={state.fruity}
+                onChange={(v) => update('fruity', v)}
+                leftLabel="neutrální"
+                rightLabel="ovocný"
+                hint="Intenzita ovocných tónů — jablko, banán, zelená rajčata, tropické ovoce. Vyšší hodnota = výraznější aroma čerstvého ovoce."
+              />
+              <Slider
+                label="Hořkost"
+                value={state.bitter}
+                onChange={(v) => update('bitter', v)}
+                leftLabel="jemný"
+                rightLabel="hořký"
+                hint="Hořkost typická pro polyfenoly. Vysoká hořkost = více antioxidantů (zdravější) ale silnější chuť. Typické pro early-harvest oleje."
+              />
+              <Slider
+                label="Palčivost"
+                value={state.spicy}
+                onChange={(v) => update('spicy', v)}
+                leftLabel="hladký"
+                rightLabel="palčivý"
+                hint="Štiplavost v hrdle (oleocanthal polyfenol). Po polknutí olej zaštípe v krku. Znak vysoké kvality EVOO."
+              />
+              <Slider
+                label="Krémovost"
+                value={state.mild}
+                onChange={(v) => update('mild', v)}
+                leftLabel="výrazný"
+                rightLabel="máslový"
+                hint="Jemný, sametový profil bez výrazné hořkosti či palčivosti. Vhodné pro citlivou chuť, saláty, ryby."
+              />
             </div>
 
             <div className="mt-4 pt-3 border-t border-off flex flex-wrap items-center gap-2">
@@ -188,17 +216,42 @@ function Slider({
   onChange,
   leftLabel,
   rightLabel,
+  hint,
 }: {
   label: string
   value: number
   onChange: (v: number) => void
   leftLabel: string
   rightLabel: string
+  hint?: string
 }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <div className="text-[14px] font-medium text-text">{label}</div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[14px] font-medium text-text">{label}</span>
+          {hint && (
+            <span className="group relative inline-flex">
+              {/* "?" ikonka — pure CSS hover tooltip, žádný JS */}
+              <span
+                tabIndex={0}
+                aria-label={`Vysvětlivka: ${label}`}
+                className="w-4 h-4 inline-flex items-center justify-center bg-off2 text-text3 hover:bg-olive-bg hover:text-olive rounded-full text-[10px] font-bold cursor-help transition-colors"
+              >
+                ?
+              </span>
+              {/* Tooltip popup — zobrazí se při hover/focus */}
+              <span
+                role="tooltip"
+                className="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-56 bg-text text-white text-[11px] leading-relaxed px-3 py-2 rounded-lg shadow-lg pointer-events-none transition-opacity"
+              >
+                {hint}
+                {/* Šipka nahoru */}
+                <span className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-text rotate-45" />
+              </span>
+            </span>
+          )}
+        </div>
         <div className="text-[12px] text-text3 tabular-nums">{value}/100</div>
       </div>
       <input
