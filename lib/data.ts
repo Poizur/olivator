@@ -101,6 +101,13 @@ function mapRetailer(row: Record<string, unknown>): Retailer {
     rating: row.rating != null ? Number(row.rating) : null,
     ratingCount: row.rating_count != null ? Number(row.rating_count) : null,
     ratingSource: (row.rating_source as string) ?? null,
+    tagline: (row.tagline as string) ?? null,
+    story: (row.story as string) ?? null,
+    foundedYear: row.founded_year != null ? Number(row.founded_year) : null,
+    founders: (row.founders as string) ?? null,
+    headquarters: (row.headquarters as string) ?? null,
+    specialization: (row.specialization as string) ?? null,
+    logoUrl: (row.logo_url as string) ?? null,
   }
 }
 
@@ -306,6 +313,14 @@ export interface RetailerInput {
   rating?: number | null
   ratingCount?: number | null
   ratingSource?: string | null
+  // Presentation
+  tagline?: string | null
+  story?: string | null
+  foundedYear?: number | null
+  founders?: string | null
+  headquarters?: string | null
+  specialization?: string | null
+  logoUrl?: string | null
 }
 
 export async function upsertRetailer(input: RetailerInput, id?: string) {
@@ -322,6 +337,14 @@ export async function upsertRetailer(input: RetailerInput, id?: string) {
   if (input.rating !== undefined) payload.rating = input.rating
   if (input.ratingCount !== undefined) payload.rating_count = input.ratingCount
   if (input.ratingSource !== undefined) payload.rating_source = input.ratingSource
+  // Presentation fields
+  if (input.tagline !== undefined) payload.tagline = input.tagline || null
+  if (input.story !== undefined) payload.story = input.story || null
+  if (input.foundedYear !== undefined) payload.founded_year = input.foundedYear
+  if (input.founders !== undefined) payload.founders = input.founders || null
+  if (input.headquarters !== undefined) payload.headquarters = input.headquarters || null
+  if (input.specialization !== undefined) payload.specialization = input.specialization || null
+  if (input.logoUrl !== undefined) payload.logo_url = input.logoUrl || null
 
   if (id) {
     const { error } = await supabaseAdmin.from('retailers').update(payload).eq('id', id)

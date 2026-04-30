@@ -11,6 +11,7 @@ import { FlavorWheel } from '@/components/flavor-wheel'
 import { PriceTable } from '@/components/price-table'
 import { AffiliateLink } from '@/components/affiliate-link'
 import { ProductGallery } from '@/components/product-gallery'
+import { RetailerCard } from '@/components/retailer-card'
 import { ProductActions } from './product-actions'
 
 export async function generateStaticParams() {
@@ -415,6 +416,15 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             </aside>
           </div>
         </section>
+      )}
+
+      {/* O eshopu — krátká prezentace prodejce (jen pokud má tagline/story/founders) */}
+      {cheapest && (
+        <RetailerCard
+          retailer={cheapest.retailer}
+          productSlug={product.slug}
+          price={cheapest.price}
+        />
       )}
 
       {/* Podobné oleje — menší karty 6 v řadě s "Proč podobné" badge */}

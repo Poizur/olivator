@@ -22,6 +22,14 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
   const [rating, setRating] = useState(String(initial?.rating ?? ''))
   const [ratingCount, setRatingCount] = useState(String(initial?.ratingCount ?? ''))
   const [ratingSource, setRatingSource] = useState(initial?.ratingSource ?? '')
+  // Presentation fields — public product page "O eshopu" sekce
+  const [tagline, setTagline] = useState(initial?.tagline ?? '')
+  const [story, setStory] = useState(initial?.story ?? '')
+  const [foundedYear, setFoundedYear] = useState(String(initial?.foundedYear ?? ''))
+  const [founders, setFounders] = useState(initial?.founders ?? '')
+  const [headquarters, setHeadquarters] = useState(initial?.headquarters ?? '')
+  const [specialization, setSpecialization] = useState(initial?.specialization ?? '')
+  const [logoUrl, setLogoUrl] = useState(initial?.logoUrl ?? '')
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -40,6 +48,14 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
         rating: rating ? Number(rating) : null,
         ratingCount: ratingCount ? Number(ratingCount) : 0,
         ratingSource: ratingSource || null,
+        // Presentation
+        tagline: tagline || null,
+        story: story || null,
+        foundedYear: foundedYear ? Number(foundedYear) : null,
+        founders: founders || null,
+        headquarters: headquarters || null,
+        specialization: specialization || null,
+        logoUrl: logoUrl || null,
       }
       const res = await fetch(
         isEdit ? `/api/admin/retailers/${initial!.id}` : '/api/admin/retailers',
@@ -198,6 +214,82 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
           <br />
           Nech prázdné pokud ještě nemáš schválené partnerství — odkazy pak vedou přímo na prodejce.
         </Help>
+      </div>
+
+      {/* Presentation — info o eshopu pro public produktovou stránku */}
+      <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 space-y-4">
+        <div>
+          <div className="text-sm font-semibold text-text">Prezentace e-shopu</div>
+          <div className="text-xs text-text2 mt-0.5">
+            Jak se eshop představí pod offers tabulkou na produktové stránce.
+            Aby uživatel věděl koho podporuje + eshop měl radost z hezké prezentace.
+          </div>
+        </div>
+        <div>
+          <Label>Tagline (1 věta)</Label>
+          <Input
+            value={tagline}
+            onChange={setTagline}
+            placeholder="Specialisté na řecké oleje od cestovatelů Zdeňka a Marcelky"
+          />
+          <Help>Krátký hook pod jménem eshopu — max 160 znaků.</Help>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label>Zakladatelé</Label>
+            <Input
+              value={founders}
+              onChange={setFounders}
+              placeholder="Zdeněk a Marcelka"
+            />
+          </div>
+          <div>
+            <Label>Sídlo</Label>
+            <Input
+              value={headquarters}
+              onChange={setHeadquarters}
+              placeholder="Praha"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label>Rok založení</Label>
+            <Input
+              value={foundedYear}
+              onChange={setFoundedYear}
+              type="number"
+              placeholder="2018"
+            />
+          </div>
+          <div>
+            <Label>Specializace</Label>
+            <Input
+              value={specialization}
+              onChange={setSpecialization}
+              placeholder="Řecké oleje, gourmet"
+            />
+          </div>
+        </div>
+        <div>
+          <Label>Příběh (delší popis)</Label>
+          <textarea
+            value={story}
+            onChange={(e) => setStory(e.target.value)}
+            rows={4}
+            placeholder="Vášniví cestovatelé z Řecka, kteří se specializují na olivové oleje z malých ostrovních farem. Eshop spravují Zdeněk a Marcelka..."
+            className="w-full px-3 py-2 border border-off2 rounded-lg text-sm focus:outline-none focus:border-olive resize-y"
+          />
+          <Help>2-4 věty. Zobrazí se v sekci „O eshopu" pod offers tabulkou.</Help>
+        </div>
+        <div>
+          <Label>Logo URL (volitelně)</Label>
+          <Input
+            value={logoUrl}
+            onChange={setLogoUrl}
+            placeholder="https://eshop.cz/logo.svg"
+          />
+        </div>
       </div>
 
       {error && (

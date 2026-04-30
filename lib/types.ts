@@ -67,6 +67,14 @@ export interface Retailer {
   rating?: number | null
   ratingCount?: number | null
   ratingSource?: string | null
+  // Presentation fields — short story for public product page
+  tagline?: string | null
+  story?: string | null
+  foundedYear?: number | null
+  founders?: string | null
+  headquarters?: string | null
+  specialization?: string | null
+  logoUrl?: string | null
 }
 
 export interface ProductOffer {
