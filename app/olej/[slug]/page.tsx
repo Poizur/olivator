@@ -216,7 +216,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           __html: JSON.stringify(faqSchema(allFAQs)),
         }}
       />
-      <div className="max-w-[1040px] mx-auto px-10 py-10">
+      <div className="max-w-[1280px] mx-auto px-6 md:px-10 py-10">
       <div className="text-xs text-text3 mb-7">
         <Link href="/" className="text-olive cursor-pointer">Olivator</Link>
         {' › '}
@@ -225,7 +225,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         {product.name}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-14 items-start mb-14">
+      <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-10 lg:gap-14 items-start mb-14">
         {/* Left — gallery */}
         <ProductGallery
           productName={product.name}

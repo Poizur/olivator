@@ -38,7 +38,7 @@ export function ProductGallery({
 
   if (!active) {
     return (
-      <div className="bg-off rounded-[var(--radius-card)] aspect-square flex items-center justify-center relative overflow-hidden">
+      <div className="bg-white border border-off2 rounded-[var(--radius-card)] aspect-[4/5] flex items-center justify-center relative overflow-hidden">
         {scoreBadge && (
           <div className="absolute top-4 right-4">{scoreBadge}</div>
         )}
@@ -48,14 +48,16 @@ export function ProductGallery({
 
   return (
     <div className="sticky top-[72px]">
-      {/* Hero image — fills the entire box, only minimal padding */}
-      <div className="bg-off rounded-[var(--radius-card)] aspect-square flex items-center justify-center relative mb-3 overflow-hidden">
+      {/* Hero image — portrait 4:5 (lahve jsou na výšku), bg-white sjednotí
+          s photo whitespace tak aby žádná hranice nerušila. Bez vnitřního
+          paddingu — foto sahá k hranám karty. */}
+      <div className="bg-white border border-off2 rounded-[var(--radius-card)] aspect-[4/5] flex items-center justify-center relative mb-3 overflow-hidden">
         <Image
           src={active.url}
           alt={active.altText ?? productName}
           fill
-          sizes="(max-width: 768px) 100vw, 500px"
-          className="object-contain p-2"
+          sizes="(max-width: 768px) 100vw, 600px"
+          className="object-contain"
           priority
         />
         {scoreBadge && (
