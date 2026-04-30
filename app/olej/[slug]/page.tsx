@@ -350,50 +350,81 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </section>
       )}
 
-      {/* Porovnat s podobnými — internal link → /porovnani slug URL */}
+      {/* Porovnat s podobnými — vizuálně bohatá sekce s fotky + key metrics */}
       {similarProducts.length >= 2 && (
         <section className="mt-12 max-w-[1040px]">
-          <div className="bg-olive-bg/50 border border-olive-border/40 rounded-[var(--radius-card)] p-6">
-            <div className="flex items-start justify-between gap-4 flex-wrap">
-              <div className="flex-1 min-w-[280px]">
-                <h2 className="font-[family-name:var(--font-display)] text-xl text-text mb-1">
-                  Postavit vedle podobných?
-                </h2>
-                <p className="text-[13px] text-text2 leading-relaxed">
-                  Vidíš, jak si {product.nameShort} stojí oproti {similarProducts.length}&nbsp;dalším podobným olejům — Score, kyselost, polyfenoly, cena.
-                </p>
+          <div className="flex items-end justify-between mb-5 flex-wrap gap-4">
+            <div>
+              <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
+                — Podobné oleje
               </div>
-              <Link
-                href={`/porovnani/${[product, ...similarProducts].map((p) => p.slug).join('-vs-')}`}
-                className="bg-olive text-white rounded-full px-5 py-2.5 text-[13px] font-medium hover:bg-olive-dark transition-colors whitespace-nowrap"
-              >
-                Porovnat oleje →
-              </Link>
+              <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-3xl font-normal text-text leading-tight">
+                Postavit vedle podobných?
+              </h2>
+              <p className="text-[13px] text-text2 mt-1">
+                Vidíš jak si {product.nameShort} stojí oproti {similarProducts.length} dalším — Score, kyselost, polyfenoly, cena.
+              </p>
             </div>
-            <div className="mt-4 flex gap-2 flex-wrap">
-              {similarProducts.map((p) => (
-                <Link
-                  key={p.id}
-                  href={`/olej/${p.slug}`}
-                  className="flex items-center gap-2 bg-white border border-off2 rounded-lg px-3 py-2 hover:border-olive-light transition-colors"
-                >
-                  {p.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.imageUrl} alt={p.name} className="w-7 h-7 object-contain" loading="lazy" />
-                  ) : (
-                    <span className="font-[family-name:var(--font-display)] text-base italic text-text3 leading-none w-7 h-7 flex items-center justify-center">
-                      {p.name.charAt(0)}
-                    </span>
-                  )}
-                  <span className="text-[12px] text-text">
-                    {p.nameShort}
-                  </span>
-                  <span className="text-[10px] bg-terra/15 text-terra rounded px-1.5 py-0.5 font-semibold">
+            <Link
+              href={`/porovnani/${[product, ...similarProducts].map((p) => p.slug).join('-vs-')}`}
+              className="bg-olive text-white rounded-full px-5 py-2.5 text-[13px] font-medium hover:bg-olive-dark transition-colors whitespace-nowrap shadow-sm"
+            >
+              Srovnat všechny →
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {similarProducts.map((p) => (
+              <Link
+                key={p.id}
+                href={`/olej/${p.slug}`}
+                className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_12px_32px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:border-olive-light"
+              >
+                <div className="relative aspect-[4/5] bg-white overflow-hidden">
+                  {/* Score badge */}
+                  <span className="absolute top-2.5 right-2.5 z-10 text-[12px] font-bold bg-terra text-white rounded-full w-10 h-10 flex items-center justify-center tabular-nums shadow-sm">
                     {p.olivatorScore}
                   </span>
-                </Link>
-              ))}
-            </div>
+                  <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
+                    {p.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={p.imageUrl}
+                        alt={p.name}
+                        className="w-full h-full object-contain"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="font-[family-name:var(--font-display)] text-[80px] italic text-text3/30 leading-none select-none">
+                          {p.name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="p-3 flex-1 flex flex-col">
+                  <div className="text-[9px] text-text3 mb-0.5 uppercase tracking-widest font-medium">
+                    {countryName(p.originCountry)}
+                  </div>
+                  <div className="text-[12px] font-semibold text-text leading-tight line-clamp-2 mb-2 min-h-[2.4em]">
+                    {p.name}
+                  </div>
+                  {/* Key metrics */}
+                  <div className="flex flex-wrap gap-1 mb-2 text-[10px]">
+                    {p.acidity != null && (
+                      <span className="bg-olive-bg text-olive-dark px-1.5 py-0.5 rounded">
+                        kys. {p.acidity}%
+                      </span>
+                    )}
+                    {p.polyphenols != null && (
+                      <span className="bg-amber-50 text-amber-800 px-1.5 py-0.5 rounded">
+                        {p.polyphenols} mg/kg
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
         </section>
       )}
