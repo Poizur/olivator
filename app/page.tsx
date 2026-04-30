@@ -230,7 +230,7 @@ export default async function Home() {
                 <div className="p-6 md:p-8 flex flex-col">
                   <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2 flex items-center gap-1.5">
                     <Trophy size={14} strokeWidth={1.75} />
-                    Olej měsíce
+                    Olej týdne
                   </div>
 
                   <div className="text-[12px] text-text3 mb-1 uppercase tracking-widest font-medium">

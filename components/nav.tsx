@@ -26,8 +26,8 @@ export function Nav({ hasAdminBar = false }: { hasAdminBar?: boolean }) {
 
   return (
     <>
-      <nav className={`sticky ${hasAdminBar ? 'top-9' : 'top-0'} z-50 bg-white/88 backdrop-blur-xl border-b border-black/8`}>
-        <div className="max-w-[1280px] mx-auto h-[52px] flex items-center px-6 md:px-10 gap-8">
+      <nav className={`sticky ${hasAdminBar ? 'top-9' : 'top-0'} z-50 bg-white/88 backdrop-blur-xl border-b border-black/8 px-6 md:px-10`}>
+        <div className="max-w-[1280px] mx-auto h-[52px] flex items-center gap-8">
           <Link
             href="/"
             className="font-[family-name:var(--font-display)] text-[19px] text-olive-dark tracking-tight shrink-0"
