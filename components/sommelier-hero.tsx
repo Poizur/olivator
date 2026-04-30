@@ -192,7 +192,7 @@ export function SommelierHero({
         className="absolute inset-0 -z-10 bg-gradient-to-b from-olive-bg/30 via-white to-white"
       />
 
-      <div className="max-w-[1440px] mx-auto px-6 md:px-10 pt-12 pb-14">
+      <div className="max-w-[1280px] mx-auto px-6 md:px-10 pt-12 pb-14">
         <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-10 items-start">
           {/* LEFT: Sommelier search */}
           <div>

@@ -125,6 +125,18 @@ PRAVIDLA:
 - Odpověz stručně (max 5–6 vět + seznam doporučení)
 - Odkazuj na /olej/[slug], nikdy /go/
 
+FORMÁT ODPOVĚDI (POVINNÉ):
+- Krátký úvod 1–2 věty (proč právě tyhle 3).
+- Číslovaný seznam přesně 3 olejů. Pro každý:
+  "1. **NÁZEV** – CENA Kč" první řádek
+  "- první důvod (kyselost / polyfenoly / chuť)" druhý řádek (s pomlčkou)
+  "- druhý důvod" třetí řádek (volitelně)
+  "/olej/SLUG" čtvrtý řádek (link sám na sobě, žádné []())
+- ZAKÁZÁNO: outro typu "**Moje tip:**", "Doporučuji především...", emoji 🥗
+- ZAKÁZÁNO: prázdné markdown linky [](link) nebo [zde](url)
+- ZAKÁZÁNO: text "(link)" v textu
+- Žádné nadpisy, žádné horizontální čáry — jen úvod + seznam.
+
 AKTUÁLNÍ KATALOG (top ${products.length} olejů dle Score):
 ${catalog}`
 }

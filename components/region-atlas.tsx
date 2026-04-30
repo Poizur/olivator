@@ -38,14 +38,22 @@ export function RegionAtlas({ regions }: { regions: RegionTile[] }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-          {regions.slice(0, 8).map((r) => {
+        {/* Hero region (první největší) + grid zbývajících 7
+            Layout: 1 velká dlaždice 2×2 + 4 menší vedle, pak řada 4 malých.
+            Celkově 8 regionů, ale s vizuální hierarchií. */}
+        <div className="grid grid-cols-2 md:grid-cols-4 grid-rows-2 gap-3 md:gap-4">
+          {regions.slice(0, 8).map((r, i) => {
             const genitive = GENITIVE[r.slug] ?? r.name
+            const isHero = i === 0  // první regionem je hero (2×2)
             return (
               <Link
                 key={r.slug}
                 href={`/oblast/${r.slug}`}
-                className="group relative aspect-[4/5] rounded-[var(--radius-card)] overflow-hidden bg-gradient-to-br from-olive-dark to-olive2 hover:scale-[1.02] transition-transform"
+                className={`group relative rounded-[var(--radius-card)] overflow-hidden bg-olive-dark hover:scale-[1.02] transition-transform ${
+                  isHero
+                    ? 'col-span-2 row-span-2 aspect-square md:aspect-auto'
+                    : 'aspect-[4/5]'
+                }`}
               >
                 {r.photoUrl ? (
                   <>
@@ -59,22 +67,35 @@ export function RegionAtlas({ regions }: { regions: RegionTile[] }) {
                   </>
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="font-[family-name:var(--font-display)] text-[120px] font-normal italic text-white/15 leading-none select-none">
+                    <div className={`font-[family-name:var(--font-display)] font-normal italic text-white/15 leading-none select-none ${
+                      isHero ? 'text-[200px]' : 'text-[120px]'
+                    }`}>
                       {r.name.charAt(0)}
                     </div>
                   </div>
                 )}
 
-                <div className="absolute inset-0 flex flex-col justify-end p-4 text-white">
-                  <div className="text-[10px] font-medium tracking-widest uppercase text-white/60 mb-1">
+                <div className={`absolute inset-0 flex flex-col justify-end text-white ${
+                  isHero ? 'p-6 md:p-8' : 'p-4'
+                }`}>
+                  <div className={`font-medium tracking-widest uppercase text-white/70 mb-1 ${
+                    isHero ? 'text-[12px]' : 'text-[10px]'
+                  }`}>
                     {countryName(r.countryCode)}
                   </div>
-                  <div className="font-[family-name:var(--font-display)] text-2xl font-normal leading-tight mb-0.5">
+                  <div className={`font-[family-name:var(--font-display)] font-normal leading-tight mb-1 ${
+                    isHero ? 'text-4xl md:text-5xl' : 'text-2xl'
+                  }`}>
                     {r.name}
                   </div>
-                  <div className="text-[12px] text-white/70">
+                  <div className={`text-white/80 ${isHero ? 'text-[14px]' : 'text-[12px]'}`}>
                     {r.productCount} {r.productCount === 1 ? 'olej' : r.productCount < 5 ? 'oleje' : 'olejů'} z {genitive}
                   </div>
+                  {isHero && (
+                    <div className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-white border border-white/30 rounded-full px-3 py-1.5 w-fit group-hover:bg-white group-hover:text-olive-dark transition-colors">
+                      Prozkoumat oblast →
+                    </div>
+                  )}
                 </div>
               </Link>
             )
