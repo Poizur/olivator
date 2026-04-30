@@ -362,40 +362,31 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </div>
       </div>
 
-      {/* Variants — stejný brand+region, různé objemy. Posunuto VYŠŠ —
-          uživatel hned vidí že existují jiná balení, nemusí scrollovat dolů. */}
+      {/* Variants — kompaktní grid (6 v řadě), variants jsou "taky info"
+          ne hlavní atrakce. Stejný styl jako Podobné oleje níže. */}
       {variants.length > 0 && (
         <section className="mt-10 max-w-[1040px]">
           <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
             — Jiná balení
           </div>
-          <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-1">
+          <h2 className="font-[family-name:var(--font-display)] text-xl font-normal text-text mb-1">
             Stejný olej v jiných objemech
           </h2>
-          <p className="text-[13px] text-text3 mb-5">
+          <p className="text-[12px] text-text3 mb-4">
             {product.nameShort
-              ? `${product.nameShort}${product.originRegion ? ` z regionu ${product.originRegion}` : ''} v dalších balíccích`
-              : 'Stejný producent v dalších objemech'}
+              ? `${product.nameShort}${product.originRegion ? ` z regionu ${product.originRegion}` : ''}`
+              : 'Stejný producent v jiných balíccích'}
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
             {variants.map((v) => (
               <Link
                 key={v.id}
                 href={`/olej/${v.slug}`}
-                className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_12px_32px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:border-olive-light"
+                className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:border-olive-light"
               >
                 <div className="relative aspect-[4/5] bg-white overflow-hidden">
-                  <span className="absolute top-2.5 left-2.5 z-10 text-[10px] font-bold uppercase tracking-wider bg-white/90 backdrop-blur-sm text-text rounded px-2 py-1 shadow-sm">
-                    {v.volumeMl
-                      ? v.volumeMl >= 1000
-                        ? `${v.volumeMl / 1000} l`
-                        : `${v.volumeMl} ml`
-                      : '—'}
-                    {v.packaging === 'dark_glass' && ' · sklo'}
-                    {v.packaging === 'tin' && ' · plech'}
-                  </span>
                   {v.olivatorScore != null && v.olivatorScore > 0 && (
-                    <span className="absolute top-2.5 right-2.5 z-10 text-[12px] font-bold bg-terra text-white rounded-full w-10 h-10 flex items-center justify-center tabular-nums shadow-sm">
+                    <span className="absolute top-1.5 right-1.5 z-10 text-[10px] font-bold bg-terra text-white rounded-full w-7 h-7 flex items-center justify-center tabular-nums">
                       {v.olivatorScore}
                     </span>
                   )}
@@ -410,24 +401,35 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <span className="font-[family-name:var(--font-display)] text-[80px] italic text-text3/30 leading-none select-none">
+                        <span className="font-[family-name:var(--font-display)] text-[56px] italic text-text3/30 leading-none select-none">
                           {v.name.charAt(0)}
                         </span>
                       </div>
                     )}
                   </div>
                 </div>
-                <div className="p-3 flex-1 flex flex-col">
-                  <div className="text-[12px] font-semibold text-text leading-tight line-clamp-2 mb-2 min-h-[2.4em]">
-                    {v.name}
+                <div className="p-2.5 flex-1 flex flex-col">
+                  {/* Volume + balení místo full name — variants se odlišují objemem */}
+                  <div className="text-[12px] font-bold text-text mb-1 leading-tight">
+                    {v.volumeMl
+                      ? v.volumeMl >= 1000
+                        ? `${v.volumeMl / 1000} l`
+                        : `${v.volumeMl} ml`
+                      : '—'}
+                    {v.packaging === 'dark_glass' && (
+                      <span className="text-text3 font-normal text-[11px]"> · sklo</span>
+                    )}
+                    {v.packaging === 'tin' && (
+                      <span className="text-text3 font-normal text-[11px]"> · plech</span>
+                    )}
                   </div>
                   <div className="mt-auto">
                     {v.cheapestPrice ? (
-                      <div className="text-[15px] font-bold text-text tabular-nums">
+                      <div className="text-[13px] font-bold text-text tabular-nums">
                         {Math.round(v.cheapestPrice)} Kč
                       </div>
                     ) : (
-                      <div className="text-[12px] text-text3 italic">Cena chybí</div>
+                      <div className="text-[11px] text-text3 italic">—</div>
                     )}
                   </div>
                 </div>
