@@ -455,53 +455,107 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               </div>
             </div>
 
-            {/* Klíčové fakty na boku — sticky, doplňuje text */}
-            <aside className="lg:sticky lg:top-[100px] bg-olive-bg/40 border border-olive-border/40 rounded-[var(--radius-card)] p-5">
-              <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-3">
-                Rychlé fakty
-              </div>
-              <div className="space-y-3">
-                {product.acidity != null && (
+            {/* Sticky aside — Rychlé fakty + Souvislosti pod sebou */}
+            <aside className="lg:sticky lg:top-[100px] space-y-4">
+              {/* Rychlé fakty */}
+              <div className="bg-olive-bg/40 border border-olive-border/40 rounded-[var(--radius-card)] p-5">
+                <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-3">
+                  Rychlé fakty
+                </div>
+                <div className="space-y-3">
+                  {product.acidity != null && (
+                    <FactRow
+                      label="Kyselost"
+                      value={`${product.acidity} %`}
+                      note={product.acidity <= 0.3 ? 'výrazně pod limitem 0,8 %' : 'pod limitem 0,8 %'}
+                    />
+                  )}
+                  {product.polyphenols != null && (
+                    <FactRow
+                      label="Polyfenoly"
+                      value={`${product.polyphenols} mg/kg`}
+                      note={
+                        product.polyphenols >= 500
+                          ? 'splňuje EU health claim (≥250)'
+                          : product.polyphenols >= 250
+                          ? 'splňuje EU health claim'
+                          : 'nižší obsah'
+                      }
+                    />
+                  )}
+                  {product.harvestYear && (
+                    <FactRow label="Sklizeň" value={String(product.harvestYear)} />
+                  )}
                   <FactRow
-                    label="Kyselost"
-                    value={`${product.acidity} %`}
-                    note={product.acidity <= 0.3 ? 'výrazně pod limitem 0,8 %' : 'pod limitem 0,8 %'}
-                  />
-                )}
-                {product.polyphenols != null && (
-                  <FactRow
-                    label="Polyfenoly"
-                    value={`${product.polyphenols} mg/kg`}
+                    label="Score"
+                    value={`${product.olivatorScore}/100`}
                     note={
-                      product.polyphenols >= 500
-                        ? 'splňuje EU health claim (≥250)'
-                        : product.polyphenols >= 250
-                        ? 'splňuje EU health claim'
-                        : 'nižší obsah'
+                      product.olivatorScore >= 80
+                        ? 'výjimečná kvalita'
+                        : product.olivatorScore >= 60
+                        ? 'kvalitní EVOO'
+                        : 'standardní'
                     }
                   />
-                )}
-                {product.harvestYear && (
-                  <FactRow label="Sklizeň" value={String(product.harvestYear)} />
-                )}
-                <FactRow
-                  label="Score"
-                  value={`${product.olivatorScore}/100`}
-                  note={
-                    product.olivatorScore >= 80
-                      ? 'výjimečná kvalita'
-                      : product.olivatorScore >= 60
-                      ? 'kvalitní EVOO'
-                      : 'standardní'
-                  }
-                />
-                {product.certifications.length > 0 && (
-                  <FactRow
-                    label="Certifikace"
-                    value={product.certifications.map(certLabel).join(', ')}
-                  />
-                )}
+                  {product.certifications.length > 0 && (
+                    <FactRow
+                      label="Certifikace"
+                      value={product.certifications.map(certLabel).join(', ')}
+                    />
+                  )}
+                </div>
               </div>
+
+              {/* Souvislosti — region / značka / odrůda jako kompaktní seznam */}
+              {(entityLinks.region || entityLinks.brand || entityLinks.cultivars.length > 0) && (
+                <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-5">
+                  <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-3">
+                    Souvislosti
+                  </div>
+                  <div className="space-y-2.5">
+                    {entityLinks.region && (
+                      <Link
+                        href={`/oblast/${entityLinks.region.slug}`}
+                        className="block group"
+                      >
+                        <div className="text-[10px] font-medium text-text3 uppercase tracking-wider mb-0.5">
+                          Oblast
+                        </div>
+                        <div className="font-[family-name:var(--font-display)] text-[18px] text-text group-hover:text-olive transition-colors leading-tight">
+                          {entityLinks.region.name} →
+                        </div>
+                      </Link>
+                    )}
+                    {entityLinks.brand && (
+                      <Link
+                        href={`/znacka/${entityLinks.brand.slug}`}
+                        className="block group pt-2.5 border-t border-off"
+                      >
+                        <div className="text-[10px] font-medium text-text3 uppercase tracking-wider mb-0.5">
+                          Značka
+                        </div>
+                        <div className="font-[family-name:var(--font-display)] text-[18px] text-text group-hover:text-olive transition-colors leading-tight">
+                          {entityLinks.brand.name} →
+                        </div>
+                      </Link>
+                    )}
+                    {entityLinks.cultivars.map((c) => (
+                      <Link
+                        key={c.slug}
+                        href={`/odruda/${c.slug}`}
+                        className="block group pt-2.5 border-t border-off"
+                      >
+                        <div className="text-[10px] font-medium text-text3 uppercase tracking-wider mb-0.5">
+                          Odrůda
+                        </div>
+                        <div className="font-[family-name:var(--font-display)] text-[18px] text-text group-hover:text-olive transition-colors leading-tight">
+                          {c.name} →
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
             </aside>
           </div>
         </section>
@@ -652,69 +706,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </div>
         </section>
       )}
-      {/* Prozkoumejte více — region / značka / odrůdy jako velké dlaždice */}
-      {(entityLinks.region || entityLinks.brand || entityLinks.cultivars.length > 0) && (
-        <section className="mt-14 max-w-[1280px] mb-12">
-          <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
-            — Souvislosti
-          </div>
-          <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-3xl font-normal text-text mb-6 leading-tight">
-            Prozkoumejte více
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {entityLinks.region && (
-              <Link
-                href={`/oblast/${entityLinks.region.slug}`}
-                className="group bg-olive-bg border border-olive-border rounded-[var(--radius-card)] p-5 hover:bg-olive-dark hover:border-olive-dark transition-all hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <div className="text-[10px] font-bold tracking-widest uppercase text-olive group-hover:text-white/70 mb-2 transition-colors">
-                  Oblast
-                </div>
-                <div className="font-[family-name:var(--font-display)] text-2xl text-text group-hover:text-white leading-tight mb-2 transition-colors">
-                  {entityLinks.region.name}
-                </div>
-                <div className="text-[12px] text-text2 group-hover:text-white/80 transition-colors">
-                  Další oleje z oblasti →
-                </div>
-              </Link>
-            )}
-            {entityLinks.brand && (
-              <Link
-                href={`/znacka/${entityLinks.brand.slug}`}
-                className="group bg-olive-bg border border-olive-border rounded-[var(--radius-card)] p-5 hover:bg-olive-dark hover:border-olive-dark transition-all hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <div className="text-[10px] font-bold tracking-widest uppercase text-olive group-hover:text-white/70 mb-2 transition-colors">
-                  Značka
-                </div>
-                <div className="font-[family-name:var(--font-display)] text-2xl text-text group-hover:text-white leading-tight mb-2 transition-colors">
-                  {entityLinks.brand.name}
-                </div>
-                <div className="text-[12px] text-text2 group-hover:text-white/80 transition-colors">
-                  Další oleje od značky →
-                </div>
-              </Link>
-            )}
-            {entityLinks.cultivars.map((c) => (
-              <Link
-                key={c.slug}
-                href={`/odruda/${c.slug}`}
-                className="group bg-olive-bg border border-olive-border rounded-[var(--radius-card)] p-5 hover:bg-olive-dark hover:border-olive-dark transition-all hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <div className="text-[10px] font-bold tracking-widest uppercase text-olive group-hover:text-white/70 mb-2 transition-colors">
-                  Odrůda
-                </div>
-                <div className="font-[family-name:var(--font-display)] text-2xl text-text group-hover:text-white leading-tight mb-2 transition-colors">
-                  {c.name}
-                </div>
-                <div className="text-[12px] text-text2 group-hover:text-white/80 transition-colors">
-                  Profil odrůdy + další oleje →
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
       </div>
     </div>
   )
