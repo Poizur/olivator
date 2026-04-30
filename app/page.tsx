@@ -94,7 +94,7 @@ export default async function Home() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 md:gap-3">
             {topTwelve.map((p, i) => (
               <TopProductCard
                 key={p.id}
@@ -518,60 +518,56 @@ function TopProductCard({
           Aspekt 4:5 (užší/vyšší než 3:4) protože lahve mají natural portrait.
           bg-white sjednotí s bílým paddingem v product fotech (žádná viditelná hranice). */}
       <div className="relative aspect-[4/5] bg-white overflow-hidden">
-        {/* Auto badge — superlativ v čem olej vyniká (Top Score, Nejvíc polyfenolů, BIO …) */}
+        {/* Auto badge — superlativ v čem olej vyniká */}
         {badge && (
           <span
-            className={`absolute top-2.5 left-2.5 z-10 text-[10px] font-bold uppercase tracking-wider rounded-full px-2 py-1 shadow-sm ${badgeClass(badge.tone)}`}
+            className={`absolute top-1.5 left-1.5 z-10 text-[9px] font-bold uppercase tracking-wider rounded-full px-1.5 py-0.5 shadow-sm ${badgeClass(badge.tone)}`}
             title={badge.hint}
           >
             {badge.label}
           </span>
         )}
-        {/* Rank — když má badge, jde do druhé pozice (pod badge) */}
         {!badge && (
-          <span className="absolute top-2.5 left-2.5 z-10 text-[11px] font-bold tracking-widest uppercase text-text bg-white/90 backdrop-blur-sm rounded px-2 py-1 shadow-sm">
+          <span className="absolute top-1.5 left-1.5 z-10 text-[10px] font-bold tracking-widest uppercase text-text bg-white/90 backdrop-blur-sm rounded px-1.5 py-0.5 shadow-sm">
             #{rank}
           </span>
         )}
-        {/* Score VĚTŠÍ — vpravo nahoře, výraznější terra pill */}
-        <span className="absolute top-2.5 right-2.5 z-10 text-[15px] font-bold bg-terra text-white rounded-full w-11 h-11 flex items-center justify-center tabular-nums shadow-md">
+        {/* Score — menší kruh pro užší kartu */}
+        <span className="absolute top-1.5 right-1.5 z-10 text-[12px] font-bold bg-terra text-white rounded-full w-9 h-9 flex items-center justify-center tabular-nums shadow-md">
           {product.olivatorScore}
         </span>
-        {/* Vlajka země — levý dolní roh přes obrázek */}
+        {/* Vlajka — menší */}
         <span
-          className="absolute bottom-2.5 left-2.5 z-10 text-[20px] leading-none bg-white/90 backdrop-blur-sm rounded px-1.5 py-1 shadow-sm"
+          className="absolute bottom-1.5 left-1.5 z-10 text-[16px] leading-none bg-white/90 backdrop-blur-sm rounded px-1 py-0.5 shadow-sm"
           aria-label={countryName(product.originCountry)}
           title={countryName(product.originCountry)}
         >
           {countryFlag(product.originCountry)}
         </span>
-        {/* Obrázek vyplňuje celou kartu, mírný hover scale */}
         <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
           <ProductImage
             product={product}
-            fallbackSize="text-[80px]"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 240px"
+            fallbackSize="text-[60px]"
+            sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 200px"
           />
         </div>
       </div>
 
-      {/* Textová část */}
-      <div className="p-3 flex-1 flex flex-col">
-        <div className="text-[9px] text-text3 mb-0.5 uppercase tracking-widest font-medium">
-          {countryName(product.originCountry)}
-        </div>
-        <div className="text-[12px] font-semibold text-text leading-tight mb-2 line-clamp-2 min-h-[2.4em]">
+      {/* Textová část — kompaktní */}
+      <div className="p-2.5 flex-1 flex flex-col">
+        <div className="text-[11px] font-semibold text-text leading-tight mb-1.5 line-clamp-2 min-h-[2.4em]">
           {product.name}
         </div>
 
         {product.cheapestOffer && (
-          <div className="mt-auto pt-2 border-t border-off flex items-baseline gap-2 flex-wrap">
-            <div className="text-[15px] font-bold text-text leading-tight tabular-nums">
-              {formatPrice(product.cheapestOffer.price)}
-            </div>
-            {/* Cena za 100 ml — TERRA badge, mnohem viditelnější */}
-            <div className="text-[10px] font-semibold text-terra bg-terra-bg rounded px-1.5 py-0.5 tabular-nums">
-              {formatPricePer100ml(product.cheapestOffer.price, product.volumeMl)}
+          <div className="mt-auto pt-1.5 border-t border-off">
+            <div className="flex items-baseline gap-1.5 flex-wrap">
+              <div className="text-[13px] font-bold text-text leading-tight tabular-nums">
+                {formatPrice(product.cheapestOffer.price)}
+              </div>
+              <div className="text-[9px] font-semibold text-terra bg-terra-bg rounded px-1 py-0.5 tabular-nums">
+                {formatPricePer100ml(product.cheapestOffer.price, product.volumeMl)}
+              </div>
             </div>
           </div>
         )}
