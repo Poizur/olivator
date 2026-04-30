@@ -12,16 +12,19 @@ type NavLink = { href: string; label: string; badge?: number; badgeTone?: 'amber
 type NavSection = { group?: string; items: NavLink[] }
 
 async function getBadges(): Promise<Record<string, { value: number; tone: 'amber' | 'red' | 'olive' }>> {
-  const [drafts, pendingDiscovery, qualityIssues] = await Promise.all([
+  const [drafts, pendingDiscovery, qualityIssues, draftBrands] = await Promise.all([
     supabaseAdmin.from('products').select('*', { count: 'exact', head: true }).eq('status', 'draft'),
     supabaseAdmin.from('discovery_candidates').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
     supabaseAdmin.from('products').select('*', { count: 'exact', head: true }).lt('completeness_score', 50),
+    // Auto-vytvořené brand stubs (status='draft') — admin musí doplnit obsah
+    supabaseAdmin.from('brands').select('*', { count: 'exact', head: true }).eq('status', 'draft'),
   ])
 
   const badges: Record<string, { value: number; tone: 'amber' | 'red' | 'olive' }> = {}
   if ((drafts.count ?? 0) > 0) badges['/admin/products'] = { value: drafts.count!, tone: 'amber' }
   if ((pendingDiscovery.count ?? 0) > 0) badges['/admin/discovery'] = { value: pendingDiscovery.count!, tone: 'olive' }
   if ((qualityIssues.count ?? 0) > 0) badges['/admin/quality'] = { value: qualityIssues.count!, tone: 'red' }
+  if ((draftBrands.count ?? 0) > 0) badges['/admin/brands'] = { value: draftBrands.count!, tone: 'amber' }
   return badges
 }
 
@@ -51,7 +54,12 @@ export async function AdminSidebar() {
           badgeTone: badges['/admin/products']?.tone,
         },
         { href: '/admin/regions', label: 'Regiony' },
-        { href: '/admin/brands', label: 'Značky' },
+        {
+          href: '/admin/brands',
+          label: 'Značky',
+          badge: badges['/admin/brands']?.value,
+          badgeTone: badges['/admin/brands']?.tone,
+        },
         { href: '/admin/cultivars', label: 'Odrůdy' },
       ],
     },

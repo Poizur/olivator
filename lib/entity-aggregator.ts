@@ -156,6 +156,12 @@ export async function recomputeAllCultivars(): Promise<{ updated: number; skippe
  * Po publishCandidate: zavolat extract entities + uložit linky + spustit
  * recompute pro každou dotčenou odrůdu. Best-effort — selhání nesmí
  * zablokovat publish.
+ *
+ * Hybrid přístup pro entity creation:
+ * - Region/cultivar = WHITELIST (predefined list v entity-extractor.ts).
+ *   Když nematchne, slug se NEpřiřadí (žádný orphan).
+ * - Brand = AUTO-CREATE STUB s status='draft' + countryCode z produktu.
+ *   Admin to uvidí v /admin/brands jako "K doplnění" a vyplní detaily.
  */
 export async function linkAndRecomputeForProduct(
   productId: string,
@@ -172,6 +178,11 @@ export async function linkAndRecomputeForProduct(
     const brandSlug = extractBrandSlug(productName)
     const regionSlug = extractRegionSlug(productOriginCountry ?? '', productOriginRegion ?? '')
     const cultivars = detectCultivars(productName, productDescription ?? null)
+
+    // ── Brand: auto-create stub pokud neexistuje ────────────────────────
+    if (brandSlug) {
+      await ensureBrandStub(brandSlug, productName, productOriginCountry)
+    }
 
     const patch: Record<string, string> = {}
     if (brandSlug) patch.brand_slug = brandSlug
@@ -195,5 +206,64 @@ export async function linkAndRecomputeForProduct(
     await Promise.all(affectedCultivars.map((slug) => recomputeCultivar(slug)))
   } catch (err) {
     console.warn('[entity-aggregator] linkAndRecompute failed:', err)
+  }
+}
+
+// Generické prefixy které NIKDY nemají vznikat jako brand (false positive
+// z extractBrandSlug když jméno začíná general adjektivem). Whitelist
+// chrání před balastem v /admin/brands.
+const BRAND_BLACKLIST = new Set([
+  'extra', 'premium', 'organic', 'bio', 'eco',
+  'olivovy', 'olivový', 'olivovy-olej',
+  'griechisches', 'cretan', 'italian', 'spanish',
+  'panenský', 'panensky',
+])
+
+/**
+ * Vytvoří stub záznam v brands tabulce pokud slug ještě neexistuje.
+ * Stub má jen slug + name (z produktového jména) + status='draft'.
+ * Admin to uvidí v /admin/brands jako "k doplnění" a doplní:
+ * - Příběh / philosophy / website
+ * - Country code (z produktu jako default)
+ * - Status → 'active' až po doplnění
+ *
+ * Status='draft' znamená že /znacka/[slug] může vrátit 404 nebo zobrazit
+ * placeholder dokud admin nedoplní obsah.
+ */
+async function ensureBrandStub(
+  slug: string,
+  productName: string,
+  countryCode: string | null
+): Promise<void> {
+  // Sanity check — generic prefixes nesmí vznikat jako značka
+  if (BRAND_BLACKLIST.has(slug)) {
+    return
+  }
+  if (slug.length < 2) return
+
+  // Zjistí jestli brand existuje. Pokud ano, nic neděláme.
+  const { data: existing } = await supabaseAdmin
+    .from('brands')
+    .select('id')
+    .eq('slug', slug)
+    .maybeSingle()
+  if (existing) return
+
+  // Auto-derive jméno: první slovo z product name (case preserve)
+  // např. "SITIA Kréta PREMIUM..." → "SITIA"
+  // Lepší než slug "sitia" (lowercase).
+  const firstWord = productName.split(/\s+/)[0] ?? slug
+  const displayName = firstWord.length >= 2 ? firstWord : slug
+
+  const { error } = await supabaseAdmin.from('brands').insert({
+    slug,
+    name: displayName,
+    country_code: countryCode ?? 'XX',  // XX placeholder — admin opraví
+    status: 'draft',
+  })
+  if (error) {
+    console.warn(`[entity-aggregator] brand stub insert failed for ${slug}:`, error.message)
+  } else {
+    console.log(`[entity-aggregator] auto-created brand stub: ${slug} (${displayName})`)
   }
 }
