@@ -631,11 +631,12 @@ function FeaturedTip({
             {product.name}
           </div>
           {product.cheapestOffer && (
-            <div className="mt-auto flex items-baseline gap-2">
+            <div className="mt-auto flex items-baseline gap-2 flex-wrap">
               <span className="text-[15px] font-bold text-text tabular-nums">
                 {formatPrice(product.cheapestOffer.price)}
               </span>
-              <span className="text-[10px] text-text3 tabular-nums">
+              {/* Cena/100ml — stejný terra badge jako v TopProductCard */}
+              <span className="text-[10px] font-semibold text-terra bg-terra-bg rounded px-1.5 py-0.5 tabular-nums">
                 {formatPricePer100ml(product.cheapestOffer.price, product.volumeMl)}
               </span>
             </div>
