@@ -478,6 +478,7 @@ export interface VariantProduct {
   packaging: string | null
   cheapestPrice: number | null
   olivatorScore: number | null
+  imageUrl: string | null
 }
 
 /** Find sibling products of given product (same brand + region + base name).
@@ -499,7 +500,7 @@ export async function getVariantProducts(productId: string): Promise<VariantProd
   // Match products with same brand. If no brand, fall back to same region.
   let query = supabaseAdmin
     .from('products')
-    .select('id, slug, name, volume_ml, packaging, olivator_score, name_short, origin_region')
+    .select('id, slug, name, volume_ml, packaging, olivator_score, name_short, origin_region, image_url')
     .eq('status', 'active')
     .neq('id', productId)
   if (brand) {
@@ -542,6 +543,7 @@ export async function getVariantProducts(productId: string): Promise<VariantProd
       packaging: c.packaging as string | null,
       cheapestPrice: cheapestByProduct.get(c.id as string) ?? null,
       olivatorScore: c.olivator_score as number | null,
+      imageUrl: c.image_url as string | null,
     }))
     .sort((a, b) => (a.volumeMl ?? 0) - (b.volumeMl ?? 0))
 }

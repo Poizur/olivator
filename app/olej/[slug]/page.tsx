@@ -82,29 +82,40 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const cheapest = offers[0]
 
   // Find 3 similar products for "Porovnat s podobnými" CTA — různá značka,
-  // podobné Score/origin/certifikace. Same algorithm as comparator suggestions.
+  // podobné Score/origin/certifikace + reason (proč jsou podobné)
   const similarProducts = (() => {
     const candidates = allProducts.filter(
       (p) => p.id !== product.id && p.nameShort !== product.nameShort
     )
     const scored = candidates.map((p) => {
+      const reasons: string[] = []
       let s = 0
-      if (p.originCountry === product.originCountry) s += 0.3
-      if (p.originRegion && p.originRegion === product.originRegion) s += 0.2
+      if (p.originRegion && p.originRegion === product.originRegion) {
+        s += 0.5
+        reasons.push(`stejná oblast (${p.originRegion})`)
+      } else if (p.originCountry === product.originCountry) {
+        s += 0.3
+        reasons.push(`stejná země`)
+      }
       const scoreDiff = Math.abs(p.olivatorScore - product.olivatorScore)
-      s += Math.max(0, (20 - scoreDiff) / 20) * 0.2
+      if (scoreDiff <= 10) {
+        s += 0.2
+        reasons.push(`Score ±${scoreDiff || 0}`)
+      }
       const sharedCerts = p.certifications.filter((c) =>
         product.certifications.includes(c)
-      ).length
-      s += Math.min(sharedCerts * 0.1, 0.2)
+      )
+      if (sharedCerts.length > 0) {
+        s += Math.min(sharedCerts.length * 0.1, 0.2)
+        reasons.push(sharedCerts.map((c) => c.toUpperCase()).join(', '))
+      }
       if (p.type === product.type) s += 0.1
-      return { product: p, similarity: s }
+      return { product: p, similarity: s, reason: reasons[0] ?? 'podobný profil' }
     })
     return scored
       .filter((x) => x.similarity >= 0.2)
       .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, 3)
-      .map((x) => x.product)
+      .slice(0, 6)  // až 6 podobných (predtím 3)
   })()
 
   // Transparent spec table — missing data shown as "— nezveřejněno" in italics
@@ -338,19 +349,75 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </div>
       </div>
 
-      {/* Long description — SEO content */}
+      {/* Long description — bohatší 2-col layout: text vlevo + key facts vpravo */}
       {product.descriptionLong && (
-        <section className="mt-14 max-w-[720px] mx-auto">
-          <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-4">
-            O tomto oleji
-          </h2>
-          <div className="text-[15px] text-text2 leading-relaxed whitespace-pre-line">
-            {product.descriptionLong}
+        <section className="mt-14 max-w-[1040px]">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-10 items-start">
+            <div>
+              <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
+                — Editorial
+              </div>
+              <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-3xl font-normal text-text mb-5 leading-tight">
+                O tomto oleji
+              </h2>
+              <div className="text-[15px] text-text2 leading-relaxed whitespace-pre-line">
+                {product.descriptionLong}
+              </div>
+            </div>
+
+            {/* Klíčové fakty na boku — sticky, doplňuje text */}
+            <aside className="lg:sticky lg:top-[100px] bg-olive-bg/40 border border-olive-border/40 rounded-[var(--radius-card)] p-5">
+              <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-3">
+                Rychlé fakty
+              </div>
+              <div className="space-y-3">
+                {product.acidity != null && (
+                  <FactRow
+                    label="Kyselost"
+                    value={`${product.acidity} %`}
+                    note={product.acidity <= 0.3 ? 'výrazně pod limitem 0,8 %' : 'pod limitem 0,8 %'}
+                  />
+                )}
+                {product.polyphenols != null && (
+                  <FactRow
+                    label="Polyfenoly"
+                    value={`${product.polyphenols} mg/kg`}
+                    note={
+                      product.polyphenols >= 500
+                        ? 'splňuje EU health claim (≥250)'
+                        : product.polyphenols >= 250
+                        ? 'splňuje EU health claim'
+                        : 'nižší obsah'
+                    }
+                  />
+                )}
+                {product.harvestYear && (
+                  <FactRow label="Sklizeň" value={String(product.harvestYear)} />
+                )}
+                <FactRow
+                  label="Score"
+                  value={`${product.olivatorScore}/100`}
+                  note={
+                    product.olivatorScore >= 80
+                      ? 'výjimečná kvalita'
+                      : product.olivatorScore >= 60
+                      ? 'kvalitní EVOO'
+                      : 'standardní'
+                  }
+                />
+                {product.certifications.length > 0 && (
+                  <FactRow
+                    label="Certifikace"
+                    value={product.certifications.map(certLabel).join(', ')}
+                  />
+                )}
+              </div>
+            </aside>
           </div>
         </section>
       )}
 
-      {/* Porovnat s podobnými — vizuálně bohatá sekce s fotky + key metrics */}
+      {/* Podobné oleje — menší karty 6 v řadě s "Proč podobné" badge */}
       {similarProducts.length >= 2 && (
         <section className="mt-12 max-w-[1040px]">
           <div className="flex items-end justify-between mb-5 flex-wrap gap-4">
@@ -358,30 +425,29 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
                 — Podobné oleje
               </div>
-              <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-3xl font-normal text-text leading-tight">
-                Postavit vedle podobných?
+              <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text leading-tight">
+                Vyzkoušíš jiný?
               </h2>
               <p className="text-[13px] text-text2 mt-1">
-                Vidíš jak si {product.nameShort} stojí oproti {similarProducts.length} dalším — Score, kyselost, polyfenoly, cena.
+                {similarProducts.length} olejů s podobným profilem — region, score nebo certifikace.
               </p>
             </div>
             <Link
-              href={`/porovnani/${[product, ...similarProducts].map((p) => p.slug).join('-vs-')}`}
+              href={`/porovnani/${[product, ...similarProducts.map((s) => s.product)].map((p) => p.slug).join('-vs-')}`}
               className="bg-olive text-white rounded-full px-5 py-2.5 text-[13px] font-medium hover:bg-olive-dark transition-colors whitespace-nowrap shadow-sm"
             >
               Srovnat všechny →
             </Link>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {similarProducts.map((p) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+            {similarProducts.map(({ product: p, reason }) => (
               <Link
                 key={p.id}
                 href={`/olej/${p.slug}`}
-                className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_12px_32px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:border-olive-light"
+                className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:border-olive-light"
               >
                 <div className="relative aspect-[4/5] bg-white overflow-hidden">
-                  {/* Score badge */}
-                  <span className="absolute top-2.5 right-2.5 z-10 text-[12px] font-bold bg-terra text-white rounded-full w-10 h-10 flex items-center justify-center tabular-nums shadow-sm">
+                  <span className="absolute top-1.5 right-1.5 z-10 text-[10px] font-bold bg-terra text-white rounded-full w-7 h-7 flex items-center justify-center tabular-nums">
                     {p.olivatorScore}
                   </span>
                   <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
@@ -395,32 +461,22 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <span className="font-[family-name:var(--font-display)] text-[80px] italic text-text3/30 leading-none select-none">
+                        <span className="font-[family-name:var(--font-display)] text-[56px] italic text-text3/30 leading-none select-none">
                           {p.name.charAt(0)}
                         </span>
                       </div>
                     )}
                   </div>
                 </div>
-                <div className="p-3 flex-1 flex flex-col">
-                  <div className="text-[9px] text-text3 mb-0.5 uppercase tracking-widest font-medium">
-                    {countryName(p.originCountry)}
-                  </div>
-                  <div className="text-[12px] font-semibold text-text leading-tight line-clamp-2 mb-2 min-h-[2.4em]">
+                <div className="p-2.5 flex-1 flex flex-col">
+                  <div className="text-[11px] font-semibold text-text leading-tight line-clamp-2 mb-1.5">
                     {p.name}
                   </div>
-                  {/* Key metrics */}
-                  <div className="flex flex-wrap gap-1 mb-2 text-[10px]">
-                    {p.acidity != null && (
-                      <span className="bg-olive-bg text-olive-dark px-1.5 py-0.5 rounded">
-                        kys. {p.acidity}%
-                      </span>
-                    )}
-                    {p.polyphenols != null && (
-                      <span className="bg-amber-50 text-amber-800 px-1.5 py-0.5 rounded">
-                        {p.polyphenols} mg/kg
-                      </span>
-                    )}
+                  {/* Reason chip — proč je podobný */}
+                  <div className="mt-auto">
+                    <span className="inline-block text-[9px] font-medium text-olive-dark bg-olive-bg px-1.5 py-0.5 rounded tracking-tight">
+                      ✓ {reason}
+                    </span>
                   </div>
                 </div>
               </Link>
@@ -429,45 +485,74 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </section>
       )}
 
-      {/* Variants — same brand+region, different sizes */}
+      {/* Variants — stejný brand+region, různé objemy. Karty s fotem. */}
       {variants.length > 0 && (
         <section className="mt-12 max-w-[1040px]">
-          <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-2">
-            Stejný olej v jiných baleních
+          <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
+            — Jiná balení
+          </div>
+          <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-1">
+            Stejný olej v jiných objemech
           </h2>
-          <p className="text-[13px] text-text3 mb-4">
+          <p className="text-[13px] text-text3 mb-5">
             {product.nameShort
-              ? `${product.nameShort} z regionu ${product.originRegion ?? ''} v dalších objemech`
+              ? `${product.nameShort}${product.originRegion ? ` z regionu ${product.originRegion}` : ''} v dalších balíccích`
               : 'Stejný producent v dalších objemech'}
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {variants.map(v => (
+            {variants.map((v) => (
               <Link
                 key={v.id}
                 href={`/olej/${v.slug}`}
-                className="bg-white border border-off2 rounded-lg p-4 hover:border-olive-light transition-colors group"
+                className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_12px_32px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:border-olive-light"
               >
-                <div className="text-[11px] uppercase tracking-wider text-text3 mb-1">
-                  {v.volumeMl ? `${v.volumeMl >= 1000 ? `${v.volumeMl / 1000} l` : `${v.volumeMl} ml`}` : '—'}
-                  {v.packaging === 'dark_glass' && ' · sklo'}
-                  {v.packaging === 'tin' && ' · plech'}
-                </div>
-                <div className="text-[13px] font-medium text-text group-hover:text-olive-dark line-clamp-2 mb-2">
-                  {v.name}
-                </div>
-                <div className="flex items-end justify-between">
-                  {v.cheapestPrice ? (
-                    <div className="text-base font-semibold text-text">
-                      {Math.round(v.cheapestPrice)} Kč
-                    </div>
-                  ) : (
-                    <div className="text-[12px] text-text3 italic">Cena chybí</div>
-                  )}
+                <div className="relative aspect-[4/5] bg-white overflow-hidden">
+                  {/* Volume + balení badge vlevo nahoře */}
+                  <span className="absolute top-2.5 left-2.5 z-10 text-[10px] font-bold uppercase tracking-wider bg-white/90 backdrop-blur-sm text-text rounded px-2 py-1 shadow-sm">
+                    {v.volumeMl
+                      ? v.volumeMl >= 1000
+                        ? `${v.volumeMl / 1000} l`
+                        : `${v.volumeMl} ml`
+                      : '—'}
+                    {v.packaging === 'dark_glass' && ' · sklo'}
+                    {v.packaging === 'tin' && ' · plech'}
+                  </span>
                   {v.olivatorScore != null && v.olivatorScore > 0 && (
-                    <div className="text-[10px] bg-terra text-white rounded-full px-2 py-0.5 font-bold">
+                    <span className="absolute top-2.5 right-2.5 z-10 text-[12px] font-bold bg-terra text-white rounded-full w-10 h-10 flex items-center justify-center tabular-nums shadow-sm">
                       {v.olivatorScore}
-                    </div>
+                    </span>
                   )}
+                  <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
+                    {v.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={v.imageUrl}
+                        alt={v.name}
+                        className="w-full h-full object-contain"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="font-[family-name:var(--font-display)] text-[80px] italic text-text3/30 leading-none select-none">
+                          {v.name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="p-3 flex-1 flex flex-col">
+                  <div className="text-[12px] font-semibold text-text leading-tight line-clamp-2 mb-2 min-h-[2.4em]">
+                    {v.name}
+                  </div>
+                  <div className="mt-auto">
+                    {v.cheapestPrice ? (
+                      <div className="text-[15px] font-bold text-text tabular-nums">
+                        {Math.round(v.cheapestPrice)} Kč
+                      </div>
+                    ) : (
+                      <div className="text-[12px] text-text3 italic">Cena chybí</div>
+                    )}
+                  </div>
                 </div>
               </Link>
             ))}
@@ -475,65 +560,72 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </section>
       )}
 
-      {/* FAQ — Two sections, rich snippets in Google */}
-      {productFAQs.length > 0 && (
-        <section className="mt-14 max-w-[720px] mx-auto mb-6">
-          <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-2">
-            Často se ptáte na tento olej
-          </h2>
-          <p className="text-[13px] text-text3 mb-6">
-            Konkrétní otázky o {product.nameShort} — odpovědi z našich dat
-          </p>
-          <div className="space-y-3">
-            {productFAQs.map((faq, i) => (
-              <details
-                key={`p-${i}`}
-                className="bg-white border border-off2 rounded-[var(--radius-card)] p-5 group"
-              >
-                <summary className="cursor-pointer list-none flex items-start justify-between gap-4">
-                  <h3 className="text-[15px] font-medium text-text leading-tight">
-                    {faq.question}
-                  </h3>
-                  <span className="text-text3 text-xl shrink-0 group-open:rotate-180 transition-transform">
-                    ⌄
-                  </span>
-                </summary>
-                <div className="mt-3 text-[14px] text-text2 leading-relaxed">
-                  {faq.answer}
-                </div>
-              </details>
-            ))}
+      {/* FAQ — sjednocené side-by-side: tento olej vs obecné otázky.
+          Místo dvou protáhlých sekcí pod sebou je to teď 2-col grid. */}
+      {(productFAQs.length > 0 || generalFAQs.length > 0) && (
+        <section className="mt-14 max-w-[1040px] mb-12">
+          <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
+            — FAQ
           </div>
-        </section>
-      )}
-
-      {generalFAQs.length > 0 && (
-        <section className="mt-10 max-w-[720px] mx-auto mb-12">
-          <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-2">
-            Co lidé hledají o olivovém oleji
+          <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-3xl font-normal text-text mb-6 leading-tight">
+            Časté otázky
           </h2>
-          <p className="text-[13px] text-text3 mb-6">
-            Obecné otázky o výběru, kvalitě a používání — užitečné než si pořídíš svou lahev
-          </p>
-          <div className="space-y-3">
-            {generalFAQs.map((faq, i) => (
-              <details
-                key={`g-${i}`}
-                className="bg-white border border-off2 rounded-[var(--radius-card)] p-5 group"
-              >
-                <summary className="cursor-pointer list-none flex items-start justify-between gap-4">
-                  <h3 className="text-[15px] font-medium text-text leading-tight">
-                    {faq.question}
-                  </h3>
-                  <span className="text-text3 text-xl shrink-0 group-open:rotate-180 transition-transform">
-                    ⌄
-                  </span>
-                </summary>
-                <div className="mt-3 text-[14px] text-text2 leading-relaxed">
-                  {faq.answer}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {productFAQs.length > 0 && (
+              <div>
+                <h3 className="text-[13px] font-semibold text-text mb-3">
+                  O tomto oleji
+                </h3>
+                <div className="space-y-2">
+                  {productFAQs.map((faq, i) => (
+                    <details
+                      key={`p-${i}`}
+                      className="bg-white border border-off2 rounded-[var(--radius-card)] group"
+                    >
+                      <summary className="cursor-pointer list-none flex items-start justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+                        <h4 className="text-[14px] font-medium text-text leading-snug">
+                          {faq.question}
+                        </h4>
+                        <span className="text-text3 text-sm shrink-0 group-open:rotate-180 transition-transform">
+                          ▾
+                        </span>
+                      </summary>
+                      <div className="px-4 pb-4 pt-0 text-[13px] text-text2 leading-relaxed">
+                        {faq.answer}
+                      </div>
+                    </details>
+                  ))}
                 </div>
-              </details>
-            ))}
+              </div>
+            )}
+
+            {generalFAQs.length > 0 && (
+              <div>
+                <h3 className="text-[13px] font-semibold text-text mb-3">
+                  O olivovém oleji obecně
+                </h3>
+                <div className="space-y-2">
+                  {generalFAQs.map((faq, i) => (
+                    <details
+                      key={`g-${i}`}
+                      className="bg-white border border-off2 rounded-[var(--radius-card)] group"
+                    >
+                      <summary className="cursor-pointer list-none flex items-start justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+                        <h4 className="text-[14px] font-medium text-text leading-snug">
+                          {faq.question}
+                        </h4>
+                        <span className="text-text3 text-sm shrink-0 group-open:rotate-180 transition-transform">
+                          ▾
+                        </span>
+                      </summary>
+                      <div className="px-4 pb-4 pt-0 text-[13px] text-text2 leading-relaxed">
+                        {faq.answer}
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -577,6 +669,27 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       )}
 
       </div>
+    </div>
+  )
+}
+
+// Inline fact řádek pro "O tomto oleji" sidebar.
+function FactRow({
+  label,
+  value,
+  note,
+}: {
+  label: string
+  value: string
+  note?: string
+}) {
+  return (
+    <div>
+      <div className="text-[11px] font-medium text-text3 uppercase tracking-wider mb-0.5">
+        {label}
+      </div>
+      <div className="text-[14px] font-semibold text-text leading-tight">{value}</div>
+      {note && <div className="text-[11px] text-text2 mt-0.5">{note}</div>}
     </div>
   )
 }
