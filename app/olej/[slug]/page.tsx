@@ -85,9 +85,21 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   // Find 3 similar products for "Porovnat s podobnými" CTA — různá značka,
   // podobné Score/origin/certifikace + reason (proč jsou podobné)
   const similarProducts = (() => {
-    const candidates = allProducts.filter(
+    const rawCandidates = allProducts.filter(
       (p) => p.id !== product.id && p.nameShort !== product.nameShort
     )
+
+    // Deduplikuj podle (nameShort + originRegion) — z každé skupiny vezmi
+    // jen produkt s nejvyšším Score. Bez toho by se v Vyzkoušíš jiný? ukázaly
+    // 3× Orino 1L/3L/5L (varianty stejného oleje). User feedback: "vadí mi
+    // že je v nabídce 3 orino — jiná balení".
+    const bestPerGroup = new Map<string, (typeof rawCandidates)[number]>()
+    for (const p of [...rawCandidates].sort((a, b) => b.olivatorScore - a.olivatorScore)) {
+      const key = `${p.nameShort ?? ''}|${p.originRegion ?? ''}`
+      if (!bestPerGroup.has(key)) bestPerGroup.set(key, p)
+    }
+    const candidates = Array.from(bestPerGroup.values())
+
     const scored = candidates.map((p) => {
       const reasons: string[] = []
       let s = 0
@@ -350,6 +362,81 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </div>
       </div>
 
+      {/* Variants — stejný brand+region, různé objemy. Posunuto VYŠŠ —
+          uživatel hned vidí že existují jiná balení, nemusí scrollovat dolů. */}
+      {variants.length > 0 && (
+        <section className="mt-10 max-w-[1040px]">
+          <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
+            — Jiná balení
+          </div>
+          <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-1">
+            Stejný olej v jiných objemech
+          </h2>
+          <p className="text-[13px] text-text3 mb-5">
+            {product.nameShort
+              ? `${product.nameShort}${product.originRegion ? ` z regionu ${product.originRegion}` : ''} v dalších balíccích`
+              : 'Stejný producent v dalších objemech'}
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {variants.map((v) => (
+              <Link
+                key={v.id}
+                href={`/olej/${v.slug}`}
+                className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_12px_32px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:border-olive-light"
+              >
+                <div className="relative aspect-[4/5] bg-white overflow-hidden">
+                  <span className="absolute top-2.5 left-2.5 z-10 text-[10px] font-bold uppercase tracking-wider bg-white/90 backdrop-blur-sm text-text rounded px-2 py-1 shadow-sm">
+                    {v.volumeMl
+                      ? v.volumeMl >= 1000
+                        ? `${v.volumeMl / 1000} l`
+                        : `${v.volumeMl} ml`
+                      : '—'}
+                    {v.packaging === 'dark_glass' && ' · sklo'}
+                    {v.packaging === 'tin' && ' · plech'}
+                  </span>
+                  {v.olivatorScore != null && v.olivatorScore > 0 && (
+                    <span className="absolute top-2.5 right-2.5 z-10 text-[12px] font-bold bg-terra text-white rounded-full w-10 h-10 flex items-center justify-center tabular-nums shadow-sm">
+                      {v.olivatorScore}
+                    </span>
+                  )}
+                  <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
+                    {v.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={v.imageUrl}
+                        alt={v.name}
+                        className="w-full h-full object-contain"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="font-[family-name:var(--font-display)] text-[80px] italic text-text3/30 leading-none select-none">
+                          {v.name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="p-3 flex-1 flex flex-col">
+                  <div className="text-[12px] font-semibold text-text leading-tight line-clamp-2 mb-2 min-h-[2.4em]">
+                    {v.name}
+                  </div>
+                  <div className="mt-auto">
+                    {v.cheapestPrice ? (
+                      <div className="text-[15px] font-bold text-text tabular-nums">
+                        {Math.round(v.cheapestPrice)} Kč
+                      </div>
+                    ) : (
+                      <div className="text-[12px] text-text3 italic">Cena chybí</div>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Long description — bohatší 2-col layout: text vlevo + key facts vpravo */}
       {product.descriptionLong && (
         <section className="mt-14 max-w-[1040px]">
@@ -487,81 +574,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                     <span className="inline-block text-[9px] font-medium text-olive-dark bg-olive-bg px-1.5 py-0.5 rounded tracking-tight">
                       ✓ {reason}
                     </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Variants — stejný brand+region, různé objemy. Karty s fotem. */}
-      {variants.length > 0 && (
-        <section className="mt-12 max-w-[1040px]">
-          <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
-            — Jiná balení
-          </div>
-          <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-1">
-            Stejný olej v jiných objemech
-          </h2>
-          <p className="text-[13px] text-text3 mb-5">
-            {product.nameShort
-              ? `${product.nameShort}${product.originRegion ? ` z regionu ${product.originRegion}` : ''} v dalších balíccích`
-              : 'Stejný producent v dalších objemech'}
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {variants.map((v) => (
-              <Link
-                key={v.id}
-                href={`/olej/${v.slug}`}
-                className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_12px_32px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:border-olive-light"
-              >
-                <div className="relative aspect-[4/5] bg-white overflow-hidden">
-                  {/* Volume + balení badge vlevo nahoře */}
-                  <span className="absolute top-2.5 left-2.5 z-10 text-[10px] font-bold uppercase tracking-wider bg-white/90 backdrop-blur-sm text-text rounded px-2 py-1 shadow-sm">
-                    {v.volumeMl
-                      ? v.volumeMl >= 1000
-                        ? `${v.volumeMl / 1000} l`
-                        : `${v.volumeMl} ml`
-                      : '—'}
-                    {v.packaging === 'dark_glass' && ' · sklo'}
-                    {v.packaging === 'tin' && ' · plech'}
-                  </span>
-                  {v.olivatorScore != null && v.olivatorScore > 0 && (
-                    <span className="absolute top-2.5 right-2.5 z-10 text-[12px] font-bold bg-terra text-white rounded-full w-10 h-10 flex items-center justify-center tabular-nums shadow-sm">
-                      {v.olivatorScore}
-                    </span>
-                  )}
-                  <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
-                    {v.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={v.imageUrl}
-                        alt={v.name}
-                        className="w-full h-full object-contain"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="font-[family-name:var(--font-display)] text-[80px] italic text-text3/30 leading-none select-none">
-                          {v.name.charAt(0)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="p-3 flex-1 flex flex-col">
-                  <div className="text-[12px] font-semibold text-text leading-tight line-clamp-2 mb-2 min-h-[2.4em]">
-                    {v.name}
-                  </div>
-                  <div className="mt-auto">
-                    {v.cheapestPrice ? (
-                      <div className="text-[15px] font-bold text-text tabular-nums">
-                        {Math.round(v.cheapestPrice)} Kč
-                      </div>
-                    ) : (
-                      <div className="text-[12px] text-text3 italic">Cena chybí</div>
-                    )}
                   </div>
                 </div>
               </Link>
