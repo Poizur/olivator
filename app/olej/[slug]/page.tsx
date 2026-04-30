@@ -582,37 +582,36 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </section>
       )}
 
-      {/* FAQ — sjednocené side-by-side: tento olej vs obecné otázky.
-          Místo dvou protáhlých sekcí pod sebou je to teď 2-col grid. */}
+      {/* FAQ — full width (1280px) 50/50 split, větší nadpisy + otázky */}
       {(productFAQs.length > 0 || generalFAQs.length > 0) && (
-        <section className="mt-14 max-w-[1040px] mb-12">
+        <section className="mt-14 max-w-[1280px] mb-12">
           <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
             — FAQ
           </div>
-          <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-3xl font-normal text-text mb-6 leading-tight">
+          <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text mb-8 leading-tight">
             Časté otázky
           </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {productFAQs.length > 0 && (
               <div>
-                <h3 className="text-[13px] font-semibold text-text mb-3">
+                <h3 className="font-[family-name:var(--font-display)] text-xl md:text-2xl font-normal text-text mb-4 leading-tight">
                   O tomto oleji
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {productFAQs.map((faq, i) => (
                     <details
                       key={`p-${i}`}
-                      className="bg-white border border-off2 rounded-[var(--radius-card)] group"
+                      className="bg-white border border-off2 rounded-[var(--radius-card)] group hover:border-olive-light transition-colors"
                     >
-                      <summary className="cursor-pointer list-none flex items-start justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
-                        <h4 className="text-[14px] font-medium text-text leading-snug">
+                      <summary className="cursor-pointer list-none flex items-start justify-between gap-3 px-5 py-4 [&::-webkit-details-marker]:hidden">
+                        <h4 className="text-[15px] font-medium text-text leading-snug">
                           {faq.question}
                         </h4>
-                        <span className="text-text3 text-sm shrink-0 group-open:rotate-180 transition-transform">
+                        <span className="text-text3 text-base shrink-0 group-open:rotate-180 transition-transform mt-0.5">
                           ▾
                         </span>
                       </summary>
-                      <div className="px-4 pb-4 pt-0 text-[13px] text-text2 leading-relaxed">
+                      <div className="px-5 pb-5 pt-0 text-[14px] text-text2 leading-relaxed border-t border-off mt-1 pt-3">
                         {faq.answer}
                       </div>
                     </details>
@@ -623,24 +622,24 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
             {generalFAQs.length > 0 && (
               <div>
-                <h3 className="text-[13px] font-semibold text-text mb-3">
+                <h3 className="font-[family-name:var(--font-display)] text-xl md:text-2xl font-normal text-text mb-4 leading-tight">
                   O olivovém oleji obecně
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {generalFAQs.map((faq, i) => (
                     <details
                       key={`g-${i}`}
-                      className="bg-white border border-off2 rounded-[var(--radius-card)] group"
+                      className="bg-white border border-off2 rounded-[var(--radius-card)] group hover:border-olive-light transition-colors"
                     >
-                      <summary className="cursor-pointer list-none flex items-start justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
-                        <h4 className="text-[14px] font-medium text-text leading-snug">
+                      <summary className="cursor-pointer list-none flex items-start justify-between gap-3 px-5 py-4 [&::-webkit-details-marker]:hidden">
+                        <h4 className="text-[15px] font-medium text-text leading-snug">
                           {faq.question}
                         </h4>
-                        <span className="text-text3 text-sm shrink-0 group-open:rotate-180 transition-transform">
+                        <span className="text-text3 text-base shrink-0 group-open:rotate-180 transition-transform mt-0.5">
                           ▾
                         </span>
                       </summary>
-                      <div className="px-4 pb-4 pt-0 text-[13px] text-text2 leading-relaxed">
+                      <div className="px-5 pb-5 pt-0 text-[14px] text-text2 leading-relaxed border-t border-off mt-1 pt-3">
                         {faq.answer}
                       </div>
                     </details>
@@ -651,39 +650,63 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </div>
         </section>
       )}
-      {/* Cross-linky — region / značka / odrůda */}
+      {/* Prozkoumejte více — region / značka / odrůdy jako velké dlaždice */}
       {(entityLinks.region || entityLinks.brand || entityLinks.cultivars.length > 0) && (
-        <section className="mt-8 max-w-[720px] mx-auto mb-8">
-          <h2 className="font-[family-name:var(--font-display)] text-xl font-normal text-text mb-4">
+        <section className="mt-14 max-w-[1280px] mb-12">
+          <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
+            — Souvislosti
+          </div>
+          <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-3xl font-normal text-text mb-6 leading-tight">
             Prozkoumejte více
           </h2>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {entityLinks.region && (
               <Link
                 href={`/oblast/${entityLinks.region.slug}`}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-olive4 border border-olive5 rounded-full text-sm text-olive hover:bg-olive5 transition-colors"
+                className="group bg-olive-bg border border-olive-border rounded-[var(--radius-card)] p-5 hover:bg-olive-dark hover:border-olive-dark transition-all hover:-translate-y-0.5 hover:shadow-md"
               >
-                <span className="text-[10px] uppercase tracking-widest font-semibold text-olive/60">Region</span>
-                <span>{entityLinks.region.name}</span>
+                <div className="text-[10px] font-bold tracking-widest uppercase text-olive group-hover:text-white/70 mb-2 transition-colors">
+                  Oblast
+                </div>
+                <div className="font-[family-name:var(--font-display)] text-2xl text-text group-hover:text-white leading-tight mb-2 transition-colors">
+                  {entityLinks.region.name}
+                </div>
+                <div className="text-[12px] text-text2 group-hover:text-white/80 transition-colors">
+                  Další oleje z oblasti →
+                </div>
               </Link>
             )}
             {entityLinks.brand && (
               <Link
                 href={`/znacka/${entityLinks.brand.slug}`}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-olive4 border border-olive5 rounded-full text-sm text-olive hover:bg-olive5 transition-colors"
+                className="group bg-olive-bg border border-olive-border rounded-[var(--radius-card)] p-5 hover:bg-olive-dark hover:border-olive-dark transition-all hover:-translate-y-0.5 hover:shadow-md"
               >
-                <span className="text-[10px] uppercase tracking-widest font-semibold text-olive/60">Značka</span>
-                <span>{entityLinks.brand.name}</span>
+                <div className="text-[10px] font-bold tracking-widest uppercase text-olive group-hover:text-white/70 mb-2 transition-colors">
+                  Značka
+                </div>
+                <div className="font-[family-name:var(--font-display)] text-2xl text-text group-hover:text-white leading-tight mb-2 transition-colors">
+                  {entityLinks.brand.name}
+                </div>
+                <div className="text-[12px] text-text2 group-hover:text-white/80 transition-colors">
+                  Další oleje od značky →
+                </div>
               </Link>
             )}
             {entityLinks.cultivars.map((c) => (
               <Link
                 key={c.slug}
                 href={`/odruda/${c.slug}`}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-olive4 border border-olive5 rounded-full text-sm text-olive hover:bg-olive5 transition-colors"
+                className="group bg-olive-bg border border-olive-border rounded-[var(--radius-card)] p-5 hover:bg-olive-dark hover:border-olive-dark transition-all hover:-translate-y-0.5 hover:shadow-md"
               >
-                <span className="text-[10px] uppercase tracking-widest font-semibold text-olive/60">Odrůda</span>
-                <span>{c.name}</span>
+                <div className="text-[10px] font-bold tracking-widest uppercase text-olive group-hover:text-white/70 mb-2 transition-colors">
+                  Odrůda
+                </div>
+                <div className="font-[family-name:var(--font-display)] text-2xl text-text group-hover:text-white leading-tight mb-2 transition-colors">
+                  {c.name}
+                </div>
+                <div className="text-[12px] text-text2 group-hover:text-white/80 transition-colors">
+                  Profil odrůdy + další oleje →
+                </div>
               </Link>
             ))}
           </div>
