@@ -82,6 +82,27 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   ])
   const cheapest = offers[0]
 
+  // Recepty napojené na produkt přes region nebo cultivar (recipe_entity_links).
+  // Hybrid sekce "Pokračujte" je sloučí s variants do jednoho gridu.
+  const relatedRecipes = await (async () => {
+    const { loadEntityRecipes } = await import('@/lib/entity-page-data')
+    const lists = await Promise.all([
+      entityLinks.region ? loadEntityRecipes('region', entityLinks.region.slug) : Promise.resolve([]),
+      ...entityLinks.cultivars.map((c) => loadEntityRecipes('cultivar', c.slug)),
+    ])
+    // Dedup podle slug
+    const seen = new Set<string>()
+    const out: { slug: string; title: string; excerpt: string; readTime: string }[] = []
+    for (const list of lists) {
+      for (const r of list) {
+        if (seen.has(r.slug)) continue
+        seen.add(r.slug)
+        out.push(r)
+      }
+    }
+    return out.slice(0, 3) // max 3 recepty (zbytek by zatlačil variants ven)
+  })()
+
   // Find 3 similar products for "Porovnat s podobnými" CTA — různá značka,
   // podobné Score/origin/certifikace + reason (proč jsou podobné)
   const similarProducts = (() => {
@@ -362,22 +383,31 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </div>
       </div>
 
-      {/* Variants — kompaktní grid (6 v řadě), variants jsou "taky info"
-          ne hlavní atrakce. Stejný styl jako Podobné oleje níže. */}
-      {variants.length > 0 && (
+      {/* Pokračujte — hybrid sekce: variants + recepty + CTA Najít olej.
+          Sjednocuje 3 typy karet do jednoho gridu, kompaktní karty 6 v řadě.
+          Pokud nemá ani variants ani recepty, ukáže se jen CTA karta sólo. */}
+      {(variants.length > 0 || relatedRecipes.length > 0) && (
         <section className="mt-10 max-w-[1040px]">
           <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
-            — Jiná balení
+            — Pokračujte
           </div>
           <h2 className="font-[family-name:var(--font-display)] text-xl font-normal text-text mb-1">
-            Stejný olej v jiných objemech
+            {variants.length > 0 && relatedRecipes.length > 0
+              ? 'Jiná balení a co s olejem uvařit'
+              : variants.length > 0
+                ? 'Stejný olej v jiných objemech'
+                : 'Co s tímhle olejem uvařit'}
           </h2>
           <p className="text-[12px] text-text3 mb-4">
-            {product.nameShort
-              ? `${product.nameShort}${product.originRegion ? ` z regionu ${product.originRegion}` : ''}`
-              : 'Stejný producent v jiných balíccích'}
+            {variants.length > 0 &&
+              (product.nameShort
+                ? `${product.nameShort}${product.originRegion ? ` z regionu ${product.originRegion}` : ''}`
+                : 'Stejný producent v jiných balíccích')}
+            {variants.length > 0 && relatedRecipes.length > 0 && ' · '}
+            {relatedRecipes.length > 0 && 'recepty z regionu nebo s touto odrůdou'}
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+            {/* Variants */}
             {variants.map((v) => (
               <Link
                 key={v.id}
@@ -385,6 +415,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:border-olive-light"
               >
                 <div className="relative aspect-[4/5] bg-white overflow-hidden">
+                  <span className="absolute top-1.5 left-1.5 z-10 text-[8px] font-bold uppercase tracking-wider bg-white/90 backdrop-blur-sm text-text3 rounded px-1.5 py-0.5">
+                    Balení
+                  </span>
                   {v.olivatorScore != null && v.olivatorScore > 0 && (
                     <span className="absolute top-1.5 right-1.5 z-10 text-[10px] font-bold bg-terra text-white rounded-full w-7 h-7 flex items-center justify-center tabular-nums">
                       {v.olivatorScore}
@@ -409,7 +442,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   </div>
                 </div>
                 <div className="p-2.5 flex-1 flex flex-col">
-                  {/* Volume + balení místo full name — variants se odlišují objemem */}
                   <div className="text-[12px] font-bold text-text mb-1 leading-tight">
                     {v.volumeMl
                       ? v.volumeMl >= 1000
@@ -435,6 +467,61 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 </div>
               </Link>
             ))}
+
+            {/* Recepty */}
+            {relatedRecipes.map((r) => {
+              const initial = r.title.charAt(0).toUpperCase()
+              return (
+                <Link
+                  key={r.slug}
+                  href={`/recept/${r.slug}`}
+                  className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:border-terra/30"
+                >
+                  <div className="relative aspect-[4/5] bg-[#7a3b1e] overflow-hidden">
+                    <span className="absolute top-1.5 left-1.5 z-10 text-[8px] font-bold uppercase tracking-wider bg-white/90 backdrop-blur-sm text-terra rounded px-1.5 py-0.5">
+                      Recept
+                    </span>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="font-[family-name:var(--font-display)] text-[80px] italic text-white/15 leading-none select-none">
+                        {initial}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-2.5 flex-1 flex flex-col">
+                    <div className="text-[12px] font-semibold text-text leading-tight line-clamp-2 mb-2 min-h-[2.4em]">
+                      {r.title}
+                    </div>
+                    <div className="mt-auto text-[11px] text-terra">{r.readTime}</div>
+                  </div>
+                </Link>
+              )
+            })}
+
+            {/* CTA: Najít olej (vždycky poslední, vyplní zbylé místo) */}
+            <Link
+              href="/quiz"
+              className="group bg-olive-bg border border-olive-border rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_8px_24px_rgba(45,106,79,0.1)] hover:-translate-y-0.5 hover:bg-olive-dark hover:border-olive-dark"
+            >
+              <div className="relative aspect-[4/5] flex flex-col items-center justify-center p-3 text-center">
+                <div className="w-12 h-12 rounded-full bg-white/70 group-hover:bg-white/15 flex items-center justify-center mb-2 transition-colors">
+                  <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-olive group-hover:text-white transition-colors">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.35-4.35" />
+                  </svg>
+                </div>
+                <div className="text-[11px] font-medium text-olive-dark group-hover:text-white transition-colors">
+                  Není to ten pravý?
+                </div>
+              </div>
+              <div className="p-2.5 flex-1 flex flex-col bg-white group-hover:bg-olive-dark transition-colors">
+                <div className="text-[12px] font-bold text-text group-hover:text-white leading-tight mb-1 transition-colors">
+                  Najít olej
+                </div>
+                <div className="mt-auto text-[10px] text-olive group-hover:text-white/80 transition-colors">
+                  Doporučení za 60 s →
+                </div>
+              </div>
+            </Link>
           </div>
         </section>
       )}
