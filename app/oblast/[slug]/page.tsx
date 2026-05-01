@@ -14,7 +14,6 @@ import {
   formatPriceRange,
 } from '@/lib/entity-page-data'
 
-import { EntityKpiGrid } from '@/components/entity-page/entity-kpi-grid'
 import { EntityCtaStripe } from '@/components/entity-page/entity-cta-stripe'
 import { EntityProductsTable } from '@/components/entity-page/entity-products-table'
 import { EntityTrustRow } from '@/components/entity-page/entity-trust-row'
@@ -211,49 +210,59 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
           </div>
         </div>
 
-        {/* Blok 1 — Hero */}
+        {/* Blok 1 — Hero kompaktní (obraz + KPI v jedné kartě) */}
         <section className="px-6 md:px-10 mb-6">
           <div className="max-w-[1280px] mx-auto">
-            {heroPhoto ? (
-              <div className="relative rounded-[var(--radius-card)] overflow-hidden h-56 md:h-64">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={heroPhoto.url}
-                  alt={heroPhoto.alt_text ?? region.name}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 p-6">
-                  <h1 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl font-normal text-white mb-1">
-                    {titleH1}
-                  </h1>
-                  <p className="text-sm text-white/85">
-                    {country} · {kpis.count} olejů v katalogu
-                  </p>
+            <div className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col md:flex-row">
+              {/* Obrázek — 42 % šířky na desktopu, plná výška */}
+              {heroPhoto && (
+                <div className="relative md:w-[42%] shrink-0 h-44 md:h-auto">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={heroPhoto.url}
+                    alt={heroPhoto.alt_text ?? region.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent md:bg-gradient-to-r md:from-transparent md:to-white/10" />
+                  {heroPhoto.source_attribution && (
+                    <p className="absolute bottom-1.5 right-2 text-[10px] text-white/50">
+                      © {heroPhoto.source_attribution}
+                    </p>
+                  )}
                 </div>
-                {heroPhoto.source_attribution && (
-                  <p className="absolute bottom-2 right-3 text-[10px] text-white/50">
-                    © {heroPhoto.source_attribution}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 md:p-8">
+              )}
+
+              {/* Obsah */}
+              <div className="p-6 md:p-8 flex flex-col justify-center flex-1 min-w-0">
                 <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
                   — {country}
                 </div>
-                <h1 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl font-normal text-text mb-2">
+                <h1 className="font-[family-name:var(--font-display)] text-2xl md:text-3xl font-normal text-text leading-tight mb-2">
                   {titleH1}
                 </h1>
-                <p className="text-sm text-text3">{kpis.count} olejů v katalogu</p>
+                {tldr && (
+                  <p className="text-sm text-text2 leading-relaxed line-clamp-2 mb-4">{tldr}</p>
+                )}
+
+                {/* KPI řádek */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-5 gap-y-3 pt-4 border-t border-off2">
+                  {kpiItems.map((item, i) => (
+                    <div key={i}>
+                      <div className="text-[10px] text-text3 uppercase tracking-widest font-medium mb-0.5">
+                        {item.label}
+                      </div>
+                      <div className="font-[family-name:var(--font-display)] text-lg font-normal text-text leading-tight">
+                        {item.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </section>
 
         <div className="space-y-6">
-          {/* Blok 2 — KPI */}
-          <EntityKpiGrid items={kpiItems} />
 
           {/* Blok 3 — CTA */}
           <EntityCtaStripe
