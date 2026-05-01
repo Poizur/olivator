@@ -391,28 +391,22 @@ export function ProductForm({
         </div>
       </Section>
 
-      {error && (
-        <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="text-xs text-olive-dark bg-olive-bg border border-olive-border rounded-lg px-3 py-2">
-          ✓ Uloženo
-        </div>
-      )}
 
       <div className="flex items-center gap-2 sticky bottom-4 bg-white border border-off2 rounded-[var(--radius-card)] p-4 shadow-sm flex-wrap">
         <button
           type="submit"
           disabled={saving}
-          className="bg-olive text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-olive-dark disabled:opacity-40 transition-colors"
+          className={`rounded-lg px-5 py-2.5 text-sm font-medium transition-all duration-200 ${
+            success
+              ? 'bg-olive-bg text-olive-dark border border-olive-border'
+              : 'bg-olive text-white hover:bg-olive-dark disabled:opacity-40'
+          }`}
         >
-          {saving ? 'Ukládám...' : 'Uložit změny'}
+          {saving ? '⏳ Ukládám...' : success ? '✓ Uloženo' : '💾 Uložit změny'}
         </button>
-        <span className="text-[11px] text-text3 ml-2">
-          Akce <strong>⚡ Publikovat</strong> / <strong>👁 Zobrazit</strong> / <strong>← Zpět</strong> najdeš nahoře vpravo
-        </span>
+        {error && (
+          <span className="text-xs text-red-600">⚠ {error}</span>
+        )}
       </div>
     </form>
   )

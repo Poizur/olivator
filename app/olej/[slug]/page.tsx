@@ -12,6 +12,7 @@ import { PriceTable } from '@/components/price-table'
 import { AffiliateLink } from '@/components/affiliate-link'
 import { ProductGallery } from '@/components/product-gallery'
 import { RetailerCard } from '@/components/retailer-card'
+import { PriceSparkline } from '@/components/price-sparkline'
 import { ProductActions } from './product-actions'
 
 export async function generateStaticParams() {
@@ -71,7 +72,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const brandSlug = extractBrandSlug(product.name)
   const regionSlug = extractRegionSlug(product.originCountry, product.originRegion)
 
-  const [offers, gallery, customFAQs, dbGeneralFAQs, variants, allProducts, entityLinks] = await Promise.all([
+  const [offers, gallery, customFAQs, dbGeneralFAQs, variants, allProducts, entityLinks, priceHistory] = await Promise.all([
     getOffersForProduct(product.id),
     getProductGallery(product.id),
     getProductCustomFAQs(product.id),
@@ -79,6 +80,28 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     getVariantProducts(product.id),
     getProducts(),
     getProductEntityLinks(product.id, brandSlug, regionSlug),
+    // Price history: nejnižší cena ze všech prodejců za každý den (posledních 60 dní)
+    (async () => {
+      const { supabaseAdmin } = await import('@/lib/supabase')
+      const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()
+      const { data } = await supabaseAdmin
+        .from('price_history')
+        .select('price, recorded_at')
+        .eq('product_id', product.id)
+        .gte('recorded_at', since)
+        .order('recorded_at', { ascending: true })
+      if (!data || data.length === 0) return []
+      // Grup po dnech — nejnižší cena daného dne
+      const byDay = new Map<string, number>()
+      for (const row of data) {
+        const day = (row.recorded_at as string).slice(0, 10)
+        const price = Number(row.price)
+        if (!byDay.has(day) || price < byDay.get(day)!) byDay.set(day, price)
+      }
+      return Array.from(byDay.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, price]) => ({ date, price }))
+    })(),
   ])
   const cheapest = offers[0]
 
@@ -338,6 +361,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             volumeMl={product.volumeMl}
             productSlug={product.slug}
             productName={product.name}
+          />
+          <PriceSparkline
+            data={priceHistory}
+            currentPrice={cheapest?.price ?? null}
           />
 
           {cheapest && (

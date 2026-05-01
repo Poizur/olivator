@@ -1,10 +1,10 @@
 'use client'
 
 // Správa fotek entity (region/brand/cultivar) v admin.
-// Umožňuje přidat URL, nastavit hlavní, editovat alt text, odebrat.
+// Upload ze zařízení nebo URL. AI alt text automaticky.
 
-import { useState, useTransition } from 'react'
-import { Star, Trash2, Pencil, Check, X, Plus, Loader2 } from 'lucide-react'
+import { useState, useTransition, useRef } from 'react'
+import { Star, Trash2, Pencil, Check, X, Plus, Loader2, Upload } from 'lucide-react'
 
 interface Photo {
   id: string
@@ -33,6 +33,12 @@ export function EntityPhotosManager({ entityId, entityType, initialPhotos }: Pro
   const [editAlt, setEditAlt] = useState('')
   const [isPending, startTransition] = useTransition()
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadAlt, setUploadAlt] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadPreview, setUploadPreview] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function addPhoto() {
     if (!addUrl.trim()) return
@@ -49,6 +55,43 @@ export function EntityPhotosManager({ entityId, entityType, initialPhotos }: Pro
       setAddUrl('')
       setAddAlt('')
     })
+  }
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0] ?? null
+    setUploadFile(f)
+    setUploadError(null)
+    if (f) {
+      const url = URL.createObjectURL(f)
+      setUploadPreview(url)
+    } else {
+      setUploadPreview(null)
+    }
+  }
+
+  async function uploadPhoto() {
+    if (!uploadFile) return
+    setUploading(true)
+    setUploadError(null)
+    try {
+      const fd = new FormData()
+      fd.append('file', uploadFile)
+      fd.append('entityId', entityId)
+      fd.append('entityType', entityType)
+      if (uploadAlt.trim()) fd.append('altText', uploadAlt.trim())
+      const res = await fetch('/api/admin/entity-images/upload', { method: 'POST', body: fd })
+      const json = await res.json()
+      if (!json.ok) throw new Error(json.error ?? 'Upload selhal')
+      setPhotos((prev) => [...prev, json.photo as Photo])
+      setUploadFile(null)
+      setUploadAlt('')
+      setUploadPreview(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : 'Chyba uploadu')
+    } finally {
+      setUploading(false)
+    }
   }
 
   async function setPrimary(id: string) {
@@ -199,9 +242,77 @@ export function EntityPhotosManager({ entityId, entityType, initialPhotos }: Pro
         </p>
       )}
 
-      {/* Přidat novou fotku */}
+      {/* Upload ze zařízení */}
+      <div className="border border-off2 rounded-xl p-4 space-y-3 bg-off/30">
+        <p className="text-xs font-medium text-text2">Nahrát ze zařízení</p>
+
+        {/* Drop zone / file input */}
+        <label
+          className={`flex flex-col items-center gap-2 border-2 border-dashed rounded-xl py-5 px-4 cursor-pointer transition-colors ${
+            uploadFile ? 'border-olive bg-olive-bg/30' : 'border-off2 hover:border-olive-light'
+          }`}
+        >
+          {uploadPreview ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={uploadPreview} alt="" className="h-24 rounded-lg object-contain" />
+          ) : (
+            <>
+              <Upload size={22} className="text-text3" />
+              <span className="text-xs text-text3 text-center leading-snug">
+                Klikni nebo přetáhni soubor<br />
+                <span className="text-[11px]">JPG, PNG, WebP · max 10 MB</span>
+              </span>
+            </>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={onFileChange}
+          />
+        </label>
+
+        {uploadFile && (
+          <>
+            <div className="flex items-center justify-between text-[11px] text-text3">
+              <span className="truncate max-w-[200px]">{uploadFile.name}</span>
+              <span>{(uploadFile.size / 1024).toFixed(0)} KB</span>
+            </div>
+            <input
+              value={uploadAlt}
+              onChange={(e) => setUploadAlt(e.target.value)}
+              className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-olive"
+              placeholder="Alt text (AI doplní automaticky, pokud nevyplníš)"
+            />
+          </>
+        )}
+
+        {uploadError && <p className="text-xs text-terra">{uploadError}</p>}
+
+        {uploadFile && (
+          <div className="flex gap-2">
+            <button
+              onClick={uploadPhoto}
+              disabled={uploading}
+              className="flex items-center gap-1.5 bg-olive text-white rounded-full px-4 py-1.5 text-sm font-medium disabled:opacity-40 hover:bg-olive-dark transition-colors"
+            >
+              {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+              {uploading ? 'Nahrávám + AI alt…' : 'Nahrát fotku'}
+            </button>
+            <button
+              onClick={() => { setUploadFile(null); setUploadPreview(null); setUploadError(null); if (fileInputRef.current) fileInputRef.current.value = '' }}
+              className="text-xs text-text3 hover:text-text px-2"
+            >
+              Zrušit
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Přidat podle URL */}
       <div className="border border-off2 rounded-xl p-4 space-y-2.5 bg-off/30">
-        <p className="text-xs font-medium text-text2">Přidat fotku podle URL</p>
+        <p className="text-xs font-medium text-text2">Nebo přidat podle URL</p>
         <input
           value={addUrl}
           onChange={(e) => setAddUrl(e.target.value)}
@@ -214,7 +325,7 @@ export function EntityPhotosManager({ entityId, entityType, initialPhotos }: Pro
           onChange={(e) => setAddAlt(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addPhoto()}
           className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text outline-none focus:border-olive"
-          placeholder="Alt text (volitelné, ale doporučené pro SEO)"
+          placeholder="Alt text (volitelné)"
         />
         {addError && <p className="text-xs text-terra">{addError}</p>}
         <button
