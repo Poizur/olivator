@@ -341,7 +341,7 @@ export async function publishCandidate(
     productId = created.id as string
   }
 
-  // Create offer
+  // Create / update offer + zaznamenat do price_history (každý run = 1 záznam)
   if (scraped.price) {
     await supabaseAdmin.from('product_offers').upsert(
       {
@@ -354,6 +354,13 @@ export async function publishCandidate(
       },
       { onConflict: 'product_id,retailer_id' }
     )
+    // Historický záznam — jeden řádek per run, grafy vývoje ceny
+    await supabaseAdmin.from('price_history').insert({
+      product_id: productId,
+      retailer_id: retailer.id,
+      price: scraped.price,
+      in_stock: scraped.inStock ?? true,
+    })
   }
 
   // Images — auto-publish first 5 as `scraper` (visible in public gallery,
@@ -716,6 +723,17 @@ async function addOfferToExisting(
     .select('id')
     .single()
   if (error || !created) throw new Error(`Offer upsert failed: ${error?.message}`)
+
+  // Historický záznam — jeden řádek per run, grafy vývoje ceny
+  if (scraped.price) {
+    await supabaseAdmin.from('price_history').insert({
+      product_id: matchedProductId,
+      retailer_id: retailer.id,
+      price: scraped.price,
+      in_stock: scraped.inStock ?? true,
+    })
+  }
+
   return created.id as string
 }
 
