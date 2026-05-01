@@ -4,6 +4,9 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { EntityEditForm } from '@/components/entity-edit-form'
 import { EntityFaqEditor } from '@/components/entity-faq-editor'
 import { EntityRecipeLinker } from '@/components/entity-recipe-linker'
+import { EntityGuidesLinker } from '@/components/entity-guides-linker'
+import { EntityPhotosManager } from '@/components/entity-photos-manager'
+import { EntityProductsList } from '@/components/entity-products-list'
 import { ARTICLES } from '@/lib/static-content'
 
 async function getRegion(slug: string) {
@@ -11,7 +14,7 @@ async function getRegion(slug: string) {
   return data
 }
 
-async function getRecipeLinks(entityType: 'region' | 'brand' | 'cultivar', entitySlug: string) {
+async function getLinkedSlugs(entityType: 'region' | 'brand' | 'cultivar', entitySlug: string) {
   const { data } = await supabaseAdmin
     .from('recipe_entity_links')
     .select('recipe_slug')
@@ -23,7 +26,7 @@ async function getRecipeLinks(entityType: 'region' | 'brand' | 'cultivar', entit
 async function getEntityPhotos(entityId: string) {
   const { data } = await supabaseAdmin
     .from('entity_images')
-    .select('id, url, alt_text, is_primary, source_attribution')
+    .select('id, url, alt_text, is_primary, sort_order, source, source_attribution, width, height')
     .eq('entity_id', entityId)
     .eq('status', 'active')
     .order('sort_order')
@@ -45,16 +48,33 @@ export default async function EditRegionPage({ params }: { params: Promise<{ slu
   const region = await getRegion(slug)
   if (!region) notFound()
 
-  const [photos, faqs, recipeLinks] = await Promise.all([
+  const guideSlugsInDb = ARTICLES
+    .filter((a) => a.category !== 'recept')
+    .map((a) => a.slug)
+
+  const [photos, faqs, allLinkedSlugs] = await Promise.all([
     getEntityPhotos(region.id),
     getFaqs(region.id),
-    getRecipeLinks('region', region.slug),
+    getLinkedSlugs('region', region.slug),
   ])
+
+  // Split linked slugs into recipes vs guides by checking which category they belong to
+  const recipeSlugsSet = new Set(ARTICLES.filter((a) => a.category === 'recept').map((a) => a.slug))
+  const guideSlugsSet = new Set(guideSlugsInDb)
+  const linkedRecipeSlugs = allLinkedSlugs.filter((s) => recipeSlugsSet.has(s))
+  const linkedGuideSlugs = allLinkedSlugs.filter((s) => guideSlugsSet.has(s))
 
   const allRecipes = ARTICLES.filter((a) => a.category === 'recept').map((a) => ({
     slug: a.slug,
     title: a.title,
     excerpt: a.excerpt,
+  }))
+
+  const allGuides = ARTICLES.filter((a) => a.category !== 'recept').map((a) => ({
+    slug: a.slug,
+    title: a.title,
+    excerpt: a.excerpt,
+    category: a.category,
   }))
 
   return (
@@ -69,33 +89,6 @@ export default async function EditRegionPage({ params }: { params: Promise<{ slu
 
       <h1 className="text-2xl font-semibold text-text mb-2">{region.name}</h1>
       <p className="text-sm text-text3 mb-8">{region.slug} · {region.country_code}</p>
-
-      {/* Fotky */}
-      {photos.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-sm font-medium text-text2 mb-3">Fotky ({photos.length})</h2>
-          <div className="flex gap-3 flex-wrap">
-            {photos.map((p: { id: string; url: string; alt_text: string | null; is_primary: boolean; source_attribution: string | null }) => (
-              <div key={p.id} className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={p.url}
-                  alt={p.alt_text ?? ''}
-                  className="w-40 h-28 object-cover rounded-lg border border-off2"
-                />
-                {p.is_primary && (
-                  <span className="absolute top-1 left-1 bg-olive text-white text-[10px] px-1.5 py-0.5 rounded">
-                    hlavní
-                  </span>
-                )}
-                {p.source_attribution && (
-                  <p className="text-[10px] text-text3 mt-0.5">{p.source_attribution}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       <EntityEditForm
         entity={{
@@ -113,6 +106,12 @@ export default async function EditRegionPage({ params }: { params: Promise<{ slu
         entityId={region.id}
       />
 
+      <EntityPhotosManager
+        entityId={region.id}
+        entityType="region"
+        initialPhotos={photos as Parameters<typeof EntityPhotosManager>[0]['initialPhotos']}
+      />
+
       <EntityFaqEditor
         entityType="region"
         entityId={region.id}
@@ -123,7 +122,19 @@ export default async function EditRegionPage({ params }: { params: Promise<{ slu
         entityType="region"
         entitySlug={region.slug}
         allRecipes={allRecipes}
-        linkedSlugs={recipeLinks}
+        linkedSlugs={linkedRecipeSlugs}
+      />
+
+      <EntityGuidesLinker
+        entityType="region"
+        entitySlug={region.slug}
+        allGuides={allGuides}
+        linkedSlugs={linkedGuideSlugs}
+      />
+
+      <EntityProductsList
+        entityType="region"
+        entitySlug={region.slug}
       />
     </div>
   )

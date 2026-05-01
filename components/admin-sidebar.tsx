@@ -61,6 +61,7 @@ export async function AdminSidebar() {
           badgeTone: badges['/admin/brands']?.tone,
         },
         { href: '/admin/cultivars', label: 'Odrůdy' },
+        { href: '/admin/recipes', label: 'Recepty' },
       ],
     },
     {
