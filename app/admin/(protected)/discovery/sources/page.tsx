@@ -21,21 +21,26 @@ interface Source {
   total_products_imported: number
 }
 
-async function getAllSources(): Promise<Source[]> {
+async function getSources(): Promise<{ active: Source[]; failedCount: number }> {
   const { data, error } = await supabaseAdmin
     .from('discovery_sources')
     .select('*')
     .order('status', { ascending: true })
     .order('found_at', { ascending: false })
   if (error) {
-    if (error.code === '42P01' || error.code === 'PGRST205') return []
+    if (error.code === '42P01' || error.code === 'PGRST205') return { active: [], failedCount: 0 }
     throw error
   }
-  return (data ?? []) as Source[]
+  const all = (data ?? []) as Source[]
+  // Drafts = prospector kandidáti co prošli testem neúspěšně.
+  // Zobrazujeme je jako pouhý počet — nejsou actionable a jen šumí.
+  const active = all.filter((s) => s.status !== 'draft')
+  const failedCount = all.filter((s) => s.status === 'draft' && s.source === 'prospector_curated').length
+  return { active, failedCount }
 }
 
 export default async function SourcesPage() {
-  const sources = await getAllSources()
+  const { active: sources, failedCount } = await getSources()
   return (
     <div>
       <div className="mb-4">
@@ -46,11 +51,17 @@ export default async function SourcesPage() {
       <h1 className="font-[family-name:var(--font-display)] text-3xl text-text mb-1">
         Zdroje (e-shopy)
       </h1>
-      <p className="text-sm text-text3 mb-6 max-w-[640px]">
+      <p className="text-sm text-text3 mb-2 max-w-[640px]">
         Registr všech e-shopů které sledujeme. Discovery agent prochází jen ty co mají
         status <strong>enabled</strong>. Můžeš ručně přidávat nové, testovat crawler
         bez import, a spouštět bulk import per shop.
       </p>
+      {failedCount > 0 && (
+        <p className="text-xs text-text3 mb-6">
+          {failedCount} {failedCount === 1 ? 'kandidát byl' : failedCount < 5 ? 'kandidáti byli' : 'kandidátů bylo'} automaticky prospectorem otestováno a zamítnuto (sitemap nenalezena) — nejsou zobrazeni.
+        </p>
+      )}
+      {failedCount === 0 && <div className="mb-6" />}
       <SourcesAdmin initialSources={sources} />
     </div>
   )

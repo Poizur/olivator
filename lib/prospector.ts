@@ -105,15 +105,17 @@ export async function runProspector(): Promise<ProspectResult> {
     const urlCount = test.urls.length
     const scanError: string | null = test.error ?? null
 
+    // Rozlišujeme úspěch/fail — do DB uložíme oboje (pro dedup),
+    // ale status se liší: 'suggested' jen pokud crawler našel URL.
+    // Failnuté shopy dostanou 'draft' — v DB jsou pro dedup,
+    // ale admin UI je nezobrazuje jako actionable návrhy.
     if (urlCount > 0) {
       result.testedSuccess++
     } else {
       result.testedFailed++
-      // Try alternate type
-      if (candidate.crawlerType === 'shoptet_sitemap' && !candidate.categoryUrl) {
-        // Maybe shop uses category-based instead. We don't know URL though, skip.
-      }
     }
+
+    const newStatus = urlCount > 0 ? 'suggested' : 'draft'
 
     // Slug from domain
     const slug = candidate.domain
@@ -129,9 +131,9 @@ export async function runProspector(): Promise<ProspectResult> {
         slug,
         name: candidate.name,
         crawler_type: candidate.crawlerType,
-        status: 'suggested',
+        status: newStatus,
         source: 'prospector_curated',
-        reasoning: candidate.reasoning + (urlCount > 0 ? ` · ✓ test: ${urlCount} olejů` : ` · ✗ test selhal`),
+        reasoning: candidate.reasoning + (urlCount > 0 ? ` · ✓ test: ${urlCount} URL` : ` · crawler test selhal — sitemap nenalezena`),
         last_scan_url_count: urlCount,
         last_scan_error: scanError,
         last_scanned_at: new Date().toISOString(),
@@ -139,11 +141,11 @@ export async function runProspector(): Promise<ProspectResult> {
       .select('id, domain, name')
       .single()
 
-    if (!error && created) {
+    if (!error && created && urlCount > 0) {
       result.newlyAdded++
       result.added.push({
         domain: created.domain as string,
-        name: created.name as string ?? candidate.domain,
+        name: (created.name as string) ?? candidate.domain,
         urlsFound: urlCount,
         error: scanError ?? undefined,
       })
