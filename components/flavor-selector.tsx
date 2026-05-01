@@ -194,6 +194,10 @@ export function FlavorSelector({ totalProducts }: { totalProducts: number }) {
                 </span>
               </div>
 
+              <div className="font-[family-name:var(--font-display)] italic text-[15px] text-white/80 leading-snug mb-1.5">
+                Tvému výběru odpovídá:
+              </div>
+
               <div className="flex items-baseline gap-2.5 mb-1">
                 <span className="font-[family-name:var(--font-display)] text-6xl font-normal leading-none tabular-nums">
                   {count ?? '—'}
