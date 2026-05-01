@@ -115,7 +115,7 @@ export async function runProspector(): Promise<ProspectResult> {
       result.testedFailed++
     }
 
-    const newStatus = urlCount > 0 ? 'suggested' : 'draft'
+    const newStatus = urlCount > 0 ? 'suggested' : 'rejected'
 
     // Slug from domain
     const slug = candidate.domain
