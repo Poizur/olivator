@@ -359,12 +359,16 @@ function SourceRow({
   }
 
   async function deleteSource() {
-    if (!confirm(`Smazat ${s.domain} z registru? Discovery už ho nebude procházet.`)) return
+    const isSuggestion = s.status === 'suggested'
+    const msg = isSuggestion
+      ? `Zamítnout ${s.domain}? Prospector ho už nikdy znovu nenavrhne.`
+      : `Smazat ${s.domain} z registru? Discovery už ho nebude procházet.`
+    if (!confirm(msg)) return
     setBusy('delete')
     try {
       const res = await fetch(`/api/admin/discovery/sources/${s.id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error((await res.json()).error)
-      onSuccess(`Smazáno: ${s.domain}`)
+      onSuccess(isSuggestion ? `Zamítnuto: ${s.domain}` : `Smazáno: ${s.domain}`)
       onChanged()
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Chyba')

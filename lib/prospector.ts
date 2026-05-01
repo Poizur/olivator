@@ -1,18 +1,20 @@
-// Prospector Agent — autonomously suggests new e-shops to admin.
+// Prospector Agent — autonomně navrhuje nové e-shopy adminovi.
 //
-// Sources (in priority order):
-//  1. Curated list of known CZ specialty olive oil retailers
-//  2. Heureka category scrape (TODO: requires Playwright due to Cloudflare)
-//  3. Google Custom Search API (TODO: requires GOOGLE_CSE_API_KEY env)
+// Strategie:
+//  1. Claude API navrhne 20-30 kandidátů (aktuální tržní přehled)
+//  2. Curated list jako safety net (manuálně udržovaný)
+//  3. Pro každého kandidáta: dedup → crawler test → DB save
 //
-// For each candidate domain:
-//  - Check if already in discovery_sources (dedup)
-//  - Test crawler — if works, mark as 'suggested' with URL count
-//  - If fails, still mark as 'suggested' with last_scan_error
-// Admin reviews suggestions in /admin/discovery/sources.
+// DB výsledky:
+//  - Crawler test PROŠEL → status='suggested' (admin vidí jako návrh)
+//  - Crawler test SELHAL → status='rejected' (v DB pro dedup, neviditelné v UI)
+//
+// Admin reviewuje v /admin/discovery/sources. Když smaže suggestion, jde do
+// 'rejected' (soft delete) — prospector už nikdy znovu nenavrhne.
 
 import { supabaseAdmin } from './supabase'
 import { testCrawlerForDomain } from './shop-crawlers'
+import { discoverCandidatesViaClaude } from './claude-prospector'
 
 interface ProspectCandidate {
   domain: string
@@ -63,10 +65,54 @@ export interface ProspectResult {
   }>
 }
 
-/** Run the Prospector — test curated candidates, add new ones as 'suggested'. */
+interface UnifiedCandidate {
+  domain: string
+  name: string
+  reasoning: string
+  source: 'prospector_curated' | 'prospector_claude'
+}
+
+/** Run the Prospector — Claude AI návrhy + curated safety net.
+ *  Každý kandidát: dedup → crawler test → DB save. */
 export async function runProspector(): Promise<ProspectResult> {
+  // 1. Načti existující domény z DB (jakýkoli status — i rejected!)
+  //    Důvod: rejected = admin nebo prospector už řekl "ne", neopakovat.
+  const { data: existing } = await supabaseAdmin
+    .from('discovery_sources')
+    .select('domain')
+  const knownDomains = new Set(
+    (existing ?? []).map((r) => (r.domain as string).toLowerCase())
+  )
+
+  // 2. Claude prospector — primární zdroj
+  const claudeCandidates = await discoverCandidatesViaClaude(
+    Array.from(knownDomains)
+  )
+
+  // 3. Sjednoť s curated listem (curated jako fallback safety net)
+  const candidates: UnifiedCandidate[] = []
+  for (const c of claudeCandidates) {
+    candidates.push({
+      domain: c.domain,
+      name: c.name,
+      reasoning: c.reasoning,
+      source: 'prospector_claude',
+    })
+  }
+  for (const c of CURATED_CANDIDATES) {
+    if (c.crawlerType === 'custom') continue // mainstream grocers — řeší se separátně
+    // Dedupe proti Claude návrhům
+    if (candidates.some((x) => x.domain.toLowerCase() === c.domain.toLowerCase())) continue
+    candidates.push({
+      domain: c.domain,
+      name: c.name,
+      reasoning: c.reasoning,
+      source: 'prospector_curated',
+    })
+  }
+
   const result: ProspectResult = {
-    totalCandidates: CURATED_CANDIDATES.length,
+    totalCandidates: candidates.length,
     alreadyKnown: 0,
     newlyAdded: 0,
     testedSuccess: 0,
@@ -74,50 +120,25 @@ export async function runProspector(): Promise<ProspectResult> {
     added: [],
   }
 
-  // Get existing domains from DB
-  const { data: existing } = await supabaseAdmin
-    .from('discovery_sources')
-    .select('domain')
-  const knownDomains = new Set(
-    (existing ?? []).map(r => (r.domain as string).toLowerCase())
-  )
-
-  for (const candidate of CURATED_CANDIDATES) {
+  // 4. Pro každého kandidáta: dedup → test → save
+  for (const candidate of candidates) {
     const normalized = candidate.domain.toLowerCase()
     if (knownDomains.has(normalized)) {
       result.alreadyKnown++
       continue
     }
 
-    // custom type = mainstream grocer (Rohlík, Košík) — jejich sitemaps jsou obří
-    // a způsobují TCP stall. Prospector je přeskočí; discovery je řeší separátně.
-    if (candidate.crawlerType === 'custom') {
-      result.alreadyKnown++
-      continue
-    }
-
-    // Test crawler — see if shop is reachable + parses
-    const test = await testCrawlerForDomain(candidate.domain, {
-      type: candidate.crawlerType,
-      categoryUrl: candidate.categoryUrl,
-    })
-
+    // Crawler test — pokus o sitemap
+    const test = await testCrawlerForDomain(candidate.domain, { type: 'shoptet_sitemap' })
     const urlCount = test.urls.length
     const scanError: string | null = test.error ?? null
 
-    // Rozlišujeme úspěch/fail — do DB uložíme oboje (pro dedup),
-    // ale status se liší: 'suggested' jen pokud crawler našel URL.
-    // Failnuté shopy dostanou 'draft' — v DB jsou pro dedup,
-    // ale admin UI je nezobrazuje jako actionable návrhy.
-    if (urlCount > 0) {
-      result.testedSuccess++
-    } else {
-      result.testedFailed++
-    }
+    if (urlCount > 0) result.testedSuccess++
+    else result.testedFailed++
 
     const newStatus = urlCount > 0 ? 'suggested' : 'rejected'
 
-    // Slug from domain
+    // Slug z domény
     const slug = candidate.domain
       .replace(/^(shop\.|m\.|www\.)/, '')
       .split('.')[0]
@@ -130,10 +151,14 @@ export async function runProspector(): Promise<ProspectResult> {
         domain: candidate.domain,
         slug,
         name: candidate.name,
-        crawler_type: candidate.crawlerType,
+        crawler_type: 'shoptet_sitemap',
         status: newStatus,
-        source: 'prospector_curated',
-        reasoning: candidate.reasoning + (urlCount > 0 ? ` · ✓ test: ${urlCount} URL` : ` · crawler test selhal — sitemap nenalezena`),
+        source: candidate.source,
+        reasoning:
+          candidate.reasoning +
+          (urlCount > 0
+            ? ` · ✓ test: ${urlCount} URL`
+            : ` · crawler test selhal — sitemap nenalezena`),
         last_scan_url_count: urlCount,
         last_scan_error: scanError,
         last_scanned_at: new Date().toISOString(),
@@ -151,8 +176,11 @@ export async function runProspector(): Promise<ProspectResult> {
       })
     }
 
+    // Přidej do knownDomains aby Claude+curated overlap nezpůsobil dvojitý insert
+    knownDomains.add(normalized)
+
     // Polite delay
-    await new Promise(r => setTimeout(r, 1500))
+    await new Promise((r) => setTimeout(r, 1200))
   }
 
   return result

@@ -32,6 +32,9 @@ export async function PATCH(
   }
 }
 
+/** DELETE — soft delete pro 'suggested' (admin si přeje "tohle nikdy"),
+ * hard delete pro vše ostatní. Soft delete = status='rejected', zůstane v DB
+ * pro dedup → prospector tu doménu už nikdy znovu nezasugeruje. */
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -41,9 +44,28 @@ export async function DELETE(
   }
   try {
     const { id } = await params
+
+    // Zjisti current status
+    const { data: existing } = await supabaseAdmin
+      .from('discovery_sources')
+      .select('status')
+      .eq('id', id)
+      .single()
+
+    if (existing?.status === 'suggested') {
+      // Soft delete — zachovat pro dedup, označit jako rejected
+      const { error } = await supabaseAdmin
+        .from('discovery_sources')
+        .update({ status: 'rejected', updated_at: new Date().toISOString() })
+        .eq('id', id)
+      if (error) throw error
+      return NextResponse.json({ ok: true, mode: 'soft' })
+    }
+
+    // Hard delete pro ostatní statusy (enabled, disabled, rejected, failing)
     const { error } = await supabaseAdmin.from('discovery_sources').delete().eq('id', id)
     if (error) throw error
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, mode: 'hard' })
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Server error' },

@@ -35,8 +35,15 @@ async function getSources(): Promise<{ active: Source[]; failedCount: number }> 
   // Drafts = prospector kandidáti co prošli testem neúspěšně.
   // Zobrazujeme je jako pouhý počet — nejsou actionable a jen šumí.
   // Automaticky zamítnuté prospectorem (crawler test selhal) — nezobrazujeme jako návrhy.
-  // Manuálně zamítnuté adminem (source !== 'prospector_curated') zobrazujeme normálně.
-  const autoRejected = all.filter((s) => s.status === 'rejected' && s.source === 'prospector_curated' && (s.last_scan_url_count ?? 0) === 0)
+  // Manuálně zamítnuté adminem zobrazujeme normálně (mají other source jako 'manual').
+  const PROSPECTOR_SOURCES = new Set(['prospector_curated', 'prospector_claude', 'prospector_heureka'])
+  const autoRejected = all.filter(
+    (s) =>
+      s.status === 'rejected' &&
+      s.source !== null &&
+      PROSPECTOR_SOURCES.has(s.source) &&
+      (s.last_scan_url_count ?? 0) === 0
+  )
   const autoRejectedDomains = new Set(autoRejected.map((s) => s.id))
   const active = all.filter((s) => !autoRejectedDomains.has(s.id))
   const failedCount = autoRejected.length
