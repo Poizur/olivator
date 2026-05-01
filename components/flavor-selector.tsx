@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
+import { Sparkles } from 'lucide-react'
 
 interface FlavorState {
   fruity: number
@@ -179,30 +180,60 @@ export function FlavorSelector({ totalProducts }: { totalProducts: number }) {
             </div>
           </div>
 
-          {/* Live result — kompaktní (méně padding, menší číslo) */}
-          <div className="bg-olive-dark rounded-[var(--radius-card)] p-5 text-white flex flex-col justify-center">
-            <div className="text-[10px] font-bold tracking-widest uppercase text-white/70 mb-2">
-              {loading ? 'Hledám…' : 'Odpovídá ti'}
-            </div>
-            <div className="font-[family-name:var(--font-display)] text-5xl font-normal leading-none mb-1 tabular-nums">
-              {count ?? '—'}
-            </div>
-            <div className="text-[13px] text-white/80 mb-4">
-              {count === 0
-                ? 'olejů — uvolni jezdce'
-                : count === 1
-                  ? 'olej s tvojí chutí'
-                  : 'olejů s tvojí chutí'}
-            </div>
+          {/* Live result — vylepšená karta s mini chuťovým profilem */}
+          <div className="bg-olive-dark rounded-[var(--radius-card)] p-5 text-white flex flex-col justify-center relative overflow-hidden">
+            <div
+              aria-hidden
+              className="absolute -top-12 -right-12 w-40 h-40 bg-olive-light/30 rounded-full blur-3xl pointer-events-none"
+            />
+            <div className="relative">
+              <div className="flex items-center gap-1.5 mb-2.5">
+                <Sparkles size={11} strokeWidth={1.75} className="text-white/70" />
+                <span className="text-[10px] font-bold tracking-widest uppercase text-white/70">
+                  {loading ? 'Hledám…' : 'Pro tvou chuť'}
+                </span>
+              </div>
 
-            {count != null && count > 0 && (
-              <Link
-                href={resultsHref}
-                className="block text-center bg-white text-olive-dark rounded-full px-4 py-2.5 text-[13px] font-semibold hover:bg-olive-bg transition-colors"
-              >
-                Zobrazit {count === 1 ? 'olej' : `všech ${count}`} →
-              </Link>
-            )}
+              <div className="flex items-baseline gap-2.5 mb-1">
+                <span className="font-[family-name:var(--font-display)] text-6xl font-normal leading-none tabular-nums">
+                  {count ?? '—'}
+                </span>
+                <span className="text-[14px] text-white/75 font-light">
+                  {count === 1 ? 'olej' : count != null && count >= 2 && count <= 4 ? 'oleje' : 'olejů'}
+                </span>
+              </div>
+              <div className="text-[12px] text-white/60 mb-4">
+                {count === 0 ? 'uvolni jezdce — zkus širší rozpětí' : `z ${totalProducts} v katalogu`}
+              </div>
+
+              <div className="flex gap-1.5 mb-4">
+                {[
+                  { label: 'Ovocný', value: state.fruity },
+                  { label: 'Hořký', value: state.bitter },
+                  { label: 'Palčivý', value: state.spicy },
+                  { label: 'Jemný', value: state.mild },
+                ].map((p) => (
+                  <div key={p.label} className="flex-1 min-w-0">
+                    <div className="h-1 bg-white/15 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-white/70 rounded-full transition-all duration-300"
+                        style={{ width: `${p.value}%` }}
+                      />
+                    </div>
+                    <div className="text-[9px] text-white/55 mt-1 truncate">{p.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {count != null && count > 0 && (
+                <Link
+                  href={resultsHref}
+                  className="block text-center bg-white text-olive-dark rounded-full px-4 py-2.5 text-[13px] font-semibold hover:bg-olive-bg transition-colors"
+                >
+                  Zobrazit {count === 1 ? 'olej' : count <= 4 ? `${count} oleje` : `všech ${count} olejů`} →
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </div>

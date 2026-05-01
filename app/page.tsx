@@ -9,11 +9,12 @@ import { getArticles } from '@/lib/static-content'
 import { pickOilOfDay, pickScoreFeature } from '@/lib/home-picks'
 import { NewsletterSignup } from '@/components/newsletter-signup'
 import { ProductImage } from '@/components/product-image'
-import { Trophy, BarChart3, Bot, Ban, Globe2 } from 'lucide-react'
+import { Trophy, BarChart3, Bot, Ban, Globe2, Leaf, Gift } from 'lucide-react'
 import { SommelierHero } from '@/components/sommelier-hero'
 import { FlavorSelector } from '@/components/flavor-selector'
 import { RegionAtlas } from '@/components/region-atlas'
 import { BrandStrip } from '@/components/brand-strip'
+import { ComparatorTeaser, type Duel } from '@/components/comparator-teaser'
 import { countryName, countryFlag, formatPrice, formatPricePer100ml } from '@/lib/utils'
 import { computeBadges, pickByCategory, type ProductBadge } from '@/lib/product-badges'
 import type { Product, ProductOffer } from '@/lib/types'
@@ -59,6 +60,66 @@ export default async function Home() {
   const tipJemny = pickByCategory(allProducts, 'jemny')
   const tipZdravy = pickByCategory(allProducts, 'zdravy')
 
+  // Comparator teaser — 3 prefab duely
+  const withOffer = allProducts.filter((p) => p.cheapestOffer != null)
+
+  const duelTopScore = [...withOffer]
+    .sort((a, b) => b.olivatorScore - a.olivatorScore)
+    .slice(0, 3)
+
+  const duelBioGreek = withOffer
+    .filter(
+      (p) =>
+        p.originCountry === 'GR' &&
+        p.certifications.some((c) => {
+          const lc = c.toLowerCase()
+          return lc === 'bio' || lc === 'organic' || lc === 'eu_bio'
+        })
+    )
+    .sort((a, b) => {
+      const ppa = a.cheapestOffer!.price / Math.max(1, a.volumeMl ?? 500)
+      const ppb = b.cheapestOffer!.price / Math.max(1, b.volumeMl ?? 500)
+      return ppa - ppb
+    })
+    .slice(0, 3)
+
+  // 3. duel — nejlepší Score do 500 Kč (běžný shopper)
+  const duelBudget = withOffer
+    .filter(
+      (p) =>
+        p.cheapestOffer!.price <= 500 &&
+        !duelTopScore.some((t) => t.id === p.id)
+    )
+    .sort((a, b) => b.olivatorScore - a.olivatorScore)
+    .slice(0, 3)
+
+  const duels: Duel[] = [
+    {
+      key: 'top-score',
+      icon: Trophy,
+      label: 'Top 3 dle Score',
+      sub: 'Absolutní špička katalogu',
+      hint: 'Tři nejlepší oleje napříč všemi kategoriemi — nejvyšší Olivator Score, nejtvrdší metriky.',
+      products: duelTopScore,
+    },
+    {
+      key: 'bio-greek',
+      icon: Leaf,
+      label: 'BIO řecké do koše',
+      sub: 'Nejlepší poměr cena/100 ml',
+      hint: 'Tři nejlevnější bio řecké oleje za 100 ml — kvalita certifikovaná, peněženka v klidu.',
+      products: duelBioGreek,
+    },
+    {
+      key: 'budget',
+      icon: Gift,
+      label: 'Skvělé do 500 Kč',
+      sub: 'Nejlepší Score v rozumné ceně',
+      hint: 'Tři oleje pro každodenní vaření — nejlepší Score do 500 Kč. Žádný kompromis na kvalitě.',
+      products: duelBudget,
+    },
+  ].filter((d) => d.products.length >= 2) as Duel[]
+
   return (
     <>
       {/* ─── HERO: AI Sommelier inline ─────────────────────────────── */}
@@ -69,6 +130,13 @@ export default async function Home() {
         brandCount={brands.length}
         topPicks={topPicks}
         productLookup={productLookup}
+      />
+
+      {/* ─── COMPARATOR TEASER ─ 3 prefab duely + trust counter ─── */}
+      <ComparatorTeaser
+        duels={duels}
+        totalProducts={stats.totalProducts}
+        totalRetailers={stats.activeRetailers}
       />
 
       {/* ─── TOP 12 OLEJŮ TÉTO CHVÍLE ────────────────────────────── */}
