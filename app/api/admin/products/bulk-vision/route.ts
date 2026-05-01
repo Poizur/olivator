@@ -20,6 +20,7 @@ interface ProductRow {
   slug: string
   acidity: number | null
   polyphenols: number | null
+  oleocanthal: number | null
   peroxide_value: number | null
   oleic_acid_pct: number | null
   certifications: string[] | null
@@ -91,11 +92,11 @@ export async function POST() {
   // ── Step 2: Lab scan ─────────────────────────────────────────────
   const { data: products } = await supabaseAdmin
     .from('products')
-    .select('id, name, slug, acidity, polyphenols, peroxide_value, oleic_acid_pct, certifications, volume_ml')
+    .select('id, name, slug, acidity, polyphenols, oleocanthal, peroxide_value, oleic_acid_pct, certifications, volume_ml')
     .eq('status', 'active')
     .returns<ProductRow[]>()
   const needScan = (products ?? []).filter(
-    (p) => p.acidity == null || p.polyphenols == null || p.peroxide_value == null || p.oleic_acid_pct == null
+    (p) => p.acidity == null || p.polyphenols == null || p.oleocanthal == null || p.peroxide_value == null || p.oleic_acid_pct == null
   )
 
   let labScanned = 0
@@ -106,40 +107,46 @@ export async function POST() {
       .select('url, alt_text')
       .eq('product_id', p.id)
       .neq('source', 'scraper_candidate')
-    const labPhoto = (pImgs ?? []).find((i) =>
-      looksLikeLabReport(i.url as string, i.alt_text as string | null)
-    )
-    if (!labPhoto) continue
+    // Lab-looking photos first, then all others
+    const sorted = [...(pImgs ?? [])].sort((a, b) => {
+      const aL = looksLikeLabReport(a.url as string, a.alt_text as string | null) ? 0 : 1
+      const bL = looksLikeLabReport(b.url as string, b.alt_text as string | null) ? 0 : 1
+      return aL - bL
+    })
     try {
-      const lab = await scanLabReport(labPhoto.url as string)
-      labScanned++
-      if (lab.confidence === 'low') continue
-      const patch: Record<string, number> = {}
-      if (p.acidity == null && lab.acidity != null) patch.acidity = lab.acidity
-      if (p.polyphenols == null && lab.polyphenols != null) patch.polyphenols = lab.polyphenols
-      if (p.peroxide_value == null && lab.peroxideValue != null) patch.peroxide_value = lab.peroxideValue
-      if (p.oleic_acid_pct == null && lab.oleicAcidPct != null) patch.oleic_acid_pct = lab.oleicAcidPct
-      if (Object.keys(patch).length === 0) continue
-
-      const merged = { ...p, ...patch }
-      const pricePer100ml = await getCheapestPricePer100ml(p.id, p.volume_ml)
-      const score = calculateScore({
-        acidity: merged.acidity,
-        certifications: merged.certifications,
-        polyphenols: merged.polyphenols,
-        peroxideValue: merged.peroxide_value,
-        pricePer100ml,
-      })
-      await supabaseAdmin
-        .from('products')
-        .update({
-          ...patch,
-          olivator_score: score.total,
-          score_breakdown: score.breakdown,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', p.id)
-      labUpdated++
+      for (const img of sorted) {
+        const lab = await scanLabReport(img.url as string)
+        labScanned++
+        if (lab.confidence === 'low') continue
+        const patch: Record<string, number> = {}
+        if (p.acidity == null && lab.acidity != null) patch.acidity = lab.acidity
+        if (p.polyphenols == null && lab.polyphenols != null) patch.polyphenols = lab.polyphenols
+        if (p.oleocanthal == null && lab.oleocanthal != null) patch.oleocanthal = lab.oleocanthal
+        if (p.peroxide_value == null && lab.peroxideValue != null) patch.peroxide_value = lab.peroxideValue
+        if (p.oleic_acid_pct == null && lab.oleicAcidPct != null) patch.oleic_acid_pct = lab.oleicAcidPct
+        if (Object.keys(patch).length > 0) {
+          const merged = { ...p, ...patch }
+          const pricePer100ml = await getCheapestPricePer100ml(p.id, p.volume_ml)
+          const score = calculateScore({
+            acidity: merged.acidity,
+            certifications: merged.certifications,
+            polyphenols: merged.polyphenols,
+            peroxideValue: merged.peroxide_value,
+            pricePer100ml,
+          })
+          await supabaseAdmin
+            .from('products')
+            .update({
+              ...patch,
+              olivator_score: score.total,
+              score_breakdown: score.breakdown,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', p.id)
+          labUpdated++
+        }
+        break  // got a useful scan — stop trying more photos
+      }
     } catch {
       // ignore — lab scan can fail on noise photos
     }

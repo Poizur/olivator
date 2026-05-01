@@ -104,6 +104,9 @@ export function ListingContent({
     if (activeQuality.includes('high_polyphenols')) {
       list = list.filter((p) => p.polyphenols != null && p.polyphenols >= 500)
     }
+    if (activeQuality.includes('high_oleocanthal')) {
+      list = list.filter((p) => p.oleocanthal != null && p.oleocanthal >= 100)
+    }
     if (maxPrice) {
       const max = Number(maxPrice)
       if (!isNaN(max)) {
@@ -254,6 +257,12 @@ export function ListingContent({
                   <FilterChip
                     label="Polyfenoly ≥500"
                     onRemove={() => clearFilter('quality', 'high_polyphenols')}
+                  />
+                )}
+                {activeQuality.includes('high_oleocanthal') && (
+                  <FilterChip
+                    label="Oleokantal ≥100"
+                    onRemove={() => clearFilter('quality', 'high_oleocanthal')}
                   />
                 )}
                 {maxPrice && (

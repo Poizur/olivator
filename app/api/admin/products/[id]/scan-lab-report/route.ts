@@ -38,7 +38,7 @@ export async function POST(
     // Read current product to only fill NULL fields
     const { data: product, error: readErr } = await supabaseAdmin
       .from('products')
-      .select('acidity, polyphenols, peroxide_value, oleic_acid_pct, certifications, volume_ml')
+      .select('acidity, polyphenols, oleocanthal, peroxide_value, oleic_acid_pct, certifications, volume_ml')
       .eq('id', id)
       .maybeSingle()
     if (readErr) throw readErr
@@ -56,6 +56,10 @@ export async function POST(
     if (product.polyphenols == null && lab.polyphenols != null) {
       payload.polyphenols = lab.polyphenols
       filled.push(`polyfenoly ${lab.polyphenols} mg/kg`)
+    }
+    if (product.oleocanthal == null && lab.oleocanthal != null) {
+      payload.oleocanthal = lab.oleocanthal
+      filled.push(`oleokantal ${lab.oleocanthal} mg/kg`)
     }
     if (product.peroxide_value == null && lab.peroxideValue != null) {
       payload.peroxide_value = lab.peroxideValue

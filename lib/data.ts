@@ -16,6 +16,7 @@ interface ProductRow {
   type: string | null
   acidity: number | null
   polyphenols: number | null
+  oleocanthal: number | null
   peroxide_value: number | null
   oleic_acid_pct: number | null
   harvest_year: number | null
@@ -51,6 +52,7 @@ function mapProduct(row: ProductRow): Product {
     type: (row.type ?? 'evoo') as Product['type'],
     acidity: row.acidity != null ? Number(row.acidity) : null,
     polyphenols: row.polyphenols,                       // preserve null — common for small producers
+    oleocanthal: row.oleocanthal != null ? Number(row.oleocanthal) : null,
     peroxideValue: row.peroxide_value != null ? Number(row.peroxide_value) : null,
     oleicAcidPct: row.oleic_acid_pct != null ? Number(row.oleic_acid_pct) : null,
     harvestYear: row.harvest_year,
@@ -224,6 +226,7 @@ export interface SiteStats {
   byType: Record<string, number>
   under200Kc: number
   highPolyphenols: number
+  highOleocanthal: number
 }
 
 export async function getSiteStats(): Promise<SiteStats> {
@@ -234,6 +237,7 @@ export async function getSiteStats(): Promise<SiteStats> {
   const byType: Record<string, number> = {}
   let under200Kc = 0
   let highPolyphenols = 0
+  let highOleocanthal = 0
 
   for (const p of products) {
     byOrigin[p.originCountry] = (byOrigin[p.originCountry] ?? 0) + 1
@@ -243,6 +247,7 @@ export async function getSiteStats(): Promise<SiteStats> {
     }
     if (p.cheapestOffer && p.cheapestOffer.price <= 200) under200Kc++
     if (p.polyphenols != null && p.polyphenols >= 500) highPolyphenols++
+    if (p.oleocanthal != null && p.oleocanthal >= 100) highOleocanthal++
   }
 
   const { count } = await supabaseAdmin
@@ -258,6 +263,7 @@ export async function getSiteStats(): Promise<SiteStats> {
     byType,
     under200Kc,
     highPolyphenols,
+    highOleocanthal,
   }
 }
 
@@ -393,6 +399,7 @@ export interface ProductInput {
   type: string
   acidity?: number
   polyphenols?: number
+  oleocanthal?: number
   peroxideValue?: number
   oleicAcidPct?: number
   harvestYear?: number
@@ -422,6 +429,7 @@ export async function createProduct(input: ProductInput): Promise<{ id: string }
     type: input.type,
     acidity: input.acidity ?? null,
     polyphenols: input.polyphenols ?? null,
+    oleocanthal: input.oleocanthal ?? null,
     peroxide_value: input.peroxideValue ?? null,
     oleic_acid_pct: input.oleicAcidPct ?? null,
     harvest_year: input.harvestYear ?? null,
@@ -462,6 +470,7 @@ export async function updateProduct(id: string, input: ProductInput) {
     type: input.type,
     acidity: input.acidity ?? null,
     polyphenols: input.polyphenols ?? null,
+    oleocanthal: input.oleocanthal ?? null,
     peroxide_value: input.peroxideValue ?? null,
     oleic_acid_pct: input.oleicAcidPct ?? null,
     harvest_year: input.harvestYear ?? null,

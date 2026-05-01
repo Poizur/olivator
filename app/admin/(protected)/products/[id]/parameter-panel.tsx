@@ -20,6 +20,7 @@ const KNOWN_MAPPED_KEYS = [
   'kyselina olejová',
   'země původu', 'původ',
   'polyfenoly',
+  'oleokantal', 'oleocanthal',
 ]
 
 function isKnownKey(label: string): boolean {

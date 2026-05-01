@@ -9,6 +9,7 @@ const MODEL = 'claude-sonnet-4-20250514' // vision requires Sonnet, not Haiku
 export interface LabReportData {
   acidity: number | null         // kyselost %
   polyphenols: number | null     // mg/kg
+  oleocanthal: number | null     // mg/kg — protizánětlivý fenol
   peroxideValue: number | null   // mEq O2/kg
   oleicAcidPct: number | null    // kys. olejová %
   k232: number | null
@@ -23,6 +24,7 @@ const SYSTEM_PROMPT = `Jsi odborník na laboratorní analýzy olivových olejů.
 Hledej tyto hodnoty:
 - **acidita** (kyselost, % volných mastných kyselin, oleic acid equivalent) — čísla jako 0.1 až 1.0
 - **polyfenoly** (total polyphenols, polifenoli totali) — mg/kg, čísla typicky 50-800
+- **oleocanthal** (oleocantalio, oleocantale, ibuprofen-like phenol) — mg/kg, typicky 0-700; bývá na etiketách prémiových EVOO jako samostatný údaj nebo součást fenolického profilu
 - **peroxidové číslo** (peroxide value) — mEq O2/kg, čísla 0-25
 - **kys. olejová** (oleic acid) — % všech mastných kyselin, typicky 55-83
 - **K232** — UV absorption koeficient, typicky 1.5-3.0
@@ -33,6 +35,7 @@ Vrať POUZE JSON (žádný markdown, žádný text okolo):
 {
   "acidity": 0.32,
   "polyphenols": 285,
+  "oleocanthal": 120,
   "peroxideValue": 8.5,
   "oleicAcidPct": 75.2,
   "k232": 1.95,
@@ -92,6 +95,7 @@ export async function scanLabReport(imageUrl: string): Promise<LabReportData> {
   return {
     acidity: safeNum(parsed.acidity, 0, 5),
     polyphenols: safeNum(parsed.polyphenols, 0, 2000, true),
+    oleocanthal: safeNum(parsed.oleocanthal, 0, 1000, true),
     peroxideValue: safeNum(parsed.peroxideValue, 0, 50),
     oleicAcidPct: safeNum(parsed.oleicAcidPct, 0, 100),
     k232: safeNum(parsed.k232, 0, 10),

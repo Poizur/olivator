@@ -17,6 +17,7 @@ export interface Product {
   type: 'evoo' | 'virgin' | 'refined' | 'olive_oil' | 'pomace'
   acidity: number | null           // null when not tested / not published
   polyphenols: number | null       // null is common — lab analysis is expensive
+  oleocanthal: number | null       // mg/kg — protizánětlivý fenol, pálivý vjem v hrdle
   peroxideValue: number | null
   oleicAcidPct: number | null
   harvestYear: number | null

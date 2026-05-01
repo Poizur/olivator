@@ -76,6 +76,7 @@ export function ProductForm({
   // Chemistry
   const [acidity, setAcidity] = useState(String(productRow.acidity ?? ''))
   const [polyphenols, setPolyphenols] = useState(String(productRow.polyphenols ?? ''))
+  const [oleocanthal, setOleocanthal] = useState(String(productRow.oleocanthal ?? ''))
   const [peroxideValue, setPeroxide] = useState(String(productRow.peroxide_value ?? ''))
   const [oleicAcid, setOleic] = useState(String(productRow.oleic_acid_pct ?? ''))
 
@@ -129,6 +130,7 @@ export function ProductForm({
         packaging: packaging || undefined,
         acidity: acidity ? Number(acidity) : undefined,
         polyphenols: polyphenols ? Number(polyphenols) : undefined,
+        oleocanthal: oleocanthal ? Number(oleocanthal) : undefined,
         peroxideValue: peroxideValue ? Number(peroxideValue) : undefined,
         oleicAcidPct: oleicAcid ? Number(oleicAcid) : undefined,
         olivatorScore: olivatorScore ? Number(olivatorScore) : undefined,
@@ -256,6 +258,9 @@ export function ProductForm({
           </Field>
           <Field label="Polyfenoly (mg/kg)">
             <Input value={polyphenols} onChange={setPolyphenols} type="number" placeholder="312" />
+          </Field>
+          <Field label="Oleokantal (mg/kg)">
+            <Input value={oleocanthal} onChange={setOleocanthal} type="number" placeholder="120" />
           </Field>
           <Field label="Peroxidové číslo">
             <Input value={peroxideValue} onChange={setPeroxide} type="number" step="0.1" />

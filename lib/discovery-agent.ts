@@ -461,39 +461,43 @@ export async function publishCandidate(
         )
       }
 
-      // 4. Auto-scan lab report photos: pokud některá fotka vypadá jako lab
-      //    report (heuristika nebo AI alt), spusť OCR a doplň chybějící chemii.
-      //    Jen pokud má produkt aspoň jedno NULL pole které lab umí vyplnit.
+      // 4. Auto-scan ALL product photos for chemistry data.
+      //    Etikety a lahve bývají zdrojem dat (kyselost, polyfenoly, oleokantal…)
+      //    stejně jako laboratorní protokoly. Zkusíme každou fotku dokud nedostaneme
+      //    confidence != 'low'. Jen pokud má produkt aspoň jedno NULL chemické pole.
       try {
-        const labCandidates = insertedRows.filter((r) =>
-          looksLikeLabReport(r.url as string, null)
-        )
-        if (labCandidates.length > 0) {
-          // Read current product chemistry to skip if everything is filled
-          const { data: prod } = await supabaseAdmin
-            .from('products')
-            .select('acidity, polyphenols, peroxide_value, oleic_acid_pct')
-            .eq('id', productId)
-            .maybeSingle()
-          const needsScan =
-            !prod ||
-            prod.acidity == null ||
-            prod.polyphenols == null ||
-            prod.peroxide_value == null ||
-            prod.oleic_acid_pct == null
-          if (needsScan) {
-            // Scan first lab-looking photo (most likely a real report)
-            const lab = await scanLabReport(labCandidates[0].url as string)
-            if (lab.confidence !== 'low') {
-              const patch: Record<string, number> = {}
-              if (prod?.acidity == null && lab.acidity != null) patch.acidity = lab.acidity
-              if (prod?.polyphenols == null && lab.polyphenols != null) patch.polyphenols = lab.polyphenols
-              if (prod?.peroxide_value == null && lab.peroxideValue != null) patch.peroxide_value = lab.peroxideValue
-              if (prod?.oleic_acid_pct == null && lab.oleicAcidPct != null) patch.oleic_acid_pct = lab.oleicAcidPct
-              if (Object.keys(patch).length > 0) {
-                await supabaseAdmin.from('products').update(patch).eq('id', productId)
-              }
+        const { data: prod } = await supabaseAdmin
+          .from('products')
+          .select('acidity, polyphenols, oleocanthal, peroxide_value, oleic_acid_pct')
+          .eq('id', productId)
+          .maybeSingle()
+        const needsScan =
+          !prod ||
+          prod.acidity == null ||
+          prod.polyphenols == null ||
+          prod.oleocanthal == null ||
+          prod.peroxide_value == null ||
+          prod.oleic_acid_pct == null
+        if (needsScan && insertedRows.length > 0) {
+          // Lab-looking photos first (heuristika), pak zbytek
+          const sorted = [...insertedRows].sort((a, b) => {
+            const aLab = looksLikeLabReport(a.url as string, null) ? 0 : 1
+            const bLab = looksLikeLabReport(b.url as string, null) ? 0 : 1
+            return aLab - bLab
+          })
+          for (const row of sorted) {
+            const lab = await scanLabReport(row.url as string)
+            if (lab.confidence === 'low') continue   // not useful, try next
+            const patch: Record<string, number> = {}
+            if (prod?.acidity == null && lab.acidity != null) patch.acidity = lab.acidity
+            if (prod?.polyphenols == null && lab.polyphenols != null) patch.polyphenols = lab.polyphenols
+            if (prod?.oleocanthal == null && lab.oleocanthal != null) patch.oleocanthal = lab.oleocanthal
+            if (prod?.peroxide_value == null && lab.peroxideValue != null) patch.peroxide_value = lab.peroxideValue
+            if (prod?.oleic_acid_pct == null && lab.oleicAcidPct != null) patch.oleic_acid_pct = lab.oleicAcidPct
+            if (Object.keys(patch).length > 0) {
+              await supabaseAdmin.from('products').update(patch).eq('id', productId)
             }
+            break  // got a useful scan — stop
           }
         }
       } catch (err) {

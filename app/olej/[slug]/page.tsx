@@ -173,6 +173,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       missing: product.polyphenols == null,
     },
     {
+      key: 'Oleokantal',
+      value: product.oleocanthal != null ? `${product.oleocanthal} mg/kg` : '— data chybí',
+      missing: product.oleocanthal == null,
+    },
+    {
       key: 'Rok sklizně',
       value: product.harvestYear ? String(product.harvestYear) : '— nezveřejněno',
       missing: !product.harvestYear,
@@ -584,6 +589,19 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                           ? 'splňuje EU health claim (≥250)'
                           : product.polyphenols >= 250
                           ? 'splňuje EU health claim'
+                          : 'nižší obsah'
+                      }
+                    />
+                  )}
+                  {product.oleocanthal != null && (
+                    <FactRow
+                      label="Oleokantal"
+                      value={`${product.oleocanthal} mg/kg`}
+                      note={
+                        product.oleocanthal >= 200
+                          ? 'výrazný pálivý vjem, silné protizánětlivé účinky'
+                          : product.oleocanthal >= 100
+                          ? 'dobrý obsah oleokantalu'
                           : 'nižší obsah'
                       }
                     />
