@@ -497,28 +497,46 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               )
             })}
 
-            {/* CTA: Najít olej (vždycky poslední, vyplní zbylé místo) */}
+            {/* CTA: Najít olej — sytě olivová karta s dekorativní olivovou
+                ratolestí (SVG). Stejný vizuální jazyk jako Olej týdne / Top 3
+                v hero. Plně barevná (ne pastelová) = výraznější "promo" tón. */}
             <Link
               href="/quiz"
-              className="group bg-olive-bg border border-olive-border rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_8px_24px_rgba(45,106,79,0.1)] hover:-translate-y-0.5 hover:bg-olive-dark hover:border-olive-dark"
+              className="group bg-olive-dark text-white rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_12px_32px_rgba(45,106,79,0.25)] hover:-translate-y-0.5 relative"
             >
-              <div className="relative aspect-[4/5] flex flex-col items-center justify-center p-3 text-center">
-                <div className="w-12 h-12 rounded-full bg-white/70 group-hover:bg-white/15 flex items-center justify-center mb-2 transition-colors">
-                  <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-olive group-hover:text-white transition-colors">
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="m21 21-4.35-4.35" />
-                  </svg>
-                </div>
-                <div className="text-[11px] font-medium text-olive-dark group-hover:text-white transition-colors">
-                  Není to ten pravý?
-                </div>
+              {/* Decorative olive branch SVG na pozadí */}
+              <div className="absolute inset-0 opacity-15 pointer-events-none">
+                <svg
+                  viewBox="0 0 100 125"
+                  className="absolute -right-4 -top-2 w-32 h-40 text-white"
+                  fill="currentColor"
+                >
+                  {/* Olivová ratolest — stylizovaná */}
+                  <path d="M50 10 Q 60 25, 55 40 Q 50 55, 60 70 Q 70 85, 65 100" stroke="currentColor" strokeWidth="2" fill="none" />
+                  <ellipse cx="55" cy="22" rx="6" ry="3" transform="rotate(-30 55 22)" />
+                  <ellipse cx="62" cy="35" rx="6" ry="3" transform="rotate(20 62 35)" />
+                  <ellipse cx="50" cy="48" rx="6" ry="3" transform="rotate(-20 50 48)" />
+                  <ellipse cx="62" cy="62" rx="6" ry="3" transform="rotate(30 62 62)" />
+                  <ellipse cx="55" cy="78" rx="6" ry="3" transform="rotate(-15 55 78)" />
+                  <ellipse cx="68" cy="92" rx="6" ry="3" transform="rotate(25 68 92)" />
+                </svg>
               </div>
-              <div className="p-2.5 flex-1 flex flex-col bg-white group-hover:bg-olive-dark transition-colors">
-                <div className="text-[12px] font-bold text-text group-hover:text-white leading-tight mb-1 transition-colors">
+
+              <div className="relative aspect-[4/5] flex flex-col items-start justify-end p-4">
+                <div className="text-[9px] font-bold tracking-widest uppercase text-white/70 mb-2">
+                  Pomocník
+                </div>
+                <div className="font-[family-name:var(--font-display)] text-2xl text-white leading-tight mb-1">
                   Najít olej
                 </div>
-                <div className="mt-auto text-[10px] text-olive group-hover:text-white/80 transition-colors">
-                  Doporučení za 60 s →
+                <div className="text-[11px] text-white/80 leading-snug">
+                  5 otázek, 3 doporučení
+                </div>
+              </div>
+              <div className="relative p-2.5 bg-olive2 group-hover:bg-olive transition-colors">
+                <div className="text-[12px] font-semibold text-white flex items-center justify-between">
+                  <span>Spustit</span>
+                  <span className="group-hover:translate-x-0.5 transition-transform">→</span>
                 </div>
               </div>
             </Link>
