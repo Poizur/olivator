@@ -897,18 +897,18 @@ export async function deleteOffer(id: string) {
 // ── Entity cross-links (region / brand / cultivar) ─────────────────────────
 
 export interface ProductEntityLinks {
-  region: { slug: string; name: string } | null
-  brand: { slug: string; name: string } | null
-  cultivars: Array<{ slug: string; name: string }>
+  region: { slug: string; name: string; photoUrl: string | null; countryCode: string | null } | null
+  brand: { slug: string; name: string; photoUrl: string | null } | null
+  cultivars: Array<{ slug: string; name: string; photoUrl: string | null }>
 }
 
 export async function getProductEntityLinks(productId: string, brandSlug: string | null, regionSlug: string | null): Promise<ProductEntityLinks> {
   const [regionRow, brandRow, cultivarLinks] = await Promise.all([
     regionSlug
-      ? supabaseAdmin.from('regions').select('slug, name').eq('slug', regionSlug).single().then((r) => r.data)
+      ? supabaseAdmin.from('regions').select('id, slug, name, country_code').eq('slug', regionSlug).single().then((r) => r.data)
       : Promise.resolve(null),
     brandSlug
-      ? supabaseAdmin.from('brands').select('slug, name').eq('slug', brandSlug).single().then((r) => r.data)
+      ? supabaseAdmin.from('brands').select('id, slug, name').eq('slug', brandSlug).single().then((r) => r.data)
       : Promise.resolve(null),
     supabaseAdmin
       .from('product_cultivars')
@@ -918,19 +918,56 @@ export async function getProductEntityLinks(productId: string, brandSlug: string
   ])
 
   const cultivarSlugs = cultivarLinks.map((c: { cultivar_slug: string }) => c.cultivar_slug)
-  let cultivars: Array<{ slug: string; name: string }> = []
+  let cultivars: Array<{ id: string; slug: string; name: string }> = []
   if (cultivarSlugs.length > 0) {
     const { data } = await supabaseAdmin
       .from('cultivars')
-      .select('slug, name')
+      .select('id, slug, name')
       .in('slug', cultivarSlugs)
-    cultivars = data ?? []
+    cultivars = (data ?? []) as Array<{ id: string; slug: string; name: string }>
+  }
+
+  // Načti primární fotky všech tří typů entit jednou batch query.
+  // entity_images je polymorphic — entity_type + entity_id.
+  const entityIds: Array<{ id: string; type: 'region' | 'brand' | 'cultivar' }> = []
+  if (regionRow?.id) entityIds.push({ id: regionRow.id, type: 'region' })
+  if (brandRow?.id) entityIds.push({ id: brandRow.id, type: 'brand' })
+  for (const c of cultivars) entityIds.push({ id: c.id, type: 'cultivar' })
+
+  const photoByEntity = new Map<string, string>()
+  if (entityIds.length > 0) {
+    const { data: photos } = await supabaseAdmin
+      .from('entity_images')
+      .select('entity_id, url')
+      .in('entity_id', entityIds.map((e) => e.id))
+      .eq('status', 'active')
+      .eq('is_primary', true)
+    for (const p of photos ?? []) {
+      photoByEntity.set(p.entity_id as string, p.url as string)
+    }
   }
 
   return {
-    region: regionRow ? { slug: regionRow.slug, name: regionRow.name } : null,
-    brand: brandRow ? { slug: brandRow.slug, name: brandRow.name } : null,
-    cultivars,
+    region: regionRow
+      ? {
+          slug: regionRow.slug,
+          name: regionRow.name,
+          photoUrl: photoByEntity.get(regionRow.id) ?? null,
+          countryCode: regionRow.country_code ?? null,
+        }
+      : null,
+    brand: brandRow
+      ? {
+          slug: brandRow.slug,
+          name: brandRow.name,
+          photoUrl: photoByEntity.get(brandRow.id) ?? null,
+        }
+      : null,
+    cultivars: cultivars.map((c) => ({
+      slug: c.slug,
+      name: c.name,
+      photoUrl: photoByEntity.get(c.id) ?? null,
+    })),
   }
 }
 

@@ -611,51 +611,90 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 </div>
               </div>
 
-              {/* Souvislosti — region / značka / odrůda jako kompaktní seznam */}
+              {/* Souvislosti — region / značka / odrůda jako vizuální karty s thumbnailem */}
               {(entityLinks.region || entityLinks.brand || entityLinks.cultivars.length > 0) && (
-                <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-5">
-                  <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-3">
+                <div className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden">
+                  <div className="px-4 pt-4 pb-2 text-[10px] font-bold tracking-widest uppercase text-olive">
                     Souvislosti
                   </div>
-                  <div className="space-y-2.5">
+                  <div className="divide-y divide-off">
                     {entityLinks.region && (
                       <Link
                         href={`/oblast/${entityLinks.region.slug}`}
-                        className="block group"
+                        className="flex items-center gap-3 px-4 py-3 group hover:bg-off/50 transition-colors"
                       >
-                        <div className="text-[10px] font-medium text-text3 uppercase tracking-wider mb-0.5">
-                          Oblast
+                        <div className="shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-olive-bg border border-olive-border">
+                          {entityLinks.region.photoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={entityLinks.region.photoUrl} alt={entityLinks.region.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <span className="font-[family-name:var(--font-display)] text-xl italic text-olive-dark leading-none">
+                                {entityLinks.region.countryCode ?? entityLinks.region.name.charAt(0)}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        <div className="font-[family-name:var(--font-display)] text-[18px] text-text group-hover:text-olive transition-colors leading-tight">
-                          {entityLinks.region.name} →
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[10px] font-medium text-text3 uppercase tracking-wider mb-0.5">Oblast</div>
+                          <div className="font-[family-name:var(--font-display)] text-[15px] text-text group-hover:text-olive transition-colors leading-tight truncate">
+                            {entityLinks.region.name}
+                          </div>
                         </div>
+                        <span className="shrink-0 text-text3 group-hover:text-olive transition-colors text-sm">→</span>
                       </Link>
                     )}
                     {entityLinks.brand && (
                       <Link
                         href={`/znacka/${entityLinks.brand.slug}`}
-                        className="block group pt-2.5 border-t border-off"
+                        className="flex items-center gap-3 px-4 py-3 group hover:bg-off/50 transition-colors"
                       >
-                        <div className="text-[10px] font-medium text-text3 uppercase tracking-wider mb-0.5">
-                          Značka
+                        <div className="shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-olive-bg border border-olive-border">
+                          {entityLinks.brand.photoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={entityLinks.brand.photoUrl} alt={entityLinks.brand.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <span className="font-[family-name:var(--font-display)] text-xl italic text-olive-dark leading-none">
+                                {entityLinks.brand.name.charAt(0)}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        <div className="font-[family-name:var(--font-display)] text-[18px] text-text group-hover:text-olive transition-colors leading-tight">
-                          {entityLinks.brand.name} →
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[10px] font-medium text-text3 uppercase tracking-wider mb-0.5">Značka</div>
+                          <div className="font-[family-name:var(--font-display)] text-[15px] text-text group-hover:text-olive transition-colors leading-tight truncate">
+                            {entityLinks.brand.name}
+                          </div>
                         </div>
+                        <span className="shrink-0 text-text3 group-hover:text-olive transition-colors text-sm">→</span>
                       </Link>
                     )}
                     {entityLinks.cultivars.map((c) => (
                       <Link
                         key={c.slug}
                         href={`/odruda/${c.slug}`}
-                        className="block group pt-2.5 border-t border-off"
+                        className="flex items-center gap-3 px-4 py-3 group hover:bg-off/50 transition-colors"
                       >
-                        <div className="text-[10px] font-medium text-text3 uppercase tracking-wider mb-0.5">
-                          Odrůda
+                        <div className="shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-olive-bg border border-olive-border">
+                          {c.photoUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={c.photoUrl} alt={c.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <span className="font-[family-name:var(--font-display)] text-xl italic text-olive-dark leading-none">
+                                {c.name.charAt(0)}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        <div className="font-[family-name:var(--font-display)] text-[18px] text-text group-hover:text-olive transition-colors leading-tight">
-                          {c.name} →
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[10px] font-medium text-text3 uppercase tracking-wider mb-0.5">Odrůda</div>
+                          <div className="font-[family-name:var(--font-display)] text-[15px] text-text group-hover:text-olive transition-colors leading-tight truncate">
+                            {c.name}
+                          </div>
                         </div>
+                        <span className="shrink-0 text-text3 group-hover:text-olive transition-colors text-sm">→</span>
                       </Link>
                     ))}
                   </div>
