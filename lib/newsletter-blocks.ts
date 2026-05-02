@@ -105,11 +105,13 @@ export async function pickOilOfTheWeek(
       in_stock: boolean
       retailers: { name: string; slug: string; is_active: boolean } | null
     }
-    const validOffers = ((offers ?? []) as unknown as OfferRow[]).filter(
-      (o) => o.retailers?.is_active === true
+    const allOffers = ((offers ?? []) as unknown as OfferRow[]).filter(
+      (o) => o.retailers !== null
     )
-    if (validOffers.length === 0) continue
-    const cheapest = validOffers[0]
+    if (allOffers.length === 0) continue
+    // Preferuj is_active=true, ale pokud takový není, vezmi jakýkoliv
+    const cheapest =
+      allOffers.find((o) => o.retailers?.is_active === true) ?? allOffers[0]
 
     // Najdi minimální cenu za posledních 30 dnů (kontext: drop?)
     const { data: history } = await supabaseAdmin
@@ -285,17 +287,18 @@ export async function pickNewArrival(): Promise<OilCardData | null> {
       .eq('product_id', p.id)
       .eq('in_stock', true)
       .order('price', { ascending: true })
-      .limit(1)
 
     type OfferRow = {
       price: number
       in_stock: boolean
       retailers: { name: string; slug: string; is_active: boolean } | null
     }
-    const validOffer = ((offers ?? []) as unknown as OfferRow[]).find(
-      (o) => o.retailers?.is_active === true
+    const allOffers = ((offers ?? []) as unknown as OfferRow[]).filter(
+      (o) => o.retailers !== null
     )
-    if (!validOffer) continue
+    if (allOffers.length === 0) continue
+    const validOffer =
+      allOffers.find((o) => o.retailers?.is_active === true) ?? allOffers[0]
 
     type Brand = { name: string; slug: string } | null
     const brand = (p.brands as unknown as Brand) ?? null
