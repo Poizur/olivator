@@ -65,11 +65,11 @@ function buildAffiliateUrl(retailerSlug: string, productSlug: string, utmContent
 // ── 1. Olej týdne — kurátorský pick ────────────────────────────────────────
 //
 // Strategie výběru:
-//  - Nejvyšší Score (85+) co MÁ aktivní nabídku
+//  - Nejvyšší Score co MÁ aktivní nabídku (žádný hard threshold — bereme co máme)
 //  - Není ten samý jako minulý týden (LRU)
 //  - Preferuj olej co má drop > 10 % (vědět "proč právě teď")
 //
-// Returns null pokud žádný kandidát nesplňuje kritéria.
+// Returns null pouze pokud catalog je prázdný nebo nikdo nemá aktivní nabídku.
 export async function pickOilOfTheWeek(
   excludeProductIds: string[] = []
 ): Promise<OilCardData | null> {
@@ -80,9 +80,8 @@ export async function pickOilOfTheWeek(
       brands ( name, slug )
     `)
     .eq('status', 'active')
-    .gte('olivator_score', 80)
     .order('olivator_score', { ascending: false })
-    .limit(20)
+    .limit(30)
 
   if (!products) return null
 
@@ -130,7 +129,9 @@ export async function pickOilOfTheWeek(
 
     const reasoning = hasDrop
       ? `Score ${p.olivator_score} a aktuálně sleva ${Math.round(((oldPrice! - cheapest.price) / oldPrice!) * 100)} % oproti měsíčnímu maximu — silný moment k vyzkoušení.`
-      : `Patří mezi 5 % nejlépe hodnocených v katalogu. Kvalita ověřená Olivator Score.`
+      : (p.olivator_score as number) >= 80
+      ? `Patří mezi nejlépe hodnocené v katalogu. Kvalita ověřená Olivator Score ${p.olivator_score}.`
+      : `Aktuálně Score ${p.olivator_score} — solidní volba k tomu typu pokrmů.`
 
     return {
       productId: p.id as string,
@@ -256,9 +257,10 @@ export async function pickDeals(
 
 // ── 3. Premiéra — nejnovější active produkt ────────────────────────────────
 //
-// Najde produkty kde created_at < 14 dnů, status='active', score > 70.
+// Najde produkty kde created_at < 30 dnů, status='active'. Bez score threshold —
+// novinka stojí za zmínku i kdyby byla 60+. Když je málo dat, rozšiřujeme okno.
 export async function pickNewArrival(): Promise<OilCardData | null> {
-  const since = new Date(Date.now() - 14 * 86400000).toISOString()
+  const since = new Date(Date.now() - 30 * 86400000).toISOString()
 
   const { data: products } = await supabaseAdmin
     .from('products')
@@ -268,9 +270,8 @@ export async function pickNewArrival(): Promise<OilCardData | null> {
     `)
     .eq('status', 'active')
     .gte('created_at', since)
-    .gte('olivator_score', 70)
     .order('created_at', { ascending: false })
-    .limit(5)
+    .limit(10)
 
   if (!products || products.length === 0) return null
 

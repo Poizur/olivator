@@ -96,10 +96,20 @@ Vrať jako čistý JSON (žádný markdown):
       preheader?: string
       hook?: string
     }
+    // Strip markdown markers (asterisks pro italic, underscores) — HeroHook
+    // už aplikuje italic přes CSS, doublete je nežádoucí.
+    const cleanHook = (parsed.hook ?? '')
+      .replace(/^[*_\s]+|[*_\s]+$/g, '')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/\*(.+?)\*/g, '$1')
+      .trim()
+    const cleanSubject = (parsed.subject ?? '').replace(/^[*_\s]+|[*_\s]+$/g, '').trim()
+    const cleanPreheader = (parsed.preheader ?? '').replace(/^[*_\s]+|[*_\s]+$/g, '').trim()
+
     return {
-      subject: (parsed.subject ?? '').slice(0, 100) || `Olivový týden — ${new Date().toLocaleDateString('cs-CZ')}`,
-      preheader: (parsed.preheader ?? '').slice(0, 200) || 'Olej týdne, slevy, recept, novinka',
-      hook: (parsed.hook ?? '').slice(0, 300) || 'Tento týden máme pár zajímavých novinek.',
+      subject: cleanSubject.slice(0, 100) || `Olivový týden — ${new Date().toLocaleDateString('cs-CZ')}`,
+      preheader: cleanPreheader.slice(0, 200) || 'Olej týdne, slevy, recept, novinka',
+      hook: cleanHook.slice(0, 300) || 'Tento týden máme pár zajímavých novinek.',
     }
   } catch (err) {
     console.error('[composer] hook generation failed:', err)
@@ -118,9 +128,11 @@ export async function composeWeeklyDraft(): Promise<ComposedDraft> {
   const stats = await getNewsletterStats()
 
   // 2. Pick blocks (parallel)
+  // Deals threshold 5 % — pro malou DB s krátkou price history. Až bude
+  // dostatek dat, nastav vyšší (10-15 %) v admin/newsletter/settings.
   const [oilOfWeek, deals, newArrival, recipe, fact] = await Promise.all([
     pickOilOfTheWeek(),
-    pickDeals(10, 5),
+    pickDeals(5, 5),
     pickNewArrival(),
     pickRecipe(),
     pickFact(),
