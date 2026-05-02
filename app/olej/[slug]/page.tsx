@@ -13,6 +13,7 @@ import { AffiliateLink } from '@/components/affiliate-link'
 import { ProductGallery } from '@/components/product-gallery'
 import { RetailerCard } from '@/components/retailer-card'
 import { PriceSparkline } from '@/components/price-sparkline'
+import { PriceAlertButton } from '@/components/price-alert-button'
 import { ProductActions } from './product-actions'
 
 export async function generateStaticParams() {
@@ -368,19 +369,28 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           />
 
           {cheapest && (
-            <AffiliateLink
-              data={{
-                productSlug: product.slug,
-                productName: product.name,
-                retailerSlug: cheapest.retailer.slug,
-                retailerName: cheapest.retailer.name,
-                price: cheapest.price,
-                source: 'product_page',
-              }}
-              className="block w-full bg-olive text-white border-none rounded-xl py-3.5 text-[15px] font-medium cursor-pointer text-center transition-colors hover:bg-olive-dark mb-2.5"
-            >
-              Koupit u {cheapest.retailer.name} — {formatPrice(cheapest.price)}
-            </AffiliateLink>
+            <>
+              <AffiliateLink
+                data={{
+                  productSlug: product.slug,
+                  productName: product.name,
+                  retailerSlug: cheapest.retailer.slug,
+                  retailerName: cheapest.retailer.name,
+                  price: cheapest.price,
+                  source: 'product_page',
+                }}
+                className="block w-full bg-olive text-white border-none rounded-xl py-3.5 text-[15px] font-medium cursor-pointer text-center transition-colors hover:bg-olive-dark mb-2.5"
+              >
+                Koupit u {cheapest.retailer.name} — {formatPrice(cheapest.price)}
+              </AffiliateLink>
+              <div className="text-center mb-2.5">
+                <PriceAlertButton
+                  productId={product.id}
+                  productName={product.name}
+                  currentPrice={cheapest.price}
+                />
+              </div>
+            </>
           )}
 
           <ProductActions product={product} />
