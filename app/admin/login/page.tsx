@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { Suspense } from 'react'
 import { LoginForm } from './login-form'
 
@@ -11,13 +12,17 @@ export default function AdminLoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-off px-6">
       <div className="w-full max-w-[380px] bg-white border border-off2 rounded-[var(--radius-card)] p-8 shadow-sm">
         <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-full bg-olive mx-auto mb-4 flex items-center justify-center text-2xl">
-            🫒
-          </div>
+          <Image
+            src="/logo-mark.png"
+            alt="olivátor"
+            width={56}
+            height={56}
+            className="w-14 h-14 mx-auto mb-4 rounded-xl"
+          />
           <h1 className="font-[family-name:var(--font-display)] text-2xl text-text mb-1">
             Admin
           </h1>
-          <p className="text-sm text-text2 font-light">Olivator administrace</p>
+          <p className="text-sm text-text2 font-light">olivátor administrace</p>
         </div>
         <Suspense fallback={<div className="text-center text-text3 text-sm">...</div>}>
           <LoginForm />

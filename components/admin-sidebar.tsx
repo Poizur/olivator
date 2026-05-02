@@ -3,6 +3,7 @@
 // (drafts, pending discovery, quality issues).
 
 import { headers } from 'next/headers'
+import Image from 'next/image'
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
 import { AdminCommandPalette } from './admin-command-palette'
@@ -115,13 +116,21 @@ export async function AdminSidebar() {
       {/* Brand */}
       <div className="px-5 pt-5 pb-3">
         <Link href="/admin" className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-olive-bg border border-olive-border flex items-center justify-center">
-            <div className="w-2 h-2 rounded-full bg-olive" />
-          </div>
+          <Image
+            src="/logo-mark.png"
+            alt="olivátor"
+            width={36}
+            height={36}
+            className="w-9 h-9 rounded-lg shrink-0"
+          />
           <div>
-            <div className="font-[family-name:var(--font-display)] text-lg text-text leading-none">
-              Olivátor
-            </div>
+            <Image
+              src="/logo-wordmark.png"
+              alt="olivátor"
+              width={110}
+              height={28}
+              className="h-5 w-auto"
+            />
             <div className="text-[10px] uppercase tracking-widest text-text3 mt-1">
               Admin
             </div>

@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { headers } from 'next/headers'
 import { NewsletterSignup } from './newsletter-signup'
@@ -13,10 +14,14 @@ export async function Footer() {
     <footer className="bg-off border-t border-off2 mt-12">
       <div className="max-w-[1280px] mx-auto px-6 md:px-10 py-10 grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
         <div>
-          <div className="font-[family-name:var(--font-display)] text-[17px] text-olive-dark">
-            Olivator
-          </div>
-          <div className="text-xs text-text3 mt-1 leading-relaxed">
+          <Image
+            src="/logo-wordmark.png"
+            alt="olivátor"
+            width={140}
+            height={36}
+            className="h-7 w-auto"
+          />
+          <div className="text-xs text-text3 mt-2 leading-relaxed">
             Největší srovnávač olivových olejů v ČR
             <br />
             &copy; {new Date().getFullYear()}

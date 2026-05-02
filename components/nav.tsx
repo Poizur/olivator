@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useCompare } from '@/lib/compare-context'
@@ -28,11 +29,15 @@ export function Nav({ hasAdminBar = false }: { hasAdminBar?: boolean }) {
     <>
       <nav className={`sticky ${hasAdminBar ? 'top-9' : 'top-0'} z-50 bg-white/88 backdrop-blur-xl border-b border-black/8 px-6 md:px-10`}>
         <div className="max-w-[1280px] mx-auto h-[52px] flex items-center gap-8">
-          <Link
-            href="/"
-            className="font-[family-name:var(--font-display)] text-[19px] text-olive-dark tracking-tight shrink-0"
-          >
-            Olivator
+          <Link href="/" className="shrink-0 flex items-center" aria-label="Olivátor — domů">
+            <Image
+              src="/logo-wordmark.png"
+              alt="olivátor"
+              width={140}
+              height={36}
+              priority
+              className="h-7 w-auto"
+            />
           </Link>
 
           <div className="hidden md:flex gap-6 flex-1">

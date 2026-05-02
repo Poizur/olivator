@@ -3,9 +3,12 @@ import { ImageResponse } from 'next/og'
 export const runtime = 'edge'
 export const contentType = 'image/png'
 export const size = { width: 1200, height: 630 }
-export const alt = 'Olivator — největší srovnávač olivových olejů v ČR'
+export const alt = 'olivátor — největší srovnávač olivových olejů v ČR'
 
 export default async function OGImage() {
+  // Načteme logo jako data URL — ImageResponse nepodporuje relativní /public cesty
+  const logoUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? 'https://olivator.cz'}/logo-mark.png`
+
   return new ImageResponse(
     (
       <div
@@ -21,30 +24,24 @@ export default async function OGImage() {
         }}
       >
         {/* Top — brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logoUrl}
+            alt="olivátor"
+            width={64}
+            height={64}
+            style={{ borderRadius: '12px' }}
+          />
           <div
             style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '50%',
-              background: '#2d6a4f',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '32px',
-            }}
-          >
-            🫒
-          </div>
-          <div
-            style={{
-              fontSize: '32px',
-              fontWeight: 500,
+              fontSize: '38px',
+              fontWeight: 700,
               color: '#1b4332',
-              letterSpacing: '-0.5px',
+              letterSpacing: '-1px',
             }}
           >
-            Olivator
+            olivátor
           </div>
         </div>
 
