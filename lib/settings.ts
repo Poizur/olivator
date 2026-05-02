@@ -11,6 +11,16 @@ export type SettingKey =
   | 'discovery_enabled_shops'
   | 'discovery_schedule_cron'
   | 'cron_secret'
+  // Newsletter settings
+  | 'newsletter_enabled'
+  | 'newsletter_weekly_enabled'
+  | 'newsletter_weekly_day'
+  | 'newsletter_weekly_send_hour'
+  | 'newsletter_deals_enabled'
+  | 'newsletter_deals_min_drop_pct'
+  | 'newsletter_alerts_enabled'
+  | 'newsletter_auto_send'
+  | 'newsletter_test_mode'
 
 interface SettingDef<T> {
   key: SettingKey
@@ -54,6 +64,52 @@ export const SETTINGS: Record<SettingKey, SettingDef<unknown>> = {
     key: 'cron_secret',
     default: '',
     description: 'Tajný klíč v hlavičce X-Cron-Secret pro autentizaci /api/cron/* endpointů',
+  },
+  // ── Newsletter ──────────────────────────────────────────────────────────
+  newsletter_enabled: {
+    key: 'newsletter_enabled',
+    default: true,
+    description: 'Master switch — pokud false, žádné newsletter automatizace neběží.',
+  },
+  newsletter_weekly_enabled: {
+    key: 'newsletter_weekly_enabled',
+    default: true,
+    description: 'Týdenní souhrn (čtvrtek). Auto-generuje draft který admin schválí.',
+  },
+  newsletter_weekly_day: {
+    key: 'newsletter_weekly_day',
+    default: 4, // Thursday
+    description: 'Den v týdnu kdy se posílá týdenní souhrn (1=pondělí … 7=neděle)',
+  },
+  newsletter_weekly_send_hour: {
+    key: 'newsletter_weekly_send_hour',
+    default: 8,
+    description: 'Hodina kdy se posílá týdenní souhrn (0-23, UTC). Default 8 ráno.',
+  },
+  newsletter_deals_enabled: {
+    key: 'newsletter_deals_enabled',
+    default: true,
+    description: 'Slevová kampaň — když najdeme významný drop, vytvoří se draft.',
+  },
+  newsletter_deals_min_drop_pct: {
+    key: 'newsletter_deals_min_drop_pct',
+    default: 15,
+    description: 'Minimální % poklesu ceny aby se olej dostal do slevové kampaně',
+  },
+  newsletter_alerts_enabled: {
+    key: 'newsletter_alerts_enabled',
+    default: true,
+    description: 'Cenové alerty — uživatelé sledují konkrétní oleje, email po triggeru',
+  },
+  newsletter_auto_send: {
+    key: 'newsletter_auto_send',
+    default: false,
+    description: 'POZOR: pokud true, draft se odešle automaticky bez schválení (jen pro pokročilé)',
+  },
+  newsletter_test_mode: {
+    key: 'newsletter_test_mode',
+    default: false,
+    description: 'Test mode — odesílá pouze adminovi (nikdy ne všem subscribers)',
   },
 }
 

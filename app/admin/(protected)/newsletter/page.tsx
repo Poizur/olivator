@@ -1,125 +1,130 @@
+// Newsletter dashboard — entrypoint pro správu newsletter systému.
+
+import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
+import { AdminBlock } from '@/components/admin-block'
+import { GenerateDraftButton } from './_actions/generate-draft-button'
 
 export const dynamic = 'force-dynamic'
 
-interface SignupRow {
-  id: string
-  email: string
-  source: string | null
-  created_at: string
-  confirmed: boolean
-  unsubscribed: boolean
-  resend_contact_id: string | null
+interface Stats {
+  totalSubscribers: number
+  activeSubscribers: number
+  draftsPending: number
+  draftsApproved: number
+  totalSent: number
+  last7dSent: number
+  totalAlerts: number
+  triggeredAlerts: number
 }
 
-async function getSignups(): Promise<SignupRow[]> {
+async function safeCount(table: string, filterFn?: (q: any) => any): Promise<number> {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('newsletter_signups')
-      .select('id, email, source, created_at, confirmed, unsubscribed, resend_contact_id')
-      .order('created_at', { ascending: false })
-      .limit(200)
-    if (error) {
-      if (error.code === '42P01' || error.code === 'PGRST205') return []
-      throw error
-    }
-    return (data ?? []) as SignupRow[]
+    let q: any = supabaseAdmin.from(table).select('*', { count: 'exact', head: true })
+    if (filterFn) q = filterFn(q)
+    const r = await q
+    return r.count ?? 0
   } catch {
-    return []
+    return 0
   }
 }
 
-export default async function NewsletterAdminPage() {
-  const signups = await getSignups()
-  const active = signups.filter((s) => !s.unsubscribed && s.confirmed)
-  const bySource = new Map<string, number>()
-  for (const s of active) {
-    const src = s.source ?? 'unknown'
-    bySource.set(src, (bySource.get(src) ?? 0) + 1)
+async function getStats(): Promise<Stats> {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString()
+  const [
+    totalSubscribers,
+    activeSubscribers,
+    draftsPending,
+    draftsApproved,
+    totalSent,
+    last7dSent,
+    totalAlerts,
+    triggeredAlerts,
+  ] = await Promise.all([
+    safeCount('newsletter_signups'),
+    safeCount('newsletter_signups', (q) => q.eq('confirmed', true).eq('unsubscribed', false)),
+    safeCount('newsletter_drafts', (q) => q.eq('status', 'draft')),
+    safeCount('newsletter_drafts', (q) => q.eq('status', 'approved')),
+    safeCount('newsletter_drafts', (q) => q.eq('status', 'sent')),
+    safeCount('newsletter_drafts', (q) => q.eq('status', 'sent').gte('approved_at', sevenDaysAgo)),
+    safeCount('price_alerts'),
+    safeCount('price_alerts', (q) => q.eq('status', 'triggered')),
+  ])
+
+  return {
+    totalSubscribers, activeSubscribers, draftsPending, draftsApproved,
+    totalSent, last7dSent, totalAlerts, triggeredAlerts,
   }
-  const synced = signups.filter((s) => s.resend_contact_id).length
+}
+
+export default async function NewsletterDashboard() {
+  const stats = await getStats()
 
   return (
-    <div>
+    <div className="p-6 md:p-8 max-w-5xl mx-auto">
       <div className="mb-6">
-        <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">— Obsah</div>
-        <h1 className="font-[family-name:var(--font-display)] text-3xl text-text mb-1">
-          Newsletter
-        </h1>
-        <p className="text-[13px] text-text2 max-w-[640px]">
-          Newsletter signups z homepage hero boxu a footeru. Synchronizuji do Resend Audiences,
-          pokud máš nastavený <code className="bg-off rounded px-1 text-[12px]">NEWSLETTER_AUDIENCE_ID</code>.
-        </p>
+        <h1 className="font-[family-name:var(--font-display)] text-3xl text-text leading-tight">Newsletter</h1>
+        <p className="text-[13px] text-text3 mt-1">Týdenní souhrn · cenové alerty · slevové kampaně</p>
       </div>
 
-      {signups.length === 0 ? (
-        <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-8 text-center">
-          <div className="text-2xl mb-2">📭</div>
-          <div className="text-sm font-medium text-text mb-1">Zatím žádné přihlášky</div>
-          <div className="text-xs text-text3 mb-4">
-            Pokud nejsou ani po pár dnech, zkontroluj že migrace
-            <code className="bg-off rounded px-1 mx-1 text-[12px]">20260428_newsletter_signups.sql</code>
-            byla aplikována v Supabase.
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-            <Stat label="Aktivní přihlášky" value={active.length} />
-            <Stat label="Z homepage" value={bySource.get('homepage') ?? 0} />
-            <Stat label="Z footeru" value={bySource.get('footer') ?? 0} />
-            <Stat label="Synchronizováno do Resend" value={synced} />
-          </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <KpiCard label="Aktivní subscribers" value={stats.activeSubscribers} hint={`${stats.totalSubscribers} celkem`} tone="olive" />
+        <KpiCard label="Drafty na schválení" value={stats.draftsPending} hint={stats.draftsApproved > 0 ? `+${stats.draftsApproved} schválené` : 'k revizi'} tone={stats.draftsPending > 0 ? 'amber' : 'neutral'} />
+        <KpiCard label="Odesláno za 7 dní" value={stats.last7dSent} hint={`${stats.totalSent} celkem`} tone="neutral" />
+        <KpiCard label="Cenové alerty" value={stats.totalAlerts} hint={`${stats.triggeredAlerts} už spuštěné`} tone="neutral" />
+      </div>
 
-          <div className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden">
-            <table className="w-full text-[13px]">
-              <thead className="bg-off">
-                <tr>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text3">Email</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text3">Zdroj</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text3">Resend ID</th>
-                  <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text3">Stav</th>
-                  <th className="text-right px-4 py-3 text-[11px] font-semibold uppercase tracking-wider text-text3">Datum</th>
-                </tr>
-              </thead>
-              <tbody>
-                {signups.map((s) => (
-                  <tr key={s.id} className="border-t border-off2">
-                    <td className="px-4 py-2.5 font-mono text-[12px] text-text">{s.email}</td>
-                    <td className="px-4 py-2.5 text-text2">{s.source ?? '—'}</td>
-                    <td className="px-4 py-2.5 font-mono text-[10px] text-text3">{s.resend_contact_id ? s.resend_contact_id.slice(0, 12) + '…' : '—'}</td>
-                    <td className="px-4 py-2.5">
-                      {s.unsubscribed ? (
-                        <span className="text-[10px] bg-red-50 text-red-700 border border-red-200 rounded-full px-2 py-0.5 font-medium">odhlášen</span>
-                      ) : s.confirmed ? (
-                        <span className="text-[10px] bg-olive-bg text-olive-dark border border-olive-border rounded-full px-2 py-0.5 font-medium">aktivní</span>
-                      ) : (
-                        <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-0.5 font-medium">čeká</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-right text-[12px] text-text3 tabular-nums">
-                      {new Date(s.created_at).toLocaleDateString('cs-CZ', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="space-y-6">
+        <AdminBlock number={1} icon="⚡" title="Rychlé akce" description="Co můžeš udělat ručně mimo automatizaci.">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <GenerateDraftButton />
+            <Link href="/admin/newsletter/drafts" className="border border-off2 rounded-xl p-4 hover:border-olive transition-colors block">
+              <div className="text-[13px] font-medium text-text mb-1">📝 Drafty ({stats.draftsPending + stats.draftsApproved})</div>
+              <div className="text-[11px] text-text3 leading-snug">Auto-generated kampaně k revizi/odeslání</div>
+            </Link>
+            <Link href="/admin/newsletter/sends" className="border border-off2 rounded-xl p-4 hover:border-olive transition-colors block">
+              <div className="text-[13px] font-medium text-text mb-1">📊 Historie odeslaných ({stats.totalSent})</div>
+              <div className="text-[11px] text-text3 leading-snug">Open rate, click rate, attribution</div>
+            </Link>
+            <Link href="/admin/newsletter/subscribers" className="border border-off2 rounded-xl p-4 hover:border-olive transition-colors block">
+              <div className="text-[13px] font-medium text-text mb-1">👥 Subscribers ({stats.activeSubscribers})</div>
+              <div className="text-[11px] text-text3 leading-snug">Aktivní seznam, preference, zdroje</div>
+            </Link>
           </div>
-        </>
-      )}
+        </AdminBlock>
+
+        <AdminBlock number={2} icon="⚙️" title="Nastavení a obsah" description="Automatizace, knowledge base, vysvětlení flow.">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Link href="/admin/newsletter/settings" className="border border-off2 rounded-xl p-4 hover:border-olive transition-colors block">
+              <div className="text-[13px] font-medium text-text mb-1">🎛 Automatizace</div>
+              <div className="text-[11px] text-text3 leading-snug">Zapni/vypni typy kampaní + schedule</div>
+            </Link>
+            <Link href="/admin/newsletter/facts" className="border border-off2 rounded-xl p-4 hover:border-olive transition-colors block">
+              <div className="text-[13px] font-medium text-text mb-1">💡 Educational facts</div>
+              <div className="text-[11px] text-text3 leading-snug">Knihovna „Věděli jste?" pro rotaci v emailech</div>
+            </Link>
+            <Link href="/admin/newsletter/legend" className="border border-olive-border bg-olive-bg/30 rounded-xl p-4 hover:bg-olive-bg/50 transition-colors block">
+              <div className="text-[13px] font-medium text-olive-dark mb-1">📚 Jak to funguje</div>
+              <div className="text-[11px] text-olive leading-snug">Vysvětlení automatizací — co se kdy děje</div>
+            </Link>
+          </div>
+        </AdminBlock>
+      </div>
     </div>
   )
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
+function KpiCard({ label, value, hint, tone }: { label: string; value: number; hint?: string; tone: 'olive' | 'amber' | 'neutral' }) {
+  const colors = {
+    olive: 'border-olive-border bg-olive-bg/30',
+    amber: 'border-terra/30 bg-amber-50',
+    neutral: 'border-off2 bg-white',
+  }
   return (
-    <div className="bg-off/60 rounded-lg p-3">
-      <div className="text-[10px] uppercase tracking-wider text-text3 mb-1">{label}</div>
-      <div className="text-lg font-semibold text-text tabular-nums">{value}</div>
+    <div className={`border rounded-xl p-4 ${colors[tone]}`}>
+      <div className="text-[10px] uppercase tracking-widest font-medium text-text3 mb-1">{label}</div>
+      <div className="font-[family-name:var(--font-display)] text-2xl font-normal text-text leading-tight">{value}</div>
+      {hint && <div className="text-[11px] text-text3 mt-1">{hint}</div>}
     </div>
   )
 }
