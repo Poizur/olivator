@@ -90,7 +90,8 @@ export function OilCard({
                     height: '140px',
                     objectFit: 'contain',
                     borderRadius: '8px',
-                    background: '#f5f5f7',
+                    background: '#ffffff',
+                    border: '1px solid #e8e8ed',
                   }}
                 />
               ) : (
@@ -99,7 +100,8 @@ export function OilCard({
                     width: '120px',
                     height: '140px',
                     borderRadius: '8px',
-                    background: '#f5f5f7',
+                    background: '#ffffff',
+                    border: '1px solid #e8e8ed',
                     display: 'inline-block',
                   }}
                 />

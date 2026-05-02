@@ -195,7 +195,7 @@ export function EntityProductsTable({ products, entityType, filters = [], filter
                   <td className="px-4 py-3">
                     <Link href={`/olej/${p.slug}`} className="flex items-center gap-4 group">
                       {/* Náhled lahve — větší (obrázky prodávají) */}
-                      <div className="w-16 h-20 shrink-0 bg-off rounded-lg overflow-hidden flex items-center justify-center">
+                      <div className="w-16 h-20 shrink-0 bg-white border border-off2 rounded-lg overflow-hidden flex items-center justify-center">
                         {p.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
