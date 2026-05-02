@@ -52,16 +52,19 @@ export function RegionTerroir({
 
   return (
     <section className="px-6 md:px-10">
-      <div className="max-w-[1280px] mx-auto bg-olive-bg/40 rounded-[var(--radius-card)] p-6 md:p-10">
-        {/* Header s mini-mapou vpravo */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
-          <div>
+      <div className="max-w-[1280px] mx-auto bg-olive-bg/40 rounded-[var(--radius-card)] p-6 md:p-8">
+        {/* Header — title vlevo, mini-mapa vpravo, zarovnané nahoře aby nebylo prázdno */}
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
+          <div className="flex-1 min-w-0">
             <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
               — Terroir a krajina
             </div>
-            <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-3xl font-normal text-text leading-tight">
+            <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-3xl font-normal text-text leading-tight mb-3">
               Co je pro {regionName} typické
             </h2>
+            <p className="text-sm text-text3 font-light max-w-[480px] leading-relaxed">
+              Tři přírodní faktory které dělají {regionName} ideálním místem pro pěstování oliv.
+            </p>
           </div>
           <div className="shrink-0">
             <RegionMap
@@ -73,14 +76,16 @@ export function RegionTerroir({
           </div>
         </div>
 
-        {/* 3-sloupcový grid s photo headers */}
-        <div className={`grid gap-5 md:gap-6 ${visible.length === 3 ? 'md:grid-cols-3' : visible.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
+        {/* 3-sloupcový grid */}
+        <div className={`grid gap-4 md:gap-5 ${visible.length === 3 ? 'md:grid-cols-3' : visible.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-1'}`}>
           {visible.map((col, i) => {
             const photo = columnPhotos[i] ?? null
+
+            // S fotkou: photo header + text. Bez fotky: čistá plain karta s pillem.
             return (
               <div
                 key={col.key}
-                className="bg-white rounded-[var(--radius-card)] overflow-hidden border border-olive-border/40"
+                className="bg-white rounded-[var(--radius-card)] overflow-hidden border border-olive-border/40 flex flex-col"
               >
                 {photo ? (
                   <div className="relative aspect-[16/9] bg-off">
@@ -91,23 +96,25 @@ export function RegionTerroir({
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
-                    <div className="absolute bottom-3 left-4 text-white">
-                      <span className="text-[10px] font-bold tracking-widest uppercase opacity-90">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+                    <div className="absolute bottom-3 left-4 flex items-center gap-2 text-white">
+                      <span className="text-base">{col.fallbackEmoji}</span>
+                      <span className="text-[11px] font-bold tracking-widest uppercase">
                         {col.label}
                       </span>
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-olive-bg/60 px-5 py-3 flex items-center gap-2">
-                    <span className="text-base">{col.fallbackEmoji}</span>
-                    <span className="text-[11px] font-bold tracking-widest uppercase text-olive-dark">
+                  // Bez fotky: žádný fake photo header — jen vertikální accent + pill
+                  <div className="px-6 pt-5 pb-2 border-l-[3px] border-olive">
+                    <div className="inline-flex items-center gap-1.5 bg-olive-bg/70 text-olive-dark text-[10px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full">
+                      <span className="text-[12px]">{col.fallbackEmoji}</span>
                       {col.label}
-                    </span>
+                    </div>
                   </div>
                 )}
-                <div className="px-5 py-5">
-                  <p className="text-[14px] text-text2 font-light leading-[1.65]">
+                <div className={`flex-1 ${photo ? 'px-5 py-5' : 'px-6 pb-6 pt-3'}`}>
+                  <p className="text-[14px] text-text2 font-light leading-[1.7]">
                     {col.body}
                   </p>
                 </div>
@@ -115,6 +122,7 @@ export function RegionTerroir({
             )
           })}
         </div>
+
       </div>
     </section>
   )
