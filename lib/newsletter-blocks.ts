@@ -79,11 +79,12 @@ async function loadRetailerMap(): Promise<Map<string, { name: string; slug: stri
   return map
 }
 
+// Map brand by slug (products.brand_slug → brands.slug). Není FK přes brand_id.
 async function loadBrandMap(): Promise<Map<string, { name: string; slug: string }>> {
-  const { data } = await supabaseAdmin.from('brands').select('id, name, slug')
+  const { data } = await supabaseAdmin.from('brands').select('name, slug')
   const map = new Map<string, { name: string; slug: string }>()
   for (const b of data ?? []) {
-    map.set(b.id as string, { name: b.name as string, slug: b.slug as string })
+    map.set(b.slug as string, { name: b.name as string, slug: b.slug as string })
   }
   return map
 }
@@ -103,7 +104,7 @@ export async function pickOilOfTheWeek(
 
   const { data: products } = await supabaseAdmin
     .from('products')
-    .select('id, slug, name, name_short, image_url, olivator_score, brand_id')
+    .select('id, slug, name, name_short, image_url, olivator_score, brand_slug')
     .eq('status', 'active')
     .order('olivator_score', { ascending: false })
     .limit(30)
@@ -150,7 +151,7 @@ export async function pickOilOfTheWeek(
     const oldPrice = (history?.[0]?.price as number | undefined) ?? null
     const hasDrop = oldPrice && oldPrice > cheapest.price && (oldPrice - cheapest.price) / oldPrice > 0.05
 
-    const brand = p.brand_id ? brandMap.get(p.brand_id as string) ?? null : null
+    const brand = p.brand_slug ? brandMap.get(p.brand_slug as string) ?? null : null
     const productName = (p.name_short as string | null) ?? (p.name as string)
 
     const reasoning = hasDrop
@@ -323,7 +324,7 @@ export async function pickNewArrival(): Promise<OilCardData | null> {
 
   const { data: products } = await supabaseAdmin
     .from('products')
-    .select('id, slug, name, name_short, image_url, olivator_score, brand_id')
+    .select('id, slug, name, name_short, image_url, olivator_score, brand_slug')
     .eq('status', 'active')
     .gte('created_at', since)
     .order('created_at', { ascending: false })
@@ -354,7 +355,7 @@ export async function pickNewArrival(): Promise<OilCardData | null> {
     if (enriched.length === 0) continue
     const cheapest = enriched.find((o) => o.retailer.is_active) ?? enriched[0]
 
-    const brand = p.brand_id ? brandMap.get(p.brand_id as string) ?? null : null
+    const brand = p.brand_slug ? brandMap.get(p.brand_slug as string) ?? null : null
 
     return {
       productId: p.id as string,
