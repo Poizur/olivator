@@ -92,10 +92,9 @@ export function EntityFaqEditor({ entityType, entityId, initialFaqs }: Props) {
   }
 
   return (
-    <div className="border-t border-off2 pt-6 mt-8">
+    <div>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-text">FAQ ({faqs.length})</h3>
-        <p className="text-xs text-text3">Vykreslí se v bloku 8 + JSON-LD FAQPage.</p>
+        <p className="text-[12px] text-text3">{faqs.length} otázek · vykreslí se v FAQ akordeonu + JSON-LD pro Google</p>
       </div>
 
       {faqs.length === 0 && !drafting && (

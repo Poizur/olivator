@@ -133,7 +133,7 @@ export function EntityPhotosManager({ entityId, entityType, initialPhotos }: Pro
   }
 
   return (
-    <div className="border-t border-off2 pt-6 mt-8 space-y-4">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-text">Fotky ({photos.length})</h3>
         <p className="text-xs text-text3">★ = hlavní fotka (zobrazí se v kartě)</p>

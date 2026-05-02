@@ -67,12 +67,12 @@ export function EntityGuidesLinker({ entityType, entitySlug, allGuides, linkedSl
   }
 
   return (
-    <div className="border-t border-off2 pt-6 mt-8">
+    <div>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-text">
-          Propojené průvodce ({linked.size}/{allGuides.length})
+        <h3 className="text-[13px] font-medium text-text">
+          📚 Průvodci ({linked.size}/{allGuides.length})
         </h3>
-        <p className="text-xs text-text3">Vykreslí se v bloku Obsah na webu (max 3).</p>
+        <p className="text-[11px] text-text3">Vykreslí se max 3 v sekci „Související obsah"</p>
       </div>
 
       {allGuides.length === 0 && (

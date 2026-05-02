@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import type { RetailerFull } from '@/lib/data'
+import { AdminBlock } from '@/components/admin-block'
 
 export function RetailerForm({ initial }: { initial?: RetailerFull }) {
   const router = useRouter()
@@ -94,8 +95,15 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6 max-w-2xl">
-      <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 space-y-4">
+    <form onSubmit={onSubmit} className="space-y-6 max-w-3xl">
+      <AdminBlock
+        number={1}
+        icon="🔧"
+        title="Základní údaje"
+        publicLocation="Pouze admin (identifikace + affiliate routing)"
+        description="Identita, doména, affiliate síť a komise. Slug se používá v /go/[slug]/..."
+      >
+        <div className="space-y-4">
         <div>
           <Label>Jméno</Label>
           <Input value={name} onChange={setName} required placeholder="Rohlík.cz" />
@@ -156,16 +164,16 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
             Aktivní — zobrazí se jako zdroj nabídek na webu
           </label>
         </div>
-      </div>
-
-      <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 space-y-4">
-        <div>
-          <div className="text-sm font-semibold text-text">Hodnocení e-shopu (hvězdičky)</div>
-          <div className="text-xs text-text2 mt-0.5">
-            Zobrazí se pod tlačítkem &ldquo;Koupit&rdquo; na produktové kartě jako trust signal.
-            Můžeš zadat ručně z Heureka stránky e-shopu (např. „98% spokojenost, 4.7/5 z 523 hodnocení").
-          </div>
         </div>
+      </AdminBlock>
+
+      <AdminBlock
+        number={2}
+        icon="⭐"
+        title="Hodnocení e-shopu"
+        publicLocation='Trust signál pod tlačítkem „Koupit" na produktové kartě'
+        description='Z Heureka stránky e-shopu — např. „98 % spokojenost, 4.7/5 z 523 hodnocení".'
+      >
         <div className="grid grid-cols-3 gap-4">
           <div>
             <Label>Rating (0–5)</Label>
@@ -189,18 +197,16 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
             </select>
           </div>
         </div>
-      </div>
+      </AdminBlock>
 
-      <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm font-semibold text-text">Affiliate šablona URL</div>
-            <div className="text-xs text-text2 mt-0.5">
-              Jakmile vyplníš, všechny existující nabídky tohoto prodejce automaticky
-              používají affiliate routing — žádný batch update nepotřeba.
-            </div>
-          </div>
-        </div>
+      <AdminBlock
+        number={3}
+        icon="🔗"
+        title="Affiliate šablona URL"
+        publicLocation="Pouze admin (routing /go/[slug]/...)"
+        description="Jakmile vyplníš, všechny existující nabídky tohoto prodejce automaticky používají affiliate routing — žádný batch update nepotřeba."
+      >
+        <div className="space-y-3">
         <textarea
           value={baseTrackingUrl}
           onChange={e => setBaseTrackingUrl(e.target.value)}
@@ -214,17 +220,17 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
           <br />
           Nech prázdné pokud ještě nemáš schválené partnerství — odkazy pak vedou přímo na prodejce.
         </Help>
-      </div>
-
-      {/* Presentation — info o eshopu pro public produktovou stránku */}
-      <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 space-y-4">
-        <div>
-          <div className="text-sm font-semibold text-text">Prezentace e-shopu</div>
-          <div className="text-xs text-text2 mt-0.5">
-            Jak se eshop představí pod offers tabulkou na produktové stránce.
-            Aby uživatel věděl koho podporuje + eshop měl radost z hezké prezentace.
-          </div>
         </div>
+      </AdminBlock>
+
+      <AdminBlock
+        number={4}
+        icon="📝"
+        title="Prezentace e-shopu"
+        publicLocation='Sekce „O eshopu" pod offers tabulkou na detailu produktu'
+        description="Jak se eshop představí — tagline, zakladatelé, příběh. Aby uživatel věděl koho podporuje."
+      >
+        <div className="space-y-4">
         <div>
           <Label>Tagline (1 věta)</Label>
           <Input
@@ -290,7 +296,8 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
             placeholder="https://eshop.cz/logo.svg"
           />
         </div>
-      </div>
+        </div>
+      </AdminBlock>
 
       {error && (
         <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
