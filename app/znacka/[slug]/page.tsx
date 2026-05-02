@@ -9,6 +9,7 @@ import {
   loadEntityFaqs,
   loadEntityRecipes,
   splitDescriptionToAccordion,
+  extractIntroFromDescription,
   formatPriceRange,
 } from '@/lib/entity-page-data'
 
@@ -18,6 +19,8 @@ import { EntityProductsTable } from '@/components/entity-page/entity-products-ta
 import { EntityTrustRow } from '@/components/entity-page/entity-trust-row'
 import { EntityRelatedContent } from '@/components/entity-page/entity-related-content'
 import { EntitySeoAccordion } from '@/components/entity-page/entity-seo-accordion'
+import { EntityEditorialStory } from '@/components/entity-page/entity-editorial-story'
+import { EntityAtmosphereGallery } from '@/components/entity-page/entity-atmosphere-gallery'
 import { BrandStory } from '@/components/entity-page/brand-story'
 import { FaqJsonLd, OrganizationJsonLd } from '@/components/entity-page/entity-jsonld'
 
@@ -183,7 +186,13 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
   ]
 
   const accordionSections = splitDescriptionToAccordion(brand.description_long)
+  const introLead = extractIntroFromDescription(brand.description_long)
   const tldr = brand.tldr ?? brand.description_short ?? null
+
+  // Photo distribution — hero > editorial story > galerie
+  const photosForLayout = photos.slice(1).map((p) => ({ url: p.url, alt: p.alt_text }))
+  const storyPhotos = photosForLayout.slice(0, accordionSections.length)
+  const galleryPhotos = photosForLayout.slice(storyPhotos.length)
   const url = `https://olivator.cz/znacka/${slug}`
 
   return (
@@ -282,6 +291,18 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
             portfolio={portfolio}
           />
 
+          <EntityEditorialStory
+            sections={accordionSections}
+            photos={storyPhotos}
+            intro={introLead}
+          />
+
+          <EntityAtmosphereGallery
+            photos={galleryPhotos}
+            title={`Atmosféra: ${brand.name}`}
+            subtitle="Producent, výroba a místa původu"
+          />
+
           <EntityRelatedContent
             recipes={recipes}
             chipSections={[
@@ -301,7 +322,7 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
             ]}
           />
 
-          <EntitySeoAccordion tldr={tldr} sections={accordionSections} faqs={faqs} />
+          <EntitySeoAccordion faqs={faqs} />
         </div>
       </div>
     </>

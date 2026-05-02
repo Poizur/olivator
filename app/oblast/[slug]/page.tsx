@@ -9,6 +9,7 @@ import {
   loadEntityFaqs,
   loadEntityRecipes,
   splitDescriptionToAccordion,
+  extractIntroFromDescription,
   loadCultivarsByRegion,
   loadBrandsByRegion,
   formatPriceRange,
@@ -19,6 +20,8 @@ import { EntityProductsTable } from '@/components/entity-page/entity-products-ta
 import { EntityTrustRow } from '@/components/entity-page/entity-trust-row'
 import { EntityRelatedContent } from '@/components/entity-page/entity-related-content'
 import { EntitySeoAccordion } from '@/components/entity-page/entity-seo-accordion'
+import { EntityEditorialStory } from '@/components/entity-page/entity-editorial-story'
+import { EntityAtmosphereGallery } from '@/components/entity-page/entity-atmosphere-gallery'
 import { RegionTerroir } from '@/components/entity-page/region-terroir'
 import { FaqJsonLd, PlaceJsonLd } from '@/components/entity-page/entity-jsonld'
 
@@ -182,7 +185,16 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
   ]
 
   const accordionSections = splitDescriptionToAccordion(region.description_long)
+  const introLead = extractIntroFromDescription(region.description_long)
   const tldr = region.tldr ?? region.description_short ?? null
+
+  // Photo distribution — priorita: hero > editorial story > terroir > galerie.
+  // Pokud je málo fotek, dolní bloky se elegantně degradují.
+  const photosForLayout = photos.slice(1).map((p) => ({ url: p.url, alt: p.alt_text }))
+  const storyPhotos = photosForLayout.slice(0, accordionSections.length)
+  const afterStory = photosForLayout.slice(storyPhotos.length)
+  const terroirPhotos = afterStory.slice(0, 3)
+  const galleryPhotos = afterStory.slice(terroirPhotos.length)
 
   const url = `https://olivator.cz/oblast/${slug}`
 
@@ -281,20 +293,34 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
             filterField="cultivarLabel"
           />
 
-          {/* Blok 5 — Důvěra */}
+          {/* Blok 5 — Důvěra (TL;DR + metodika) */}
           <EntityTrustRow tldr={tldr} entityKind="oblast" />
 
-          {/* Blok 6 — Unique: Terroir */}
+          {/* Blok 6 — Editorial story (magazine-style: text + foto, alternující) */}
+          <EntityEditorialStory
+            sections={accordionSections}
+            photos={storyPhotos}
+            intro={introLead}
+          />
+
+          {/* Blok 7 — Terroir (3 sloupce s photo headers) */}
           <RegionTerroir
             regionSlug={region.slug}
             regionName={region.name}
             countryCode={region.country_code}
             countryName={country}
             terroir={region.terroir}
-            farmPhotos={photos.slice(1, 5).map((p) => ({ url: p.url, alt: p.alt_text }))}
+            columnPhotos={terroirPhotos}
           />
 
-          {/* Blok 7 — Křížení */}
+          {/* Blok 8 — Atmosféra (mosaic gallery) */}
+          <EntityAtmosphereGallery
+            photos={galleryPhotos}
+            title={`Atmosféra: ${region.name}`}
+            subtitle="Krajina, farmy a každodenní život v olivovnících"
+          />
+
+          {/* Blok 9 — Křížení */}
           <EntityRelatedContent
             recipes={recipes}
             chipSections={[
@@ -315,8 +341,8 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
             ]}
           />
 
-          {/* Blok 8 — SEO akordeon */}
-          <EntitySeoAccordion tldr={tldr} sections={accordionSections} faqs={faqs} />
+          {/* Blok 10 — FAQ (TL;DR už je v trust row, neduplikujeme) */}
+          <EntitySeoAccordion faqs={faqs} />
         </div>
       </div>
     </>

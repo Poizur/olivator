@@ -267,6 +267,31 @@ export function splitDescriptionToAccordion(text: string | null): AccordionSecti
 }
 
 /**
+ * Vyextrahuje intro odstavec(y) z description_long — text před prvním ## headerem.
+ * Magazine layout (EntityEditorialStory) ho zobrazí jako velký lead text.
+ * Vrací null pokud text začíná rovnou H2 nebo je prázdný.
+ */
+export function extractIntroFromDescription(text: string | null): string | null {
+  if (!text) return null
+  const trimmed = text.trim()
+  if (!trimmed) return null
+  if (!trimmed.includes('## ')) return null // bez sekcí intro nedává smysl
+
+  const lines = trimmed.split('\n')
+  const introLines: string[] = []
+  for (const line of lines) {
+    if (line.startsWith('## ')) break
+    introLines.push(line)
+  }
+  const intro = introLines.join('\n').trim()
+  // Pokud je velmi krátký (<40 znaků), pravděpodobně to není smysluplný intro
+  if (intro.length < 40) return null
+  // Vezmeme jen první odstavec — druhý už je obvykle technický detail
+  const firstParagraph = intro.split(/\n\s*\n/)[0].trim()
+  return firstParagraph || null
+}
+
+/**
  * Načte první N "souvisejících" entit druhého typu pro chip linky.
  */
 export async function loadCultivarsByRegion(regionSlug: string): Promise<
