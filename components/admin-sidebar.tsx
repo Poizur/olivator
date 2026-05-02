@@ -114,22 +114,22 @@ export async function AdminSidebar() {
   return (
     <aside className="hidden lg:flex w-[240px] shrink-0 bg-off border-r border-off2 flex-col sticky top-0 h-screen text-text2">
       {/* Brand */}
-      <div className="px-5 pt-5 pb-3">
+      <div className="px-5 pt-5 pb-4">
         <Link href="/admin" className="flex items-center gap-3">
           <Image
             src="/logo-mark.png"
             alt="olivátor"
-            width={36}
-            height={36}
-            className="w-9 h-9 rounded-lg shrink-0"
+            width={56}
+            height={56}
+            className="w-12 h-12 rounded-lg shrink-0"
           />
           <div>
             <Image
               src="/logo-wordmark.png"
               alt="olivátor"
-              width={110}
-              height={28}
-              className="h-5 w-auto"
+              width={200}
+              height={50}
+              className="h-9 w-auto"
             />
             <div className="text-[10px] uppercase tracking-widest text-text3 mt-1">
               Admin

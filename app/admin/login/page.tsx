@@ -15,9 +15,9 @@ export default function AdminLoginPage() {
           <Image
             src="/logo-mark.png"
             alt="olivátor"
-            width={56}
-            height={56}
-            className="w-14 h-14 mx-auto mb-4 rounded-xl"
+            width={112}
+            height={112}
+            className="w-28 h-28 mx-auto mb-4 rounded-2xl"
           />
           <h1 className="font-[family-name:var(--font-display)] text-2xl text-text mb-1">
             Admin
