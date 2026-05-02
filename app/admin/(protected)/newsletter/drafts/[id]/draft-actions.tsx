@@ -111,7 +111,11 @@ export function DraftActions({
   }
 
   async function archive() {
-    if (!confirm('Archivovat draft? Nezobrazí se v seznamu, ale data zůstávají.')) return
+    const isHardDelete = ['draft', 'approved', 'failed', 'archived'].includes(status)
+    const msg = isHardDelete
+      ? 'Smazat draft natvrdo? Nelze vrátit.'
+      : 'Archivovat odeslanou kampaň? Stats zůstanou v historii.'
+    if (!confirm(msg)) return
     setBusy('archive')
     try {
       const res = await fetch(`/api/admin/newsletter/drafts/${draftId}`, {
@@ -216,7 +220,11 @@ export function DraftActions({
             disabled={busy !== null}
             className="text-[12px] bg-white border border-off2 text-text3 rounded-full px-4 py-1.5 hover:text-red-600 hover:border-red-300 ml-auto"
           >
-            {busy === 'archive' ? '⏳' : '🗑 Archivovat'}
+            {busy === 'archive'
+              ? '⏳'
+              : ['draft', 'approved', 'failed', 'archived'].includes(status)
+              ? '🗑 Smazat'
+              : '📦 Archivovat'}
           </button>
         </div>
       )}

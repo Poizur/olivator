@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
+import { DeleteDraftButton } from './delete-draft-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,25 +33,32 @@ const CAMPAIGN_LABELS: Record<string, string> = {
   alert: '🔔 Alert',
 }
 
-async function getDrafts(): Promise<DraftRow[]> {
+async function getDrafts(includeArchived: boolean): Promise<DraftRow[]> {
   try {
-    const { data } = await supabaseAdmin
+    const q = supabaseAdmin
       .from('newsletter_drafts')
       .select('id, campaign_type, subject, preheader, status, generated_at, approved_at, recipient_count')
-      .neq('status', 'archived')
       .order('generated_at', { ascending: false })
       .limit(100)
+    const { data } = await (includeArchived ? q : q.neq('status', 'archived'))
     return (data ?? []) as DraftRow[]
   } catch {
     return []
   }
 }
 
-export default async function DraftsPage() {
-  const drafts = await getDrafts()
+export default async function DraftsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ archived?: string }>
+}) {
+  const { archived } = await searchParams
+  const showArchived = archived === '1'
+  const drafts = await getDrafts(showArchived)
   const pending = drafts.filter((d) => d.status === 'draft' || d.status === 'approved')
   const sent = drafts.filter((d) => d.status === 'sent')
   const failed = drafts.filter((d) => d.status === 'failed')
+  const archivedCount = drafts.filter((d) => d.status === 'archived').length
 
   return (
     <div className="p-6 md:p-8 max-w-5xl mx-auto">
@@ -59,15 +67,22 @@ export default async function DraftsPage() {
         {' › '}Drafty
       </div>
 
-      <div className="flex items-end justify-between mb-6">
+      <div className="flex items-end justify-between mb-6 gap-4 flex-wrap">
         <div>
           <h1 className="font-[family-name:var(--font-display)] text-3xl text-text leading-tight">
             Drafty
           </h1>
           <p className="text-[13px] text-text3 mt-1">
             {pending.length} k revizi · {sent.length} odesláno · {failed.length} selhalo
+            {showArchived && archivedCount > 0 ? ` · ${archivedCount} archivovaných` : ''}
           </p>
         </div>
+        <Link
+          href={showArchived ? '/admin/newsletter/drafts' : '/admin/newsletter/drafts?archived=1'}
+          className="text-[12px] text-text2 hover:text-olive border border-off2 rounded-full px-3 py-1.5"
+        >
+          {showArchived ? '👁 Skrýt archiv' : '📦 Zobrazit i archivované'}
+        </Link>
       </div>
 
       {drafts.length === 0 ? (
@@ -125,10 +140,13 @@ export default async function DraftsPage() {
                         day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                       })}
                     </td>
-                    <td className="px-2 py-3 text-right">
-                      <Link href={`/admin/newsletter/drafts/${d.id}`} className="text-[12px] text-olive font-medium">
-                        Otevřít →
-                      </Link>
+                    <td className="px-2 py-3 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1">
+                        <Link href={`/admin/newsletter/drafts/${d.id}`} className="text-[12px] text-olive font-medium px-2">
+                          Otevřít →
+                        </Link>
+                        <DeleteDraftButton draftId={d.id} status={d.status} subject={d.subject} />
+                      </div>
                     </td>
                   </tr>
                 )

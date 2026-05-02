@@ -39,6 +39,13 @@ export async function PATCH(
   }
 }
 
+/** Smart delete:
+ *  - draft/approved/failed/archived → HARD delete (DB row pryč)
+ *  - sent/sending → SOFT archive (zachovej historii kampaně)
+ *
+ *  Důvod: odeslané kampaně musíme držet kvůli stats (open/click rate),
+ *  ale neodeslané drafty co už nepotřebujeme = clutter, smažeme natvrdo.
+ */
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -48,12 +55,38 @@ export async function DELETE(
   }
   try {
     const { id } = await params
+
+    // Zjisti current status
+    const { data: existing } = await supabaseAdmin
+      .from('newsletter_drafts')
+      .select('status')
+      .eq('id', id)
+      .maybeSingle()
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Draft nenalezen' }, { status: 404 })
+    }
+
+    const status = existing.status as string
+    const HARD_DELETABLE = ['draft', 'approved', 'failed', 'archived']
+
+    if (HARD_DELETABLE.includes(status)) {
+      // Hard delete — newsletter_sends + newsletter_events smažou se kaskádou (FK CASCADE)
+      const { error } = await supabaseAdmin
+        .from('newsletter_drafts')
+        .delete()
+        .eq('id', id)
+      if (error) throw error
+      return NextResponse.json({ ok: true, mode: 'hard' })
+    }
+
+    // Sent/sending → archivovat (zachovat data)
     const { error } = await supabaseAdmin
       .from('newsletter_drafts')
       .update({ status: 'archived', updated_at: new Date().toISOString() })
       .eq('id', id)
     if (error) throw error
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, mode: 'soft' })
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Server error' },
