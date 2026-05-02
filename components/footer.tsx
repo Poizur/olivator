@@ -19,7 +19,7 @@ export async function Footer() {
             alt="olivátor"
             width={720}
             height={184}
-            className="h-28 w-auto"
+            className="h-16 md:h-28 w-auto"
           />
           <div className="text-xs text-text3 mt-2 leading-relaxed">
             Největší srovnávač olivových olejů v ČR

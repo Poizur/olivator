@@ -167,7 +167,7 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
   ]
 
   return (
-    <div className="max-w-[1080px] mx-auto px-10 py-10">
+    <div className="max-w-[1080px] mx-auto px-4 md:px-10 py-6 md:py-10">
       <div className="text-center mb-9">
         <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-text mb-2">
           Pomůžeme ti vybrat olej

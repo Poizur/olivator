@@ -28,7 +28,7 @@ export function Nav({ hasAdminBar = false }: { hasAdminBar?: boolean }) {
   return (
     <>
       <nav className={`sticky ${hasAdminBar ? 'top-9' : 'top-0'} z-50 bg-white/88 backdrop-blur-xl border-b border-black/8 px-6 md:px-10`}>
-        <div className="max-w-[1280px] mx-auto h-[120px] flex items-center gap-8">
+        <div className="max-w-[1280px] mx-auto h-[64px] md:h-[120px] flex items-center gap-8">
           <Link href="/" className="shrink-0 flex items-center" aria-label="olivátor — domů">
             <Image
               src="/logo-wordmark.png"
@@ -36,7 +36,7 @@ export function Nav({ hasAdminBar = false }: { hasAdminBar?: boolean }) {
               width={720}
               height={184}
               priority
-              className="h-28 w-auto"
+              className="h-12 md:h-28 w-auto"
             />
           </Link>
 
@@ -107,7 +107,7 @@ export function Nav({ hasAdminBar = false }: { hasAdminBar?: boolean }) {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className={`md:hidden fixed inset-0 ${hasAdminBar ? 'top-[88px]' : 'top-[52px]'} bg-white z-40 px-6 pt-6 pb-10`}>
+        <div className={`md:hidden fixed inset-0 ${hasAdminBar ? 'top-[100px]' : 'top-[64px]'} bg-white z-40 px-6 pt-6 pb-10 overflow-y-auto`}>
           <div className="flex flex-col gap-1">
             {links.map(l => (
               <Link
