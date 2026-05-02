@@ -96,15 +96,20 @@ Vrať jako čistý JSON (žádný markdown):
       preheader?: string
       hook?: string
     }
-    // Strip markdown markers (asterisks pro italic, underscores) — HeroHook
-    // už aplikuje italic přes CSS, doublete je nežádoucí.
-    const cleanHook = (parsed.hook ?? '')
-      .replace(/^[*_\s]+|[*_\s]+$/g, '')
-      .replace(/\*\*(.+?)\*\*/g, '$1')
-      .replace(/\*(.+?)\*/g, '$1')
-      .trim()
-    const cleanSubject = (parsed.subject ?? '').replace(/^[*_\s]+|[*_\s]+$/g, '').trim()
-    const cleanPreheader = (parsed.preheader ?? '').replace(/^[*_\s]+|[*_\s]+$/g, '').trim()
+    // Strip markdown markers — HeroHook už aplikuje italic přes CSS.
+    // Postup: bold pairs → italic pairs → ALL zbylé asterisky (Claude občas
+    // vrátí nepárový * jako ".* Nejde...", proto final pass).
+    const stripMarkdown = (s: string): string =>
+      s
+        .replace(/\*\*(.+?)\*\*/g, '$1')
+        .replace(/\*(.+?)\*/g, '$1')
+        .replace(/\*/g, '')
+        .replace(/_(.+?)_/g, '$1')
+        .trim()
+
+    const cleanHook = stripMarkdown(parsed.hook ?? '')
+    const cleanSubject = stripMarkdown(parsed.subject ?? '')
+    const cleanPreheader = stripMarkdown(parsed.preheader ?? '')
 
     return {
       subject: cleanSubject.slice(0, 100) || `Olivový týden — ${new Date().toLocaleDateString('cs-CZ')}`,
