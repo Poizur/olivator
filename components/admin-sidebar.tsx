@@ -99,6 +99,12 @@ export async function AdminSidebar() {
       ],
     },
     {
+      group: 'Analytika',
+      items: [
+        { href: '/admin/analytics', label: 'Affiliate clicks' },
+      ],
+    },
+    {
       group: 'Systém',
       items: [
         { href: '/admin/nastaveni', label: 'Nastavení' },

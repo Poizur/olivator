@@ -469,7 +469,7 @@ export default async function AdminDashboardPage() {
       value: clickStats.last7d.toString(),
       sub: clickDelta ? 'vs minulý týden' : 'zatím bez kliků',
       delta: clickDelta,
-      href: '/admin/products',
+      href: '/admin/analytics?range=7',
     },
     newsletterStats.lastSentOpenRate !== null
       ? {
@@ -631,7 +631,7 @@ export default async function AdminDashboardPage() {
               <p className="text-[11px] text-text3 mt-0.5">{clickStats.last7d} celkem</p>
             </div>
             <Link
-              href="/admin/products"
+              href="/admin/analytics?range=7"
               className="text-[12px] text-olive hover:text-olive-dark transition-colors"
             >
               Detail →
