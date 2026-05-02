@@ -7,6 +7,7 @@ import { EntityRecipeLinker } from '@/components/entity-recipe-linker'
 import { EntityGuidesLinker } from '@/components/entity-guides-linker'
 import { EntityPhotosManager } from '@/components/entity-photos-manager'
 import { EntityProductsList } from '@/components/entity-products-list'
+import { AdminBlock } from '@/components/admin-block'
 import { ARTICLES } from '@/lib/static-content'
 
 async function getRegion(slug: string) {
@@ -78,8 +79,8 @@ export default async function EditRegionPage({ params }: { params: Promise<{ slu
   }))
 
   return (
-    <div className="p-8 max-w-3xl">
-      <div className="text-xs text-text3 mb-6">
+    <div className="p-6 md:p-8 max-w-4xl mx-auto">
+      <div className="text-xs text-text3 mb-4">
         <Link href="/admin" className="text-olive">Admin</Link>
         {' › '}
         <Link href="/admin/regions" className="text-olive">Regiony</Link>
@@ -87,55 +88,94 @@ export default async function EditRegionPage({ params }: { params: Promise<{ slu
         {region.name}
       </div>
 
-      <h1 className="text-2xl font-semibold text-text mb-2">{region.name}</h1>
-      <p className="text-sm text-text3 mb-8">{region.slug} · {region.country_code}</p>
+      <div className="mb-6">
+        <h1 className="font-[family-name:var(--font-display)] text-3xl text-text leading-tight">{region.name}</h1>
+        <p className="text-[12px] text-text3 mt-1">
+          {region.slug} · {region.country_code} · oblast
+        </p>
+      </div>
 
-      <EntityEditForm
-        entity={{
-          entityType: 'region',
-          slug: region.slug,
-          name: region.name,
-          status: region.status,
-          description_long: region.description_long,
-          meta_title: region.meta_title,
-          meta_description: region.meta_description,
-          tldr: region.tldr,
-          terroir: region.terroir,
-        }}
-        publicUrl={`/oblast/${region.slug}`}
-        entityId={region.id}
-      />
+      <div className="space-y-6">
+        {/* BLOKY 1, 2, 3, 9 — uvnitř EntityEditForm (TL;DR / Editorial / Specific / SEO) */}
+        <EntityEditForm
+          entity={{
+            entityType: 'region',
+            slug: region.slug,
+            name: region.name,
+            status: region.status,
+            description_long: region.description_long,
+            meta_title: region.meta_title,
+            meta_description: region.meta_description,
+            tldr: region.tldr,
+            terroir: region.terroir,
+          }}
+          publicUrl={`/oblast/${region.slug}`}
+          entityId={region.id}
+        />
 
-      <EntityPhotosManager
-        entityId={region.id}
-        entityType="region"
-        initialPhotos={photos as Parameters<typeof EntityPhotosManager>[0]['initialPhotos']}
-      />
+        {/* BLOK 4 — Fotky */}
+        <AdminBlock
+          number={4}
+          icon="🖼️"
+          title="Fotky"
+          publicLocation="Hero karta · Editorial story · Terroir sloupce · Galerie atmosféra"
+          description="Pořadí: 1. fotka = hero, 2-N = editorial sekce, další = terroir hlavičky, zbytek = galerie. Drag pro řazení (TODO)."
+        >
+          <EntityPhotosManager
+            entityId={region.id}
+            entityType="region"
+            initialPhotos={photos as Parameters<typeof EntityPhotosManager>[0]['initialPhotos']}
+          />
+        </AdminBlock>
 
-      <EntityFaqEditor
-        entityType="region"
-        entityId={region.id}
-        initialFaqs={faqs}
-      />
+        {/* BLOK 5 — FAQ */}
+        <AdminBlock
+          number={5}
+          icon="❓"
+          title="Časté otázky"
+          publicLocation='Sekce „Časté otázky" — sbalený akordeon dole na stránce'
+          description="Odpovědi na konkrétní dotazy. Slouží i pro Google FAQ rich snippet (schema.org)."
+        >
+          <EntityFaqEditor entityType="region" entityId={region.id} initialFaqs={faqs} />
+        </AdminBlock>
 
-      <EntityRecipeLinker
-        entityType="region"
-        entitySlug={region.slug}
-        allRecipes={allRecipes}
-        linkedSlugs={linkedRecipeSlugs}
-      />
+        {/* BLOK 6 — Propojení (recepty + průvodci) */}
+        <AdminBlock
+          number={6}
+          icon="🔗"
+          title="Propojený obsah"
+          publicLocation='Sekce „Související obsah" — chips s odkazy'
+          description="Co se zobrazí u této oblasti jako související čtení."
+        >
+          <div className="space-y-6">
+            <EntityRecipeLinker
+              entityType="region"
+              entitySlug={region.slug}
+              allRecipes={allRecipes}
+              linkedSlugs={linkedRecipeSlugs}
+            />
+            <div className="border-t border-off2 pt-6">
+              <EntityGuidesLinker
+                entityType="region"
+                entitySlug={region.slug}
+                allGuides={allGuides}
+                linkedSlugs={linkedGuideSlugs}
+              />
+            </div>
+          </div>
+        </AdminBlock>
 
-      <EntityGuidesLinker
-        entityType="region"
-        entitySlug={region.slug}
-        allGuides={allGuides}
-        linkedSlugs={linkedGuideSlugs}
-      />
-
-      <EntityProductsList
-        entityType="region"
-        entitySlug={region.slug}
-      />
+        {/* BLOK 7 — Produkty (read-only přehled) */}
+        <AdminBlock
+          number={7}
+          icon="📦"
+          title="Produkty oblasti"
+          publicLocation='Sekce „Olivové oleje z X" — tabulka produktů'
+          description="Produkty se přiřazují automaticky podle pole region_slug u produktu."
+        >
+          <EntityProductsList entityType="region" entitySlug={region.slug} />
+        </AdminBlock>
+      </div>
     </div>
   )
 }

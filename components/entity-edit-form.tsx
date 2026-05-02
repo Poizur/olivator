@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { EntityExtrasModal } from './entity-extras-modal'
+import { AdminBlock } from './admin-block'
 
 export interface TimelineMilestone {
   year: number
@@ -54,7 +55,29 @@ interface Props {
   entityId?: string
 }
 
+const ENTITY_LABEL: Record<EntityEditData['entityType'], { single: string; possessive: string; specificBlockTitle: string; specificBlockIcon: string }> = {
+  region: {
+    single: 'oblast',
+    possessive: 'oblasti',
+    specificBlockTitle: 'Terroir (klima, půda, tradice)',
+    specificBlockIcon: '🗺️',
+  },
+  brand: {
+    single: 'značka',
+    possessive: 'značky',
+    specificBlockTitle: 'Příběh značky',
+    specificBlockIcon: '🏷️',
+  },
+  cultivar: {
+    single: 'odrůda',
+    possessive: 'odrůdy',
+    specificBlockTitle: 'Vlastnosti odrůdy',
+    specificBlockIcon: '🌿',
+  },
+}
+
 export function EntityEditForm({ entity, publicUrl, entityId }: Props) {
+  const labels = ENTITY_LABEL[entity.entityType]
   const [extrasOpen, setExtrasOpen] = useState(false)
 
   const [data, setData] = useState({
@@ -107,7 +130,6 @@ export function EntityEditForm({ entity, publicUrl, entityId }: Props) {
     setSaving(true)
     setError(null)
     try {
-      // Sestavíme payload — strip prázdných stringů, převedeme čísla
       const payload: Record<string, unknown> = {
         name: data.name,
         status: data.status,
@@ -129,7 +151,6 @@ export function EntityEditForm({ entity, publicUrl, entityId }: Props) {
       }
 
       if (entity.entityType === 'region') {
-        // Strip prázdné klíče v terroir
         const cleanTerroir: Record<string, string> = {}
         if (terroir.climate) cleanTerroir.climate = terroir.climate
         if (terroir.soil) cleanTerroir.soil = terroir.soil
@@ -140,8 +161,7 @@ export function EntityEditForm({ entity, publicUrl, entityId }: Props) {
 
       if (entity.entityType === 'cultivar') {
         payload.nickname = data.nickname || null
-        payload.intensity_score =
-          data.intensity_score === '' ? null : Number(data.intensity_score)
+        payload.intensity_score = data.intensity_score === '' ? null : Number(data.intensity_score)
         payload.primary_use = data.primary_use || null
         payload.pairing_pros = pairingPros
         payload.pairing_cons = pairingCons
@@ -155,6 +175,7 @@ export function EntityEditForm({ entity, publicUrl, entityId }: Props) {
       const json = await res.json()
       if (!json.ok) throw new Error(json.error)
       setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Chyba')
     } finally {
@@ -207,415 +228,466 @@ export function EntityEditForm({ entity, publicUrl, entityId }: Props) {
     }
   }
 
+  const aiButton = (
+    <button
+      onClick={generateContent}
+      disabled={generating}
+      className="px-3 py-1.5 bg-olive text-white rounded-lg text-[12px] font-medium hover:bg-olive2 disabled:opacity-50"
+    >
+      {generating ? '⏳ Generuji…' : '✨ Generovat AI'}
+    </button>
+  )
+
   return (
-    <div className="space-y-8">
-      {/* Akce */}
-      <div className="flex flex-wrap gap-2 p-4 bg-off rounded-xl">
-        <button
-          onClick={generateContent}
-          disabled={generating}
-          className="px-4 py-2 bg-olive text-white rounded-lg text-sm font-medium hover:bg-olive2 disabled:opacity-50"
-        >
-          {generating ? '⏳ Generuji text…' : '✨ Generovat text (AI)'}
-        </button>
-        <button
-          onClick={importPhotos}
-          disabled={importing}
-          className="px-4 py-2 bg-white border border-off2 text-text rounded-lg text-sm hover:border-olive disabled:opacity-50"
-        >
-          {importing ? '⏳ Importuji…' : '📷 Import fotek (Unsplash)'}
-        </button>
+    <div className="space-y-6">
+      {/* Sticky horní toolbar — status, akce, save */}
+      <div className="sticky top-9 z-30 -mx-4 md:-mx-0 bg-white border border-off2 rounded-[var(--radius-card)] px-5 py-3 shadow-sm flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2 mr-auto">
+          <label className="text-[11px] text-text3 uppercase tracking-wider font-medium">Status:</label>
+          <select
+            value={data.status}
+            onChange={(e) => set('status', e.target.value)}
+            className="border border-off2 rounded-md px-2 py-1 text-[13px] text-text"
+          >
+            <option value="draft">draft</option>
+            <option value="active">active</option>
+            <option value="inactive">inactive</option>
+          </select>
+        </div>
+
         {entityId && (
           <button
             onClick={() => setExtrasOpen(true)}
-            className="px-4 py-2 bg-white border border-olive-border text-olive rounded-lg text-sm hover:bg-olive-bg"
+            className="px-3 py-1.5 bg-white border border-olive-border text-olive rounded-lg text-[12px] hover:bg-olive-bg"
           >
-            ✨ Vygenerovat doplňky
+            ✨ Doplňky AI
           </button>
         )}
+        <button
+          onClick={importPhotos}
+          disabled={importing}
+          className="px-3 py-1.5 bg-white border border-off2 text-text rounded-lg text-[12px] hover:border-olive disabled:opacity-50"
+        >
+          {importing ? '⏳ Importuji…' : '📷 Import fotek'}
+        </button>
         <a
           href={publicUrl}
           target="_blank"
-          className="px-4 py-2 bg-white border border-off2 text-text rounded-lg text-sm hover:border-olive"
+          className="px-3 py-1.5 bg-white border border-off2 text-text rounded-lg text-[12px] hover:border-olive"
         >
           🔗 Náhled
         </a>
-      </div>
-      {genResult && <p className="text-sm">{genResult}</p>}
-      {photoResult && <p className="text-sm">{photoResult}</p>}
-
-      {/* Status */}
-      <div>
-        <label className="block text-xs font-medium text-text2 mb-1">Status</label>
-        <select
-          value={data.status}
-          onChange={(e) => set('status', e.target.value)}
-          className="border border-off2 rounded-lg px-3 py-2 text-sm text-text"
+        <button
+          onClick={save}
+          disabled={saving}
+          className={`px-4 py-1.5 rounded-lg text-[13px] font-medium transition-colors ${
+            saved
+              ? 'bg-olive-bg text-olive-dark border border-olive-border'
+              : 'bg-olive text-white hover:bg-olive2 disabled:opacity-50'
+          }`}
         >
-          <option value="draft">draft</option>
-          <option value="active">active</option>
-          <option value="inactive">inactive</option>
-        </select>
+          {saving ? '⏳ Ukládám…' : saved ? '✓ Uloženo' : '💾 Uložit změny'}
+        </button>
       </div>
 
-      {/* TL;DR — info pásek + Trust blok */}
-      <div>
-        <label className="block text-xs font-medium text-text2 mb-1">
-          TL;DR shrnutí (max 280 znaků) — info pásek nad akordeonem
-        </label>
+      {(genResult || photoResult || error) && (
+        <div className="text-[12px] space-y-1">
+          {genResult && <p className="text-text2">{genResult}</p>}
+          {photoResult && <p className="text-text2">{photoResult}</p>}
+          {error && <p className="text-red-600">⚠ {error}</p>}
+        </div>
+      )}
+
+      {/* BLOK 1 — TL;DR (Trust row) */}
+      <AdminBlock
+        number={1}
+        icon="✨"
+        title="Stručně (TL;DR)"
+        publicLocation='Sekce „Pohled redakce" v Trust řádku'
+        description="2-3 věty které dají uživateli rychlou odpověď bez čtení článku."
+      >
         <textarea
           value={data.tldr}
           onChange={(e) => set('tldr', e.target.value)}
           maxLength={280}
           rows={3}
-          className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text resize-none"
-          placeholder="2-3 věty, které dají uživateli rychlou odpověď bez čtení článku."
+          className="w-full border border-off2 rounded-lg px-3 py-2 text-[14px] text-text resize-none focus:outline-none focus:border-olive"
+          placeholder={`${labels.possessive[0].toUpperCase() + labels.possessive.slice(1)} stručně — co je výjimečné a pro koho.`}
         />
-        <p className="text-xs text-text3 mt-1">{data.tldr.length}/280</p>
-      </div>
+        <p className="text-[11px] text-text3 mt-1">{data.tldr.length}/280</p>
+      </AdminBlock>
 
-      {/* Description */}
-      <div>
-        <label className="block text-xs font-medium text-text2 mb-1">
-          Popis (description_long) — markdown: ## H2, ### H3
-        </label>
+      {/* BLOK 2 — Editorial obsah */}
+      <AdminBlock
+        number={2}
+        icon="📖"
+        title="Editorial obsah"
+        publicLocation='Sekce „Editorial story" — text alternuje s fotkami'
+        description="Markdown: ## H2 = sekce s vlastní fotkou, ### H3 = podnadpis. Text před první ## se použije jako úvodní lead."
+        actions={aiButton}
+      >
         <textarea
           value={data.description_long}
           onChange={(e) => set('description_long', e.target.value)}
           rows={20}
-          className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text font-mono resize-y"
-          placeholder="Popis se vygeneruje AI nebo vložte ručně…"
+          className="w-full border border-off2 rounded-lg px-3 py-2 text-[13px] text-text font-mono resize-y focus:outline-none focus:border-olive"
+          placeholder={`Lead odstavec na úvod (bez ##)…\n\n## První sekce\nText sekce…\n\n## Druhá sekce\nText sekce…`}
         />
-        <p className="text-xs text-text3 mt-1">{data.description_long.length} znaků</p>
-      </div>
+        <p className="text-[11px] text-text3 mt-1">{data.description_long.length} znaků</p>
+      </AdminBlock>
 
-      {/* Region terroir */}
-      {entity.entityType === 'region' && (
-        <div className="space-y-3 border-t border-off2 pt-6">
-          <h3 className="text-sm font-medium text-text">Terroir (blok 6 na webu)</h3>
-
-          {/* Mapa regionu — URL na obrázek (Wikimedia, vlastní upload) */}
-          <div>
-            <label className="block text-xs font-medium text-text2 mb-1">
-              Mapa regionu — URL obrázku (SVG/PNG)
-            </label>
-            <input
-              value={data.map_image_url}
-              onChange={(e) => set('map_image_url', e.target.value)}
-              className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text"
-              placeholder="https://upload.wikimedia.org/.../Apulia.svg"
-            />
-            <p className="text-xs text-text3 mt-1">
-              Když není vyplněno, web použije zjednodušený SVG outline. Doporučeno:
-              {' '}
-              <a
-                href="https://commons.wikimedia.org/wiki/Category:SVG_maps_of_regions_of_Italy"
-                target="_blank"
-                rel="noopener"
-                className="text-olive border-b border-olive-border"
-              >
-                Wikimedia Commons SVG mapy
-              </a>
-              .
-            </p>
-            {data.map_image_url && (
-              <div className="mt-2 inline-block bg-white border border-off2 rounded-lg p-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={data.map_image_url}
-                  alt="Náhled mapy"
-                  className="w-32 h-32 object-contain"
-                />
-              </div>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-text2 mb-1">Klima</label>
-            <textarea
-              value={terroir.climate ?? ''}
-              onChange={(e) => {
-                setTerroir({ ...terroir, climate: e.target.value })
-                setSaved(false)
-              }}
-              rows={2}
-              className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text resize-y"
-              placeholder="Suché, slunečné, mírné zimy s občasnými bouřemi…"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-text2 mb-1">Půda</label>
-            <textarea
-              value={terroir.soil ?? ''}
-              onChange={(e) => {
-                setTerroir({ ...terroir, soil: e.target.value })
-                setSaved(false)
-              }}
-              rows={2}
-              className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text resize-y"
-              placeholder="Vápencová, dobré odvodnění, místy červenice…"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-text2 mb-1">Tradice</label>
-            <textarea
-              value={terroir.tradition ?? ''}
-              onChange={(e) => {
-                setTerroir({ ...terroir, tradition: e.target.value })
-                setSaved(false)
-              }}
-              rows={2}
-              className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text resize-y"
-              placeholder="Tisícileté olivovníky, ruční sklizeň, lokální lisovny…"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Brand-only fields */}
-      {entity.entityType === 'brand' && (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 border-t border-off2 pt-6">
+      {/* BLOK 3 — Specific (Terroir / Příběh / Vlastnosti) */}
+      <AdminBlock
+        number={3}
+        icon={labels.specificBlockIcon}
+        title={labels.specificBlockTitle}
+        publicLocation={
+          entity.entityType === 'region'
+            ? 'Sekce „Co je pro X typické" — 3 sloupce'
+            : entity.entityType === 'cultivar'
+            ? 'Sekce „Profil odrůdy"'
+            : 'Sekce „Příběh značky" — timeline + portfolio'
+        }
+      >
+        {entity.entityType === 'region' && (
+          <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-text2 mb-1">Pěstuje od</label>
-              <input
-                type="number"
-                value={data.founded_year}
-                onChange={(e) => set('founded_year', e.target.value)}
-                className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text"
-                placeholder="1860"
+              <label className="block text-[11px] font-medium text-text2 mb-1.5 uppercase tracking-wider">
+                ☀️ Klima
+              </label>
+              <textarea
+                value={terroir.climate ?? ''}
+                onChange={(e) => {
+                  setTerroir({ ...terroir, climate: e.target.value })
+                  setSaved(false)
+                }}
+                rows={2}
+                className="w-full border border-off2 rounded-lg px-3 py-2 text-[14px] text-text resize-y focus:outline-none focus:border-olive"
+                placeholder="Suché, slunečné, mírné zimy s občasnými bouřemi…"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-text2 mb-1">Generace</label>
-              <input
-                type="number"
-                value={data.generation}
-                onChange={(e) => set('generation', e.target.value)}
-                className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text"
-                placeholder="4"
+              <label className="block text-[11px] font-medium text-text2 mb-1.5 uppercase tracking-wider">
+                🪨 Půda
+              </label>
+              <textarea
+                value={terroir.soil ?? ''}
+                onChange={(e) => {
+                  setTerroir({ ...terroir, soil: e.target.value })
+                  setSaved(false)
+                }}
+                rows={2}
+                className="w-full border border-off2 rounded-lg px-3 py-2 text-[14px] text-text resize-y focus:outline-none focus:border-olive"
+                placeholder="Vápencová, dobré odvodnění, místy červenice…"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-text2 mb-1">Hektary</label>
-              <input
-                type="number"
-                value={data.hectares}
-                onChange={(e) => set('hectares', e.target.value)}
-                className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text"
-                placeholder="50"
+              <label className="block text-[11px] font-medium text-text2 mb-1.5 uppercase tracking-wider">
+                🌿 Tradice
+              </label>
+              <textarea
+                value={terroir.tradition ?? ''}
+                onChange={(e) => {
+                  setTerroir({ ...terroir, tradition: e.target.value })
+                  setSaved(false)
+                }}
+                rows={2}
+                className="w-full border border-off2 rounded-lg px-3 py-2 text-[14px] text-text resize-y focus:outline-none focus:border-olive"
+                placeholder="Tisícileté olivovníky, ruční sklizeň, lokální lisovny…"
               />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-text2 mb-1">Sídlo</label>
-              <input
-                value={data.headquarters}
-                onChange={(e) => set('headquarters', e.target.value)}
-                className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text"
-                placeholder="Alberobello"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-text2 mb-1">Příběh značky (story)</label>
-            <textarea
-              value={data.story}
-              onChange={(e) => set('story', e.target.value)}
-              rows={5}
-              className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text resize-y"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-text2 mb-1">Filozofie (philosophy)</label>
-            <textarea
-              value={data.philosophy}
-              onChange={(e) => set('philosophy', e.target.value)}
-              rows={3}
-              className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text resize-y"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-text2 mb-1">Web značky</label>
-            <input
-              value={data.website_url}
-              onChange={(e) => set('website_url', e.target.value)}
-              className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text"
-              placeholder="https://…"
-            />
-          </div>
 
-          {/* Časová osa */}
-          <div className="border-t border-off2 pt-6">
-            <h3 className="text-sm font-medium text-text mb-3">Časová osa (blok 6 na webu)</h3>
-            {timeline.length === 0 && (
-              <p className="text-xs text-text3 italic mb-3">Žádné milníky. Přidejte rok + popisek.</p>
-            )}
-            {timeline.map((m, i) => (
-              <div key={i} className="flex gap-2 mb-2 items-start">
+            {/* Mapa regionu — URL */}
+            <div className="pt-3 border-t border-off2">
+              <label className="block text-[11px] font-medium text-text2 mb-1.5 uppercase tracking-wider">
+                🗺️ Mapa regionu — URL obrázku
+              </label>
+              <input
+                value={data.map_image_url}
+                onChange={(e) => set('map_image_url', e.target.value)}
+                className="w-full border border-off2 rounded-lg px-3 py-2 text-[14px] text-text focus:outline-none focus:border-olive"
+                placeholder="https://upload.wikimedia.org/.../Apulia.svg"
+              />
+              <p className="text-[11px] text-text3 mt-1">
+                Nepovinné — bez URL se použije zjednodušený SVG outline. Doporučeno:{' '}
+                <a
+                  href="https://commons.wikimedia.org/wiki/Category:SVG_maps_of_regions_of_Italy"
+                  target="_blank"
+                  rel="noopener"
+                  className="text-olive border-b border-olive-border"
+                >
+                  Wikimedia SVG mapy
+                </a>
+              </p>
+              {data.map_image_url && (
+                <div className="mt-2 inline-block bg-white border border-off2 rounded-lg p-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={data.map_image_url} alt="Náhled mapy" className="w-32 h-32 object-contain" />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {entity.entityType === 'brand' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-[11px] font-medium text-text2 mb-1.5 uppercase tracking-wider">
+                  Pěstuje od
+                </label>
                 <input
                   type="number"
-                  value={m.year}
-                  onChange={(e) => {
-                    const next = [...timeline]
-                    next[i] = { ...next[i], year: Number(e.target.value) }
-                    setTimeline(next)
-                    setSaved(false)
-                  }}
-                  className="w-20 border border-off2 rounded-lg px-2 py-1.5 text-sm text-text tabular-nums"
+                  value={data.founded_year}
+                  onChange={(e) => set('founded_year', e.target.value)}
+                  className="w-full border border-off2 rounded-lg px-3 py-2 text-[14px] text-text focus:outline-none focus:border-olive"
                   placeholder="1860"
                 />
-                <input
-                  value={m.label}
-                  onChange={(e) => {
-                    const next = [...timeline]
-                    next[i] = { ...next[i], label: e.target.value }
-                    setTimeline(next)
-                    setSaved(false)
-                  }}
-                  className="flex-1 border border-off2 rounded-lg px-2 py-1.5 text-sm text-text"
-                  placeholder="založení rodinné olivárny"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setTimeline(timeline.filter((_, j) => j !== i))
-                    setSaved(false)
-                  }}
-                  className="text-text3 hover:text-terra px-2 text-sm"
-                  aria-label="Smazat milník"
-                >
-                  ✕
-                </button>
               </div>
-            ))}
-            <button
-              type="button"
-              onClick={() => {
-                setTimeline([
-                  ...timeline,
-                  { year: new Date().getFullYear(), label: '' },
-                ])
+              <div>
+                <label className="block text-[11px] font-medium text-text2 mb-1.5 uppercase tracking-wider">
+                  Generace
+                </label>
+                <input
+                  type="number"
+                  value={data.generation}
+                  onChange={(e) => set('generation', e.target.value)}
+                  className="w-full border border-off2 rounded-lg px-3 py-2 text-[14px] text-text focus:outline-none focus:border-olive"
+                  placeholder="4"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-text2 mb-1.5 uppercase tracking-wider">
+                  Hektary
+                </label>
+                <input
+                  type="number"
+                  value={data.hectares}
+                  onChange={(e) => set('hectares', e.target.value)}
+                  className="w-full border border-off2 rounded-lg px-3 py-2 text-[14px] text-text focus:outline-none focus:border-olive"
+                  placeholder="50"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-text2 mb-1.5 uppercase tracking-wider">
+                  Sídlo
+                </label>
+                <input
+                  value={data.headquarters}
+                  onChange={(e) => set('headquarters', e.target.value)}
+                  className="w-full border border-off2 rounded-lg px-3 py-2 text-[14px] text-text focus:outline-none focus:border-olive"
+                  placeholder="Alberobello"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-text2 mb-1.5 uppercase tracking-wider">
+                Příběh značky
+              </label>
+              <textarea
+                value={data.story}
+                onChange={(e) => set('story', e.target.value)}
+                rows={5}
+                className="w-full border border-off2 rounded-lg px-3 py-2 text-[14px] text-text resize-y focus:outline-none focus:border-olive"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-text2 mb-1.5 uppercase tracking-wider">
+                Filozofie
+              </label>
+              <textarea
+                value={data.philosophy}
+                onChange={(e) => set('philosophy', e.target.value)}
+                rows={3}
+                className="w-full border border-off2 rounded-lg px-3 py-2 text-[14px] text-text resize-y focus:outline-none focus:border-olive"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-medium text-text2 mb-1.5 uppercase tracking-wider">
+                Web značky
+              </label>
+              <input
+                value={data.website_url}
+                onChange={(e) => set('website_url', e.target.value)}
+                className="w-full border border-off2 rounded-lg px-3 py-2 text-[14px] text-text focus:outline-none focus:border-olive"
+                placeholder="https://…"
+              />
+            </div>
+
+            {/* Časová osa */}
+            <div className="pt-3 border-t border-off2">
+              <label className="block text-[11px] font-medium text-text2 mb-2 uppercase tracking-wider">
+                📅 Časová osa
+              </label>
+              {timeline.length === 0 && (
+                <p className="text-[12px] text-text3 italic mb-2">Žádné milníky. Přidejte rok + popisek.</p>
+              )}
+              {timeline.map((m, i) => (
+                <div key={i} className="flex gap-2 mb-2 items-start">
+                  <input
+                    type="number"
+                    value={m.year}
+                    onChange={(e) => {
+                      const next = [...timeline]
+                      next[i] = { ...next[i], year: Number(e.target.value) }
+                      setTimeline(next)
+                      setSaved(false)
+                    }}
+                    className="w-20 border border-off2 rounded-lg px-2 py-1.5 text-[13px] text-text tabular-nums focus:outline-none focus:border-olive"
+                    placeholder="1860"
+                  />
+                  <input
+                    value={m.label}
+                    onChange={(e) => {
+                      const next = [...timeline]
+                      next[i] = { ...next[i], label: e.target.value }
+                      setTimeline(next)
+                      setSaved(false)
+                    }}
+                    className="flex-1 border border-off2 rounded-lg px-2 py-1.5 text-[13px] text-text focus:outline-none focus:border-olive"
+                    placeholder="založení rodinné olivárny"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTimeline(timeline.filter((_, j) => j !== i))
+                      setSaved(false)
+                    }}
+                    className="text-text3 hover:text-terra px-2 text-[13px]"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  setTimeline([...timeline, { year: new Date().getFullYear(), label: '' }])
+                  setSaved(false)
+                }}
+                className="text-[12px] text-olive border border-olive-border rounded-md px-3 py-1.5 hover:bg-olive-bg"
+              >
+                + Přidat milník
+              </button>
+            </div>
+          </div>
+        )}
+
+        {entity.entityType === 'cultivar' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-medium text-text2 mb-1.5 uppercase tracking-wider">
+                  Přezdívka
+                </label>
+                <input
+                  value={data.nickname}
+                  onChange={(e) => set('nickname', e.target.value)}
+                  className="w-full border border-off2 rounded-lg px-3 py-2 text-[14px] text-text focus:outline-none focus:border-olive"
+                  placeholder="apulijský punch"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-text2 mb-1.5 uppercase tracking-wider">
+                  Intenzita 1–10
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={data.intensity_score}
+                  onChange={(e) => set('intensity_score', e.target.value)}
+                  className="w-full border border-off2 rounded-lg px-3 py-2 text-[14px] text-text focus:outline-none focus:border-olive"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-text2 mb-1.5 uppercase tracking-wider">
+                  Typ použití
+                </label>
+                <select
+                  value={data.primary_use}
+                  onChange={(e) => set('primary_use', e.target.value)}
+                  className="w-full border border-off2 rounded-lg px-3 py-2 text-[14px] text-text focus:outline-none focus:border-olive"
+                >
+                  <option value="">— vyberte —</option>
+                  <option value="finishing">na dochucení</option>
+                  <option value="dipping">k máčení</option>
+                  <option value="cooking">do vaření</option>
+                  <option value="frying">na smažení</option>
+                  <option value="universal">univerzální</option>
+                </select>
+              </div>
+            </div>
+
+            {entity.flavor_profile && Object.keys(entity.flavor_profile).length > 0 && (
+              <div className="bg-olive-bg border border-olive-border rounded-lg px-3 py-2 text-[12px] text-olive-dark">
+                <strong>Chuťový profil</strong>{' '}
+                {entity.auto_filled_at ? '(auto-fill ze produktů)' : '(ručně)'}:{' '}
+                {Object.entries(entity.flavor_profile)
+                  .filter(([, v]) => typeof v === 'number' && v > 0)
+                  .map(([k, v]) => `${k} ${v}`)
+                  .join(' · ')}
+              </div>
+            )}
+
+            <ChipListEditor
+              label="✓ Hodí se k"
+              values={pairingPros}
+              onChange={(v) => {
+                setPairingPros(v)
                 setSaved(false)
               }}
-              className="text-xs text-olive border border-olive-border rounded-md px-3 py-1.5 hover:bg-olive-bg"
-            >
-              + Přidat milník
-            </button>
+              placeholder="steaky"
+            />
+            <ChipListEditor
+              label="✗ Spíš ne k"
+              values={pairingCons}
+              onChange={(v) => {
+                setPairingCons(v)
+                setSaved(false)
+              }}
+              placeholder="dezerty"
+            />
           </div>
-        </>
-      )}
+        )}
+      </AdminBlock>
 
-      {/* Cultivar-only */}
-      {entity.entityType === 'cultivar' && (
-        <div className="space-y-3 border-t border-off2 pt-6">
-          <h3 className="text-sm font-medium text-text">Vlastnosti odrůdy (blok 6 na webu)</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-text2 mb-1">Přezdívka</label>
-              <input
-                value={data.nickname}
-                onChange={(e) => set('nickname', e.target.value)}
-                className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text"
-                placeholder="apulijský punch"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-text2 mb-1">Intenzita 1–10</label>
-              <input
-                type="number"
-                min={1}
-                max={10}
-                value={data.intensity_score}
-                onChange={(e) => set('intensity_score', e.target.value)}
-                className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-text2 mb-1">Typ použití</label>
-              <select
-                value={data.primary_use}
-                onChange={(e) => set('primary_use', e.target.value)}
-                className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text"
-              >
-                <option value="">— vyberte —</option>
-                <option value="finishing">na dochucení</option>
-                <option value="dipping">k máčení</option>
-                <option value="cooking">do vaření</option>
-                <option value="frying">na smažení</option>
-                <option value="universal">univerzální</option>
-              </select>
-            </div>
+      {/* BLOK SEO (poslední) */}
+      <AdminBlock
+        number={9}
+        icon="🔍"
+        title="SEO meta tagy"
+        publicLocation="HTML <title> + meta description (Google výsledky)"
+        description="Doporučeno: title 50-60 znaků, description 140-160 znaků."
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[11px] font-medium text-text2 mb-1.5 uppercase tracking-wider">
+              Meta title (max 70 znaků)
+            </label>
+            <input
+              value={data.meta_title}
+              onChange={(e) => set('meta_title', e.target.value)}
+              maxLength={70}
+              className="w-full border border-off2 rounded-lg px-3 py-2 text-[14px] text-text focus:outline-none focus:border-olive"
+            />
+            <p className="text-[11px] text-text3 mt-1">{data.meta_title.length}/70</p>
           </div>
-
-          {entity.flavor_profile && Object.keys(entity.flavor_profile).length > 0 && (
-            <div className="bg-olive-bg border border-olive-border rounded-lg px-3 py-2 text-xs text-olive-dark">
-              <strong>Chuťový profil</strong> {entity.auto_filled_at ? '(auto-fill ze produktů)' : '(ručně)'}:{' '}
-              {Object.entries(entity.flavor_profile)
-                .filter(([, v]) => typeof v === 'number' && v > 0)
-                .map(([k, v]) => `${k} ${v}`)
-                .join(' · ')}
-            </div>
-          )}
-
-          <ChipListEditor
-            label="Hodí se k (zelený seznam)"
-            values={pairingPros}
-            onChange={(v) => {
-              setPairingPros(v)
-              setSaved(false)
-            }}
-            placeholder="steaky"
-          />
-          <ChipListEditor
-            label="Spíš ne k (červený seznam)"
-            values={pairingCons}
-            onChange={(v) => {
-              setPairingCons(v)
-              setSaved(false)
-            }}
-            placeholder="dezerty"
-          />
+          <div>
+            <label className="block text-[11px] font-medium text-text2 mb-1.5 uppercase tracking-wider">
+              Meta description (max 160 znaků)
+            </label>
+            <textarea
+              value={data.meta_description}
+              onChange={(e) => set('meta_description', e.target.value)}
+              maxLength={160}
+              rows={3}
+              className="w-full border border-off2 rounded-lg px-3 py-2 text-[14px] text-text resize-none focus:outline-none focus:border-olive"
+            />
+            <p className="text-[11px] text-text3 mt-1">{data.meta_description.length}/160</p>
+          </div>
         </div>
-      )}
-
-      {/* SEO */}
-      <div className="space-y-4 border-t border-off2 pt-6">
-        <h3 className="text-sm font-medium text-text">SEO</h3>
-        <div>
-          <label className="block text-xs font-medium text-text2 mb-1">Meta title (max 60 znaků)</label>
-          <input
-            value={data.meta_title}
-            onChange={(e) => set('meta_title', e.target.value)}
-            maxLength={70}
-            className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text"
-          />
-          <p className="text-xs text-text3 mt-1">{data.meta_title.length}/70</p>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-text2 mb-1">Meta description (max 160 znaků)</label>
-          <textarea
-            value={data.meta_description}
-            onChange={(e) => set('meta_description', e.target.value)}
-            maxLength={160}
-            rows={3}
-            className="w-full border border-off2 rounded-lg px-3 py-2 text-sm text-text resize-none"
-          />
-          <p className="text-xs text-text3 mt-1">{data.meta_description.length}/160</p>
-        </div>
-      </div>
-
-      {/* Save */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={save}
-          disabled={saving}
-          className="px-6 py-2.5 bg-olive text-white rounded-lg text-sm font-medium hover:bg-olive2 disabled:opacity-50"
-        >
-          {saving ? 'Ukládám…' : 'Uložit'}
-        </button>
-        {saved && <span className="text-sm text-green-600">✓ Uloženo</span>}
-        {error && <span className="text-sm text-red-500">{error}</span>}
-      </div>
+      </AdminBlock>
 
       {/* AI extras modal */}
       {entityId && (
@@ -631,7 +703,7 @@ export function EntityEditForm({ entity, publicUrl, entityId }: Props) {
   )
 }
 
-// Inline chip-list editor — Enter přidá, ✕ odebere.
+// Inline chip-list editor
 function ChipListEditor({
   label,
   values,
@@ -658,27 +730,24 @@ function ChipListEditor({
 
   return (
     <div>
-      <label className="block text-xs font-medium text-text2 mb-1">{label}</label>
+      <label className="block text-[11px] font-medium text-text2 mb-1.5 uppercase tracking-wider">{label}</label>
       <div className="flex flex-wrap gap-1.5 mb-2">
         {values.map((v, i) => (
           <span
             key={i}
-            className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-off border border-off2 text-text2"
+            className="inline-flex items-center gap-1 text-[12px] px-2 py-1 rounded-full bg-off border border-off2 text-text2"
           >
             {v}
             <button
               type="button"
               onClick={() => onChange(values.filter((_, j) => j !== i))}
               className="text-text3 hover:text-terra"
-              aria-label={`Smazat ${v}`}
             >
               ×
             </button>
           </span>
         ))}
-        {values.length === 0 && (
-          <span className="text-xs text-text3 italic">Zatím prázdné.</span>
-        )}
+        {values.length === 0 && <span className="text-[12px] text-text3 italic">Zatím prázdné.</span>}
       </div>
       <div className="flex gap-2">
         <input
@@ -691,12 +760,12 @@ function ChipListEditor({
             }
           }}
           placeholder={placeholder}
-          className="flex-1 border border-off2 rounded-lg px-3 py-1.5 text-sm text-text"
+          className="flex-1 border border-off2 rounded-lg px-3 py-1.5 text-[13px] text-text focus:outline-none focus:border-olive"
         />
         <button
           type="button"
           onClick={add}
-          className="text-xs text-olive border border-olive-border rounded-md px-3 py-1.5 hover:bg-olive-bg"
+          className="text-[12px] text-olive border border-olive-border rounded-md px-3 py-1.5 hover:bg-olive-bg"
         >
           Přidat
         </button>

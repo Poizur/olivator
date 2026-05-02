@@ -6,21 +6,63 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { formatPrice } from '@/lib/utils'
 
 interface Props {
-  entityType: 'region'
+  entityType: 'region' | 'brand' | 'cultivar'
   entitySlug: string
 }
 
+const ENTITY_LABEL = {
+  region: 'regionu',
+  brand: 'značce',
+  cultivar: 'odrůdě',
+}
+
 export async function EntityProductsList({ entityType, entitySlug }: Props) {
-  // Pro regiony matchujeme přes region_slug column
-  const { data: products } = await supabaseAdmin
-    .from('products')
-    .select(`
-      id, slug, name, name_short, olivator_score, origin_country, status,
-      product_offers ( price, currency )
-    `)
-    .eq('region_slug', entitySlug)
-    .order('olivator_score', { ascending: false })
-    .limit(50)
+  let products: Array<unknown> | null = null
+
+  if (entityType === 'region') {
+    const { data } = await supabaseAdmin
+      .from('products')
+      .select(`
+        id, slug, name, name_short, olivator_score, origin_country, status,
+        product_offers ( price, currency )
+      `)
+      .eq('region_slug', entitySlug)
+      .order('olivator_score', { ascending: false })
+      .limit(50)
+    products = data
+  } else if (entityType === 'brand') {
+    const { data } = await supabaseAdmin
+      .from('products')
+      .select(`
+        id, slug, name, name_short, olivator_score, origin_country, status,
+        product_offers ( price, currency )
+      `)
+      .eq('brand_slug', entitySlug)
+      .order('olivator_score', { ascending: false })
+      .limit(50)
+    products = data
+  } else if (entityType === 'cultivar') {
+    // Junction tabulka product_cultivars → product_id → products
+    const { data: links } = await supabaseAdmin
+      .from('product_cultivars')
+      .select('product_id')
+      .eq('cultivar_slug', entitySlug)
+    const productIds = (links ?? []).map((l: { product_id: string }) => l.product_id)
+    if (productIds.length === 0) {
+      products = []
+    } else {
+      const { data } = await supabaseAdmin
+        .from('products')
+        .select(`
+          id, slug, name, name_short, olivator_score, origin_country, status,
+          product_offers ( price, currency )
+        `)
+        .in('id', productIds)
+        .order('olivator_score', { ascending: false })
+        .limit(50)
+      products = data
+    }
+  }
 
   const items = (products ?? []) as Array<{
     id: string
@@ -42,10 +84,10 @@ export async function EntityProductsList({ entityType, entitySlug }: Props) {
     .sort((a, b) => a - b)[0]
 
   return (
-    <div className="border-t border-off2 pt-6 mt-8">
+    <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-medium text-text">
-          Produkty v regionu ({items.length})
+          Produkty v {ENTITY_LABEL[entityType]} ({items.length})
         </h3>
         <div className="flex gap-4 text-xs text-text3">
           <span>Průměrný Score: <strong className="text-text">{avgScore}</strong></span>
