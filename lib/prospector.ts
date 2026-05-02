@@ -128,15 +128,25 @@ export async function runProspector(): Promise<ProspectResult> {
       continue
     }
 
-    // Crawler test — pokus o sitemap
+    // Crawler test — pokus o sitemap. URL count = počet URL co prošly
+    // PRODUCT_URL_HEURISTIC (musí obsahovat "olivov-olej" + volume marker).
     const test = await testCrawlerForDomain(candidate.domain, { type: 'shoptet_sitemap' })
     const urlCount = test.urls.length
     const scanError: string | null = test.error ?? null
 
-    if (urlCount > 0) result.testedSuccess++
+    // Threshold pro "real specialty shop": min 3 olive oil produkty.
+    // 1-2 olejů = generic shop co má jen pár položek; nezajímavý pro nás.
+    // 3+ = signál že shop má reálnou kategorii / sortiment.
+    const MIN_OLIVE_URLS = 3
+
+    if (urlCount >= MIN_OLIVE_URLS) result.testedSuccess++
     else result.testedFailed++
 
-    const newStatus = urlCount > 0 ? 'suggested' : 'rejected'
+    const newStatus = urlCount >= MIN_OLIVE_URLS ? 'suggested' : 'rejected'
+    const failReason =
+      urlCount === 0
+        ? 'crawler test selhal — sitemap nenalezena nebo žádné olive oil URL'
+        : `pouze ${urlCount} olive oil URL (threshold: ${MIN_OLIVE_URLS})`
 
     // Slug z domény
     const slug = candidate.domain
@@ -156,9 +166,9 @@ export async function runProspector(): Promise<ProspectResult> {
         source: candidate.source,
         reasoning:
           candidate.reasoning +
-          (urlCount > 0
-            ? ` · ✓ test: ${urlCount} URL`
-            : ` · crawler test selhal — sitemap nenalezena`),
+          (urlCount >= MIN_OLIVE_URLS
+            ? ` · ✓ test: ${urlCount} olejů v sitemap`
+            : ` · ${failReason}`),
         last_scan_url_count: urlCount,
         last_scan_error: scanError,
         last_scanned_at: new Date().toISOString(),
@@ -166,7 +176,7 @@ export async function runProspector(): Promise<ProspectResult> {
       .select('id, domain, name')
       .single()
 
-    if (!error && created && urlCount > 0) {
+    if (!error && created && urlCount >= MIN_OLIVE_URLS) {
       result.newlyAdded++
       result.added.push({
         domain: created.domain as string,
