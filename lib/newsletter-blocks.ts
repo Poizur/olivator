@@ -62,6 +62,32 @@ function buildAffiliateUrl(retailerSlug: string, productSlug: string, utmContent
   return `${SITE_URL}/go/${retailerSlug}/${productSlug}?${params.toString()}`
 }
 
+// ── Helper: načti retailer/brand mapy (1× per pick funkce) ─────────────────
+//
+// Důvod: Supabase nested select `retailers ( ... )` může vrátit null pokud
+// FK constraint není v DB schématu. Bezpečnější: 2 separate queries + Map.
+async function loadRetailerMap(): Promise<Map<string, { name: string; slug: string; is_active: boolean }>> {
+  const { data } = await supabaseAdmin.from('retailers').select('id, name, slug, is_active')
+  const map = new Map<string, { name: string; slug: string; is_active: boolean }>()
+  for (const r of data ?? []) {
+    map.set(r.id as string, {
+      name: r.name as string,
+      slug: r.slug as string,
+      is_active: r.is_active as boolean,
+    })
+  }
+  return map
+}
+
+async function loadBrandMap(): Promise<Map<string, { name: string; slug: string }>> {
+  const { data } = await supabaseAdmin.from('brands').select('id, name, slug')
+  const map = new Map<string, { name: string; slug: string }>()
+  for (const b of data ?? []) {
+    map.set(b.id as string, { name: b.name as string, slug: b.slug as string })
+  }
+  return map
+}
+
 // ── 1. Olej týdne — kurátorský pick ────────────────────────────────────────
 //
 // Strategie výběru:
@@ -73,12 +99,11 @@ function buildAffiliateUrl(retailerSlug: string, productSlug: string, utmContent
 export async function pickOilOfTheWeek(
   excludeProductIds: string[] = []
 ): Promise<OilCardData | null> {
+  const [retailerMap, brandMap] = await Promise.all([loadRetailerMap(), loadBrandMap()])
+
   const { data: products } = await supabaseAdmin
     .from('products')
-    .select(`
-      id, slug, name, name_short, image_url, olivator_score,
-      brands ( name, slug )
-    `)
+    .select('id, slug, name, name_short, image_url, olivator_score, brand_id')
     .eq('status', 'active')
     .order('olivator_score', { ascending: false })
     .limit(30)
@@ -88,32 +113,32 @@ export async function pickOilOfTheWeek(
   for (const p of products) {
     if (excludeProductIds.includes(p.id as string)) continue
 
-    // Najdi nejlevnější aktivní nabídku
+    // Načti všechny in_stock offers pro tento produkt
     const { data: offers } = await supabaseAdmin
       .from('product_offers')
-      .select(`
-        price, currency, in_stock,
-        retailers ( name, slug, is_active )
-      `)
+      .select('price, currency, in_stock, retailer_id')
       .eq('product_id', p.id)
       .eq('in_stock', true)
       .order('price', { ascending: true })
 
-    type OfferRow = {
-      price: number
-      currency: string
-      in_stock: boolean
-      retailers: { name: string; slug: string; is_active: boolean } | null
-    }
-    const allOffers = ((offers ?? []) as unknown as OfferRow[]).filter(
-      (o) => o.retailers !== null
-    )
-    if (allOffers.length === 0) continue
-    // Preferuj is_active=true, ale pokud takový není, vezmi jakýkoliv
-    const cheapest =
-      allOffers.find((o) => o.retailers?.is_active === true) ?? allOffers[0]
+    if (!offers || offers.length === 0) continue
 
-    // Najdi minimální cenu za posledních 30 dnů (kontext: drop?)
+    // Přilep retailer info z mapy
+    const enriched = offers
+      .map((o) => ({
+        price: o.price as number,
+        retailer: retailerMap.get(o.retailer_id as string) ?? null,
+      }))
+      .filter((o) => o.retailer !== null) as Array<{
+        price: number
+        retailer: { name: string; slug: string; is_active: boolean }
+      }>
+
+    if (enriched.length === 0) continue
+    // Preferuj is_active retailera, fallback jakýkoliv
+    const cheapest = enriched.find((o) => o.retailer.is_active) ?? enriched[0]
+
+    // Min cena 30d (drop kontext)
     const { data: history } = await supabaseAdmin
       .from('price_history')
       .select('price')
@@ -122,18 +147,17 @@ export async function pickOilOfTheWeek(
       .order('price', { ascending: false })
       .limit(1)
 
-    const oldPrice = history?.[0]?.price ?? null
+    const oldPrice = (history?.[0]?.price as number | undefined) ?? null
     const hasDrop = oldPrice && oldPrice > cheapest.price && (oldPrice - cheapest.price) / oldPrice > 0.05
 
-    type Brand = { name: string; slug: string } | null
-    const brand = (p.brands as unknown as Brand) ?? null
+    const brand = p.brand_id ? brandMap.get(p.brand_id as string) ?? null : null
     const productName = (p.name_short as string | null) ?? (p.name as string)
 
     const reasoning = hasDrop
       ? `Score ${p.olivator_score} a aktuálně sleva ${Math.round(((oldPrice! - cheapest.price) / oldPrice!) * 100)} % oproti měsíčnímu maximu — silný moment k vyzkoušení.`
       : (p.olivator_score as number) >= 80
       ? `Patří mezi nejlépe hodnocené v katalogu. Kvalita ověřená Olivator Score ${p.olivator_score}.`
-      : `Aktuálně Score ${p.olivator_score} — solidní volba k tomu typu pokrmů.`
+      : `Aktuálně Score ${p.olivator_score} — solidní volba k danému typu pokrmů.`
 
     return {
       productId: p.id as string,
@@ -144,9 +168,9 @@ export async function pickOilOfTheWeek(
       score: p.olivator_score as number,
       price: cheapest.price,
       oldPrice: hasDrop ? oldPrice : null,
-      retailerName: cheapest.retailers!.name,
-      retailerSlug: cheapest.retailers!.slug,
-      ctaUrl: buildAffiliateUrl(cheapest.retailers!.slug, p.slug as string, 'oil_of_week'),
+      retailerName: cheapest.retailer.name,
+      retailerSlug: cheapest.retailer.slug,
+      ctaUrl: buildAffiliateUrl(cheapest.retailer.slug, p.slug as string, 'oil_of_week'),
       reasoning,
     }
   }
@@ -162,44 +186,81 @@ export async function pickDeals(
   limit = 5,
   excludeProductIds: string[] = []
 ): Promise<DealData[]> {
-  // Pull aktuální offers + porovnej s history
+  const retailerMap = await loadRetailerMap()
+
+  // Pull aktuální in_stock offers
   const { data: offers } = await supabaseAdmin
     .from('product_offers')
-    .select(`
-      product_id, price, in_stock,
-      products ( id, slug, name, name_short, status, olivator_score ),
-      retailers ( name, slug, is_active )
-    `)
+    .select('product_id, price, retailer_id')
     .eq('in_stock', true)
 
-  if (!offers) return []
+  if (!offers || offers.length === 0) return []
 
-  type OfferData = {
+  // Načti products data (status + name) jednou
+  const productIds = Array.from(new Set(offers.map((o) => o.product_id as string)))
+  const { data: productsData } = await supabaseAdmin
+    .from('products')
+    .select('id, slug, name, name_short, status, olivator_score')
+    .in('id', productIds)
+  const productMap = new Map<string, {
+    slug: string
+    name: string
+    name_short: string | null
+    status: string
+    olivator_score: number
+  }>()
+  for (const p of productsData ?? []) {
+    productMap.set(p.id as string, {
+      slug: p.slug as string,
+      name: p.name as string,
+      name_short: p.name_short as string | null,
+      status: p.status as string,
+      olivator_score: p.olivator_score as number,
+    })
+  }
+
+  interface OfferData {
     product_id: string
     price: number
-    in_stock: boolean
-    products: {
-      id: string
-      slug: string
-      name: string
-      name_short: string | null
-      status: string
-      olivator_score: number
-    } | null
-    retailers: { name: string; slug: string; is_active: boolean } | null
+    retailer: { name: string; slug: string; is_active: boolean }
+    product: { slug: string; name: string; name_short: string | null; olivator_score: number }
   }
 
   const candidates: DealData[] = []
 
-  // Group by product_id, pick cheapest offer
+  // Group by product_id, pick cheapest offer (preferuj is_active retailer)
   const byProduct = new Map<string, OfferData>()
-  for (const o of offers as unknown as OfferData[]) {
-    if (!o.products || !o.retailers) continue
-    if (o.products.status !== 'active') continue
-    if (!o.retailers.is_active) continue
-    if (excludeProductIds.includes(o.product_id)) continue
-    const existing = byProduct.get(o.product_id)
-    if (!existing || o.price < existing.price) byProduct.set(o.product_id, o)
+  for (const o of offers) {
+    const productId = o.product_id as string
+    const product = productMap.get(productId)
+    const retailer = retailerMap.get(o.retailer_id as string)
+    if (!product || !retailer) continue
+    if (product.status !== 'active') continue
+    if (excludeProductIds.includes(productId)) continue
+
+    const candidate: OfferData = {
+      product_id: productId,
+      price: o.price as number,
+      retailer,
+      product: {
+        slug: product.slug,
+        name: product.name,
+        name_short: product.name_short,
+        olivator_score: product.olivator_score,
+      },
+    }
+
+    const existing = byProduct.get(productId)
+    if (!existing) {
+      byProduct.set(productId, candidate)
+    } else {
+      // Preferuj active retailer; pokud oba stejné, levnější
+      const existingActive = existing.retailer.is_active
+      const newActive = candidate.retailer.is_active
+      if ((newActive && !existingActive) || (newActive === existingActive && candidate.price < existing.price)) {
+        byProduct.set(productId, candidate)
+      }
+    }
   }
 
   for (const offer of byProduct.values()) {
@@ -230,8 +291,7 @@ export async function pickDeals(
     const minPrice = (minHistory?.[0]?.price as number) ?? offer.price
     const isAtMin = offer.price <= minPrice * 1.02
 
-    const productName =
-      offer.products!.name_short ?? offer.products!.name
+    const productName = offer.product.name_short ?? offer.product.name
 
     candidates.push({
       productId: offer.product_id,
@@ -239,13 +299,9 @@ export async function pickDeals(
       oldPrice: maxPrice,
       newPrice: offer.price,
       dropPct: Math.round(dropPct),
-      retailerName: offer.retailers!.name,
-      retailerSlug: offer.retailers!.slug,
-      ctaUrl: buildAffiliateUrl(
-        offer.retailers!.slug,
-        offer.products!.slug,
-        'deal_radar'
-      ),
+      retailerName: offer.retailer.name,
+      retailerSlug: offer.retailer.slug,
+      ctaUrl: buildAffiliateUrl(offer.retailer.slug, offer.product.slug, 'deal_radar'),
       context: isAtMin
         ? '90denní minimum'
         : `Klesla z ${Math.round(maxPrice)} Kč za poslední měsíc`,
@@ -262,14 +318,12 @@ export async function pickDeals(
 // Najde produkty kde created_at < 30 dnů, status='active'. Bez score threshold —
 // novinka stojí za zmínku i kdyby byla 60+. Když je málo dat, rozšiřujeme okno.
 export async function pickNewArrival(): Promise<OilCardData | null> {
+  const [retailerMap, brandMap] = await Promise.all([loadRetailerMap(), loadBrandMap()])
   const since = new Date(Date.now() - 30 * 86400000).toISOString()
 
   const { data: products } = await supabaseAdmin
     .from('products')
-    .select(`
-      id, slug, name, name_short, image_url, olivator_score,
-      brands ( name, slug )
-    `)
+    .select('id, slug, name, name_short, image_url, olivator_score, brand_id')
     .eq('status', 'active')
     .gte('created_at', since)
     .order('created_at', { ascending: false })
@@ -280,28 +334,27 @@ export async function pickNewArrival(): Promise<OilCardData | null> {
   for (const p of products) {
     const { data: offers } = await supabaseAdmin
       .from('product_offers')
-      .select(`
-        price, in_stock,
-        retailers ( name, slug, is_active )
-      `)
+      .select('price, in_stock, retailer_id')
       .eq('product_id', p.id)
       .eq('in_stock', true)
       .order('price', { ascending: true })
 
-    type OfferRow = {
-      price: number
-      in_stock: boolean
-      retailers: { name: string; slug: string; is_active: boolean } | null
-    }
-    const allOffers = ((offers ?? []) as unknown as OfferRow[]).filter(
-      (o) => o.retailers !== null
-    )
-    if (allOffers.length === 0) continue
-    const validOffer =
-      allOffers.find((o) => o.retailers?.is_active === true) ?? allOffers[0]
+    if (!offers || offers.length === 0) continue
 
-    type Brand = { name: string; slug: string } | null
-    const brand = (p.brands as unknown as Brand) ?? null
+    const enriched = offers
+      .map((o) => ({
+        price: o.price as number,
+        retailer: retailerMap.get(o.retailer_id as string) ?? null,
+      }))
+      .filter((o) => o.retailer !== null) as Array<{
+        price: number
+        retailer: { name: string; slug: string; is_active: boolean }
+      }>
+
+    if (enriched.length === 0) continue
+    const cheapest = enriched.find((o) => o.retailer.is_active) ?? enriched[0]
+
+    const brand = p.brand_id ? brandMap.get(p.brand_id as string) ?? null : null
 
     return {
       productId: p.id as string,
@@ -310,15 +363,11 @@ export async function pickNewArrival(): Promise<OilCardData | null> {
       brandName: brand?.name ?? null,
       imageUrl: p.image_url as string | null,
       score: p.olivator_score as number,
-      price: validOffer.price,
+      price: cheapest.price,
       oldPrice: null,
-      retailerName: validOffer.retailers!.name,
-      retailerSlug: validOffer.retailers!.slug,
-      ctaUrl: buildAffiliateUrl(
-        validOffer.retailers!.slug,
-        p.slug as string,
-        'new_arrival'
-      ),
+      retailerName: cheapest.retailer.name,
+      retailerSlug: cheapest.retailer.slug,
+      ctaUrl: buildAffiliateUrl(cheapest.retailer.slug, p.slug as string, 'new_arrival'),
       reasoning: `Nový olej v katalogu — Score ${p.olivator_score}, čerstvě validovaný.`,
     }
   }
