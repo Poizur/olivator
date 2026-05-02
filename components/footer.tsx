@@ -17,9 +17,9 @@ export async function Footer() {
           <Image
             src="/logo-wordmark.png"
             alt="olivátor"
-            width={520}
-            height={132}
-            className="h-20 w-auto"
+            width={720}
+            height={184}
+            className="h-28 w-auto"
           />
           <div className="text-xs text-text3 mt-2 leading-relaxed">
             Největší srovnávač olivových olejů v ČR

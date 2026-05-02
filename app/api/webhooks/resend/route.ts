@@ -1,11 +1,70 @@
 // Resend webhook → loguj events (delivered, opened, clicked, bounced, complained).
 // Setup: v Resend dashboard → Webhooks → URL: https://olivator.cz/api/webhooks/resend
-// Resend posílá POST s JSON bodyo všech eventech.
+//
+// Bezpečnost: ověřujeme Svix signature (Resend používá Svix pro signing).
+// Bez RESEND_WEBHOOK_SECRET endpoint funguje i bez verifikace (dev fallback),
+// ale v produkci VŽDY nastav.
 
 import { NextRequest, NextResponse } from 'next/server'
+import crypto from 'crypto'
 import { supabaseAdmin } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
+
+/**
+ * Ověř Svix webhook signature (Resend uses Svix).
+ * Headers: svix-id, svix-timestamp, svix-signature
+ * Signature format: "v1,<base64-hmac>" (může být víc oddělené mezerou)
+ *
+ * Vrátí true pokud signature sedí, false pokud ne (nebo chybí secret).
+ * Pokud RESEND_WEBHOOK_SECRET není nastaven, vrátí true (dev mode).
+ */
+function verifySignature(
+  rawBody: string,
+  svixId: string | null,
+  svixTimestamp: string | null,
+  svixSignature: string | null
+): boolean {
+  const secret = process.env.RESEND_WEBHOOK_SECRET
+  if (!secret) {
+    console.warn('[resend webhook] RESEND_WEBHOOK_SECRET not set — accepting without verification')
+    return true
+  }
+  if (!svixId || !svixTimestamp || !svixSignature) {
+    return false
+  }
+
+  // Replay protection: reject older than 5 minut
+  const now = Math.floor(Date.now() / 1000)
+  const ts = Number(svixTimestamp)
+  if (Number.isNaN(ts) || Math.abs(now - ts) > 300) {
+    return false
+  }
+
+  // Strip "whsec_" prefix → decode base64 to bytes
+  const secretKey = secret.startsWith('whsec_') ? secret.slice(6) : secret
+  let secretBytes: Buffer
+  try {
+    secretBytes = Buffer.from(secretKey, 'base64')
+  } catch {
+    return false
+  }
+
+  const signedPayload = `${svixId}.${svixTimestamp}.${rawBody}`
+  const expected = crypto
+    .createHmac('sha256', secretBytes)
+    .update(signedPayload)
+    .digest('base64')
+
+  // svix-signature může být "v1,sigA v1,sigB" — split a porovnat každý
+  const sigs = svixSignature.split(' ').map((s) => s.split(',')[1])
+  for (const sig of sigs) {
+    if (sig && crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
+      return true
+    }
+  }
+  return false
+}
 
 interface ResendWebhookPayload {
   type: string  // "email.sent" | "email.delivered" | "email.opened" | "email.clicked" | "email.bounced" | "email.complained"
@@ -28,9 +87,21 @@ const TYPE_MAP: Record<string, string> = {
 }
 
 export async function POST(request: NextRequest) {
+  // Verify Svix signature před parsováním body
+  const rawBody = await request.text()
+  const ok = verifySignature(
+    rawBody,
+    request.headers.get('svix-id'),
+    request.headers.get('svix-timestamp'),
+    request.headers.get('svix-signature')
+  )
+  if (!ok) {
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+  }
+
   let payload: ResendWebhookPayload
   try {
-    payload = await request.json()
+    payload = JSON.parse(rawBody)
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
