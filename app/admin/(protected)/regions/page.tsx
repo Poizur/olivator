@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
+import { RegenerateAllButton } from '@/components/regenerate-all-button'
 
 async function getRegions() {
   const { data } = await supabaseAdmin
@@ -45,6 +46,11 @@ export default async function AdminRegionsPage() {
           <h1 className="font-[family-name:var(--font-display)] text-3xl text-text">Regiony</h1>
           <p className="text-[13px] text-text2 mt-1">{regions.length} regionů v katalogu</p>
         </div>
+        <RegenerateAllButton
+          entityType="regions"
+          estimatedCount={regions.length}
+          label="Přepsat editorial obsah všech regionů"
+        />
       </div>
 
       <div className="bg-white border border-off2 rounded-xl divide-y divide-off2">

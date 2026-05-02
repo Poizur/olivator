@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
+import { RegenerateAllButton } from '@/components/regenerate-all-button'
 
 async function getCultivars() {
   const { data } = await supabaseAdmin
@@ -44,6 +45,11 @@ export default async function AdminCultivarsPage() {
           <h1 className="font-[family-name:var(--font-display)] text-3xl text-text">Odrůdy</h1>
           <p className="text-[13px] text-text2 mt-1">{cultivars.length} odrůd v katalogu</p>
         </div>
+        <RegenerateAllButton
+          entityType="cultivars"
+          estimatedCount={cultivars.length}
+          label="Přepsat editorial obsah všech odrůd"
+        />
       </div>
 
       <div className="bg-white border border-off2 rounded-xl divide-y divide-off2">

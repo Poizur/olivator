@@ -4,8 +4,10 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { generateRegionContent, generateBrandContent, generateCultivarContent } from '@/lib/entity-content-generator'
 import { getCheapestOffer } from '@/lib/data'
 
-// Content generation může trvat ~3 min pro všechny entity
-export const maxDuration = 300
+// Content generation: ~30-60s per entitu × N entit. Pro bulk regenerate
+// (10+ entit) potřebujeme až 10+ minut. Railway nemá limit, Next.js respektuje
+// tento export pro serverless platformy.
+export const maxDuration = 800
 
 interface ProductRow {
   id: string
