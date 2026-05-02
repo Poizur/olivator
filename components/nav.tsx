@@ -28,15 +28,15 @@ export function Nav({ hasAdminBar = false }: { hasAdminBar?: boolean }) {
   return (
     <>
       <nav className={`sticky ${hasAdminBar ? 'top-9' : 'top-0'} z-50 bg-white/88 backdrop-blur-xl border-b border-black/8 px-6 md:px-10`}>
-        <div className="max-w-[1280px] mx-auto h-[68px] flex items-center gap-8">
+        <div className="max-w-[1280px] mx-auto h-[96px] flex items-center gap-8">
           <Link href="/" className="shrink-0 flex items-center" aria-label="olivátor — domů">
             <Image
               src="/logo-wordmark.png"
               alt="olivátor"
-              width={280}
-              height={72}
+              width={520}
+              height={132}
               priority
-              className="h-14 w-auto"
+              className="h-20 w-auto"
             />
           </Link>
 
