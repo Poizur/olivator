@@ -33,11 +33,41 @@ async function syncToResend(email: string): Promise<string | null> {
   }
 }
 
+interface PreferencesInput {
+  weekly?: boolean
+  deals?: boolean
+  harvest?: boolean
+  alerts?: boolean
+}
+
+const DEFAULT_PREFERENCES = {
+  weekly: true,
+  deals: true,
+  harvest: false,
+  alerts: false,
+}
+
+function sanitizePreferences(input: unknown): typeof DEFAULT_PREFERENCES {
+  if (!input || typeof input !== 'object') return DEFAULT_PREFERENCES
+  const p = input as PreferencesInput
+  return {
+    weekly: typeof p.weekly === 'boolean' ? p.weekly : DEFAULT_PREFERENCES.weekly,
+    deals: typeof p.deals === 'boolean' ? p.deals : DEFAULT_PREFERENCES.deals,
+    harvest: typeof p.harvest === 'boolean' ? p.harvest : DEFAULT_PREFERENCES.harvest,
+    alerts: typeof p.alerts === 'boolean' ? p.alerts : DEFAULT_PREFERENCES.alerts,
+  }
+}
+
+function generateUnsubToken(): string {
+  return crypto.randomBytes(32).toString('hex')
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}))
     const email: string = (body.email ?? '').trim().toLowerCase()
     const source: string = body.source ?? 'unknown'
+    const preferences = sanitizePreferences(body.preferences)
 
     if (!email || !EMAIL_REGEX.test(email)) {
       return NextResponse.json({ error: 'Neplatný email' }, { status: 400 })
@@ -45,14 +75,28 @@ export async function POST(request: NextRequest) {
     if (email.length > 255) {
       return NextResponse.json({ error: 'Email moc dlouhý' }, { status: 400 })
     }
+    if (!Object.values(preferences).some(Boolean)) {
+      return NextResponse.json(
+        { error: 'Vyber alespoň jeden typ obsahu' },
+        { status: 400 }
+      )
+    }
 
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '0.0.0.0'
     const ipHash = hashIp(ip)
     const userAgent = request.headers.get('user-agent') ?? ''
 
-    // Try to upsert (handle missing table gracefully)
     let stored = false
     try {
+      // Načti existující řádek aby se zachoval token (pokud existuje)
+      const { data: existing } = await supabaseAdmin
+        .from('newsletter_signups')
+        .select('id, unsubscribe_token')
+        .eq('email', email)
+        .maybeSingle()
+
+      const unsubToken = (existing?.unsubscribe_token as string | null) ?? generateUnsubToken()
+
       const { error } = await supabaseAdmin
         .from('newsletter_signups')
         .upsert(
@@ -63,6 +107,9 @@ export async function POST(request: NextRequest) {
             user_agent: userAgent.slice(0, 500),
             confirmed: true,
             unsubscribed: false,
+            unsubscribed_at: null,
+            unsubscribe_token: unsubToken,
+            preferences,
           },
           { onConflict: 'email', ignoreDuplicates: false }
         )
@@ -74,7 +121,6 @@ export async function POST(request: NextRequest) {
       console.warn('[newsletter] DB write skipped:', err)
     }
 
-    // Sync to Resend (optional, best-effort)
     const resendId = await syncToResend(email)
     if (resendId && stored) {
       await supabaseAdmin
