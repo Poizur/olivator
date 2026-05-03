@@ -17,6 +17,7 @@
 import { supabaseAdmin } from './supabase'
 import { scrapeProductPage, type ScrapedProduct } from './product-scraper'
 import { crawlShops, getKnownShopSlugs } from './shop-crawlers'
+import { getRetailerSlugsWithXmlFeed } from './feed-sync-runner'
 import { getSetting } from './settings'
 import { generateProductDescriptions, generateMetaDescription } from './content-agent'
 import { calculateScore } from './score'
@@ -751,6 +752,18 @@ export async function runDiscoveryAgent(): Promise<DiscoveryRunResult> {
   if (enabledShops.length === 0) {
     enabledShops = (await getSetting<string[]>('discovery_enabled_shops')) ?? []
   }
+
+  // Skip retailery, kteří mají vyplněný XML feed — ti běží přes cron:feed-sync
+  // (Heureka XML parser, rychlejší + bez Playwright). Bez tohoto filtru bychom
+  // měli denně 2× upsert do product_offers + 2× insert do price_history pro
+  // stejný produkt = duplikáty v grafu cenového vývoje.
+  const xmlBackedSlugs = await getRetailerSlugsWithXmlFeed()
+  const skippedXml = enabledShops.filter(s => xmlBackedSlugs.has(s))
+  enabledShops = enabledShops.filter(s => !xmlBackedSlugs.has(s))
+  if (skippedXml.length > 0) {
+    console.log(`[discovery] skip ${skippedXml.length} retailer(s) — XML feed je řeší: ${skippedXml.join(', ')}`)
+  }
+
   const dailyLimit = (await getSetting<number>('discovery_daily_limit')) ?? 5
   const autoPublish = (await getSetting<boolean>('discovery_auto_publish')) ?? false
 

@@ -523,12 +523,31 @@ export const supabase = createClient(
 
 **Anti-block:** rotace User-Agent, delay 2–8s, retry 3×, respectRobotsTxt pro affiliate partnery
 
-**Pipeline (06:00 UTC):**
-1. Discovery scan → nové EAN kódy
-2. Price update + dostupnost
-3. Upsert do Supabase + price_history
-4. Trigger Image Agent pro nové produkty
-5. Trigger Score recalculation
+### Dvě cesty per shop — XML feed nebo Playwright
+
+Některé eshopy poskytují strukturovaný produktový feed (Heureka XML, eHUB),
+ostatní musíme crawlovat sitemap + scrapovat každý produkt přes Playwright.
+Pipeline si vybírá dle pole `retailers.xml_feed_url`:
+
+```
+04:00 UTC  cron:feed-sync     XML retaileři      ~30s/shop
+04:30 UTC  cron:discovery     ostatní (Playwright) ~10min/shop
+05:00 UTC  cron:prospect      hledá nové eshopy
+06:00 UTC  cron:link-check    deaktivuj mrtvé affiliate URL
+```
+
+**Dedup:** `lib/discovery-agent.ts` filtruje shopy přes
+`getRetailerSlugsWithXmlFeed()` — retailer s XML se v discovery NEcrawluje.
+Bez tohoto filtru by se denně 2× upsertovala nabídka + 2× zápis do
+`price_history` = duplikáty v cenovém grafu.
+
+**Když retailer nemá feed:** discovery nezměněná. `lib/shop-crawlers.ts`
+najde URLs z sitemap, `lib/product-scraper.ts` (Playwright) extrahuje
+data, discovery upsertne offer. Žádná regrese.
+
+**Když retailer feed má:** vyplň `xml_feed_url` + `xml_feed_format='heureka'`
+v admin UI. `cron:feed-sync` se postará. V `discovery_sources` shop
+disabuj (signál v adminu, že XML to řeší).
 
 ### Editorial fotky (průvodce, recepty, články)
 **Unsplash API** — již napojeno z only5l projektu. Přidat klíč do env.
