@@ -35,12 +35,26 @@ export async function POST(req: Request) {
     )
   }
 
+  const trimmedQ = question.trim()
+
+  // Dedup — pokud existuje stejná otázka pro tuto entitu, neprovádět insert
+  const { data: existing } = await supabaseAdmin
+    .from('entity_faqs')
+    .select('id, question, answer, sort_order')
+    .eq('entity_type', entityType)
+    .eq('entity_id', entityId)
+    .ilike('question', trimmedQ)
+    .maybeSingle()
+  if (existing) {
+    return NextResponse.json({ ok: true, faq: existing, skipped: 'duplicate' })
+  }
+
   const { data, error } = await supabaseAdmin
     .from('entity_faqs')
     .insert({
       entity_type: entityType,
       entity_id: entityId,
-      question: question.trim(),
+      question: trimmedQ,
       answer: answer.trim(),
       sort_order: sortOrder ?? 0,
     })
@@ -85,9 +99,32 @@ export async function DELETE(req: Request) {
 
   const url = new URL(req.url)
   const id = url.searchParams.get('id')
-  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  const entityType = url.searchParams.get('entityType')
+  const entityId = url.searchParams.get('entityId')
 
-  const { error } = await supabaseAdmin.from('entity_faqs').delete().eq('id', id)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  // Single delete by id
+  if (id) {
+    const { error } = await supabaseAdmin.from('entity_faqs').delete().eq('id', id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true })
+  }
+
+  // Bulk delete VŠECH FAQ pro danou entitu (vyčistit duplikáty)
+  if (entityType && entityId) {
+    if (!VALID_TYPES.has(entityType)) {
+      return NextResponse.json({ error: 'Invalid entityType' }, { status: 400 })
+    }
+    const { error, count } = await supabaseAdmin
+      .from('entity_faqs')
+      .delete({ count: 'exact' })
+      .eq('entity_type', entityType)
+      .eq('entity_id', entityId)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true, deleted: count ?? 0 })
+  }
+
+  return NextResponse.json(
+    { error: 'id NEBO (entityType + entityId) required' },
+    { status: 400 }
+  )
 }

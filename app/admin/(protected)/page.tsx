@@ -7,6 +7,7 @@ import { ArrowUpRight, ArrowUp, ArrowDown, Plus } from 'lucide-react'
 import { getSiteStats, getAllRetailers } from '@/lib/data'
 import { supabaseAdmin } from '@/lib/supabase'
 import { BulkFetchImagesButton } from './bulk-fetch-images'
+import { RegenerateAllButton } from '@/components/regenerate-all-button'
 
 export const revalidate = 60
 export const dynamic = 'force-dynamic'
@@ -929,6 +930,27 @@ export default async function AdminDashboardPage() {
           </ul>
         </div>
       )}
+
+      {/* Master regen — kompletní obsah napříč webem */}
+      <div className="bg-olive-bg/30 border border-olive-border rounded-xl p-5 mb-3">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h2 className="text-[14px] font-medium text-olive-dark">
+              ✨ Vygeneruj kompletní obsah napříč webem
+            </h2>
+            <p className="text-[12px] text-olive-dark/80 mt-1 leading-snug max-w-[640px]">
+              Pro VŠECHNY regiony, značky a odrůdy: editorial obsah + TL;DR + terroir/timeline/pairing
+              + FAQ. Smaže duplikáty, nastaví vše na status=active. Trvá ~10-15 min, $1-2 Claude API.
+            </p>
+          </div>
+          <RegenerateAllButton
+            entityType="all"
+            label="Vygeneruj VŠE a publikuj"
+            includeExtras={true}
+            setActive={true}
+          />
+        </div>
+      </div>
 
       {/* Quick actions */}
       <div className="bg-white border border-off2 rounded-xl p-5">

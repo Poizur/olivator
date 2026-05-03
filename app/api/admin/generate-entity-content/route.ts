@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { generateRegionContent, generateBrandContent, generateCultivarContent } from '@/lib/entity-content-generator'
+import { generateRegionExtras, generateBrandExtras, generateCultivarExtras } from '@/lib/entity-extras-generator'
 import { getCheapestOffer } from '@/lib/data'
+import { countryName as countryNameLabel } from '@/lib/utils'
 
 // Content generation: ~30-60s per entitu × N entit. Pro bulk regenerate
 // (10+ entit) potřebujeme až 10+ minut. Railway nemá limit, Next.js respektuje
@@ -53,8 +55,12 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
   const entityType: string = body.entityType ?? 'all'   // 'regions' | 'brands' | 'cultivars' | 'all'
   const slug: string | null = body.slug ?? null          // konkrétní entita, nebo null = všechny
+  // Default: generuj i extras (TL;DR, terroir, FAQs) — chceme kompletní content
+  const includeExtras: boolean = body.includeExtras !== false
+  // Default: po regeneraci nastav status='active' (publish)
+  const setActive: boolean = body.setActive !== false
 
-  const results: Array<{ type: string; slug: string; ok: boolean; error?: string; chars?: number }> = []
+  const results: Array<{ type: string; slug: string; ok: boolean; error?: string; chars?: number; extras?: boolean; published?: boolean }> = []
 
   // ── Regions ───────────────────────────────────────────────────────────────
   if (entityType === 'all' || entityType === 'regions') {
@@ -64,6 +70,15 @@ export async function POST(req: Request) {
 
     for (const region of regions ?? []) {
       try {
+        // Cleanup: smaž staré FAQ (vyhne se duplikátům po opakovaném gen)
+        if (includeExtras) {
+          await supabaseAdmin
+            .from('entity_faqs')
+            .delete()
+            .eq('entity_type', 'region')
+            .eq('entity_id', region.id)
+        }
+
         const { data: products } = await supabaseAdmin
           .from('products')
           .select('id, name, slug, olivator_score, acidity, polyphenols, certifications, region_slug')
@@ -103,7 +118,69 @@ export async function POST(req: Request) {
           .update({ description_long: description, updated_at: new Date().toISOString() })
           .eq('slug', region.slug)
 
-        results.push({ type: 'region', slug: region.slug, ok: true, chars: description.length })
+        // Volitelně: generuj a auto-apply extras (TL;DR, terroir, FAQs)
+        let extrasOk = false
+        if (includeExtras) {
+          try {
+            const extras = await generateRegionExtras({
+              type: 'region',
+              name: region.name,
+              countryName: countryNameLabel(region.country_code),
+              descriptionLong: description,
+              productCount: products.length,
+              topProducts,
+            })
+            // Save tldr + terroir
+            await supabaseAdmin
+              .from('regions')
+              .update({
+                tldr: extras.tldr || null,
+                terroir: extras.terroir,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('slug', region.slug)
+            // Save FAQs (replace existing)
+            if (extras.faqs.length > 0) {
+              await supabaseAdmin
+                .from('entity_faqs')
+                .delete()
+                .eq('entity_type', 'region')
+                .eq('entity_id', region.id)
+              await supabaseAdmin.from('entity_faqs').insert(
+                extras.faqs.map((f, i) => ({
+                  entity_type: 'region',
+                  entity_id: region.id,
+                  question: f.question,
+                  answer: f.answer,
+                  sort_order: i,
+                }))
+              )
+            }
+            extrasOk = true
+          } catch (extrasErr) {
+            // Non-fatal — description už uloženo
+            console.warn(`[bulk-regen] region ${region.slug} extras failed:`, extrasErr)
+          }
+        }
+
+        // Auto-publish (status='active')
+        let published = false
+        if (setActive) {
+          await supabaseAdmin
+            .from('regions')
+            .update({ status: 'active', updated_at: new Date().toISOString() })
+            .eq('slug', region.slug)
+          published = true
+        }
+
+        results.push({
+          type: 'region',
+          slug: region.slug,
+          ok: true,
+          chars: description.length,
+          extras: extrasOk,
+          published,
+        })
       } catch (err) {
         results.push({ type: 'region', slug: region.slug, ok: false, error: String(err) })
       }
@@ -118,6 +195,15 @@ export async function POST(req: Request) {
 
     for (const brand of brands ?? []) {
       try {
+        // Cleanup FAQ
+        if (includeExtras) {
+          await supabaseAdmin
+            .from('entity_faqs')
+            .delete()
+            .eq('entity_type', 'brand')
+            .eq('entity_id', brand.id)
+        }
+
         const { data: products } = await supabaseAdmin
           .from('products')
           .select('id, name, slug, olivator_score, acidity, polyphenols, certifications, region_slug')
@@ -171,7 +257,61 @@ export async function POST(req: Request) {
           .update({ description_long: description, updated_at: new Date().toISOString() })
           .eq('slug', brand.slug)
 
-        results.push({ type: 'brand', slug: brand.slug, ok: true, chars: description.length })
+        // Extras (TL;DR + timeline + FAQs)
+        let extrasOk = false
+        if (includeExtras) {
+          try {
+            const extras = await generateBrandExtras({
+              type: 'brand',
+              name: brand.name,
+              countryName,
+              descriptionLong: description,
+              productCount: products.length,
+              topProducts,
+              foundedYear: brand.founded_year ?? null,
+            })
+            await supabaseAdmin
+              .from('brands')
+              .update({
+                tldr: extras.tldr || null,
+                timeline: extras.timeline ?? [],
+                updated_at: new Date().toISOString(),
+              })
+              .eq('slug', brand.slug)
+            if (extras.faqs.length > 0) {
+              await supabaseAdmin.from('entity_faqs').insert(
+                extras.faqs.map((f, i) => ({
+                  entity_type: 'brand',
+                  entity_id: brand.id,
+                  question: f.question,
+                  answer: f.answer,
+                  sort_order: i,
+                }))
+              )
+            }
+            extrasOk = true
+          } catch (e) {
+            console.warn(`[bulk-regen] brand ${brand.slug} extras failed:`, e)
+          }
+        }
+
+        let published = false
+        if (setActive) {
+          await supabaseAdmin
+            .from('brands')
+            .update({ status: 'active', updated_at: new Date().toISOString() })
+            .eq('slug', brand.slug)
+          published = true
+        }
+
+        results.push({
+          type: 'brand',
+          slug: brand.slug,
+          ok: true,
+          chars: description.length,
+          extras: extrasOk,
+          published,
+        })
       } catch (err) {
         results.push({ type: 'brand', slug: brand.slug, ok: false, error: String(err) })
       }
@@ -194,6 +334,15 @@ export async function POST(req: Request) {
 
     for (const cultivar of cultivars ?? []) {
       try {
+        // Cleanup FAQ
+        if (includeExtras) {
+          await supabaseAdmin
+            .from('entity_faqs')
+            .delete()
+            .eq('entity_type', 'cultivar')
+            .eq('entity_id', cultivar.id)
+        }
+
         const { data: links } = await supabaseAdmin
           .from('product_cultivars')
           .select('product_id')
@@ -253,7 +402,63 @@ export async function POST(req: Request) {
           .update({ description_long: description, updated_at: new Date().toISOString() })
           .eq('slug', cultivar.slug)
 
-        results.push({ type: 'cultivar', slug: cultivar.slug, ok: true, chars: description.length })
+        let extrasOk = false
+        if (includeExtras) {
+          try {
+            const extras = await generateCultivarExtras({
+              type: 'cultivar',
+              name: cultivar.name,
+              countriesGrown: regionNames,
+              descriptionLong: description,
+              productCount: products.length,
+              avgPolyphenols: null,
+              topProducts: [],
+            })
+            await supabaseAdmin
+              .from('cultivars')
+              .update({
+                tldr: extras.tldr || null,
+                nickname: extras.nickname || null,
+                primary_use: extras.primary_use || null,
+                pairing_pros: extras.pairing_pros ?? [],
+                pairing_cons: extras.pairing_cons ?? [],
+                updated_at: new Date().toISOString(),
+              })
+              .eq('slug', cultivar.slug)
+            if (extras.faqs.length > 0) {
+              await supabaseAdmin.from('entity_faqs').insert(
+                extras.faqs.map((f, i) => ({
+                  entity_type: 'cultivar',
+                  entity_id: cultivar.id,
+                  question: f.question,
+                  answer: f.answer,
+                  sort_order: i,
+                }))
+              )
+            }
+            extrasOk = true
+          } catch (e) {
+            console.warn(`[bulk-regen] cultivar ${cultivar.slug} extras failed:`, e)
+          }
+        }
+
+        let published = false
+        if (setActive) {
+          await supabaseAdmin
+            .from('cultivars')
+            .update({ status: 'active', updated_at: new Date().toISOString() })
+            .eq('slug', cultivar.slug)
+          published = true
+        }
+
+        results.push({
+          type: 'cultivar',
+          slug: cultivar.slug,
+          ok: true,
+          chars: description.length,
+          extras: extrasOk,
+          published,
+        })
       } catch (err) {
         results.push({ type: 'cultivar', slug: cultivar.slug, ok: false, error: String(err) })
       }

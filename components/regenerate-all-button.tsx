@@ -11,6 +11,10 @@ interface Props {
   entityType: 'regions' | 'brands' | 'cultivars' | 'all'
   estimatedCount?: number
   label?: string
+  /** Pokud true, zahrne extras (TL;DR, terroir, FAQ) — default true */
+  includeExtras?: boolean
+  /** Pokud true, nastaví status='active' (publish) — default true */
+  setActive?: boolean
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -20,7 +24,13 @@ const TYPE_LABELS: Record<string, string> = {
   all: 'VŠECHNY entity (regiony + značky + odrůdy)',
 }
 
-export function RegenerateAllButton({ entityType, estimatedCount, label }: Props) {
+export function RegenerateAllButton({
+  entityType,
+  estimatedCount,
+  label,
+  includeExtras = true,
+  setActive = true,
+}: Props) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState<{
@@ -53,7 +63,7 @@ Pokračovat?`
       const res = await fetch('/api/admin/generate-entity-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entityType }),
+        body: JSON.stringify({ entityType, includeExtras, setActive }),
       })
 
       const data = await res.json()

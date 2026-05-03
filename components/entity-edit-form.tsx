@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { EntityExtrasModal } from './entity-extras-modal'
 import { AdminBlock } from './admin-block'
 
@@ -77,6 +78,7 @@ const ENTITY_LABEL: Record<EntityEditData['entityType'], { single: string; posse
 }
 
 export function EntityEditForm({ entity, publicUrl, entityId }: Props) {
+  const router = useRouter()
   const labels = ENTITY_LABEL[entity.entityType]
   const [extrasOpen, setExtrasOpen] = useState(false)
 
@@ -190,12 +192,21 @@ export function EntityEditForm({ entity, publicUrl, entityId }: Props) {
       const res = await fetch('/api/admin/generate-entity-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entityType: entity.entityType + 's', slug: entity.slug }),
+        body: JSON.stringify({
+          entityType: entity.entityType + 's',
+          slug: entity.slug,
+          includeExtras: true,   // tldr + terroir/timeline + faqs
+          setActive: false,      // status nemnit při single-entity gen
+        }),
       })
       const json = await res.json()
       const result = json.results?.[0]
       if (result?.ok) {
-        setGenResult(`✅ Vygenerováno ${result.chars} znaků — obnovte stránku`)
+        setGenResult(
+          `✅ Vygenerováno ${result.chars} znaků${result.extras ? ' + extras (TL;DR/FAQ)' : ''}`
+        )
+        // Auto-refresh — zruší "obnovte stránku" workflow
+        router.refresh()
       } else {
         setGenResult(`❌ ${result?.error ?? 'Chyba'}`)
       }
@@ -218,6 +229,7 @@ export function EntityEditForm({ entity, publicUrl, entityId }: Props) {
       const json = await res.json()
       if (json.totalInserted != null) {
         setPhotoResult(`✅ Importováno ${json.totalInserted} fotek`)
+        router.refresh()
       } else {
         setPhotoResult(`❌ ${json.error ?? 'Chyba'}`)
       }
