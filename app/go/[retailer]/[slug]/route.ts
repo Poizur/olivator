@@ -22,29 +22,34 @@ function safeParseUrl(raw: string | null | undefined): URL | null {
  * Priority:
  *  1. offer.affiliate_url — explicit override (edge cases like Amazon/Heureka
  *     with per-product tracking params)
- *  2. retailer.base_tracking_url template with {product_url} placeholder
+ *  2. retailer.base_tracking_url template — placeholdery:
+ *     - {product_url}  → URL produktu (URL-encoded)
+ *     - {product_slug} → slug produktu (URL-encoded), užitečné pro eHUB data1
+ *     - {ean}          → EAN, pokud existuje
  *  3. offer.product_url — direct link to product at retailer
  *  4. https://{retailer.domain} — homepage fallback
- *
- * Každá kandidátní URL je validována přes safeParseUrl. Pokud projde jen
- * fallback (homepage), vrátíme jistotu.
  */
 function resolveUrl(
   retailer: { base_tracking_url: string | null; domain: string | null },
-  offer: { affiliate_url: string | null; product_url: string | null }
+  offer: { affiliate_url: string | null; product_url: string | null },
+  ctx: { productSlug: string; ean: string | null }
 ): string | null {
   // 1) explicit affiliate URL
   const aff = safeParseUrl(offer.affiliate_url)
   if (aff) return aff.toString()
 
-  // 2) tracking template + product URL
-  if (retailer.base_tracking_url && offer.product_url) {
-    const filled = retailer.base_tracking_url.replace(
-      '{product_url}',
-      encodeURIComponent(offer.product_url)
-    )
-    const parsed = safeParseUrl(filled)
-    if (parsed) return parsed.toString()
+  // 2) tracking template + placeholdery
+  if (retailer.base_tracking_url) {
+    if (!offer.product_url && retailer.base_tracking_url.includes('{product_url}')) {
+      // Template potřebuje product_url, ale offer ho nemá → fallback níže
+    } else {
+      const filled = retailer.base_tracking_url
+        .replace(/\{product_url\}/g, encodeURIComponent(offer.product_url ?? ''))
+        .replace(/\{product_slug\}/g, encodeURIComponent(ctx.productSlug))
+        .replace(/\{ean\}/g, encodeURIComponent(ctx.ean ?? ''))
+      const parsed = safeParseUrl(filled)
+      if (parsed) return parsed.toString()
+    }
   }
 
   // 3) přímý product URL
@@ -68,7 +73,7 @@ export async function GET(
 
   const { data: product, error: pErr } = await supabaseAdmin
     .from('products')
-    .select('id')
+    .select('id, ean')
     .eq('slug', productSlug)
     .maybeSingle()
   if (pErr || !product) {
@@ -96,7 +101,10 @@ export async function GET(
 
   // Resolve + validate target URL PŘED logem (kdyby URL nebyla validní,
   // nelogujeme zbytečně klik který se nikam nedostane).
-  const target = resolveUrl(retailer, offer)
+  const target = resolveUrl(retailer, offer, {
+    productSlug,
+    ean: (product.ean as string) ?? null,
+  })
   if (!target) {
     console.warn('[affiliate] Invalid offer URL', {
       productSlug,

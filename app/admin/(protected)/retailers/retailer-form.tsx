@@ -31,6 +31,9 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
   const [headquarters, setHeadquarters] = useState(initial?.headquarters ?? '')
   const [specialization, setSpecialization] = useState(initial?.specialization ?? '')
   const [logoUrl, setLogoUrl] = useState(initial?.logoUrl ?? '')
+  // XML feed (volitelný)
+  const [xmlFeedUrl, setXmlFeedUrl] = useState(initial?.xmlFeedUrl ?? '')
+  const [xmlFeedFormat, setXmlFeedFormat] = useState(initial?.xmlFeedFormat ?? '')
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
@@ -57,6 +60,8 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
         headquarters: headquarters || null,
         specialization: specialization || null,
         logoUrl: logoUrl || null,
+        xmlFeedUrl: xmlFeedUrl || null,
+        xmlFeedFormat: xmlFeedFormat || null,
       }
       const res = await fetch(
         isEdit ? `/api/admin/retailers/${initial!.id}` : '/api/admin/retailers',
@@ -210,16 +215,63 @@ export function RetailerForm({ initial }: { initial?: RetailerFull }) {
         <textarea
           value={baseTrackingUrl}
           onChange={e => setBaseTrackingUrl(e.target.value)}
-          placeholder="https://ehub.cz/click/u12345?url={product_url}"
+          placeholder="https://ehub.cz/system/scripts/click.php?a_aid=XXX&a_bid=YYY&data1={product_slug}&url={product_url}"
           rows={3}
           className="w-full px-3 py-2 border border-off2 rounded-lg text-sm font-mono focus:outline-none focus:border-olive"
         />
         <Help>
-          Placeholder <code className="bg-off px-1 rounded">{'{product_url}'}</code> bude
-          nahrazen URL konkrétního produktu (URL-encoded).
+          Placeholdery (URL-encoded při substituci):
+          <br />
+          <code className="bg-off px-1 rounded">{'{product_url}'}</code> → URL konkrétního produktu na eshopu
+          <br />
+          <code className="bg-off px-1 rounded">{'{product_slug}'}</code> → slug produktu na Olivator (užitečné pro eHUB <code className="bg-off px-1 rounded">data1</code>)
+          <br />
+          <code className="bg-off px-1 rounded">{'{ean}'}</code> → EAN produktu, pokud existuje
           <br />
           Nech prázdné pokud ještě nemáš schválené partnerství — odkazy pak vedou přímo na prodejce.
         </Help>
+        </div>
+      </AdminBlock>
+
+      <AdminBlock
+        number={5}
+        icon="📦"
+        title="XML produktový feed (volitelný)"
+        publicLocation='Pouze admin (hromadný import produktů + cen z feedu)'
+        description='Pokud eshop poskytuje Heureka XML nebo jiný feed, vyplň URL zde. Pak v sekci „Synchronizace" nahoře stačí jeden klik a produkty + ceny se naimportují / aktualizují. Bez feedu spoléháme na per-URL Playwright scrape.'
+      >
+        <div className="space-y-4">
+          <div>
+            <Label>URL feedu</Label>
+            <textarea
+              value={xmlFeedUrl}
+              onChange={e => setXmlFeedUrl(e.target.value)}
+              rows={2}
+              placeholder="https://shop.priklad.cz/heureka/export/products.xml?hash=..."
+              className="w-full px-3 py-2 border border-off2 rounded-lg text-sm font-mono focus:outline-none focus:border-olive"
+            />
+            <Help>
+              U eHUBu je často přístupný v sekci „Feedy" partnerského programu.
+              Heureka XML, Google Shopping, custom — formát říká dropdown níže.
+            </Help>
+          </div>
+          <div>
+            <Label>Formát feedu</Label>
+            <select
+              value={xmlFeedFormat}
+              onChange={e => setXmlFeedFormat(e.target.value)}
+              className="w-full px-3 py-2 border border-off2 rounded-lg text-sm focus:outline-none focus:border-olive"
+            >
+              <option value="">— Žádný (feed nepoužíváme) —</option>
+              <option value="heureka">Heureka XML</option>
+              <option value="google_shopping">Google Shopping (zatím nepodporováno)</option>
+              <option value="custom">Custom (zatím nepodporováno)</option>
+            </select>
+            <Help>
+              Aktuálně plně podporovaný: <strong>Heureka XML</strong> (formát českých eshopů).
+              Ostatní budeme přidávat podle potřeby.
+            </Help>
+          </div>
         </div>
       </AdminBlock>
 

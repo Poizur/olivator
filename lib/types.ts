@@ -76,6 +76,11 @@ export interface Retailer {
   headquarters?: string | null
   specialization?: string | null
   logoUrl?: string | null
+  // XML feed (volitelné) — Heureka XML, Google Shopping. Když retailer feed má,
+  // syncujeme z něj produkty + ceny dávkově. Když nemá, fallback na Playwright.
+  xmlFeedUrl?: string | null
+  xmlFeedFormat?: string | null
+  xmlFeedLastSynced?: string | null
 }
 
 export interface ProductOffer {

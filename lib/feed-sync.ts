@@ -1,0 +1,198 @@
+// Feed sync orchestrátor — z XML feedu retailera vytvoří/aktualizuje produkty
+// a nabídky v naší DB. Volá se z admin UI (POST /api/admin/retailers/[id]/sync-feed)
+// nebo z budoucího cron jobu.
+//
+// Strategie:
+// - existing product (match na EAN) → upsert offer (cena, dostupnost), neměníme
+//   produkt samotný (manuální edity přežijí)
+// - nový EAN → vytvoříme draft product (status='draft') s minimal daty z XML
+//   (EAN, name, slug, type, origin_country=GR, acidity, peroxide, volume_ml,
+//   source_url, raw_description) + offer s cenou
+// - draft user schválí v admin UI → status='active' → live na webu
+
+import { supabaseAdmin } from './supabase'
+import {
+  fetchHeurekaFeed,
+  isOliveOil,
+  extractVolumeMl,
+  extractAcidity,
+  extractPeroxideValue,
+  detectPackaging,
+  detectType,
+  isSuspectEan,
+  type HeurekaItem,
+} from './heureka-feed-parser'
+import { slugify } from './utils'
+
+export interface FeedSyncResult {
+  total: number
+  oilsInFeed: number
+  productsCreated: number
+  productsExisting: number  // matched přes EAN
+  offersUpserted: number
+  skipped: number
+  errors: { ean: string; name: string; reason: string }[]
+  startedAt: string
+  finishedAt: string
+}
+
+export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResult> {
+  const startedAt = new Date().toISOString()
+
+  const { data: retailer, error: rErr } = await supabaseAdmin
+    .from('retailers')
+    .select('id, slug, name, default_commission_pct, xml_feed_url, xml_feed_format')
+    .eq('id', retailerId)
+    .maybeSingle()
+  if (rErr) throw new Error(`Retailer query failed: ${rErr.message}`)
+  if (!retailer) throw new Error(`Retailer ${retailerId} nenalezen`)
+  if (!retailer.xml_feed_url) throw new Error('Retailer nemá nastavený XML feed URL')
+  if (retailer.xml_feed_format !== 'heureka') {
+    throw new Error(`Format "${retailer.xml_feed_format}" zatím není podporován (pouze heureka)`)
+  }
+
+  const items = await fetchHeurekaFeed(retailer.xml_feed_url as string)
+  const oils = items.filter(isOliveOil)
+
+  const result: FeedSyncResult = {
+    total: items.length,
+    oilsInFeed: oils.length,
+    productsCreated: 0,
+    productsExisting: 0,
+    offersUpserted: 0,
+    skipped: 0,
+    errors: [],
+    startedAt,
+    finishedAt: '',
+  }
+
+  for (const item of oils) {
+    // EAN je master klíč. Bez EAN nebo se suspect EAN nemůžeme spolehlivě
+    // dedupovat → preskočíme. User může produkt přidat ručně přes admin import.
+    if (!item.ean || isSuspectEan(item.ean)) {
+      result.errors.push({
+        ean: item.ean || '(prázdný)',
+        name: item.productName,
+        reason: 'EAN chybí nebo vypadá jako fake (např. 7777770000xxx)',
+      })
+      result.skipped++
+      continue
+    }
+    if (item.priceVat <= 0) {
+      result.errors.push({
+        ean: item.ean,
+        name: item.productName,
+        reason: 'Neplatná cena',
+      })
+      result.skipped++
+      continue
+    }
+
+    try {
+      const { productId, created } = await ensureProduct(item)
+      if (created) result.productsCreated++
+      else result.productsExisting++
+
+      const inStock = item.deliveryDate === '0' || item.deliveryDate === ''
+      const priceCzk = Math.round(item.priceVat * 100) / 100
+
+      const { error: offerErr } = await supabaseAdmin
+        .from('product_offers')
+        .upsert(
+          {
+            product_id: productId,
+            retailer_id: retailer.id,
+            price: priceCzk,
+            currency: 'CZK',
+            in_stock: inStock,
+            product_url: item.url,
+            commission_pct: retailer.default_commission_pct,
+            last_checked: new Date().toISOString(),
+          },
+          { onConflict: 'product_id,retailer_id' }
+        )
+      if (offerErr) throw new Error(`Offer upsert: ${offerErr.message}`)
+
+      // Price history snapshot — pro Fáze 2 graf
+      await supabaseAdmin.from('price_history').insert({
+        product_id: productId,
+        retailer_id: retailer.id,
+        price: priceCzk,
+        in_stock: inStock,
+      })
+
+      result.offersUpserted++
+    } catch (err) {
+      result.errors.push({
+        ean: item.ean,
+        name: item.productName,
+        reason: err instanceof Error ? err.message : String(err),
+      })
+      result.skipped++
+    }
+  }
+
+  result.finishedAt = new Date().toISOString()
+
+  await supabaseAdmin
+    .from('retailers')
+    .update({
+      xml_feed_last_synced: result.finishedAt,
+      xml_feed_last_result: result as unknown as Record<string, unknown>,
+    })
+    .eq('id', retailer.id)
+
+  return result
+}
+
+async function ensureProduct(
+  item: HeurekaItem
+): Promise<{ productId: string; created: boolean }> {
+  const { data: existing, error: queryErr } = await supabaseAdmin
+    .from('products')
+    .select('id')
+    .eq('ean', item.ean)
+    .maybeSingle()
+  if (queryErr) throw new Error(`Product query: ${queryErr.message}`)
+
+  if (existing) {
+    return { productId: existing.id as string, created: false }
+  }
+
+  const baseSlug = slugify(item.productName)
+  const slug = await uniqueSlug(baseSlug)
+
+  const { data: newProduct, error: insertErr } = await supabaseAdmin
+    .from('products')
+    .insert({
+      ean: item.ean,
+      name: item.productName,
+      slug,
+      type: detectType(item),
+      origin_country: 'GR',  // reckonasbavi: 100% řecké; pro jiné retailery upravíme
+      acidity: extractAcidity(item),
+      peroxide_value: extractPeroxideValue(item),
+      volume_ml: extractVolumeMl(item),
+      packaging: detectPackaging(item),
+      source_url: item.url,
+      raw_description: item.description,
+      status: 'draft',
+    })
+    .select('id')
+    .single()
+  if (insertErr) throw new Error(`Product insert: ${insertErr.message}`)
+
+  return { productId: newProduct.id as string, created: true }
+}
+
+async function uniqueSlug(baseSlug: string, attempt = 0): Promise<string> {
+  const candidate = attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`
+  const { data } = await supabaseAdmin
+    .from('products')
+    .select('id')
+    .eq('slug', candidate)
+    .maybeSingle()
+  if (!data) return candidate
+  if (attempt > 50) throw new Error(`Slug ${baseSlug} kolize >50 — fix manuálně`)
+  return uniqueSlug(baseSlug, attempt + 1)
+}

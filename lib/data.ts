@@ -110,6 +110,9 @@ function mapRetailer(row: Record<string, unknown>): Retailer {
     headquarters: (row.headquarters as string) ?? null,
     specialization: (row.specialization as string) ?? null,
     logoUrl: (row.logo_url as string) ?? null,
+    xmlFeedUrl: (row.xml_feed_url as string) ?? null,
+    xmlFeedFormat: (row.xml_feed_format as string) ?? null,
+    xmlFeedLastSynced: (row.xml_feed_last_synced as string) ?? null,
   }
 }
 
@@ -288,9 +291,10 @@ export async function getRetailerById(id: string): Promise<Retailer | null> {
   return data ? mapRetailer(data as Record<string, unknown>) : null
 }
 
-// Extended retailer with affiliate template for admin editing
+// Extended retailer with affiliate template + sync metadata for admin editing
 export interface RetailerFull extends Retailer {
   baseTrackingUrl: string | null
+  xmlFeedLastResult: Record<string, unknown> | null
 }
 
 export async function getRetailerFullById(id: string): Promise<RetailerFull | null> {
@@ -304,6 +308,7 @@ export async function getRetailerFullById(id: string): Promise<RetailerFull | nu
   return {
     ...mapRetailer(data as Record<string, unknown>),
     baseTrackingUrl: (data.base_tracking_url as string) ?? null,
+    xmlFeedLastResult: (data.xml_feed_last_result as Record<string, unknown>) ?? null,
   }
 }
 
@@ -327,6 +332,9 @@ export interface RetailerInput {
   headquarters?: string | null
   specialization?: string | null
   logoUrl?: string | null
+  // XML feed (volitelné)
+  xmlFeedUrl?: string | null
+  xmlFeedFormat?: string | null
 }
 
 export async function upsertRetailer(input: RetailerInput, id?: string) {
@@ -351,6 +359,8 @@ export async function upsertRetailer(input: RetailerInput, id?: string) {
   if (input.headquarters !== undefined) payload.headquarters = input.headquarters || null
   if (input.specialization !== undefined) payload.specialization = input.specialization || null
   if (input.logoUrl !== undefined) payload.logo_url = input.logoUrl || null
+  if (input.xmlFeedUrl !== undefined) payload.xml_feed_url = input.xmlFeedUrl || null
+  if (input.xmlFeedFormat !== undefined) payload.xml_feed_format = input.xmlFeedFormat || null
 
   if (id) {
     const { error } = await supabaseAdmin.from('retailers').update(payload).eq('id', id)

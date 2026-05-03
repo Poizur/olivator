@@ -7,8 +7,6 @@ import { ArrowUpRight, ArrowUp, ArrowDown, Plus } from 'lucide-react'
 import { getSiteStats, getAllRetailers } from '@/lib/data'
 import { supabaseAdmin } from '@/lib/supabase'
 import { BulkFetchImagesButton } from './bulk-fetch-images'
-import { RegenerateAllButton } from '@/components/regenerate-all-button'
-import { PublishAllButton } from '@/components/publish-all-button'
 
 export const revalidate = 60
 export const dynamic = 'force-dynamic'
@@ -932,26 +930,42 @@ export default async function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Master regen — kompletní obsah napříč webem */}
+      {/* Hromadná regenerace přesunuta na příslušné listing stránky —
+          /admin/regions, /admin/brands, /admin/cultivars. Důvod: dlouho běžící
+          plošný call (10–15 min) blokoval UI a maskoval chyby v jednotlivých
+          typech. Per-typ je rychlejší, transparentnější a chyby v jednom typu
+          neruší ostatní. */}
       <div className="bg-olive-bg/30 border border-olive-border rounded-xl p-5 mb-3">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h2 className="text-[14px] font-medium text-olive-dark">
-              ✨ Vygeneruj kompletní obsah napříč webem
+              ✨ Hromadná regenerace editorial obsahu
             </h2>
             <p className="text-[12px] text-olive-dark/80 mt-1 leading-snug max-w-[640px]">
-              Pro VŠECHNY regiony, značky a odrůdy: editorial obsah + TL;DR + terroir/timeline/pairing
-              + FAQ. Smaže duplikáty, nastaví vše na status=active. Trvá ~10-15 min, $1-2 Claude API.
+              Tlačítka „Přepsat editorial obsah všech…" jsou teď na příslušných
+              katalogových stránkách. Každá kategorie zvlášť → kratší běh, jasné chybové hlášky,
+              jeden typ neselhání ostatní.
             </p>
           </div>
-          <div className="flex flex-col gap-2 items-end shrink-0">
-            <RegenerateAllButton
-              entityType="all"
-              label="Vygeneruj VŠE a publikuj"
-              includeExtras={true}
-              setActive={true}
-            />
-            <PublishAllButton />
+          <div className="flex flex-wrap gap-2 items-end shrink-0">
+            <Link
+              href="/admin/regions"
+              className="inline-flex items-center gap-1.5 bg-white border border-olive-border text-olive-dark hover:bg-olive-bg/40 rounded-full px-4 py-2 text-[13px] font-medium transition-colors"
+            >
+              🗺️ Oblasti
+            </Link>
+            <Link
+              href="/admin/brands"
+              className="inline-flex items-center gap-1.5 bg-white border border-olive-border text-olive-dark hover:bg-olive-bg/40 rounded-full px-4 py-2 text-[13px] font-medium transition-colors"
+            >
+              🏷️ Výrobci
+            </Link>
+            <Link
+              href="/admin/cultivars"
+              className="inline-flex items-center gap-1.5 bg-white border border-olive-border text-olive-dark hover:bg-olive-bg/40 rounded-full px-4 py-2 text-[13px] font-medium transition-colors"
+            >
+              🌿 Odrůdy
+            </Link>
           </div>
         </div>
       </div>

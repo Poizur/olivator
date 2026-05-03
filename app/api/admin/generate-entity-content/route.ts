@@ -62,6 +62,8 @@ export async function POST(req: Request) {
 
   const results: Array<{ type: string; slug: string; ok: boolean; error?: string; chars?: number; extras?: boolean; published?: boolean }> = []
 
+  try {
+
   // ── Regions ───────────────────────────────────────────────────────────────
   if (entityType === 'all' || entityType === 'regions') {
     let query = supabaseAdmin.from('regions').select('*')
@@ -465,7 +467,26 @@ export async function POST(req: Request) {
     }
   }
 
-  const ok = results.filter((r) => r.ok).length
-  const failed = results.filter((r) => !r.ok).length
-  return NextResponse.json({ ok: true, generated: ok, failed, results })
+    const ok = results.filter((r) => r.ok).length
+    const failed = results.filter((r) => !r.ok).length
+    return NextResponse.json({ ok: true, generated: ok, failed, results })
+  } catch (err) {
+    // Top-level catch — kdyby selhal něco mimo per-entity try/catch (Supabase
+    // query selhala bez await, network glitch, atd.), vrátíme JSON s tím co
+    // jsme stihli vygenerovat než klient dostane HTML stránku 500.
+    const ok = results.filter((r) => r.ok).length
+    const failed = results.filter((r) => !r.ok).length
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[generate-entity-content] top-level error:', err)
+    return NextResponse.json(
+      {
+        ok: false,
+        error: `Selhalo uprostřed: ${message}`,
+        generated: ok,
+        failed,
+        results,
+      },
+      { status: 500 }
+    )
+  }
 }

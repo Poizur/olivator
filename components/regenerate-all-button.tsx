@@ -66,9 +66,21 @@ Pokračovat?`
         body: JSON.stringify({ entityType, includeExtras, setActive }),
       })
 
-      const data = await res.json()
+      // Robust parsing — server může vrátit HTML při timeout/proxy error.
+      // V tom případě zkusíme přečíst text a dát user srozumitelný hint.
+      let data: { ok?: boolean; error?: string; generated?: number; failed?: number; results?: Array<{ ok: boolean; slug: string; error?: string }> } = {}
+      const contentType = res.headers.get('content-type') ?? ''
+      if (contentType.includes('application/json')) {
+        data = await res.json().catch(() => ({}))
+      } else {
+        const text = await res.text().catch(() => '')
+        const snippet = text.slice(0, 200).replace(/\s+/g, ' ')
+        throw new Error(
+          `Server vrátil ne-JSON odpověď (HTTP ${res.status}). Pravděpodobně timeout nebo gateway error. Obsah je možná publikovaný i tak — zkontroluj /oblast, /znacka, /odruda. Náhled: ${snippet}`
+        )
+      }
       if (!res.ok) {
-        throw new Error(data.error ?? 'Regenerate failed')
+        throw new Error(data.error ?? `HTTP ${res.status}`)
       }
 
       const ok = data.generated ?? 0
@@ -87,9 +99,21 @@ Pokračovat?`
       })
       router.refresh()
     } catch (err) {
+      // Browser timeout / network abort se hlásí jako DOMException s různě
+      // obskurními messages („The string did not match the expected pattern",
+      // „Failed to fetch"). Server pravděpodobně dál běží a content je
+      // publikovaný — řekneme to user.
+      const raw = err instanceof Error ? err.message : 'Chyba'
+      const looksLikeAbort =
+        raw.includes('did not match') ||
+        raw.includes('Failed to fetch') ||
+        raw.includes('aborted') ||
+        raw.includes('NetworkError')
       setFeedback({
         ok: false,
-        msg: `❌ ${err instanceof Error ? err.message : 'Chyba'}`,
+        msg: looksLikeAbort
+          ? `⚠️ Spojení se přerušilo (${raw}). Generování ale typicky doběhne na serveru — počkej 5–10 min, pak obnov stránku a zkontroluj /oblast/[slug], /znacka/[slug], /odruda/[slug] jestli je obsah živý.`
+          : `❌ ${raw}`,
       })
     } finally {
       setBusy(false)
