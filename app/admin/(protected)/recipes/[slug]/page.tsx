@@ -19,6 +19,17 @@ async function getCultivarSlugs(): Promise<string[]> {
   return (data ?? []).map((c) => c.slug as string)
 }
 
+async function getRecipePhotos(recipeId: string) {
+  const { data } = await supabaseAdmin
+    .from('entity_images')
+    .select('id, url, alt_text, is_primary, sort_order, source, source_attribution, width, height')
+    .eq('entity_id', recipeId)
+    .eq('entity_type', 'recipe')
+    .eq('status', 'active')
+    .order('sort_order')
+  return data ?? []
+}
+
 export default async function EditRecipePage({
   params,
 }: {
@@ -28,9 +39,10 @@ export default async function EditRecipePage({
   const recipe = await getRecipeBySlug(slug)
   if (!recipe) notFound()
 
-  const [regionSlugs, cultivarSlugs] = await Promise.all([
+  const [regionSlugs, cultivarSlugs, photos] = await Promise.all([
     getRegionSlugs(),
     getCultivarSlugs(),
+    getRecipePhotos(recipe.id),
   ])
 
   return (
@@ -58,6 +70,7 @@ export default async function EditRecipePage({
         recipe={recipe}
         availableRegions={regionSlugs}
         availableCultivars={cultivarSlugs}
+        initialPhotos={photos}
       />
     </div>
   )

@@ -7,16 +7,30 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AdminBlock } from '@/components/admin-block'
+import { EntityPhotosManager } from '@/components/entity-photos-manager'
 import type {
   RecipeFull,
   RecipeIngredient,
   RecipeInstruction,
 } from '@/lib/recipes-db'
 
+interface RecipePhoto {
+  id: string
+  url: string
+  alt_text: string | null
+  is_primary: boolean
+  sort_order: number
+  source: string | null
+  source_attribution: string | null
+  width: number | null
+  height: number | null
+}
+
 interface Props {
   recipe: RecipeFull
   availableRegions: string[]
   availableCultivars: string[]
+  initialPhotos: RecipePhoto[]
 }
 
 const CUISINE_OPTIONS = [
@@ -36,7 +50,7 @@ const DIFFICULTY_OPTIONS = [
   { value: 'hard', label: 'náročnější' },
 ]
 
-export function RecipeEditForm({ recipe, availableRegions, availableCultivars }: Props) {
+export function RecipeEditForm({ recipe, availableRegions, availableCultivars, initialPhotos }: Props) {
   const router = useRouter()
   const [title, setTitle] = useState(recipe.title)
   const [excerpt, setExcerpt] = useState(recipe.excerpt ?? '')
@@ -323,7 +337,7 @@ export function RecipeEditForm({ recipe, availableRegions, availableCultivars }:
           </div>
           <div>
             <label className="block text-[11px] font-medium text-text2 mb-1.5 uppercase tracking-wider">
-              Hero image URL (volitelné)
+              Hero image URL (volitelné, fallback)
             </label>
             <input
               value={heroImageUrl}
@@ -331,8 +345,26 @@ export function RecipeEditForm({ recipe, availableRegions, availableCultivars }:
               placeholder="https://..."
               className="w-full border border-off2 rounded-lg px-3 py-2 text-[14px]"
             />
+            <p className="text-[11px] text-text3 mt-1.5">
+              Pokud nahraješ fotky níže, primární se použije automaticky a tohle pole nech prázdné.
+            </p>
           </div>
         </div>
+      </AdminBlock>
+
+      {/* BLOK 1.5 — Galerie fotek (multi-image upload) */}
+      <AdminBlock
+        number={2}
+        icon="🖼️"
+        title="Fotky receptu"
+        publicLocation="Hero karta · sekce nad ingrediencemi · galerie pod postupem"
+        description="Drag & drop nebo URL. První fotka = hero (auto). Pořadí podle sort_order."
+      >
+        <EntityPhotosManager
+          entityId={recipe.id}
+          entityType="recipe"
+          initialPhotos={initialPhotos}
+        />
       </AdminBlock>
 
       {/* BLOK 2 — Ingredience */}
