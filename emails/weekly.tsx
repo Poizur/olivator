@@ -131,6 +131,26 @@ export function WeeklyEmail({ preheader, hook, unsubscribeUrl, blocks }: Props) 
               Otevřít recept →
             </a>
           </Section>
+
+          {/* Paired oil — pokud najdeme produkt z recommended regions/cultivars */}
+          {recipe.pairedOil && (
+            <Section className="mt-3">
+              <Text className="text-[11px] text-olive font-bold tracking-widest uppercase m-0 mb-2">
+                Doporučený olej k receptu
+              </Text>
+              <OilCard
+                imageUrl={recipe.pairedOil.imageUrl}
+                name={recipe.pairedOil.name}
+                brandName={recipe.pairedOil.brandName}
+                score={recipe.pairedOil.score}
+                price={recipe.pairedOil.price}
+                oldPrice={recipe.pairedOil.oldPrice}
+                retailerName={recipe.pairedOil.retailerName}
+                ctaUrl={recipe.pairedOil.ctaUrl}
+                reasoning={recipe.pairedOil.reasoning ?? undefined}
+              />
+            </Section>
+          )}
         </>
       )}
 

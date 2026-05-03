@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getArticles, getArticleBySlug } from '@/lib/static-content'
+import { getArticleBySlug as getArticleFromDb, getActiveArticles } from '@/lib/articles-db'
+import { getArticles, getArticleBySlug as getStaticArticle } from '@/lib/static-content'
 import { ArticleBody } from '@/components/article-body'
 import { resolveTemplateVars } from '@/lib/template-vars'
 import { getProductsWithOffers } from '@/lib/data'
@@ -19,17 +20,22 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>
 }): Promise<Metadata> {
   const { slug } = await params
-  const article = getArticleBySlug(slug)
-  if (!article) return { title: 'Článek nenalezen' }
+  // Primárně DB, fallback static
+  const dbArticle = await getArticleFromDb(slug)
+  const staticArticle = !dbArticle ? getStaticArticle(slug) : null
+  if (!dbArticle && !staticArticle) return { title: 'Článek nenalezen' }
+  const title = dbArticle?.metaTitle || dbArticle?.title || staticArticle?.title || ''
+  const description =
+    dbArticle?.metaDescription || dbArticle?.excerpt || staticArticle?.excerpt || ''
   return {
-    title: article.title,
-    description: article.excerpt,
-    alternates: { canonical: `https://olivator.cz/pruvodce/${article.slug}` },
+    title,
+    description,
+    alternates: { canonical: `https://olivator.cz/pruvodce/${slug}` },
     openGraph: {
       type: 'article',
-      url: `https://olivator.cz/pruvodce/${article.slug}`,
-      title: article.title,
-      description: article.excerpt,
+      url: `https://olivator.cz/pruvodce/${slug}`,
+      title,
+      description,
     },
   }
 }
@@ -47,22 +53,74 @@ export default async function ArticleDetailPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const article = getArticleBySlug(slug)
-  if (!article || article.category === 'recept') notFound()
+
+  // Primárně DB, fallback static
+  const dbArticle = await getArticleFromDb(slug)
+  if (dbArticle && dbArticle.status !== 'active') notFound()
+
+  let article: {
+    slug: string
+    title: string
+    excerpt: string | null
+    emoji: string | null
+    readTime: string | null
+    category: string
+    body: string | null
+  } | null = null
+
+  if (dbArticle) {
+    article = {
+      slug: dbArticle.slug,
+      title: dbArticle.title,
+      excerpt: dbArticle.excerpt,
+      emoji: dbArticle.emoji,
+      readTime: dbArticle.readTime,
+      category: dbArticle.category,
+      body: dbArticle.bodyMarkdown,
+    }
+  } else {
+    const sa = getStaticArticle(slug)
+    if (!sa || sa.category === 'recept') notFound()
+    article = {
+      slug: sa.slug,
+      title: sa.title,
+      excerpt: sa.excerpt,
+      emoji: sa.emoji,
+      readTime: sa.readTime,
+      category: sa.category,
+      body: sa.body ?? null,
+    }
+  }
+
+  if (!article) notFound()
 
   // Resolve template variables ({{products.count}}, {{link:srovnavac|srovnávač}})
   const resolvedBody = article.body ? await resolveTemplateVars(article.body, 'markdown') : ''
 
-  // Sidebar data — top oleje + related články + recepty
-  const allProducts = await getProductsWithOffers()
+  // Sidebar data — top oleje + related články (DB) + recepty
+  const [allProducts, dbArticles] = await Promise.all([
+    getProductsWithOffers(),
+    getActiveArticles(),
+  ])
   const topProducts = allProducts
     .filter((p) => p.olivatorScore != null)
     .sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
     .slice(0, 5)
 
-  const otherArticles = getArticles()
-    .filter((a) => a.category !== 'recept' && a.slug !== article.slug)
-    .slice(0, 3)
+  // Related články: DB-first, fallback static
+  const otherArticles =
+    dbArticles.length > 0
+      ? dbArticles.filter((a) => a.slug !== article!.slug).slice(0, 3)
+      : getArticles()
+          .filter((a) => a.category !== 'recept' && a.slug !== article!.slug)
+          .slice(0, 3)
+          .map((a) => ({
+            slug: a.slug,
+            title: a.title,
+            emoji: a.emoji,
+            readTime: a.readTime,
+            category: a.category,
+          }))
 
   const recipeArticles = getArticles().filter((a) => a.category === 'recept').slice(0, 2)
 

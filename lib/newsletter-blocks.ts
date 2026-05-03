@@ -403,27 +403,145 @@ export async function pickFact(): Promise<FactData | null> {
   }
 }
 
-// ── 5. Recept týdne — z ARTICLES (static content) ──────────────────────────
+// ── 5. Recept týdne — DB-first, fallback static ───────────────────────────
 //
-// Recepty jsou static MD články. Picker rotuje přes recipe_entity_links data
-// abychom věděli k jakému oleji recept patří.
+// Picker rotuje active recepty (LRU-ish — týden v roce jako seed).
+// Paired oil: pokud má recept recommended_regions/cultivars, hledáme produkt
+// z toho regionu nebo s tou odrůdou v názvu — top score.
 export async function pickRecipe(): Promise<RecipeData | null> {
-  const { ARTICLES } = await import('./static-content')
-  const recipes = ARTICLES.filter((a) => a.category === 'recept')
-  if (recipes.length === 0) return null
+  const retailerMap = await loadRetailerMap()
+  const brandMap = await loadBrandMap()
 
-  // Pseudorandom: použij týden v roce jako seed
-  const weekOfYear = Math.floor(
-    (Date.now() - new Date(new Date().getFullYear(), 0, 1).getTime()) / (7 * 86400000)
-  )
-  const recipe = recipes[weekOfYear % recipes.length]
+  // 1. DB recepty
+  const { data: dbRecipes } = await supabaseAdmin
+    .from('recipes')
+    .select('slug, title, excerpt, recommended_regions, recommended_cultivars')
+    .eq('status', 'active')
+    .order('published_at', { ascending: false, nullsFirst: false })
+
+  let pickedSlug: string
+  let pickedTitle: string
+  let pickedExcerpt: string
+  let pickedRegions: string[] = []
+  let pickedCultivars: string[] = []
+
+  if (dbRecipes && dbRecipes.length > 0) {
+    const weekOfYear = Math.floor(
+      (Date.now() - new Date(new Date().getFullYear(), 0, 1).getTime()) / (7 * 86400000)
+    )
+    const r = dbRecipes[weekOfYear % dbRecipes.length] as {
+      slug: string
+      title: string
+      excerpt: string | null
+      recommended_regions: string[] | null
+      recommended_cultivars: string[] | null
+    }
+    pickedSlug = r.slug
+    pickedTitle = r.title
+    pickedExcerpt = r.excerpt ?? ''
+    pickedRegions = r.recommended_regions ?? []
+    pickedCultivars = r.recommended_cultivars ?? []
+  } else {
+    // Fallback static
+    const { ARTICLES } = await import('./static-content')
+    const recipes = ARTICLES.filter((a) => a.category === 'recept')
+    if (recipes.length === 0) return null
+    const weekOfYear = Math.floor(
+      (Date.now() - new Date(new Date().getFullYear(), 0, 1).getTime()) / (7 * 86400000)
+    )
+    const recipe = recipes[weekOfYear % recipes.length]
+    pickedSlug = recipe.slug
+    pickedTitle = recipe.title
+    pickedExcerpt = recipe.excerpt
+  }
+
+  // 2. Paired oil — najdi top scoring product z recommended regions/cultivars
+  let pairedOil: OilCardData | null = null
+
+  if (pickedRegions.length > 0 || pickedCultivars.length > 0) {
+    const { data: products } = await supabaseAdmin
+      .from('products')
+      .select(
+        'id, slug, name, name_short, image_url, olivator_score, brand_slug, region_slug'
+      )
+      .eq('status', 'active')
+      .order('olivator_score', { ascending: false })
+      .limit(50)
+
+    if (products) {
+      // Score products by match
+      const scored = products
+        .map((p) => {
+          let score = 0
+          if (pickedRegions.length > 0 && pickedRegions.includes(p.region_slug as string)) {
+            score += 2
+          }
+          if (pickedCultivars.length > 0) {
+            const productName = (p.name as string).toLowerCase()
+            if (pickedCultivars.some((c) => productName.includes(c.toLowerCase()))) {
+              score += 3
+            }
+          }
+          return { p, score, base: p.olivator_score as number }
+        })
+        .filter((x) => x.score > 0)
+        .sort((a, b) => b.score - a.score || b.base - a.base)
+
+      if (scored.length > 0) {
+        const winner = scored[0].p
+        // Find cheapest offer
+        const { data: offers } = await supabaseAdmin
+          .from('product_offers')
+          .select('price, currency, in_stock, retailer_id')
+          .eq('product_id', winner.id)
+          .eq('in_stock', true)
+          .order('price', { ascending: true })
+
+        if (offers && offers.length > 0) {
+          const enriched = offers
+            .map((o) => ({
+              price: o.price as number,
+              retailer: retailerMap.get(o.retailer_id as string) ?? null,
+            }))
+            .filter((o) => o.retailer !== null) as Array<{
+            price: number
+            retailer: { name: string; slug: string; is_active: boolean }
+          }>
+          if (enriched.length > 0) {
+            const cheapest = enriched.find((o) => o.retailer.is_active) ?? enriched[0]
+            const brand = winner.brand_slug
+              ? brandMap.get(winner.brand_slug as string) ?? null
+              : null
+            pairedOil = {
+              productId: winner.id as string,
+              slug: winner.slug as string,
+              name: (winner.name_short as string | null) ?? (winner.name as string),
+              brandName: brand?.name ?? null,
+              imageUrl: winner.image_url as string | null,
+              score: winner.olivator_score as number,
+              price: cheapest.price,
+              oldPrice: null,
+              retailerName: cheapest.retailer.name,
+              retailerSlug: cheapest.retailer.slug,
+              ctaUrl: buildAffiliateUrl(
+                cheapest.retailer.slug,
+                winner.slug as string,
+                'recipe_paired'
+              ),
+              reasoning: `Doporučujeme k receptu „${pickedTitle}".`,
+            }
+          }
+        }
+      }
+    }
+  }
 
   return {
-    slug: recipe.slug,
-    title: recipe.title,
-    excerpt: recipe.excerpt,
-    url: `${SITE_URL}/recept/${recipe.slug}?utm_source=newsletter&utm_medium=email&utm_content=recipe`,
-    pairedOil: null, // V budoucnu: lookup přes recipe_entity_links na region/cultivar
+    slug: pickedSlug,
+    title: pickedTitle,
+    excerpt: pickedExcerpt,
+    url: `${SITE_URL}/recept/${pickedSlug}?utm_source=newsletter&utm_medium=email&utm_content=recipe`,
+    pairedOil,
   }
 }
 

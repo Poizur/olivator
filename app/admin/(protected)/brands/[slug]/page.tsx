@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
 import { EntityEditForm } from '@/components/entity-edit-form'
+import { GenerateRecipeButton } from '@/components/generate-recipe-button'
 import { EntityFaqEditor } from '@/components/entity-faq-editor'
 import { EntityRecipeLinker } from '@/components/entity-recipe-linker'
 import { EntityGuidesLinker } from '@/components/entity-guides-linker'
@@ -122,6 +123,20 @@ export default async function EditBrandPage({ params }: { params: Promise<{ slug
           publicUrl={`/znacka/${brand.slug}`}
           entityId={brand.id}
         />
+
+        <div className="bg-olive-bg/30 border border-olive-border rounded-xl p-4 flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h3 className="text-[13px] font-semibold text-olive-dark">🍳 AI návrh receptu</h3>
+            <p className="text-[12px] text-olive-dark/80 mt-0.5">
+              Claude vygeneruje recept využívající olej značky {brand.name}.
+            </p>
+          </div>
+          <GenerateRecipeButton
+            entityType="brand"
+            slug={brand.slug}
+            entityName={brand.name}
+          />
+        </div>
 
         {/* BLOK 4 — Fotky */}
         <AdminBlock

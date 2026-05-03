@@ -63,6 +63,7 @@ export async function AdminSidebar() {
         },
         { href: '/admin/cultivars', label: 'Odrůdy' },
         { href: '/admin/recipes', label: 'Recepty' },
+        { href: '/admin/articles', label: 'Články (průvodci)' },
       ],
     },
     {
