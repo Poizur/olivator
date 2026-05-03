@@ -20,6 +20,7 @@ import {
   detectPackaging,
   detectType,
   isSuspectEan,
+  normalizeEan,
   type HeurekaItem,
 } from './heureka-feed-parser'
 import { slugify } from './utils'
@@ -67,22 +68,23 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
   }
 
   for (const item of oils) {
-    // EAN je master klíč. Bez EAN nebo se suspect EAN nemůžeme spolehlivě
-    // dedupovat → preskočíme. User může produkt přidat ručně přes admin import.
-    if (!item.ean || isSuspectEan(item.ean)) {
+    // Cena je jediný hard requirement — bez ceny offer postrádá smysl.
+    // EAN může chybět nebo být shop-internal (farmářské oleje typu Evoilino),
+    // ensureProduct si poradí přes source_url fallback.
+    if (item.priceVat <= 0) {
       result.errors.push({
         ean: item.ean || '(prázdný)',
         name: item.productName,
-        reason: 'EAN chybí nebo vypadá jako fake (např. 7777770000xxx)',
+        reason: 'Neplatná cena',
       })
       result.skipped++
       continue
     }
-    if (item.priceVat <= 0) {
+    if (!item.url) {
       result.errors.push({
-        ean: item.ean,
+        ean: item.ean || '(prázdný)',
         name: item.productName,
-        reason: 'Neplatná cena',
+        reason: 'Chybí product URL — nelze deduplikovat ani vytvořit offer',
       })
       result.skipped++
       continue
@@ -148,24 +150,41 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
 async function ensureProduct(
   item: HeurekaItem
 ): Promise<{ productId: string; created: boolean }> {
-  const { data: existing, error: queryErr } = await supabaseAdmin
-    .from('products')
-    .select('id')
-    .eq('ean', item.ean)
-    .maybeSingle()
-  if (queryErr) throw new Error(`Product query: ${queryErr.message}`)
+  // 1) Match přes EAN — jen když je validní GTIN-13 / UPC-A. Shop-internal
+  //    placeholdery (7777770000xxx) ukládáme jako null, dedupujeme přes URL.
+  const normalizedEan = normalizeEan(item.ean)
+  const validEan = normalizedEan && !isSuspectEan(normalizedEan) ? normalizedEan : null
 
-  if (existing) {
-    return { productId: existing.id as string, created: false }
+  if (validEan) {
+    const { data: existing, error: queryErr } = await supabaseAdmin
+      .from('products')
+      .select('id')
+      .eq('ean', validEan)
+      .maybeSingle()
+    if (queryErr) throw new Error(`Product query (EAN): ${queryErr.message}`)
+    if (existing) return { productId: existing.id as string, created: false }
   }
 
+  // 2) Fallback match přes source_url — funguje pro farmářské / shop-internal
+  //    oleje bez validního EANu (Evoilino, atd.). Deep link na produkt v shopu
+  //    je per-product unique.
+  const { data: byUrl, error: urlErr } = await supabaseAdmin
+    .from('products')
+    .select('id')
+    .eq('source_url', item.url)
+    .maybeSingle()
+  if (urlErr) throw new Error(`Product query (URL): ${urlErr.message}`)
+  if (byUrl) return { productId: byUrl.id as string, created: false }
+
+  // 3) Vytvoř nový draft produkt. EAN ukládáme jen pokud je validní —
+  //    placeholder 7777xxx by mohl kolizovat napříč shopy.
   const baseSlug = slugify(item.productName)
   const slug = await uniqueSlug(baseSlug)
 
   const { data: newProduct, error: insertErr } = await supabaseAdmin
     .from('products')
     .insert({
-      ean: item.ean,
+      ean: validEan,  // null pro shop-internal/farmářské oleje
       name: item.productName,
       slug,
       type: detectType(item),

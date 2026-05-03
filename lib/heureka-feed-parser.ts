@@ -86,27 +86,46 @@ function parsePrice(text: string): number {
 }
 
 // Filtr na olivové oleje. Heureka kategorizace + textová heuristika v názvu —
-// chceme přeskočit kokosové, slunečnicové, pomace.
+// chceme přeskočit kokosové, slunečnicové, pomace + příslušenství (konvice atd.).
 export function isOliveOil(item: HeurekaItem): boolean {
   if (!item.categoryText.includes(OIL_CATEGORY_HINT)) return false
   const name = item.productName.toLowerCase()
-  // Vyloučit ne-olivové
+  // Vyloučit ne-olivové oleje
   if (name.includes('kokos')) return false
   if (name.includes('slunečnic')) return false
   if (name.includes('řepkov')) return false
   if (name.includes('lněn')) return false
+  // Vyloučit příslušenství („konvice na olivový olej" má slovo „olivový" v názvu,
+  // ale není to olej). Heureka občas zařazuje doplňky do kategorie kuchyňské oleje.
+  if (name.includes('konvic')) return false
+  if (name.includes('nádob')) return false
+  if (name.includes('sklenic')) return false
+  if (name.includes('dóz')) return false
+  if (name.includes('lahev na ')) return false
+  if (name.includes('miska')) return false
+  if (/\bsada\b|\bset\b/.test(name)) return false
   // Pozitivní signál
   return name.includes('oliv')
 }
 
-// EAN validation — některé eshopy generují fake EAN (7777770000037).
-// Validní EAN-13 začíná country prefixem. Pro nás platí: kontrola checksum.
-// V XML feedu z reckonasbavi je první SHOPITEM 7777770000037 — fake.
-// Bypassujeme — přijímáme všechno, jen označíme suspect_ean.
-export function isSuspectEan(ean: string): boolean {
+// Normalizace EAN: 12-char UPC-A se prefixuje 0 → 13-char EAN-13. Validní pro
+// americké produkty (např. EVOLIA `850035553411` → `0850035553411`).
+// Vrací null pokud nemůžeme získat smysluplný 13-char identifier.
+export function normalizeEan(ean: string | undefined | null): string | null {
+  if (!ean) return null
+  const trimmed = ean.trim()
+  if (trimmed.length === 13) return trimmed
+  if (trimmed.length === 12) return '0' + trimmed  // UPC-A → EAN-13
+  return null  // 14-char GTIN-14, 8-char EAN-8 atd. — pro náš MVP nepoužíváme
+}
+
+// EAN je „suspekt" když vypadá jako shop-generated placeholder (777777xxx,
+// samé nuly). Pro tyto NESTORUJEME do products.ean (riziko kolize přes různé
+// shopy které také používají placeholder), ale produkt vytvoříme s ean=null
+// a dedupujeme přes source_url. Real EAN i UPC-A projdou jako validní.
+export function isSuspectEan(ean: string | null): boolean {
   if (!ean) return true
   if (ean.length !== 13) return true
-  // Padding fake EAN: 7777770000xxx
   if (/^7{6,}/.test(ean)) return true
   if (/^0{8,}/.test(ean)) return true
   return false
