@@ -8,6 +8,7 @@ import { getSiteStats, getAllRetailers } from '@/lib/data'
 import { supabaseAdmin } from '@/lib/supabase'
 import { BulkFetchImagesButton } from './bulk-fetch-images'
 import { RegenerateAllButton } from '@/components/regenerate-all-button'
+import { PublishAllButton } from '@/components/publish-all-button'
 
 export const revalidate = 60
 export const dynamic = 'force-dynamic'
@@ -943,12 +944,15 @@ export default async function AdminDashboardPage() {
               + FAQ. Smaže duplikáty, nastaví vše na status=active. Trvá ~10-15 min, $1-2 Claude API.
             </p>
           </div>
-          <RegenerateAllButton
-            entityType="all"
-            label="Vygeneruj VŠE a publikuj"
-            includeExtras={true}
-            setActive={true}
-          />
+          <div className="flex flex-col gap-2 items-end shrink-0">
+            <RegenerateAllButton
+              entityType="all"
+              label="Vygeneruj VŠE a publikuj"
+              includeExtras={true}
+              setActive={true}
+            />
+            <PublishAllButton />
+          </div>
         </div>
       </div>
 
