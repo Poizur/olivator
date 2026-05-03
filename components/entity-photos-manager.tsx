@@ -20,7 +20,7 @@ interface Photo {
 
 interface Props {
   entityId: string
-  entityType: 'region' | 'brand' | 'cultivar' | 'recipe' | 'article'
+  entityType: 'region' | 'brand' | 'cultivar' | 'recipe' | 'article' | 'retailer'
   initialPhotos: Photo[]
 }
 

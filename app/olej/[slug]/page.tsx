@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getProducts, getProductBySlug, getOffersForProduct, getProductGallery, getProductCustomFAQs, getActiveGeneralFAQs, getVariantProducts, getProductEntityLinks } from '@/lib/data'
+import { getProducts, getProductBySlug, getOffersForProduct, getProductGallery, getProductCustomFAQs, getActiveGeneralFAQs, getVariantProducts, getProductEntityLinks, getRetailerPhotosLite } from '@/lib/data'
 import { extractBrandSlug, extractRegionSlug } from '@/lib/entity-extractor'
 import { countryName, typeLabel, certLabel, formatPrice, formatPricePer100ml } from '@/lib/utils'
 import { productSchema, breadcrumbSchema, faqSchema } from '@/lib/schema'
@@ -766,6 +766,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           retailer={cheapest.retailer}
           productSlug={product.slug}
           price={cheapest.price}
+          photos={await getRetailerPhotosLite(cheapest.retailer.id)}
         />
       )}
 

@@ -376,6 +376,27 @@ export async function deleteRetailer(id: string) {
   if (error) throw error
 }
 
+// Public RetailerCard zobrazuje 2 fotky pod logem (sklad / balení / lidé).
+// Vrací jen url + alt_text, omezeno na primary + jednu další podle sort_order.
+export async function getRetailerPhotosLite(
+  retailerId: string,
+  limit = 2
+): Promise<Array<{ url: string; alt_text: string | null }>> {
+  const { data } = await supabaseAdmin
+    .from('entity_images')
+    .select('url, alt_text, is_primary, sort_order')
+    .eq('entity_id', retailerId)
+    .eq('entity_type', 'retailer')
+    .eq('status', 'active')
+    .order('is_primary', { ascending: false })
+    .order('sort_order', { ascending: true })
+    .limit(limit)
+  return (data ?? []).map(r => ({
+    url: r.url as string,
+    alt_text: (r.alt_text as string) ?? null,
+  }))
+}
+
 // Count of active offers per retailer — shown in admin list
 export async function getRetailerOfferCounts(): Promise<Record<string, number>> {
   const { data, error } = await supabaseAdmin

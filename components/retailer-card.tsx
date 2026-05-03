@@ -7,15 +7,24 @@
 import Link from 'next/link'
 import type { Retailer } from '@/lib/types'
 
+export interface RetailerPhotoLite {
+  url: string
+  alt_text: string | null
+}
+
 interface Props {
   retailer: Retailer
   productSlug: string
   price: number
+  photos?: RetailerPhotoLite[]  // 0-2 atmosférické fotky pod logem
 }
 
-export function RetailerCard({ retailer, productSlug, price }: Props) {
+export function RetailerCard({ retailer, productSlug, price, photos = [] }: Props) {
   const hasStory = !!(retailer.tagline || retailer.story || retailer.founders)
   if (!hasStory) return null
+
+  // Zobrazujeme max 2 fotky pod logem — víc by rozbilo vertikální rytmus karty.
+  const visiblePhotos = photos.slice(0, 2)
 
   return (
     <section className="mt-12 max-w-[1040px]">
@@ -27,8 +36,8 @@ export function RetailerCard({ retailer, productSlug, price }: Props) {
       </h2>
 
       <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 md:p-7 grid grid-cols-1 md:grid-cols-[120px_1fr] gap-5 md:gap-7 items-start">
-        {/* Logo / placeholder */}
-        <div className="flex items-center justify-center md:justify-start">
+        {/* Logo + 2 fotky pod sebou */}
+        <div className="flex flex-col gap-2">
           {retailer.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -41,6 +50,20 @@ export function RetailerCard({ retailer, productSlug, price }: Props) {
               <span className="font-[family-name:var(--font-display)] text-3xl font-normal italic text-olive-dark leading-none">
                 {retailer.name.charAt(0)}
               </span>
+            </div>
+          )}
+          {visiblePhotos.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {visiblePhotos.map((p, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={i}
+                  src={p.url}
+                  alt={p.alt_text ?? `${retailer.name} fotka ${i + 1}`}
+                  className="w-24 h-20 object-cover rounded-[var(--radius-card)] border border-off2"
+                  loading="lazy"
+                />
+              ))}
             </div>
           )}
         </div>
