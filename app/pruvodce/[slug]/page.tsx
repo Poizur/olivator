@@ -7,6 +7,7 @@ import { ArticleBody } from '@/components/article-body'
 import { resolveTemplateVars } from '@/lib/template-vars'
 import { getProductsWithOffers } from '@/lib/data'
 import { formatPrice } from '@/lib/utils'
+import { ProductImage } from '@/components/product-image'
 
 export const revalidate = 60
 
@@ -153,7 +154,7 @@ export default async function ArticleDetailPage({
         {article.title}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 lg:gap-12 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 lg:gap-12 items-start relative">
         {/* Main article column */}
         <article className="min-w-0 max-w-[720px]">
           <div className="text-[10px] font-semibold tracking-widest uppercase text-olive mb-3">
@@ -204,24 +205,29 @@ export default async function ArticleDetailPage({
           </div>
         </article>
 
-        {/* Sidebar — sticky na desktopu, scrolluje s článkem */}
-        <aside className="lg:sticky lg:top-[140px] space-y-5">
+        {/* Sidebar — sticky scrolling s článkem. lg:self-start je důležité:
+            bez něj grid-row stretchne aside na výšku article, sticky pak nemá
+            kde "klouzat". top-24 (96px) navazuje pod fixed header. */}
+        <aside className="lg:sticky lg:top-24 lg:self-start space-y-5 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-1">
           {/* Top oleje */}
           {topProducts.length > 0 && (
             <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-4">
               <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-3">
                 🏆 Top oleje
               </div>
-              <ul className="space-y-2.5">
+              <ul className="space-y-3">
                 {topProducts.map((p, i) => (
                   <li key={p.id}>
                     <Link
                       href={`/olej/${p.slug}`}
-                      className="flex items-start gap-2.5 group"
+                      className="flex items-center gap-2.5 group"
                     >
-                      <span className="shrink-0 w-5 text-[12px] text-text3 font-mono tabular-nums">
+                      <span className="shrink-0 w-4 text-[11px] text-text3 font-mono tabular-nums">
                         {i + 1}.
                       </span>
+                      <div className="w-10 h-10 bg-white border border-off2 rounded shrink-0 overflow-hidden p-0.5">
+                        <ProductImage product={p} fallbackSize="text-lg" />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[13px] text-text font-medium leading-tight line-clamp-1 group-hover:text-olive">
                           {p.nameShort || p.name}
