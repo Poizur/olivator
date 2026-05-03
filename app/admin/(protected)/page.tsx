@@ -435,7 +435,9 @@ export default async function AdminDashboardPage() {
   const maxClickBar = Math.max(1, ...clickStats.byDay.map((d) => d.count))
   const maxSignupBar = Math.max(1, ...newsletterStats.signupsByDay.map((d) => d.count))
 
-  // Vytvořím 4 KPI cards — mix toho co máme
+  // KPI cards — kliky / přihlášky / open rate / aktivní katalog. Provize
+  // odhad jsme vyřadili — bez reálné konverze klik→nákup byl extrapolovaný
+  // odhad zavádějící (uživatel by si myslel že to je skutečný income).
   const cards: Array<{
     label: string
     value: string
@@ -477,13 +479,13 @@ export default async function AdminDashboardPage() {
           value: `${newsletterStats.lastSentOpenRate} %`,
           sub: `${newsletterStats.recentCampaigns[0]?.opened ?? 0} z ${newsletterStats.recentCampaigns[0]?.sent ?? 0} otevřeno`,
           href: '/admin/newsletter/sends',
-          accent: 'olive',
+          accent: 'olive' as const,
         }
       : {
-          label: 'Provize (odhad)',
-          value: fmtCZK(clickStats.estCommission7d),
-          sub: 'cena × % provize z kliků',
-          href: '/admin/retailers',
+          label: 'Aktivní produkty',
+          value: stats.totalProducts.toString(),
+          sub: `${stats.activeRetailers} prodejců`,
+          href: '/admin/products',
         },
   ]
 
@@ -637,12 +639,14 @@ export default async function AdminDashboardPage() {
               Detail →
             </Link>
           </div>
-          <div className="flex items-end gap-2 h-[120px]">
+          <div className="grid grid-cols-7 gap-2">
             {clickStats.byDay.map((d, i) => {
               const pct = (d.count / maxClickBar) * 100
               return (
-                <div key={d.date} className="flex-1 flex flex-col items-center gap-2">
-                  <div className="flex-1 w-full flex items-end relative">
+                <div key={d.date} className="flex flex-col items-center gap-2">
+                  {/* Explicit height na bar wrapperu — bez něj se height: %
+                      počítá z nuly (parent flex-1 bez explicit height = 0). */}
+                  <div className="h-[80px] w-full flex items-end">
                     <div
                       className="w-full rounded-t-sm bg-olive"
                       style={{

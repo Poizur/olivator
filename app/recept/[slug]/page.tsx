@@ -9,6 +9,7 @@ import { formatPrice } from '@/lib/utils'
 
 type ProductWithOffers = Product & { cheapestOffer: ProductOffer | null }
 import { ArticleBody } from '@/components/article-body'
+import { ProductImage } from '@/components/product-image'
 
 export const revalidate = 60
 
@@ -336,9 +337,9 @@ export default async function RecipeDetailPage({
                   className="flex items-center justify-between gap-3 py-3 border-b border-olive-border/40 last:border-b-0 hover:opacity-90 transition-opacity"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-9 h-9 bg-white rounded-lg flex items-center justify-center font-[family-name:var(--font-display)] text-base italic text-olive leading-none shrink-0">
-                      {p.name.charAt(0)}
-                    </span>
+                    <div className="w-12 h-12 bg-white rounded-lg shrink-0 overflow-hidden p-1">
+                      <ProductImage product={p} fallbackSize="text-2xl" />
+                    </div>
                     <div className="min-w-0">
                       <div className="text-[14px] font-medium text-text leading-tight truncate">
                         {p.name}
