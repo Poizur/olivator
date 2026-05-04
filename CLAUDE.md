@@ -555,6 +555,7 @@ disabuj (signál v adminu, že XML to řeší).
 |---|---|---|---|
 | `cron:entity-aggregate` | `/api/cron/entity-aggregate` | `0 3 * * *` | recompute cultivar agregátů |
 | `cron:feed-sync` | `/api/cron/feed-sync` | `0 4 * * *` | XML retaileři + auto-research + pending rescrape + brand backfill |
+| `cron:radar` | `/api/cron/radar` | `0 */2 * * *` | RSS scanner: olive oil press → AI překlad → radar_items |
 | `cron:discovery` | `/api/cron/discovery` | `30 4 * * *` | Playwright crawl pro shopy bez XML feedu |
 | `cron:prospect` | `/api/cron/prospect` | `0 5 * * *` | hledá nové eshopy |
 | `cron:link-check` | `/api/cron/link-check` | `0 6 * * *` | mrtvé affiliate URL → status='inactive' |

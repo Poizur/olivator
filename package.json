@@ -12,7 +12,8 @@
     "cron:manager": "tsx scripts/cron/manager.ts",
     "cron:link-check": "tsx scripts/cron/link-check.ts",
     "cron:entity-aggregate": "tsx scripts/cron/entity-aggregate.ts",
-    "cron:feed-sync": "tsx scripts/cron/feed-sync.ts"
+    "cron:feed-sync": "tsx scripts/cron/feed-sync.ts",
+    "cron:radar": "tsx scripts/cron/radar.ts"
   },
   "engines": {
     "node": ">=20.18.0"
