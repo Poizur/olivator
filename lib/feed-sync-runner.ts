@@ -15,6 +15,7 @@ import { supabaseAdmin } from './supabase'
 import { syncRetailerFeed, type FeedSyncResult } from './feed-sync'
 import { researchRetailer } from './retailer-research'
 import { runRescrape } from './product-rescrape'
+import { linkAndRecomputeForProduct } from './entity-aggregator'
 
 // Kolik pending draftů zpracovat per cron run. Každý rescrape ~30-90s.
 // 10 × 60s = 10 min — bezpečně v 15 min cron timeoutu i s feed sync samotným.
@@ -31,6 +32,7 @@ export interface FeedSyncRunResult {
   retailersAutoResearched: number
   pendingDraftsRescraped: number
   pendingDraftsFailed: number
+  brandLinksBackfilled: number
   perRetailer: Array<{
     slug: string
     name: string
@@ -65,6 +67,7 @@ export async function runFeedSyncForAllRetailers(): Promise<FeedSyncRunResult> {
     retailersAutoResearched: 0,
     pendingDraftsRescraped: 0,
     pendingDraftsFailed: 0,
+    brandLinksBackfilled: 0,
     perRetailer: [],
     startedAt,
     finishedAt: '',
@@ -130,6 +133,20 @@ export async function runFeedSyncForAllRetailers(): Promise<FeedSyncRunResult> {
     console.warn('[feed-sync] pending drafts stage failed:', err)
   }
 
+  // ── PASS 4: Brand link backfill ──────────────────────────────────────────
+  // Před fix bug-fix linkAndRecomputeForProduct se nevolal v feed-sync
+  // ensureProduct → existing produkty od XML retailerů jsou bez brand_slug.
+  // Tato pass projde aktivní + draft produkty bez brand_slug a doplní je.
+  // Cap 100 — extract/upsert je rychlé (~50ms / produkt), 100 × 50ms = 5s.
+  try {
+    result.brandLinksBackfilled = await backfillEntityLinks(100)
+    if (result.brandLinksBackfilled > 0) {
+      console.log(`[feed-sync] brand links backfilled: ${result.brandLinksBackfilled}`)
+    }
+  } catch (err) {
+    console.warn('[feed-sync] brand backfill stage failed:', err)
+  }
+
   result.finishedAt = new Date().toISOString()
   return result
 }
@@ -185,6 +202,37 @@ async function autoResearchEmptyRetailers(): Promise<number> {
       }
     } catch (err) {
       console.warn(`[auto-research] ${r.slug} failed:`, err instanceof Error ? err.message : err)
+    }
+  }
+  return done
+}
+
+/** Pro produkty bez brand_slug zavolá linkAndRecomputeForProduct — extrakt
+ *  brand z názvu + auto-create brand stub + region/cultivar links. Stačí
+ *  jednou per produkt, takže rychle dohrá legacy data. */
+async function backfillEntityLinks(limit: number): Promise<number> {
+  const { data, error } = await supabaseAdmin
+    .from('products')
+    .select('id, name, origin_country, origin_region, raw_description')
+    .in('status', ['active', 'draft'])
+    .is('brand_slug', null)
+    .order('created_at', { ascending: true })
+    .limit(limit)
+  if (error || !data) return 0
+
+  let done = 0
+  for (const p of data) {
+    try {
+      await linkAndRecomputeForProduct(
+        p.id as string,
+        p.name as string,
+        (p.origin_country as string | null) ?? null,
+        (p.origin_region as string | null) ?? null,
+        (p.raw_description as string | null) ?? null
+      )
+      done++
+    } catch (err) {
+      console.warn(`[brand-backfill] ${p.id} failed:`, err instanceof Error ? err.message : err)
     }
   }
   return done

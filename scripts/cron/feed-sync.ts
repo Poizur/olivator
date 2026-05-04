@@ -38,6 +38,7 @@ async function main() {
       retailersAutoResearched: result.retailersAutoResearched,
       pendingDraftsRescraped: result.pendingDraftsRescraped,
       pendingDraftsFailed: result.pendingDraftsFailed,
+      brandLinksBackfilled: result.brandLinksBackfilled,
     })
     process.exit(0)
   } catch (err) {

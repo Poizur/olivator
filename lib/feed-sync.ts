@@ -25,6 +25,19 @@ import {
 } from './heureka-feed-parser'
 import { slugify } from './utils'
 import { runRescrape } from './product-rescrape'
+import { linkAndRecomputeForProduct } from './entity-aggregator'
+
+// Default země původu per XML retailer. Bez tohoto by všechny XML produkty
+// dostaly hardcode 'GR' (původně reckonasbavi-only). Italyshop má italský
+// sortiment, takže italské oleje musí mít originCountry='IT'.
+//
+// Pro retailery které nejsou v mapě → null = origin se neuhádl, admin
+// musí v draftu vyplnit ručně (rescrape Playwright pak často odhadne z webu).
+const RETAILER_DEFAULT_ORIGIN: Record<string, string | null> = {
+  reckonasbavi: 'GR',
+  italyshop: 'IT',
+  reckyeshop: 'GR',
+}
 
 export interface FeedSyncResult {
   total: number
@@ -57,6 +70,10 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
 
   const items = await fetchHeurekaFeed(retailer.xml_feed_url as string)
   const oils = items.filter(isOliveOil)
+
+  // Země původu pro tuto retailer cestu — použijeme do ensureProduct
+  // (origin_country pro nový draft) a linkAndRecomputeForProduct (region_slug).
+  const defaultOriginCountry = RETAILER_DEFAULT_ORIGIN[retailer.slug as string] ?? null
 
   const result: FeedSyncResult = {
     total: items.length,
@@ -101,7 +118,7 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
     }
 
     try {
-      const { productId, created, excluded } = await ensureProduct(item)
+      const { productId, created, excluded } = await ensureProduct(item, defaultOriginCountry)
 
       // Blocklist: admin tento produkt vyřadil → nedělej upsert offer ani
       // price_history. Záznam zůstává, ale sync ho neaktualizuje.
@@ -191,7 +208,8 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
 }
 
 async function ensureProduct(
-  item: HeurekaItem
+  item: HeurekaItem,
+  defaultOriginCountry: string | null
 ): Promise<{ productId: string; created: boolean; excluded?: boolean }> {
   // 1) Match přes EAN — jen když je validní GTIN-13 / UPC-A. Shop-internal
   //    placeholdery (7777770000xxx) ukládáme jako null, dedupujeme přes URL.
@@ -243,7 +261,7 @@ async function ensureProduct(
       name: item.productName,
       slug,
       type: detectType(item),
-      origin_country: 'GR',  // reckonasbavi: 100% řecké; pro jiné retailery upravíme
+      origin_country: defaultOriginCountry,  // per retailer; null = admin doplní
       acidity: extractAcidity(item),
       peroxide_value: extractPeroxideValue(item),
       volume_ml: extractVolumeMl(item),
@@ -256,7 +274,25 @@ async function ensureProduct(
     .single()
   if (insertErr) throw new Error(`Product insert: ${insertErr.message}`)
 
-  return { productId: newProduct.id as string, created: true, excluded: false }
+  const productId = newProduct.id as string
+
+  // Auto-create brand stub + region/cultivar links pro nový produkt.
+  // Bez tohoto by /admin/brands ukazovala jen značky vytvořené discovery
+  // agentem (Playwright cesta) — XML produkty by chyběly.
+  // Best effort — selhání nesmí shodit feed sync.
+  try {
+    await linkAndRecomputeForProduct(
+      productId,
+      item.productName,
+      defaultOriginCountry,
+      null,           // origin_region — XML feed obvykle nemá, scrape doplní
+      item.description
+    )
+  } catch (err) {
+    console.warn(`[feed-sync] entity linking failed for ${productId}:`, err)
+  }
+
+  return { productId, created: true, excluded: false }
 }
 
 async function uniqueSlug(baseSlug: string, attempt = 0): Promise<string> {

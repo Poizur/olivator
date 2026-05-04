@@ -19,6 +19,7 @@ import { countryName } from './utils'
 import { revalidateProduct } from './revalidate'
 import { auditProduct } from './quality-rules'
 import { scanLabReport, looksLikeLabReport, type LabReportData } from './lab-report-agent'
+import { linkAndRecomputeForProduct } from './entity-aggregator'
 
 export interface RescrapeResult {
   ok: boolean
@@ -331,6 +332,29 @@ export async function runRescrape(
     await auditProduct(productId, { persist: true })
   } catch (err) {
     console.warn('[rescrape] quality audit failed:', err)
+  }
+
+  // Entity linking — auto-create brand stub + region/cultivar links. Volá se
+  // i tady (nejen ve feed-sync ensureProduct) aby pre-existing drafty bez
+  // brand_slug dohnaly přes pending-rescrape cron pass.
+  try {
+    const { data: nameRow } = await supabaseAdmin
+      .from('products')
+      .select('name, origin_country, origin_region, brand_slug')
+      .eq('id', productId)
+      .maybeSingle()
+    // Skip pokud už má brand_slug (ne-prepisujeme admin override)
+    if (nameRow && !nameRow.brand_slug) {
+      await linkAndRecomputeForProduct(
+        productId,
+        nameRow.name as string,
+        (nameRow.origin_country as string | null) ?? scraped.originCountry ?? null,
+        (nameRow.origin_region as string | null) ?? scraped.originRegion ?? null,
+        scraped.rawDescription ?? null
+      )
+    }
+  } catch (err) {
+    console.warn('[rescrape] entity linking failed:', err)
   }
 
   await revalidateProduct(productId)
