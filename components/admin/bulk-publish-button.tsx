@@ -5,6 +5,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AdminButton } from './admin-button'
 
 interface Props {
   endpoint: string  // např. '/api/admin/articles/bulk-publish'
@@ -42,14 +43,9 @@ export function BulkPublishButton({ endpoint, draftCount, entityLabel }: Props) 
 
   return (
     <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={publish}
-        disabled={busy}
-        className="bg-white border border-olive-border text-olive-dark hover:bg-olive-bg/40 rounded-full px-4 py-2 text-[13px] font-medium disabled:opacity-50 transition-colors"
-      >
+      <AdminButton variant="olive-outline" size="md" onClick={publish} disabled={busy}>
         {busy ? '⏳ Publikuji…' : `⚡ Publikovat všechny drafty (${draftCount})`}
-      </button>
+      </AdminButton>
       {feedback && (
         <span className={`text-[12px] ${feedback.ok ? 'text-olive-dark' : 'text-red-700'}`}>
           {feedback.msg}
