@@ -8,6 +8,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
+// 1h cache. Bez ní každý uživatel = full katalog ze Supabase. Filter probíhá
+// client-side podle localStorage IDs, takže fresh fetched stejně potřebujeme.
+export const revalidate = 3600
+
 export default async function OblibbenePage() {
   const products = await getProductsWithOffers()
 

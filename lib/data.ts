@@ -118,45 +118,72 @@ function mapRetailer(row: Record<string, unknown>): Retailer {
 
 // ── Public API ────────────────────────────────────────────────────────
 
+// Pole která public stránky reálně potřebují. Vyloučeno:
+//   - raw_description (HTML scrape, 5-50 KB/produkt — admin only)
+//   - extracted_facts (admin AI rewrite kontext)
+// Bez toho payload klesne z ~50 KB na ~5 KB per produkt = 10× méně egress.
+const PRODUCT_PUBLIC_COLUMNS =
+  'id, ean, name, slug, name_short, origin_country, origin_region, type, ' +
+  'acidity, polyphenols, oleocanthal, peroxide_value, oleic_acid_pct, ' +
+  'harvest_year, processing, flavor_profile, certifications, use_cases, ' +
+  'volume_ml, packaging, olivator_score, score_breakdown, ' +
+  'description_short, description_long, meta_title, meta_description, ' +
+  'status, image_url, image_source, source_url'
+
+// Subset pro listing karty (homepage, srovnavac, sidebar) — bez description_long
+// (zobrazuje se pouze na detail stránce). Ušetří ~10-20 KB / produkt × 71.
+const PRODUCT_LISTING_COLUMNS =
+  'id, ean, name, slug, name_short, origin_country, origin_region, type, ' +
+  'acidity, polyphenols, oleocanthal, ' +
+  'flavor_profile, certifications, use_cases, ' +
+  'volume_ml, olivator_score, image_url'
+
+// Retailer subset pro offers join — vyloučeno: story (long text), xml_feed_*
+const RETAILER_PUBLIC_COLUMNS =
+  'id, name, slug, domain, affiliate_network, default_commission_pct, ' +
+  'is_active, market, rating, rating_count, rating_source, ' +
+  'tagline, founders, headquarters, founded_year, specialization, logo_url'
+
 export async function getProducts(): Promise<Product[]> {
   const { data, error } = await supabaseAdmin
     .from('products')
-    .select('*')
+    .select(PRODUCT_PUBLIC_COLUMNS)
     .eq('status', 'active')
     .order('olivator_score', { ascending: false })
   if (error) throw error
-  return (data as ProductRow[]).map(mapProduct)
+  return (data as unknown as ProductRow[]).map(mapProduct)
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
+  // Detail page potřebuje extracted_facts pro „Klíčová fakta" sekci.
   const { data, error } = await supabaseAdmin
     .from('products')
-    .select('*')
+    .select(PRODUCT_PUBLIC_COLUMNS + ', extracted_facts')
     .eq('slug', slug)
     .maybeSingle()
   if (error) throw error
-  return data ? mapProduct(data as ProductRow) : null
+  return data ? mapProduct(data as unknown as ProductRow) : null
 }
 
 export async function getProductsByIds(ids: string[]): Promise<Product[]> {
   if (ids.length === 0) return []
   const { data, error } = await supabaseAdmin
     .from('products')
-    .select('*')
+    .select(PRODUCT_PUBLIC_COLUMNS)
     .in('id', ids)
   if (error) throw error
-  return (data as ProductRow[]).map(mapProduct)
+  return (data as unknown as ProductRow[]).map(mapProduct)
 }
 
 export async function getProductsBySlugs(slugs: string[]): Promise<Product[]> {
   if (slugs.length === 0) return []
   const { data, error } = await supabaseAdmin
     .from('products')
-    .select('*')
+    .select(PRODUCT_PUBLIC_COLUMNS)
     .in('slug', slugs)
   if (error) throw error
   // Preserve input order
-  const bySlug = new Map((data as ProductRow[]).map(r => [r.slug, mapProduct(r)]))
+  const bySlug = new Map((data as unknown as ProductRow[]).map(r => [r.slug, mapProduct(r)]))
   return slugs.map(s => bySlug.get(s)).filter((p): p is Product => !!p)
 }
 
@@ -168,7 +195,7 @@ export async function getProductsWithOffers(): Promise<Array<Product & { cheapes
 
   const { data, error } = await supabaseAdmin
     .from('product_offers')
-    .select('*, retailer:retailers(*)')
+    .select(`id, product_id, retailer_id, price, currency, in_stock, product_url, affiliate_url, commission_pct, retailer:retailers(${RETAILER_PUBLIC_COLUMNS})`)
     .in('product_id', ids)
     .order('price', { ascending: true })
   if (error) throw error
@@ -197,7 +224,7 @@ export async function getProductsWithOffers(): Promise<Array<Product & { cheapes
 export async function getOffersForProduct(productId: string): Promise<ProductOffer[]> {
   const { data, error } = await supabaseAdmin
     .from('product_offers')
-    .select('*, retailer:retailers(*)')
+    .select(`id, product_id, retailer_id, price, currency, in_stock, product_url, affiliate_url, commission_pct, retailer:retailers(${RETAILER_PUBLIC_COLUMNS})`)
     .eq('product_id', productId)
     .order('price', { ascending: true })
   if (error) throw error

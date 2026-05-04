@@ -22,6 +22,12 @@ export async function generateStaticParams() {
   return products.map(p => ({ slug: p.slug }))
 }
 
+// Detail produktu cache 1h. Každý request bez cache fetchoval product +
+// offers + gallery + facts + variants + entity links + retailer photos —
+// bot crawl 71 produktů × ~10 queries × ~50 KB = velký egress. ISR 1h
+// znamená 1× fetch per produkt per hodinu, pak cache hit.
+export const revalidate = 3600
+
 function trimMeta(text: string | null | undefined, max = 155): string {
   const clean = (text ?? '').replace(/\s+/g, ' ').trim()
   if (clean.length <= max) return clean
