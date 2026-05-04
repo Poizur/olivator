@@ -24,6 +24,7 @@ import {
   type HeurekaItem,
 } from './heureka-feed-parser'
 import { slugify } from './utils'
+import { runRescrape } from './product-rescrape'
 
 export interface FeedSyncResult {
   total: number
@@ -32,6 +33,8 @@ export interface FeedSyncResult {
   productsExisting: number  // matched přes EAN
   offersUpserted: number
   skipped: number
+  autoRescraped: number     // kolik nových draftů úspěšně proběhlo plnou pipeline
+  autoRescrapeFailed: number
   errors: { ean: string; name: string; reason: string }[]
   startedAt: string
   finishedAt: string
@@ -62,10 +65,17 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
     productsExisting: 0,
     offersUpserted: 0,
     skipped: 0,
+    autoRescraped: 0,
+    autoRescrapeFailed: 0,
     errors: [],
     startedAt,
     finishedAt: '',
   }
+
+  // Sbíráme ID nově vytvořených produktů — po offer upsert spustíme plnou
+  // rescrape pipeline (Playwright + AI fakta + flavor + lab scan + popisy +
+  // Score). Cíl: drafty přicházejí na admin schválení KOMPLETNĚ vyplněné.
+  const newDraftIds: string[] = []
 
   for (const item of oils) {
     // Cena je jediný hard requirement — bez ceny offer postrádá smysl.
@@ -105,8 +115,12 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
         continue
       }
 
-      if (created) result.productsCreated++
-      else result.productsExisting++
+      if (created) {
+        result.productsCreated++
+        newDraftIds.push(productId)
+      } else {
+        result.productsExisting++
+      }
 
       const inStock = item.deliveryDate === '0' || item.deliveryDate === ''
       const priceCzk = Math.round(item.priceVat * 100) / 100
@@ -144,6 +158,22 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
         reason: err instanceof Error ? err.message : String(err),
       })
       result.skipped++
+    }
+  }
+
+  // ── Auto-rescrape: pro každý nový draft pustíme plnou pipeline.
+  // 30-90s per produkt. Pokud feed-sync má 5 nových, +5-8 min. Hard
+  // timeout 15 min (cron killTimer) udělá průchod přes ~10 produktů.
+  // Errory per produkt jsou izolované — best effort. Cena má prioritu
+  // (offer už uložen výše); pokud rescrape failne, draft zůstává s
+  // minimálními daty a admin ho může rescrapovat ručně.
+  for (const newId of newDraftIds) {
+    try {
+      await runRescrape(newId)
+      result.autoRescraped++
+    } catch (err) {
+      result.autoRescrapeFailed++
+      console.warn(`[feed-sync] auto-rescrape failed for ${newId}:`, err)
     }
   }
 

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { getAllProductsAdmin } from '@/lib/data'
 import { typeLabel, extractBrand } from '@/lib/utils'
 import { calculateCompleteness, completenessColor } from '@/lib/completeness'
+import { BulkRescrapeButton } from './bulk-rescrape-button'
 
 function CompletenessBadge({ result }: { result: ReturnType<typeof calculateCompleteness> }) {
   const { bg, text } = completenessColor(result.weightedPercent)
@@ -112,6 +113,8 @@ export default async function AdminProductsPage({
     { value: 'excluded', label: `Vyřazené (${statusCounts.excluded})` },
   ]
 
+  const showBulkRescrape = status === 'draft' && statusCounts.draft > 0
+
   return (
     <div>
       <div className="flex items-end justify-between mb-6 flex-wrap gap-4">
@@ -128,6 +131,20 @@ export default async function AdminProductsPage({
           </Link>
         </div>
       </div>
+
+      {showBulkRescrape && (
+        <div className="bg-olive-bg/30 border border-olive-border rounded-xl p-4 mb-3 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex-1 min-w-0">
+            <div className="text-[13px] font-medium text-olive-dark">
+              ✨ Drafty čekají na zpracování
+            </div>
+            <p className="text-[12px] text-olive-dark/80 mt-0.5 leading-snug">
+              Spusť plnou AI pipeline (scrape + fakta + popisy + Score + galerie + lab scan) pro všechny — pak už jen zkontroluješ a publikuješ.
+            </p>
+          </div>
+          <BulkRescrapeButton draftCount={statusCounts.draft} />
+        </div>
+      )}
 
       {/* Status filter row */}
       <div className="mb-3">
