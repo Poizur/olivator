@@ -37,10 +37,10 @@ export default async function AdminArticlesPage() {
       {articles.length === 0 ? (
         <div className="bg-white border border-off2 rounded-xl p-10 text-center">
           <div className="text-3xl mb-3">📝</div>
-          <h2 className="text-[16px] font-medium text-text mb-1">Žádné články</h2>
+          <h2 className="text-[16px] font-medium text-text mb-1">Zatím žádné průvodce</h2>
           <p className="text-[13px] text-text3 mb-4 max-w-[400px] mx-auto">
-            Spusť SQL migraci <code className="bg-off rounded px-1">20260503_articles_db.sql</code>{' '}
-            nebo vytvoř článek ručně.
+            Klikni nahoře vpravo na <strong>+ Nový průvodce</strong> a začni psát.
+            Téma vyber podle plánu v CLAUDE.md sekci 17.
           </p>
         </div>
       ) : (

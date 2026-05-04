@@ -812,9 +812,18 @@ export async function runDiscoveryAgent(): Promise<DiscoveryRunResult> {
     const newUrls = cr.urls.filter(u => !seenUrls.has(u))
 
     let processedFromShop = 0
-    for (const url of newUrls) {
+    for (let urlIdx = 0; urlIdx < newUrls.length; urlIdx++) {
+      const url = newUrls[urlIdx]
       // Respect daily limit (across all shops)
       if (processedFromShop + result.newCandidates >= dailyLimit) break
+
+      // Polite delay 2-8s mezi produkty stejného shopu (CLAUDE.md sekce 14).
+      // Bez tohoto bychom v 1 minutě udělali 30+ Playwright requestů na stejný
+      // host = bot signal → IP block. Pro první URL skip, pak 2-8s random.
+      if (urlIdx > 0) {
+        const delayMs = 2000 + Math.floor(Math.random() * 6000)
+        await new Promise((r) => setTimeout(r, delayMs))
+      }
 
       try {
         const scraped = await scrapeProductPage(url)
