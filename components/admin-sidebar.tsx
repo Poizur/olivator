@@ -102,6 +102,7 @@ export async function AdminSidebar() {
       group: 'Obsah',
       items: [
         { href: '/admin/faq', label: 'FAQ' },
+        { href: '/admin/novinky', label: 'Novinky' },
         {
           href: '/admin/newsletter',
           label: 'Newsletter',
