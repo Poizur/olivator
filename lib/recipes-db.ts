@@ -197,24 +197,3 @@ export async function getRecipeBySlug(slug: string): Promise<RecipeFull | null> 
   }
 }
 
-/** Doporučené recepty pro region/cultivar — newsletter pickRecipe + entity stránky. */
-export async function getRecipesForEntity(
-  entityType: 'region' | 'cultivar',
-  entitySlug: string
-): Promise<RecipeSummary[]> {
-  try {
-    const column = entityType === 'region' ? 'recommended_regions' : 'recommended_cultivars'
-    const { data, error } = await supabaseAdmin
-      .from('recipes')
-      .select(
-        'slug, title, excerpt, emoji, read_time, hero_image_url, prep_time_min, servings, difficulty, cuisine, recommended_regions, recommended_cultivars, published_at'
-      )
-      .eq('status', 'active')
-      .contains(column, [entitySlug])
-      .order('published_at', { ascending: false, nullsFirst: false })
-    if (error) return []
-    return (data ?? []).map((r) => rowToSummary(r as Row))
-  } catch {
-    return []
-  }
-}

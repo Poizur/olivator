@@ -10,16 +10,26 @@
  */
 import { recomputeAllCultivars } from '@/lib/entity-aggregator'
 
+const MAX_RUNTIME_MS = 10 * 60 * 1000
+
 async function main() {
   const startedAt = Date.now()
   console.log('[cron:entity-aggregate] start', new Date().toISOString())
+
+  const killTimer = setTimeout(() => {
+    console.error('[cron:entity-aggregate] TIMEOUT — exceeded 10 min, forcing exit')
+    process.exit(2)
+  }, MAX_RUNTIME_MS)
+  killTimer.unref()
 
   try {
     const result = await recomputeAllCultivars()
     const elapsedSec = Math.round((Date.now() - startedAt) / 1000)
     console.log(`[cron:entity-aggregate] done in ${elapsedSec}s`, result)
+    clearTimeout(killTimer)
     process.exit(0)
   } catch (err) {
+    clearTimeout(killTimer)
     console.error('[cron:entity-aggregate] FAILED:', err)
     process.exit(1)
   }

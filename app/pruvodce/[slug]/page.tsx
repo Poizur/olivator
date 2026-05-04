@@ -9,7 +9,8 @@ import { getProductsWithOffers } from '@/lib/data'
 import { formatPrice } from '@/lib/utils'
 import { ProductImage } from '@/components/product-image'
 
-export const revalidate = 60
+// 60 → 3600 — viz pruvodce/page.tsx, stejný důvod.
+export const revalidate = 3600
 
 export function generateStaticParams() {
   return getArticles().filter((a) => a.category !== 'recept').map((a) => ({ slug: a.slug }))

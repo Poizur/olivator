@@ -7,9 +7,17 @@
 import { runManagerAgent } from '@/lib/manager-agent'
 import { sendManagerReport } from '@/lib/email'
 
+const MAX_RUNTIME_MS = 15 * 60 * 1000
+
 async function main() {
   const startedAt = Date.now()
   console.log('[cron:manager] start', new Date().toISOString())
+
+  const killTimer = setTimeout(() => {
+    console.error('[cron:manager] TIMEOUT — exceeded 15 min, forcing exit')
+    process.exit(2)
+  }, MAX_RUNTIME_MS)
+  killTimer.unref()
 
   try {
     const { reportId, report } = await runManagerAgent()
@@ -25,8 +33,10 @@ async function main() {
       console.warn('[cron:manager] email failed:', err)
     }
 
+    clearTimeout(killTimer)
     process.exit(0)
   } catch (err) {
+    clearTimeout(killTimer)
     console.error('[cron:manager] FAILED:', err)
     process.exit(1)
   }

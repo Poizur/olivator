@@ -9,9 +9,20 @@
 import { runDiscoveryAgent } from '@/lib/discovery-agent'
 import { sendDiscoverySummary } from '@/lib/email'
 
+// Discovery crawluje N shopů × Playwright na každém produktu (~30s).
+// Bez kill timeru může viset (TCP stall, infinite redirect, browser crash)
+// a blokovat další crony. 30 min hard limit.
+const MAX_RUNTIME_MS = 30 * 60 * 1000
+
 async function main() {
   const startedAt = Date.now()
   console.log('[cron:discovery] start', new Date().toISOString())
+
+  const killTimer = setTimeout(() => {
+    console.error('[cron:discovery] TIMEOUT — exceeded 30 min, forcing exit')
+    process.exit(2)
+  }, MAX_RUNTIME_MS)
+  killTimer.unref()
 
   try {
     const result = await runDiscoveryAgent()
@@ -33,8 +44,10 @@ async function main() {
       console.warn('[cron:discovery] email failed:', err)
     }
 
+    clearTimeout(killTimer)
     process.exit(0)
   } catch (err) {
+    clearTimeout(killTimer)
     console.error('[cron:discovery] FAILED:', err)
     process.exit(1)
   }

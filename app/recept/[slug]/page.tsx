@@ -11,7 +11,8 @@ type ProductWithOffers = Product & { cheapestOffer: ProductOffer | null }
 import { ArticleBody } from '@/components/article-body'
 import { ProductImage } from '@/components/product-image'
 
-export const revalidate = 60
+// 60 → 3600 — viz recept/page.tsx.
+export const revalidate = 3600
 
 const CUISINE_LABEL: Record<string, string> = {
   italian: 'italská',
