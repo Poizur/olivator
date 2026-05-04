@@ -127,6 +127,7 @@ export async function AdminSidebar() {
       group: 'Systém',
       items: [
         { href: '/admin/nastaveni', label: 'Nastavení' },
+        { href: '/admin/learnings', label: 'Learnings' },
       ],
     },
   ]
