@@ -1,15 +1,16 @@
-// Public Radar stránka — feed novinek o olivovém oleji ze světového tisku.
-// Cron 1× za 2 hodiny aktualizuje radar_items. Stránka cachuje 2h.
+// Public stránka Novinky — feed novinek o olivovém oleji ze světového tisku.
+// Cron 1× za 2 hodiny aktualizuje radar_items (interní název tabulky).
+// Stránka cachuje 2h.
 
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
 
 export const metadata: Metadata = {
-  title: 'Radar — svět olivového oleje | Olivátor',
+  title: 'Novinky ze světa olivového oleje | Olivátor',
   description:
     'Sklizně, ceny, ocenění. Aktuální zprávy ze světového tisku o olivovém oleji, přeložené do češtiny. Aktualizováno každé 2 hodiny.',
-  alternates: { canonical: 'https://olivator.cz/radar' },
+  alternates: { canonical: 'https://olivator.cz/novinky' },
 }
 
 // Cron běží každé 2h, page revalidate 2h = po každé runu se zobrazí nové
@@ -33,7 +34,7 @@ const SOURCE_LABEL: Record<string, string> = {
   googlenews_cz:    'Google News (CZ)',
 }
 
-interface RadarItemRow {
+interface NewsItemRow {
   id: string
   source: string | null
   original_url: string | null
@@ -58,7 +59,7 @@ function formatRelativeTime(iso: string | null): string {
   return d.toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' })
 }
 
-export default async function RadarPage() {
+export default async function NovinkyPage() {
   const { data, error } = await supabaseAdmin
     .from('radar_items')
     .select('id, source, original_url, czech_title, czech_summary, cz_context, badge, published_at')
@@ -67,22 +68,22 @@ export default async function RadarPage() {
     .limit(50)
 
   if (error) {
-    console.error('[radar/page] query failed:', error.message)
+    console.error('[novinky/page] query failed:', error.message)
   }
 
-  const items = (data ?? []) as RadarItemRow[]
+  const items = (data ?? []) as NewsItemRow[]
 
   return (
     <div className="max-w-[760px] mx-auto px-6 md:px-10 py-12">
       <div className="text-xs text-text3 mb-4">
         <Link href="/" className="text-olive">Olivátor</Link>
         {' › '}
-        Radar
+        Novinky
       </div>
 
       <div className="mb-10">
         <h1 className="font-[family-name:var(--font-display)] text-4xl md:text-5xl font-normal text-text mb-3 leading-tight">
-          📡 Radar — svět olivového oleje
+          📡 Novinky ze světa olivového oleje
         </h1>
         <p className="text-[15px] text-text2 leading-relaxed">
           Sklizně, ceny, ocenění a věda. Vybíráme zprávy ze světového tisku co reálně
@@ -94,9 +95,9 @@ export default async function RadarPage() {
       {items.length === 0 ? (
         <div className="bg-off/40 border border-off2 rounded-xl p-10 text-center">
           <div className="text-3xl mb-3">📡</div>
-          <h2 className="text-[16px] font-medium text-text mb-1">Žádné zprávy</h2>
+          <h2 className="text-[16px] font-medium text-text mb-1">Zatím žádné novinky</h2>
           <p className="text-[13px] text-text3">
-            Sběr právě začíná. Přijď za pár hodin — radar pravidelně skenuje světový tisk.
+            Sběr právě začíná. Přijď za pár hodin — pravidelně skenujeme světový tisk.
           </p>
         </div>
       ) : (
@@ -152,7 +153,7 @@ export default async function RadarPage() {
 
       <div className="mt-12 pt-6 border-t border-off">
         <p className="text-[12px] text-text3 leading-relaxed">
-          Radar funguje na bázi RSS scanneru — fetchne novinky ze světových odborných
+          Stránka funguje na bázi RSS scanneru — fetchne novinky ze světových odborných
           médií, deduplikuje (fingerprint hash + AI judge), přeloží do češtiny přes
           Claude AI a publikuje. Jen zprávy s konkrétním dopadem (sklizeň, ceny, ocenění,
           regulace) — žádný marketing.
