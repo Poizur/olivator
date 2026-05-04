@@ -15,7 +15,6 @@ import { FlavorSelector } from '@/components/flavor-selector'
 import { RegionAtlas } from '@/components/region-atlas'
 import { BrandStrip } from '@/components/brand-strip'
 import { ComparatorTeaser, type Duel } from '@/components/comparator-teaser'
-import { MarketPricesWidget } from '@/components/market-prices-widget'
 import { countryName, countryFlag, formatPrice, formatPricePer100ml } from '@/lib/utils'
 import { computeBadges, pickByCategory, type ProductBadge } from '@/lib/product-badges'
 import type { Product, ProductOffer } from '@/lib/types'
@@ -139,9 +138,6 @@ export default async function Home() {
         totalProducts={stats.totalProducts}
         totalRetailers={stats.activeRetailers}
       />
-
-      {/* ─── CENOVÝ WIDGET — IOC velkoobchodní ceny EVOO ────────── */}
-      <MarketPricesWidget />
 
       {/* ─── TOP 12 OLEJŮ TÉTO CHVÍLE ────────────────────────────── */}
       <section className="px-6 md:px-10 py-16">
