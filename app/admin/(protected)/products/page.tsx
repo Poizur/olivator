@@ -238,6 +238,25 @@ export default async function AdminProductsPage({
                   <div className="text-xs text-text3">
                     {p.originRegion}{p.volumeMl ? ` · ${p.volumeMl} ml` : ''}
                   </div>
+                  {(p.status === 'inactive' || p.status === 'excluded') && (p.statusReasonCode || p.statusReasonNote) && (
+                    <div className={`mt-1 inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded ${p.status === 'excluded' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-800'}`}>
+                      <span>{p.statusChangedBy === 'auto' ? '🤖' : '👤'}</span>
+                      <span>
+                        {p.statusReasonCode === 'url_404' && 'URL nedostupné'}
+                        {p.statusReasonCode === 'out_of_stock' && 'Vyprodáno'}
+                        {p.statusReasonCode === 'duplicate' && 'Duplikát'}
+                        {p.statusReasonCode === 'low_quality' && 'Málo dat'}
+                        {p.statusReasonCode === 'wrong_category' && 'Špatná kategorie'}
+                        {p.statusReasonCode === 'price_anomaly' && 'Cenová anomálie'}
+                        {p.statusReasonCode === 'not_interesting' && 'Mimo fokus'}
+                        {p.statusReasonCode === 'custom' && (p.statusReasonNote ?? 'Vlastní')}
+                        {!p.statusReasonCode && p.statusReasonNote}
+                      </span>
+                      {p.statusReasonNote && p.statusReasonCode && p.statusReasonCode !== 'custom' && (
+                        <span className="opacity-70">· {p.statusReasonNote}</span>
+                      )}
+                    </div>
+                  )}
                 </td>
                 <td className="px-3 py-3 text-xs text-text2">
                   {extractBrand(p.name)}

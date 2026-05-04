@@ -77,6 +77,10 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
           productId={id}
           currentStatus={status}
           publicUrl={publicUrl}
+          statusReasonCode={(productRow.status_reason_code as string | null) ?? null}
+          statusReasonNote={(productRow.status_reason_note as string | null) ?? null}
+          statusChangedBy={(productRow.status_changed_by as 'admin' | 'auto' | null) ?? null}
+          statusChangedAt={(productRow.status_changed_at as string | null) ?? null}
         />
       </div>
 

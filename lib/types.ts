@@ -34,6 +34,11 @@ export interface Product {
   metaTitle: string | null         // SEO <title>; null falls back to generated
   metaDescription: string | null   // SEO meta description (130-160 chars); null falls back
   status: 'draft' | 'active' | 'inactive' | 'excluded'
+  // Audit stopa pro inactive / excluded — proč a kdo. Active / draft typicky null.
+  statusReasonCode: string | null     // 'url_404' | 'out_of_stock' | 'duplicate' | …
+  statusReasonNote: string | null     // free text (admin custom nebo detail)
+  statusChangedBy: 'admin' | 'auto' | null
+  statusChangedAt: string | null      // ISO timestamp
   imageUrl?: string | null
   imageSource?: string | null
   extractedFacts?: ExtractedFact[]

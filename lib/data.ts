@@ -33,6 +33,10 @@ interface ProductRow {
   meta_title: string | null
   meta_description: string | null
   status: string
+  status_reason_code: string | null
+  status_reason_note: string | null
+  status_changed_by: string | null
+  status_changed_at: string | null
   image_url: string | null
   image_source: string | null
   extracted_facts: unknown
@@ -82,6 +86,10 @@ function mapProduct(row: ProductRow): Product {
     metaTitle: row.meta_title ?? null,
     metaDescription: row.meta_description ?? null,
     status: row.status as Product['status'],
+    statusReasonCode: row.status_reason_code ?? null,
+    statusReasonNote: row.status_reason_note ?? null,
+    statusChangedBy: (row.status_changed_by as 'admin' | 'auto' | null) ?? null,
+    statusChangedAt: row.status_changed_at ?? null,
     imageUrl: row.image_url ?? null,
     imageSource: row.image_source ?? null,
     extractedFacts: Array.isArray(row.extracted_facts)
@@ -121,6 +129,7 @@ function mapRetailer(row: Record<string, unknown>): Retailer {
 // Pole která public stránky reálně potřebují. Vyloučeno:
 //   - raw_description (HTML scrape, 5-50 KB/produkt — admin only)
 //   - extracted_facts (admin AI rewrite kontext)
+//   - status_reason_* (admin audit, public stránky to nezobrazují)
 // Bez toho payload klesne z ~50 KB na ~5 KB per produkt = 10× méně egress.
 const PRODUCT_PUBLIC_COLUMNS =
   'id, ean, name, slug, name_short, origin_country, origin_region, type, ' +

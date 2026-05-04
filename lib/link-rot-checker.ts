@@ -182,13 +182,28 @@ export async function runLinkRotCheck(): Promise<LinkCheckResult> {
     if (!hasLive && prod.status === 'active') {
       await supabaseAdmin
         .from('products')
-        .update({ status: 'inactive', updated_at: new Date().toISOString() })
+        .update({
+          status: 'inactive',
+          status_reason_code: 'url_404',
+          status_reason_note: 'Všechny URL prodejců jsou nedostupné (404 / mrtvé). Auto-detekoval link-rot-checker.',
+          status_changed_by: 'auto',
+          status_changed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', productId)
       result.productsDeactivated++
     } else if (hasLive && prod.status === 'inactive') {
+      // Reaktivace — vyčistíme reason (URL zase fungují, audit log už neplatí).
       await supabaseAdmin
         .from('products')
-        .update({ status: 'active', updated_at: new Date().toISOString() })
+        .update({
+          status: 'active',
+          status_reason_code: null,
+          status_reason_note: null,
+          status_changed_by: 'auto',
+          status_changed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', productId)
       result.productsReactivated++
     }
