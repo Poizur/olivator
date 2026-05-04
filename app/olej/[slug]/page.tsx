@@ -88,10 +88,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     getVariantProducts(product.id),
     getProducts(),
     getProductEntityLinks(product.id, brandSlug, regionSlug),
-    // Price history: nejnižší cena ze všech prodejců za každý den (posledních 60 dní)
+    // Price history: nejnižší cena ze všech prodejců za každý den.
+    // Server fetchne max 365 dní jednou; klient pak přepíná 30 / 90 / Vše.
     (async () => {
       const { supabaseAdmin } = await import('@/lib/supabase')
-      const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()
+      const since = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString()
       const { data } = await supabaseAdmin
         .from('price_history')
         .select('price, recorded_at')
