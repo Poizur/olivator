@@ -4,6 +4,7 @@
 import Link from 'next/link'
 import { getAllRecipes } from '@/lib/recipes-db'
 import { CreateRecipeButton } from './create-recipe-button'
+import { BulkPublishButton } from '@/components/admin/bulk-publish-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,13 +38,18 @@ export default async function AdminRecipesPage() {
             {archived.length > 0 && <> · {archived.length} archivovaných</>}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Link
             href="/admin/newsletter/legend"
             className="text-[12px] text-text3 hover:text-olive"
           >
             Jak fungují AI návrhy →
           </Link>
+          <BulkPublishButton
+            endpoint="/api/admin/recipes/bulk-publish"
+            draftCount={drafts.filter((d) => d.bodyMarkdown && d.bodyMarkdown.trim().length > 0).length}
+            entityLabel="receptů"
+          />
           <CreateRecipeButton />
         </div>
       </div>

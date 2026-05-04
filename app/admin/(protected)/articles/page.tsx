@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { getAllArticles } from '@/lib/articles-db'
 import { CreateArticleButton } from './create-article-button'
+import { BulkPublishButton } from '@/components/admin/bulk-publish-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,7 +32,14 @@ export default async function AdminArticlesPage() {
             {archived.length > 0 && <> · {archived.length} archivovaných</>}
           </p>
         </div>
-        <CreateArticleButton />
+        <div className="flex items-center gap-2 flex-wrap">
+          <BulkPublishButton
+            endpoint="/api/admin/articles/bulk-publish"
+            draftCount={drafts.filter((d) => d.bodyMarkdown && d.bodyMarkdown.trim().length > 0).length}
+            entityLabel="průvodců"
+          />
+          <CreateArticleButton />
+        </div>
       </div>
 
       {articles.length === 0 ? (
