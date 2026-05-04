@@ -35,6 +35,9 @@ async function main() {
       totalProductsCreated: result.totalProductsCreated,
       totalOffersUpserted: result.totalOffersUpserted,
       totalSkipped: result.totalSkipped,
+      retailersAutoResearched: result.retailersAutoResearched,
+      pendingDraftsRescraped: result.pendingDraftsRescraped,
+      pendingDraftsFailed: result.pendingDraftsFailed,
     })
     process.exit(0)
   } catch (err) {
