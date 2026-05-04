@@ -12,10 +12,13 @@ interface StatusActionsProps {
 
 export function StatusActions({ productId, currentStatus, publicUrl }: StatusActionsProps) {
   const router = useRouter()
-  const [busy, setBusy] = useState<'publish' | 'unpublish' | null>(null)
+  const [busy, setBusy] = useState<'publish' | 'unpublish' | 'exclude' | 'restore' | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  async function changeStatus(newStatus: 'active' | 'draft' | 'inactive', actionLabel: 'publish' | 'unpublish') {
+  async function changeStatus(
+    newStatus: 'active' | 'draft' | 'inactive' | 'excluded',
+    actionLabel: 'publish' | 'unpublish' | 'exclude' | 'restore'
+  ) {
     setBusy(actionLabel)
     setError(null)
     try {
@@ -65,6 +68,14 @@ export function StatusActions({ productId, currentStatus, publicUrl }: StatusAct
         <span className="inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 border border-terra/30 rounded-full px-4 py-2.5 text-sm font-medium">
           <span className="w-2 h-2 rounded-full bg-terra"></span>
           Draft
+        </span>
+      )
+    }
+    if (currentStatus === 'excluded') {
+      return (
+        <span className="inline-flex items-center gap-1.5 bg-red-50 text-red-700 border border-red-200 rounded-full px-4 py-2.5 text-sm font-medium">
+          <span className="w-2 h-2 rounded-full bg-red-700"></span>
+          Vyřazeno (sync skip)
         </span>
       )
     }
@@ -145,15 +156,47 @@ export function StatusActions({ productId, currentStatus, publicUrl }: StatusAct
         ← Zpět
       </Link>
 
-      {/* Delete — destructive, isolated visually with red hover */}
+      {/* Vyřadit — soft delete, blokuje feed-sync re-import */}
+      {currentStatus !== 'excluded' && (
+        <button
+          type="button"
+          onClick={() => {
+            if (!confirm('Vyřadit produkt ze syncu?\n\nProdukt zmizí z webu A nebude se znovu přidávat z XML feedu (i kdyby ho eshop dál nabízel). Záznam zůstává v DB — můžeš se k němu vrátit kdykoliv ze záložky „Vyřazené".')) return
+            void changeStatus('excluded', 'exclude')
+          }}
+          disabled={busy !== null}
+          className="inline-flex items-center gap-2 bg-white border border-off2 text-text3 rounded-full px-4 py-2.5 text-sm font-medium hover:border-red-300 hover:text-red-700 hover:bg-red-50 disabled:opacity-40 transition-colors"
+          title="Vyřadit ze syncu — nepřidá se zpět z feedu"
+        >
+          {busy === 'exclude' ? '⏳ Vyřazuji...' : '🚫 Vyřadit ze syncu'}
+        </button>
+      )}
+
+      {/* Restore — vrátit z blocklistu zpět do draftů */}
+      {currentStatus === 'excluded' && (
+        <button
+          type="button"
+          onClick={() => {
+            if (!confirm('Vrátit produkt do draftů?\n\nProdukt opět začne dostávat aktualizace cen z XML feedu. Status se nastaví na „Draft" — pak ho můžeš publikovat tlačítkem ⚡ Publikovat.')) return
+            void changeStatus('draft', 'restore')
+          }}
+          disabled={busy !== null}
+          className="inline-flex items-center gap-2 bg-white border border-amber-300 text-amber-700 rounded-full px-4 py-2.5 text-sm font-medium hover:border-amber-500 hover:bg-amber-50 disabled:opacity-40 transition-colors"
+          title="Vrátit z blocklistu zpět do draftů"
+        >
+          {busy === 'restore' ? '⏳ Vracím...' : '↺ Vrátit do draftů'}
+        </button>
+      )}
+
+      {/* Trvalé smazání — destrutivní, izolovaně červené */}
       <button
         type="button"
         onClick={deleteProduct}
         disabled={busy !== null}
         className="inline-flex items-center gap-2 bg-white border border-off2 text-text3 rounded-full px-4 py-2.5 text-sm font-medium hover:border-red-300 hover:text-red-700 hover:bg-red-50 disabled:opacity-40 transition-colors"
-        title="Smazat produkt navždy z databáze"
+        title="Trvale smazat (pozor: pokud je v aktivním feedu, sync ho přidá zpět)"
       >
-        🗑 Smazat
+        🗑 Smazat trvale
       </button>
 
       {error && (

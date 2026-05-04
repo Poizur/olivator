@@ -33,7 +33,7 @@ export interface Product {
   descriptionLong: string
   metaTitle: string | null         // SEO <title>; null falls back to generated
   metaDescription: string | null   // SEO meta description (130-160 chars); null falls back
-  status: 'draft' | 'active' | 'inactive'
+  status: 'draft' | 'active' | 'inactive' | 'excluded'
   imageUrl?: string | null
   imageSource?: string | null
   extractedFacts?: ExtractedFact[]

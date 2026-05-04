@@ -33,6 +33,13 @@ function StatusBadge({ status }: { status: string }) {
       </span>
     )
   }
+  if (status === 'excluded') {
+    return (
+      <span className="text-[11px] bg-red-50 text-red-700 px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block">
+        🚫 vyřazený
+      </span>
+    )
+  }
   return (
     <span className="text-[11px] bg-off text-text3 px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block">
       ○ neaktivní
@@ -68,6 +75,7 @@ export default async function AdminProductsPage({
     active: allProducts.filter(p => p.status === 'active').length,
     draft: allProducts.filter(p => p.status === 'draft').length,
     inactive: allProducts.filter(p => p.status === 'inactive').length,
+    excluded: allProducts.filter(p => p.status === 'excluded').length,
   }
 
   // Brand list with counts (respecting current status filter)
@@ -101,6 +109,7 @@ export default async function AdminProductsPage({
     { value: 'active', label: `Aktivní (${statusCounts.active})` },
     { value: 'draft', label: `Drafty (${statusCounts.draft})` },
     { value: 'inactive', label: `Neaktivní (${statusCounts.inactive})` },
+    { value: 'excluded', label: `Vyřazené (${statusCounts.excluded})` },
   ]
 
   return (

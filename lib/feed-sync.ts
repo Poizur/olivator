@@ -91,7 +91,20 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
     }
 
     try {
-      const { productId, created } = await ensureProduct(item)
+      const { productId, created, excluded } = await ensureProduct(item)
+
+      // Blocklist: admin tento produkt vyřadil → nedělej upsert offer ani
+      // price_history. Záznam zůstává, ale sync ho neaktualizuje.
+      if (excluded) {
+        result.errors.push({
+          ean: item.ean || '(prázdný)',
+          name: item.productName,
+          reason: 'Produkt na blocklistu (status=excluded)',
+        })
+        result.skipped++
+        continue
+      }
+
       if (created) result.productsCreated++
       else result.productsExisting++
 
@@ -149,7 +162,7 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
 
 async function ensureProduct(
   item: HeurekaItem
-): Promise<{ productId: string; created: boolean }> {
+): Promise<{ productId: string; created: boolean; excluded?: boolean }> {
   // 1) Match přes EAN — jen když je validní GTIN-13 / UPC-A. Shop-internal
   //    placeholdery (7777770000xxx) ukládáme jako null, dedupujeme přes URL.
   const normalizedEan = normalizeEan(item.ean)
@@ -158,11 +171,17 @@ async function ensureProduct(
   if (validEan) {
     const { data: existing, error: queryErr } = await supabaseAdmin
       .from('products')
-      .select('id')
+      .select('id, status')
       .eq('ean', validEan)
       .maybeSingle()
     if (queryErr) throw new Error(`Product query (EAN): ${queryErr.message}`)
-    if (existing) return { productId: existing.id as string, created: false }
+    if (existing) {
+      return {
+        productId: existing.id as string,
+        created: false,
+        excluded: (existing.status as string) === 'excluded',
+      }
+    }
   }
 
   // 2) Fallback match přes source_url — funguje pro farmářské / shop-internal
@@ -170,11 +189,17 @@ async function ensureProduct(
   //    je per-product unique.
   const { data: byUrl, error: urlErr } = await supabaseAdmin
     .from('products')
-    .select('id')
+    .select('id, status')
     .eq('source_url', item.url)
     .maybeSingle()
   if (urlErr) throw new Error(`Product query (URL): ${urlErr.message}`)
-  if (byUrl) return { productId: byUrl.id as string, created: false }
+  if (byUrl) {
+    return {
+      productId: byUrl.id as string,
+      created: false,
+      excluded: (byUrl.status as string) === 'excluded',
+    }
+  }
 
   // 3) Vytvoř nový draft produkt. EAN ukládáme jen pokud je validní —
   //    placeholder 7777xxx by mohl kolizovat napříč shopy.
@@ -201,7 +226,7 @@ async function ensureProduct(
     .single()
   if (insertErr) throw new Error(`Product insert: ${insertErr.message}`)
 
-  return { productId: newProduct.id as string, created: true }
+  return { productId: newProduct.id as string, created: true, excluded: false }
 }
 
 async function uniqueSlug(baseSlug: string, attempt = 0): Promise<string> {
