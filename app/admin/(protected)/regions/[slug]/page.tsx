@@ -135,7 +135,7 @@ export default async function EditRegionPage({ params }: { params: Promise<{ slu
           icon="🖼️"
           title="Fotky"
           publicLocation="Hero karta · Editorial story · Terroir sloupce · Galerie atmosféra"
-          description="Pořadí: 1. fotka = hero, 2-N = editorial sekce, další = terroir hlavičky, zbytek = galerie. Drag pro řazení (TODO)."
+          description="Pořadí: 1. fotka = hero, 2-N = editorial sekce, další = terroir hlavičky, zbytek = galerie. Pořadí lze upravit ve formuláři níže."
         >
           <EntityPhotosManager
             entityId={region.id}

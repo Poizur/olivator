@@ -549,6 +549,42 @@ data, discovery upsertne offer. Žádná regrese.
 v admin UI. `cron:feed-sync` se postará. V `discovery_sources` shop
 disabuj (signál v adminu, že XML to řeší).
 
+### Cron přehled (kompletní seznam)
+
+| Skript | API endpoint | Schedule (UTC) | Strategie |
+|---|---|---|---|
+| `cron:entity-aggregate` | `/api/cron/entity-aggregate` | `0 3 * * *` | recompute cultivar agregátů |
+| `cron:feed-sync` | `/api/cron/feed-sync` | `0 4 * * *` | XML retaileři + auto-research + pending rescrape + brand backfill |
+| `cron:discovery` | `/api/cron/discovery` | `30 4 * * *` | Playwright crawl pro shopy bez XML feedu |
+| `cron:prospect` | `/api/cron/prospect` | `0 5 * * *` | hledá nové eshopy |
+| `cron:link-check` | `/api/cron/link-check` | `0 6 * * *` | mrtvé affiliate URL → status='inactive' |
+| `cron:manager` | `/api/cron/manager` | `0 5 * * 1` | týdenní strategický report |
+| — | `/api/cron/newsletter-generate` | středa 18:00 UTC | (Newsletter generation, Fáze 2) |
+| — | `/api/cron/newsletter-send` | čtvrtek 8:00 UTC | (Newsletter send) |
+| — | `/api/cron/price-alerts` | denně 9:00 UTC | (Price drop notifications) |
+
+**Strategie**: Railway cron services volají `npm run cron:{name}` (script
+varianta s kill timery). API routes existují jako fallback / manuální trigger
+přes HTTP (autorizované přes `x-cron-secret` header). Newsletter + price-alerts
+mají jen API (admin spouští z dashboardu nebo plánuje přes externí cron).
+
+### DB transakce (Lesson learned)
+
+Supabase JS klient **nemá** standardní `BEGIN/COMMIT` transakce. Atomic
+operace přes 2+ tabulky řešíme:
+
+1. **Idempotentní upsert pattern** — `onConflict` zajistí že 2× spuštění
+   skončí stejně. Použito v `lib/feed-sync.ts` pro offers + price_history.
+2. **CASCADE foreign keys** — DELETE products kaskáduje do product_offers,
+   product_images. Žádný orphan cleanup nepotřeba.
+3. **Idempotent dedup** — match přes EAN nebo source_url v ensureProduct
+   před insertem. Re-run nepřidá duplikát.
+4. **Backfill passes** — pokud krok 2 v sekvenci selže (insert OK ale
+   linkAndRecomputeForProduct ne), backfill cron pas 4 to dohraje.
+
+Pro skutečné transakce (pokud bude potřeba): Supabase RPC s PL/pgSQL
+funkcí. Zatím nepoužíváme — komplexita > value.
+
 ### Editorial fotky (průvodce, recepty, články)
 **Unsplash API** — již napojeno z only5l projektu. Přidat klíč do env.
 
