@@ -3,6 +3,8 @@ import { getAllProductsAdmin } from '@/lib/data'
 import { typeLabel, extractBrand } from '@/lib/utils'
 import { calculateCompleteness, completenessColor } from '@/lib/completeness'
 import { BulkRescrapeButton } from './bulk-rescrape-button'
+import { StatusBadge as SharedStatusBadge } from '@/components/admin/status-badge'
+import { StatusFilters } from '@/components/admin/status-filters'
 
 function CompletenessBadge({ result }: { result: ReturnType<typeof calculateCompleteness> }) {
   const { bg, text } = completenessColor(result.weightedPercent)
@@ -19,34 +21,8 @@ function CompletenessBadge({ result }: { result: ReturnType<typeof calculateComp
   )
 }
 
-function StatusBadge({ status }: { status: string }) {
-  if (status === 'active') {
-    return (
-      <span className="text-[11px] bg-olive-bg text-olive-dark px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block">
-        ● aktivní
-      </span>
-    )
-  }
-  if (status === 'draft') {
-    return (
-      <span className="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block">
-        ○ draft
-      </span>
-    )
-  }
-  if (status === 'excluded') {
-    return (
-      <span className="text-[11px] bg-red-50 text-red-700 px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block">
-        🚫 vyřazený
-      </span>
-    )
-  }
-  return (
-    <span className="text-[11px] bg-off text-text3 px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block">
-      ○ neaktivní
-    </span>
-  )
-}
+// Re-export shared component pod stejným jménem aby zbytek souboru fungoval beze změn
+const StatusBadge = SharedStatusBadge
 
 export default async function AdminProductsPage({
   searchParams,
@@ -90,13 +66,6 @@ export default async function AdminProductsPage({
   }
   const brands = [...brandCounts.entries()].sort((a, b) => b[1] - a[1])
 
-  function statusHref(value?: string) {
-    const p = new URLSearchParams()
-    if (value) p.set('status', value)
-    if (brand) p.set('brand', brand)
-    const qs = p.toString()
-    return qs ? `/admin/products?${qs}` : '/admin/products'
-  }
   function brandHref(value?: string) {
     const p = new URLSearchParams()
     if (status) p.set('status', status)
@@ -104,14 +73,6 @@ export default async function AdminProductsPage({
     const qs = p.toString()
     return qs ? `/admin/products?${qs}` : '/admin/products'
   }
-
-  const statusFilters = [
-    { value: undefined, label: `Vše (${statusCounts.all})` },
-    { value: 'active', label: `Aktivní (${statusCounts.active})` },
-    { value: 'draft', label: `Drafty (${statusCounts.draft})` },
-    { value: 'inactive', label: `Neaktivní (${statusCounts.inactive})` },
-    { value: 'excluded', label: `Vyřazené (${statusCounts.excluded})` },
-  ]
 
   const showBulkRescrape = status === 'draft' && statusCounts.draft > 0
 
@@ -146,28 +107,18 @@ export default async function AdminProductsPage({
         </div>
       )}
 
-      {/* Status filter row */}
-      <div className="mb-3">
-        <div className="text-[11px] font-semibold tracking-wider uppercase text-text3 mb-1.5">Stav</div>
-        <div className="flex gap-2 flex-wrap">
-          {statusFilters.map(f => {
-            const active = status === f.value || (!status && !f.value)
-            return (
-              <Link
-                key={f.label}
-                href={statusHref(f.value)}
-                className={`text-[13px] px-3 py-1.5 rounded-full transition-colors ${
-                  active
-                    ? 'bg-olive text-white'
-                    : 'bg-white border border-off2 text-text2 hover:border-olive3 hover:text-olive'
-                }`}
-              >
-                {f.label}
-              </Link>
-            )
-          })}
-        </div>
-      </div>
+      <StatusFilters
+        active={status}
+        basePath="/admin/products"
+        preserveQuery={{ brand }}
+        options={[
+          { value: undefined, label: 'Vše', count: statusCounts.all },
+          { value: 'active', label: 'Aktivní', count: statusCounts.active },
+          { value: 'draft', label: 'Drafty', count: statusCounts.draft },
+          { value: 'inactive', label: 'Neaktivní', count: statusCounts.inactive },
+          { value: 'excluded', label: 'Vyřazené', count: statusCounts.excluded },
+        ]}
+      />
 
       {/* Brand filter row */}
       <div className="mb-5">

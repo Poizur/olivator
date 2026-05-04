@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
 import { RegenerateAllButton } from '@/components/regenerate-all-button'
+import { StatusBadge } from '@/components/admin/status-badge'
+import { StatusFilters } from '@/components/admin/status-filters'
 
 async function getBrands() {
   const { data } = await supabaseAdmin
@@ -22,21 +24,21 @@ async function getProductCountsByBrand(): Promise<Record<string, number>> {
   return counts
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    active: 'bg-olive-bg text-olive-dark',
-    draft: 'bg-amber-50 text-amber-700',
-    inactive: 'bg-off text-text3',
-  }
-  return (
-    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${styles[status] ?? styles.inactive}`}>
-      {status}
-    </span>
-  )
-}
-
-export default async function AdminBrandsPage() {
+export default async function AdminBrandsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>
+}) {
+  const { status } = await searchParams
   const [brands, productCounts] = await Promise.all([getBrands(), getProductCountsByBrand()])
+
+  const filtered = status ? brands.filter((b) => b.status === status) : brands
+  const counts = {
+    all: brands.length,
+    active: brands.filter((b) => b.status === 'active').length,
+    draft: brands.filter((b) => b.status === 'draft').length,
+    inactive: brands.filter((b) => b.status === 'inactive').length,
+  }
 
   return (
     <div>
@@ -53,8 +55,19 @@ export default async function AdminBrandsPage() {
         />
       </div>
 
+      <StatusFilters
+        active={status}
+        basePath="/admin/brands"
+        options={[
+          { value: undefined, label: 'Vše', count: counts.all },
+          { value: 'active', label: 'Aktivní', count: counts.active },
+          { value: 'draft', label: 'Drafty', count: counts.draft },
+          { value: 'inactive', label: 'Neaktivní', count: counts.inactive },
+        ]}
+      />
+
       <div className="bg-white border border-off2 rounded-xl divide-y divide-off2">
-        {brands.map((b) => (
+        {filtered.map((b) => (
           <div key={b.slug} className="flex items-center gap-4 px-5 py-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
