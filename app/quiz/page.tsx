@@ -8,6 +8,10 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://olivator.cz/quiz' },
 }
 
+// Quiz produkty cache 1h — kvíz logika je client-side, fresh data každou
+// hodinu stačí. Bez tohoto každý bot request → fetch všech produktů + offers.
+export const revalidate = 3600
+
 export default async function QuizPage() {
   const products = await getProductsWithOffers()
 

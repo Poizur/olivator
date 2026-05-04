@@ -7,7 +7,10 @@ export const metadata = {
   description: 'Články, návody a srovnání — vše co potřebujete vědět o olivových olejích.',
 }
 
-export const revalidate = 60
+// 60 → 3600 (1h). Boti crawlovali listing každou minutu = 1440 cache misses/den
+// × ~150 KB getProductsWithOffers JSON ≈ 210 MB/den jen z této stránky.
+// Průvodce se nemění během dne (admin schvaluje drafty), 1h je bezpečné.
+export const revalidate = 3600
 
 const CATEGORY_LABEL: Record<string, string> = {
   pruvodce: 'Průvodce',

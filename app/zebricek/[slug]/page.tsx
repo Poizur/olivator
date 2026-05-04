@@ -8,6 +8,10 @@ export function generateStaticParams() {
   return getRankings().map(r => ({ slug: r.slug }))
 }
 
+// 1h cache — žebříčky se mění málo, ale getProductsBySlugs + N× getCheapestOffer
+// per page byl volán každý request. 1h cache = N× méně Supabase queries.
+export const revalidate = 3600
+
 export default async function RankingDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const ranking = getRankingBySlug(slug)

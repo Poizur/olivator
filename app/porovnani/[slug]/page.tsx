@@ -8,6 +8,9 @@ interface RouteParams {
   slug: string
 }
 
+// 1h cache — viz porovnani/page.tsx.
+export const revalidate = 3600
+
 const SEPARATOR = '-vs-'
 
 /** Parse "evolia-platinum-vs-sitia-5l-vs-intini-coratina" → array slugů.

@@ -7,8 +7,9 @@ export const metadata = {
   description: 'Recepty kde kvalita olivového oleje dělá rozdíl. S doporučením konkrétního oleje.',
 }
 
-// 60s ISR — recepty se mění málo, ale když admin uloží, chceme vidět rychle
-export const revalidate = 60
+// 60 → 3600 (1h). Recepty se nemění minutu po minutě, 1h cache je bezpečné.
+// Když admin uloží draft, manuální revalidate cestou /api/admin/revalidate.
+export const revalidate = 3600
 
 const CUISINE_LABEL: Record<string, string> = {
   italian: 'italská',

@@ -7,6 +7,11 @@ export const metadata = {
   description: 'Porovnejte olivové oleje. Filtry podle typu, původu, certifikace a ceny.',
 }
 
+// Bez revalidate by každý bot fetch = celý katalog ze Supabase. 1h cache:
+// produkty se vidí max 1h zpožděně po admin update — ceny scrapuje
+// cron:discovery 1×/den, takže žádný real-time data loss.
+export const revalidate = 3600
+
 export default async function SrovnavacPage() {
   const [products, stats] = await Promise.all([
     getProductsWithOffers(),

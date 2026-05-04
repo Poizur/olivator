@@ -3,6 +3,12 @@ import { getProducts } from '@/lib/data'
 import { getArticles, getRankings } from '@/lib/static-content'
 import { supabaseAdmin } from '@/lib/supabase'
 
+// Sitemap default = dynamic (každý bot request → fetchne ze Supabase).
+// Google + Bing + OpenAI/Anthropic crawlers chodí denně → 4× fetch products
+// + 3× entity tables. 6h cache je dostatečná: nové produkty se v sitemapě
+// objeví max 6h zpožděně, což nevadí.
+export const revalidate = 21600
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://olivator.cz'
 
