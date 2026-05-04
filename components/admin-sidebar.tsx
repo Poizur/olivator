@@ -9,7 +9,14 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { AdminCommandPalette } from './admin-command-palette'
 import { AdminBarLogout } from './admin-bar-logout'
 
-type NavLink = { href: string; label: string; badge?: number; badgeTone?: 'amber' | 'red' | 'olive' }
+type NavLink = {
+  href: string
+  label: string
+  badge?: number
+  badgeTone?: 'amber' | 'red' | 'olive'
+  /** Sub-položky se zobrazí jen když je admin v matching cestě (parent active). */
+  subItems?: NavLink[]
+}
 type NavSection = { group?: string; items: NavLink[] }
 
 async function getBadges(): Promise<Record<string, { value: number; tone: 'amber' | 'red' | 'olive' }>> {
@@ -95,7 +102,18 @@ export async function AdminSidebar() {
       group: 'Obsah',
       items: [
         { href: '/admin/faq', label: 'FAQ' },
-        { href: '/admin/newsletter', label: 'Newsletter' },
+        {
+          href: '/admin/newsletter',
+          label: 'Newsletter',
+          subItems: [
+            { href: '/admin/newsletter/drafts', label: 'Drafty' },
+            { href: '/admin/newsletter/sends', label: 'Odeslané' },
+            { href: '/admin/newsletter/subscribers', label: 'Odběratelé' },
+            { href: '/admin/newsletter/facts', label: 'Fakta' },
+            { href: '/admin/newsletter/legend', label: 'Legenda' },
+            { href: '/admin/newsletter/settings', label: 'Nastavení' },
+          ],
+        },
         { href: '/admin/manager', label: 'Manager Agent' },
       ],
     },
@@ -113,7 +131,7 @@ export async function AdminSidebar() {
     },
   ]
 
-  const all = NAV.flatMap((g) => g.items)
+  const all = NAV.flatMap((g) => g.items.flatMap((i) => [i, ...(i.subItems ?? [])]))
   const activeMatch = all
     .filter((l) => isActive(pathname, l.href))
     .sort((a, b) => b.href.length - a.href.length)[0]
@@ -162,6 +180,8 @@ export async function AdminSidebar() {
             <ul className="space-y-0.5">
               {section.items.map((item) => {
                 const active = activeMatch?.href === item.href
+                // Parent je v "active scope" když pathname start sedí (rozbalí sub-items)
+                const inScope = isActive(pathname, item.href)
                 const dotColor = active
                   ? 'bg-olive'
                   : item.badge
@@ -197,6 +217,28 @@ export async function AdminSidebar() {
                         </span>
                       )}
                     </Link>
+                    {/* Sub-items: viditelné jen když je admin v parent route. */}
+                    {item.subItems && inScope && (
+                      <ul className="mt-0.5 ml-4 pl-3 border-l border-off2 space-y-0.5">
+                        {item.subItems.map((sub) => {
+                          const subActive = activeMatch?.href === sub.href
+                          return (
+                            <li key={sub.href}>
+                              <Link
+                                href={sub.href}
+                                className={`flex items-center gap-2 px-2 py-1 text-[12px] rounded-md transition-colors ${
+                                  subActive
+                                    ? 'bg-off/60 text-text'
+                                    : 'text-text3 hover:text-text2 hover:bg-off'
+                                }`}
+                              >
+                                <span className="flex-1 truncate">{sub.label}</span>
+                              </Link>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    )}
                   </li>
                 )
               })}
