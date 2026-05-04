@@ -6,6 +6,11 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
 
 const nextConfig: NextConfig = {
   images: {
+    // Default 60s = boti (Google, Bing, OpenAI/Anthropic crawlers) re-fetchují
+    // za minutu → každé kolo znova egress ze Supabase Storage. 30 dní (≈ 2.6M s)
+    // znamená 1× transformace per image, pak Next.js Image cache servíruje
+    // optimalizovaný WebP přímo z Railway. Klíčové pro Supabase free egress.
+    minimumCacheTTL: 2592000,
     remotePatterns: [
       {
         protocol: 'https',

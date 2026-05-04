@@ -5,6 +5,7 @@
 // Příklad: reckonasbavi.cz založili Zdeněk a Marcelka, vášniví cestovatelé z Řecka.
 
 import Link from 'next/link'
+import Image from 'next/image'
 import type { Retailer } from '@/lib/types'
 
 export interface RetailerPhotoLite {
@@ -39,12 +40,15 @@ export function RetailerCard({ retailer, productSlug, price, photos = [] }: Prop
         {/* Logo + 2 fotky pod sebou */}
         <div className="flex flex-col gap-2">
           {retailer.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={retailer.logoUrl}
-              alt={`${retailer.name} logo`}
-              className="w-24 h-24 object-contain bg-off rounded-[var(--radius-card)] p-3"
-            />
+            <div className="relative w-24 h-24 bg-off rounded-[var(--radius-card)] p-3">
+              <Image
+                src={retailer.logoUrl}
+                alt={`${retailer.name} logo`}
+                fill
+                sizes="96px"
+                className="object-contain p-2"
+              />
+            </div>
           ) : (
             <div className="w-24 h-24 bg-olive-bg border border-olive-border rounded-[var(--radius-card)] flex items-center justify-center">
               <span className="font-[family-name:var(--font-display)] text-3xl font-normal italic text-olive-dark leading-none">
@@ -55,14 +59,16 @@ export function RetailerCard({ retailer, productSlug, price, photos = [] }: Prop
           {visiblePhotos.length > 0 && (
             <div className="flex flex-col gap-2">
               {visiblePhotos.map((p, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={i}
-                  src={p.url}
-                  alt={p.alt_text ?? `${retailer.name} fotka ${i + 1}`}
-                  className="w-24 h-20 object-cover rounded-[var(--radius-card)] border border-off2"
-                  loading="lazy"
-                />
+                <div key={i} className="relative w-24 h-20 rounded-[var(--radius-card)] border border-off2 overflow-hidden">
+                  <Image
+                    src={p.url}
+                    alt={p.alt_text ?? `${retailer.name} fotka ${i + 1}`}
+                    fill
+                    sizes="96px"
+                    className="object-cover"
+                    loading="lazy"
+                  />
+                </div>
               ))}
             </div>
           )}

@@ -7,8 +7,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://olivator.cz'
 
   const staticPages: MetadataRoute.Sitemap = [
-    { url: baseUrl, lastModified: new Date(), changeFrequency: 'daily', priority: 1.0 },
-    { url: `${baseUrl}/srovnavac`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
+    { url: baseUrl, lastModified: new Date(), changeFrequency: 'weekly', priority: 1.0 },
+    { url: `${baseUrl}/srovnavac`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.9 },
     { url: `${baseUrl}/porovnani`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.7 },
     { url: `${baseUrl}/zebricek`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
     { url: `${baseUrl}/pruvodce`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
@@ -23,10 +23,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     supabaseAdmin.from('cultivars').select('slug').then((r) => r.data ?? []),
   ])
 
+  // Daily by signaloval botům (Google, Bing, OpenAI/Anthropic crawlers)
+  // znovu-fetch každý den → masivní egress. Produkty se v praxi nemění
+  // denně (cena ano, ale to je v price_history, ne v rendered HTML).
+  // Weekly stačí — Google si stejně rozhoduje sám podle real change rate.
   const productPages: MetadataRoute.Sitemap = products.map(p => ({
     url: `${baseUrl}/olej/${p.slug}`,
     lastModified: new Date(),
-    changeFrequency: 'daily' as const,
+    changeFrequency: 'weekly' as const,
     priority: 0.8,
   }))
 

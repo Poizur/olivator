@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { getProducts, getProductBySlug, getOffersForProduct, getProductGallery, getProductCustomFAQs, getActiveGeneralFAQs, getVariantProducts, getProductEntityLinks, getRetailerPhotosLite } from '@/lib/data'
 import { extractBrandSlug, extractRegionSlug } from '@/lib/entity-extractor'
 import { countryName, typeLabel, certLabel, formatPrice, formatPricePer100ml } from '@/lib/utils'
@@ -678,10 +679,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                         href={`/oblast/${entityLinks.region.slug}`}
                         className="flex items-center gap-3 px-4 py-3 group hover:bg-off/50 transition-colors"
                       >
-                        <div className="shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-olive-bg border border-olive-border">
+                        <div className="relative shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-olive-bg border border-olive-border">
                           {entityLinks.region.photoUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={entityLinks.region.photoUrl} alt={entityLinks.region.name} className="w-full h-full object-cover" />
+                            <Image src={entityLinks.region.photoUrl} alt={entityLinks.region.name} fill sizes="48px" className="object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <span className="font-[family-name:var(--font-display)] text-xl italic text-olive-dark leading-none">
@@ -704,10 +704,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                         href={`/znacka/${entityLinks.brand.slug}`}
                         className="flex items-center gap-3 px-4 py-3 group hover:bg-off/50 transition-colors"
                       >
-                        <div className="shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-olive-bg border border-olive-border">
+                        <div className="relative shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-olive-bg border border-olive-border">
                           {entityLinks.brand.photoUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={entityLinks.brand.photoUrl} alt={entityLinks.brand.name} className="w-full h-full object-cover" />
+                            <Image src={entityLinks.brand.photoUrl} alt={entityLinks.brand.name} fill sizes="48px" className="object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <span className="font-[family-name:var(--font-display)] text-xl italic text-olive-dark leading-none">
@@ -731,10 +730,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                         href={`/odruda/${c.slug}`}
                         className="flex items-center gap-3 px-4 py-3 group hover:bg-off/50 transition-colors"
                       >
-                        <div className="shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-olive-bg border border-olive-border">
+                        <div className="relative shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-olive-bg border border-olive-border">
                           {c.photoUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={c.photoUrl} alt={c.name} className="w-full h-full object-cover" />
+                            <Image src={c.photoUrl} alt={c.name} fill sizes="48px" className="object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <span className="font-[family-name:var(--font-display)] text-xl italic text-olive-dark leading-none">

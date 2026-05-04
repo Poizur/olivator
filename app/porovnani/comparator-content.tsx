@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { useCompare } from '@/lib/compare-context'
 import { formatPrice, formatPricePer100ml, certLabel, typeLabel, countryName } from '@/lib/utils'
@@ -257,8 +258,7 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                 >
                   <div className="relative w-10 h-10 shrink-0 bg-off rounded overflow-hidden border border-off2">
                     {p.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.imageUrl} alt={p.name} className="w-full h-full object-contain p-0.5" loading="lazy" />
+                      <Image src={p.imageUrl} alt={p.name} fill sizes="40px" className="object-contain p-0.5" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center font-[family-name:var(--font-display)] text-base italic text-text3/40">{p.name.charAt(0)}</div>
                     )}
@@ -312,8 +312,7 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
           <div className="bg-olive-bg rounded-[var(--radius-card)] p-4 md:p-5 mb-5 flex items-center gap-4 flex-wrap md:flex-nowrap">
             <Link href={`/olej/${winner.slug}`} className="relative w-20 h-20 shrink-0 bg-white rounded-lg border border-olive-border/40 overflow-hidden hover:shadow-md transition-shadow">
               {winner.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={winner.imageUrl} alt={winner.name} className="w-full h-full object-contain p-1" loading="lazy" />
+                <Image src={winner.imageUrl} alt={winner.name} fill sizes="80px" className="object-contain p-1" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center font-[family-name:var(--font-display)] text-3xl italic text-text3/40">{winner.name.charAt(0)}</div>
               )}
@@ -401,8 +400,7 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                 <Link href={`/olej/${item.slug}`} className="flex items-center gap-3 p-4 border-b border-off bg-off/30 hover:bg-off/60 transition-colors">
                   <div className="relative w-14 h-14 shrink-0 bg-white rounded overflow-hidden border border-off2">
                     {item.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain p-1" loading="lazy" />
+                      <Image src={item.imageUrl} alt={item.name} fill sizes="56px" className="object-contain p-1" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center font-[family-name:var(--font-display)] text-xl italic text-text3/40">{item.name.charAt(0)}</div>
                     )}
@@ -498,8 +496,7 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                     <Link href={`/olej/${item.slug}`} className="inline-flex flex-col items-center gap-2 hover:opacity-80 transition-opacity">
                       <div className="relative w-20 h-20 bg-white rounded-lg overflow-hidden border border-off2">
                         {item.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain p-1.5" loading="lazy" />
+                          <Image src={item.imageUrl} alt={item.name} fill sizes="80px" className="object-contain p-1.5" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center font-[family-name:var(--font-display)] text-2xl italic text-text3/40">{item.name.charAt(0)}</div>
                         )}

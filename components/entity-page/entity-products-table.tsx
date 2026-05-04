@@ -6,6 +6,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import type { ProductTableRow, EntityType } from './types'
 
 interface FilterChip {
@@ -264,10 +265,9 @@ export function EntityProductsTable({ products, entityType, filters = [], filter
                   onClick={() => setExpandedRow(expanded ? null : p.slug)}
                   className="w-full px-4 py-3 flex items-start gap-3 text-left"
                 >
-                  <div className="w-14 h-18 shrink-0 bg-off rounded-md overflow-hidden flex items-center justify-center" style={{ height: '4.5rem' }}>
+                  <div className="relative w-14 shrink-0 bg-off rounded-md overflow-hidden flex items-center justify-center" style={{ height: '4.5rem' }}>
                     {p.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.imageUrl} alt={p.name} className="w-full h-full object-contain" loading="lazy" />
+                      <Image src={p.imageUrl} alt={p.name} fill sizes="56px" className="object-contain" />
                     ) : (
                       <span className="text-[22px] opacity-30">🫒</span>
                     )}
