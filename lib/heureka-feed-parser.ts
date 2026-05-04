@@ -85,16 +85,19 @@ function parsePrice(text: string): number {
   return Number.isFinite(n) && n > 0 ? n : 0
 }
 
-// Filtr na olivové oleje. Heureka kategorizace + textová heuristika v názvu —
-// chceme přeskočit kokosové, slunečnicové, pomace + příslušenství (konvice atd.).
+// Filtr na olivové oleje. Heureka kategorizace je MOC volná — eshopy občas
+// zařazují i nakládané olivy / příslušenství / konzervy do „Kuchyňské oleje".
+// Musíme vícevrstvý filter: kategorie + výskyt slova „olej" + exclude listy.
 export function isOliveOil(item: HeurekaItem): boolean {
   if (!item.categoryText.includes(OIL_CATEGORY_HINT)) return false
   const name = item.productName.toLowerCase()
+
   // Vyloučit ne-olivové oleje
   if (name.includes('kokos')) return false
   if (name.includes('slunečnic')) return false
   if (name.includes('řepkov')) return false
   if (name.includes('lněn')) return false
+
   // Vyloučit příslušenství („konvice na olivový olej" má slovo „olivový" v názvu,
   // ale není to olej). Heureka občas zařazuje doplňky do kategorie kuchyňské oleje.
   if (name.includes('konvic')) return false
@@ -104,7 +107,25 @@ export function isOliveOil(item: HeurekaItem): boolean {
   if (name.includes('lahev na ')) return false
   if (name.includes('miska')) return false
   if (/\bsada\b|\bset\b/.test(name)) return false
-  // Pozitivní signál
+
+  // KRITICKÝ FILTR: musí obsahovat slovo „olej" / „oil" / „evoo".
+  // Bez něj projde i „olivy Kalamata" (má „oliv" v „olivy"), což je
+  // nakládaná zelenina, ne olej. Nakládané olivy / pasta / tapenáda /
+  // konzervy taky filtrujem.
+  if (name.includes('nakládan')) return false
+  if (name.includes('naloženě')) return false
+  if (name.includes('s peckou')) return false  // typický indikátor nakládaných oliv
+  if (name.includes('tapenád') || name.includes('tapenade')) return false
+  if (name.includes('pasta')) return false
+  if (name.includes('konzerva')) return false
+
+  const hasOilWord =
+    /\bolej\b|\boleje\b|\boleji\b|\bolejem\b/.test(name) ||
+    /\boil\b|\boils\b/.test(name) ||
+    /\bevoo\b/.test(name)
+  if (!hasOilWord) return false
+
+  // Pozitivní signál: „oliv" v názvu (olivový/olivová/olivového/oliva ne plurál)
   return name.includes('oliv')
 }
 
