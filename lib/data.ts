@@ -286,7 +286,10 @@ export async function getSiteStats(): Promise<SiteStats> {
   let highOleocanthal = 0
 
   for (const p of products) {
-    byOrigin[p.originCountry] = (byOrigin[p.originCountry] ?? 0) + 1
+    // Skip null/empty origin — frontend by jinak zobrazil prázdný řádek s číslem
+    if (p.originCountry) {
+      byOrigin[p.originCountry] = (byOrigin[p.originCountry] ?? 0) + 1
+    }
     byType[p.type] = (byType[p.type] ?? 0) + 1
     for (const c of p.certifications) {
       byCertification[c] = (byCertification[c] ?? 0) + 1

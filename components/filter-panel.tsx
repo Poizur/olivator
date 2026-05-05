@@ -68,8 +68,10 @@ export function FilterPanel({ counts }: { counts: FilterCounts }) {
     .sort((a, b) => b.count - a.count)
 
   const originItems = Object.entries(counts.origins)
-    .filter(([, n]) => n > 0)
-    .map(([v, n]) => ({ value: v, label: ORIGIN_LABELS[v] ?? v, count: n }))
+    // Vyloučí prázdné/null country kódy (15 produktů má NULL origin_country
+    // → ukazovalo by to bez vlajky a bez labelu, jen číslo).
+    .filter(([v, n]) => n > 0 && v && v !== 'null' && v !== '<NULL>' && v !== 'undefined')
+    .map(([v, n]) => ({ value: v, label: ORIGIN_LABELS[v] ?? `🏳️ ${v}`, count: n }))
     .sort((a, b) => b.count - a.count)
 
   const certItems = Object.entries(counts.certifications)

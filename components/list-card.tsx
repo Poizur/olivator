@@ -21,81 +21,143 @@ export function ListCard({ product, offer, rank, compact = false }: ListCardProp
 
   return (
     <Link href={`/olej/${product.slug}`}>
-      <div className="bg-white border border-off2 rounded-[var(--radius-card)] px-5 py-4 flex items-center gap-5 cursor-pointer transition-all hover:border-olive-light hover:shadow-[0_4px_16px_rgba(0,0,0,.06)]">
-        <div className={`text-[22px] font-bold w-8 shrink-0 text-center tabular-nums ${
-          rank <= 3 ? 'text-terra' : 'text-off2'
-        }`}>
-          {rank}
-        </div>
-
-        {/* Větší foto — obrázky prodávají, portrait aspect 3:4 (60×80) */}
-        <div className="w-20 h-[6.5rem] bg-off rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
-          <ProductImage product={product} fallbackSize="text-5xl" sizes="80px" />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="text-[10px] text-text3 mb-0.5 uppercase tracking-widest font-medium">
-            {product.originRegion ? `${product.originRegion} · ` : ''}{countryName(product.originCountry)}
-          </div>
-          <div className="text-[15px] font-medium text-text mb-1.5 tracking-tight">
-            {product.name}
-          </div>
-          <div className="flex gap-1 flex-wrap">
-            {product.acidity != null && (
-              <span className={`text-[10px] px-[7px] py-0.5 rounded-md ${
-                product.acidity <= 0.3 ? 'bg-olive-bg text-olive-dark' : 'bg-off text-text2'
-              }`}>
-                Kyselost {product.acidity} %
-              </span>
-            )}
-            {product.polyphenols != null && (
-              <span className="text-[10px] px-[7px] py-0.5 rounded-md bg-off text-text2">
-                Polyfenoly {product.polyphenols}
-              </span>
-            )}
-            {product.certifications.map(c => (
-              <span key={c} className="text-[10px] px-[7px] py-0.5 rounded-md bg-off text-text2">
-                {certLabel(c)}
-              </span>
-            ))}
-            {!product.ean && (
-              <span
-                className="text-[10px] px-[7px] py-0.5 rounded-md bg-terra-bg text-terra font-medium"
-                title="Přímo od výrobce"
-              >
-                Od výrobce
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="text-center shrink-0">
-          <div className="text-2xl font-bold text-terra tracking-tight">
-            {product.olivatorScore}
-          </div>
-          <div className="text-[10px] text-text3 uppercase tracking-wider">
-            Score
-          </div>
-        </div>
-
-        {offer && (
-          <div className="text-right shrink-0">
-            <div className="text-lg font-semibold text-text tracking-tight">
-              {formatPrice(offer.price)}
+      <div className="bg-white border border-off2 rounded-[var(--radius-card)] cursor-pointer transition-all hover:border-olive-light hover:shadow-[0_4px_16px_rgba(0,0,0,.06)] overflow-hidden">
+        {/* MOBILE — stacked: hlavička (rank+img+name+score), pak akční řádek (price+button) */}
+        <div className="md:hidden">
+          <div className="flex items-start gap-3 p-4">
+            <div className={`text-[20px] font-bold tabular-nums leading-none mt-1 shrink-0 w-6 text-center ${
+              rank <= 3 ? 'text-terra' : 'text-text3'
+            }`}>
+              {rank}
             </div>
-            <div className="text-[11px] text-text3">
-              {formatPricePer100ml(offer.price, product.volumeMl)}
+            <div className="w-16 h-20 bg-off rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+              <ProductImage product={product} fallbackSize="text-3xl" sizes="64px" />
             </div>
-            <div className="text-[11px] text-olive-light">
-              {offer.retailer.name}
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] text-text3 mb-0.5 uppercase tracking-widest font-medium truncate">
+                {product.originRegion ? `${product.originRegion} · ` : ''}{countryName(product.originCountry)}
+              </div>
+              <div className="text-[14px] font-medium text-text leading-snug line-clamp-2 mb-1.5">
+                {product.name}
+              </div>
+              <div className="flex gap-1 flex-wrap">
+                {product.acidity != null && (
+                  <span className={`text-[10px] px-[7px] py-0.5 rounded-md ${
+                    product.acidity <= 0.3 ? 'bg-olive-bg text-olive-dark' : 'bg-off text-text2'
+                  }`}>
+                    Kyselost {product.acidity}%
+                  </span>
+                )}
+                {product.polyphenols != null && (
+                  <span className="text-[10px] px-[7px] py-0.5 rounded-md bg-off text-text2">
+                    Polyfenoly {product.polyphenols}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="text-center shrink-0 ml-1">
+              <div className="text-[24px] font-bold text-terra leading-none tracking-tight">
+                {product.olivatorScore}
+              </div>
+              <div className="text-[9px] text-text3 uppercase tracking-wider mt-0.5">Score</div>
             </div>
           </div>
-        )}
+          {offer && (
+            <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-off bg-off/30">
+              <div className="min-w-0">
+                <div className="text-[16px] font-semibold text-text tabular-nums leading-none">
+                  {formatPrice(offer.price)}
+                </div>
+                <div className="text-[11px] text-text3 mt-1 truncate">
+                  {formatPricePer100ml(offer.price, product.volumeMl)} · {offer.retailer.name}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <WishlistButton productId={product.id} />
+                <span className="bg-olive text-white rounded-full px-4 py-2 text-[12px] font-medium">
+                  Koupit
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
 
-        <span className="bg-olive text-white border-none rounded-full px-4 py-2 text-xs font-medium shrink-0">
-          Koupit
-        </span>
-        <WishlistButton productId={product.id} className="shrink-0" />
+        {/* DESKTOP — horizontální layout (původní) */}
+        <div className="hidden md:flex items-center gap-5 px-5 py-4">
+          <div className={`text-[22px] font-bold w-8 shrink-0 text-center tabular-nums ${
+            rank <= 3 ? 'text-terra' : 'text-off2'
+          }`}>
+            {rank}
+          </div>
+
+          <div className="w-20 h-[6.5rem] bg-off rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+            <ProductImage product={product} fallbackSize="text-5xl" sizes="80px" />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] text-text3 mb-0.5 uppercase tracking-widest font-medium">
+              {product.originRegion ? `${product.originRegion} · ` : ''}{countryName(product.originCountry)}
+            </div>
+            <div className="text-[15px] font-medium text-text mb-1.5 tracking-tight">
+              {product.name}
+            </div>
+            <div className="flex gap-1 flex-wrap">
+              {product.acidity != null && (
+                <span className={`text-[10px] px-[7px] py-0.5 rounded-md ${
+                  product.acidity <= 0.3 ? 'bg-olive-bg text-olive-dark' : 'bg-off text-text2'
+                }`}>
+                  Kyselost {product.acidity} %
+                </span>
+              )}
+              {product.polyphenols != null && (
+                <span className="text-[10px] px-[7px] py-0.5 rounded-md bg-off text-text2">
+                  Polyfenoly {product.polyphenols}
+                </span>
+              )}
+              {product.certifications.map(c => (
+                <span key={c} className="text-[10px] px-[7px] py-0.5 rounded-md bg-off text-text2">
+                  {certLabel(c)}
+                </span>
+              ))}
+              {!product.ean && (
+                <span
+                  className="text-[10px] px-[7px] py-0.5 rounded-md bg-terra-bg text-terra font-medium"
+                  title="Přímo od výrobce"
+                >
+                  Od výrobce
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="text-center shrink-0">
+            <div className="text-2xl font-bold text-terra tracking-tight">
+              {product.olivatorScore}
+            </div>
+            <div className="text-[10px] text-text3 uppercase tracking-wider">
+              Score
+            </div>
+          </div>
+
+          {offer && (
+            <div className="text-right shrink-0">
+              <div className="text-lg font-semibold text-text tracking-tight">
+                {formatPrice(offer.price)}
+              </div>
+              <div className="text-[11px] text-text3">
+                {formatPricePer100ml(offer.price, product.volumeMl)}
+              </div>
+              <div className="text-[11px] text-olive-light">
+                {offer.retailer.name}
+              </div>
+            </div>
+          )}
+
+          <span className="bg-olive text-white border-none rounded-full px-4 py-2 text-xs font-medium shrink-0">
+            Koupit
+          </span>
+          <WishlistButton productId={product.id} className="shrink-0" />
+        </div>
       </div>
     </Link>
   )
