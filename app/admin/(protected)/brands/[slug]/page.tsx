@@ -9,6 +9,7 @@ import { EntityGuidesLinker } from '@/components/entity-guides-linker'
 import { EntityPhotosManager } from '@/components/entity-photos-manager'
 import { EntityProductsList } from '@/components/entity-products-list'
 import { AdminBlock } from '@/components/admin-block'
+import { BrandAutoResearchPanel } from '@/components/brand-auto-research-panel'
 import { ARTICLES } from '@/lib/static-content'
 
 async function getLinkedSlugs(entityType: 'region' | 'brand' | 'cultivar', entitySlug: string) {
@@ -100,6 +101,14 @@ export default async function EditBrandPage({ params }: { params: Promise<{ slug
       </div>
 
       <div className="space-y-6">
+        {/* Auto-research z webu výrobce — Claude Haiku navrhne příběh + logo */}
+        <BrandAutoResearchPanel
+          slug={brand.slug}
+          brandName={brand.name}
+          currentWebsiteUrl={brand.website_url}
+          hasPrimaryLogo={photos.some((p) => p.is_primary)}
+        />
+
         {/* BLOKY 1, 2, 3, 9 — uvnitř EntityEditForm */}
         <EntityEditForm
           entity={{
