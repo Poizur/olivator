@@ -1011,6 +1011,42 @@ const supabase = createClient(url, process.env.SUPABASE_SERVICE_KEY!)
 
 ---
 
+### BUG-024: XML feed nemusí pokrývat všechny kategorie eshopu
+**Závažnost:** STŘEDNÍ — vede k tomu že napojený retailer nepřinese žádný produkt.
+
+**Reálný případ (5. května 2026):** Cretamart eHUB partnerství. Heureka XML feed
+`?type=productscz&token=...` vrátil 53 položek — všechno mýdla, šampony, med,
+koření, octy. **Ani jeden olivový olej** ve feedu. Přitom eshop má `/cs/13-olivovy-olej`
+sekci se 46 oleji.
+
+**Důvod:** Eshopy si vybírají kategorie, které do Heureka feedu posílají. Olej tam
+prostě nepatřil. Token je obvykle global, ale e-shop kontroluje content per category.
+
+**Pravidlo pro Olivator:**
+> Před napojením XML retailera VŽDY ověřit `grep -c isOliveOil` proti aktuálnímu
+> feedu. Pokud 0 → feed je k ničemu, použít discovery agent (Playwright crawl
+> přes category page) místo XML.
+
+**Pre-flight check (5 min, manuální):**
+```bash
+# 1. Ověř že feed obsahuje olej
+curl -sL "FEED_URL" | grep -c "Kuchyňské oleje"
+# 0 = problém, > 0 = OK
+
+# 2. Ověř že eshop má olej kategorii
+curl -sL "ESHOP_URL/kategorie-oleje" | grep -c "data-id-product\|product-miniature"
+# Pokud 1 (feed) ≠ 2 (web), feed nepokrývá vše
+```
+
+**Akce při mismatch:**
+- A) Kontaktovat eshop ať doplní olej do Heureka feedu
+- B) Použít discovery agent: `crawler_type='shoptet_category'` + `category_url='/kategorie-olej'`
+- C) Skip retailer pokud nemá web kategorii
+
+**Bonus:** PrestaShop layout vyžaduje jiné selektory než Shoptet. `lib/shop-crawlers.ts:crawlShoptetCategory` byl rozšířen o `.product-miniature`, `article[data-id-product]`, `.product-container` (commit f3627a4).
+
+---
+
 ### SOUHRN PRAVIDEL (quick reference)
 
 | # | Pravidlo | Oblast |
@@ -1034,6 +1070,7 @@ const supabase = createClient(url, process.env.SUPABASE_SERVICE_KEY!)
 | 17 | `React.ReactNode` → `import type { ReactNode } from 'react'` | TypeScript |
 | 18 | Server-side Supabase VŽDY `SUPABASE_SERVICE_KEY`, ne anon | Database |
 | 19 | Batch commits — 1 commit na feature, ne série commitů | Deploy |
+| 20 | XML feed pre-flight check — `grep -c "olej" FEED_URL` před napojením | Scraper |
 
 ---
 
