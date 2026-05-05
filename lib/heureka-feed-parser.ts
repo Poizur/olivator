@@ -35,6 +35,21 @@ export async function fetchHeurekaFeed(url: string): Promise<HeurekaItem[]> {
   return parseHeurekaXml(xml)
 }
 
+/** Vytáhne agregované shipping data z DELIVERY tagů napříč všemi položkami.
+ *  Heureka XML má per-item DELIVERY blocks (GLS, DPD, ZASILKOVNA, …) s cenami.
+ *  Vrací MIN cenu (nejlevnější doprava) napříč všemi metodami. */
+export function extractShippingFromXml(xml: string): { minRateCzk: number | null } {
+  const $ = load(xml, { xmlMode: true })
+  const allRates: number[] = []
+  $('DELIVERY DELIVERY_PRICE').each((_, el) => {
+    const text = $(el).text().trim()
+    const rate = parsePrice(text)
+    if (rate > 0) allRates.push(rate)  // skip 0 (osobní odběr free)
+  })
+  if (allRates.length === 0) return { minRateCzk: null }
+  return { minRateCzk: Math.min(...allRates) }
+}
+
 export function parseHeurekaXml(xml: string): HeurekaItem[] {
   const $ = load(xml, { xmlMode: true })
   const items: HeurekaItem[] = []

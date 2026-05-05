@@ -86,6 +86,14 @@ export interface Retailer {
   xmlFeedUrl?: string | null
   xmlFeedFormat?: string | null
   xmlFeedLastSynced?: string | null
+  // Shipping + return policy pro Google Merchant Listings rich snippet.
+  // Naplněno automaticky z XML feed DELIVERY tagů + auto-research z webu.
+  // Default 14 dní vrácení (CZ zákon).
+  shippingRateCzk?: number | null
+  freeShippingThresholdCzk?: number | null
+  deliveryDaysMin?: number | null
+  deliveryDaysMax?: number | null
+  returnDays?: number | null
 }
 
 export interface ProductOffer {

@@ -12,7 +12,6 @@
 
 import { supabaseAdmin } from './supabase'
 import {
-  fetchHeurekaFeed,
   isOliveOil,
   extractVolumeMl,
   extractAcidity,
@@ -21,6 +20,7 @@ import {
   detectType,
   isSuspectEan,
   normalizeEan,
+  extractShippingFromXml,
   type HeurekaItem,
 } from './heureka-feed-parser'
 import { slugify } from './utils'
@@ -68,8 +68,27 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
     throw new Error(`Format "${retailer.xml_feed_format}" zatím není podporován (pouze heureka)`)
   }
 
-  const items = await fetchHeurekaFeed(retailer.xml_feed_url as string)
+  // Fetch XML — paralelně získáme shipping data (DELIVERY tagy) navíc.
+  const xmlRes = await fetch(retailer.xml_feed_url as string, {
+    headers: { 'User-Agent': 'OlivatorBot/1.0 (+https://olivator.cz)' },
+    cache: 'no-store',
+  })
+  if (!xmlRes.ok) throw new Error(`Feed fetch HTTP ${xmlRes.status}`)
+  const xmlText = await xmlRes.text()
+  const { parseHeurekaXml } = await import('./heureka-feed-parser')
+  const items = parseHeurekaXml(xmlText)
   const oils = items.filter(isOliveOil)
+
+  // Extract shipping rate z DELIVERY tagů a uložit na retailer (pokud
+  // ještě nemá manual override). Pro Google Merchant Listings rich snippet.
+  const shipping = extractShippingFromXml(xmlText)
+  if (shipping.minRateCzk != null) {
+    await supabaseAdmin
+      .from('retailers')
+      .update({ shipping_rate_czk: shipping.minRateCzk })
+      .eq('id', retailer.id)
+      .is('shipping_rate_czk', null)  // jen pokud admin nezadal manuálně
+  }
 
   // Země původu pro tuto retailer cestu — použijeme do ensureProduct
   // (origin_country pro nový draft) a linkAndRecomputeForProduct (region_slug).

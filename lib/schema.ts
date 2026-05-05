@@ -1,4 +1,4 @@
-import type { Product, ProductOffer } from './types'
+import type { Product, ProductOffer, Retailer } from './types'
 import { countryName, typeLabel } from './utils'
 
 /** Product description s fallbacky — zaručí že schema vždy má `description`.
@@ -20,48 +20,44 @@ function buildDescription(product: Product): string {
   return parts.join(', ')
 }
 
-/** Český zákonný 14-dní vrácení — platí pro všechny CZ eshopy.
- *  Google vyžaduje hasMerchantReturnPolicy v každém Offer pro Merchant Listings. */
-const CZ_RETURN_POLICY = {
-  '@type': 'MerchantReturnPolicy',
-  applicableCountry: 'CZ',
-  returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
-  merchantReturnDays: 14,
-  returnMethod: 'https://schema.org/ReturnByMail',
-  returnFees: 'https://schema.org/FreeReturn',
-} as const
+/** Per-retailer shipping data → schema.org OfferShippingDetails.
+ *  Pokud retailer nemá uložená data (XML neobsahoval DELIVERY tagy nebo
+ *  auto-research selhal), fallback na CZ default 99 Kč / 1-3 dny. */
+function buildShippingDetails(retailer: Retailer) {
+  const rate = retailer.shippingRateCzk ?? 99
+  const minDays = retailer.deliveryDaysMin ?? 1
+  const maxDays = retailer.deliveryDaysMax ?? 3
+  return {
+    '@type': 'OfferShippingDetails',
+    shippingRate: {
+      '@type': 'MonetaryAmount',
+      value: rate,
+      currency: 'CZK',
+    },
+    shippingDestination: {
+      '@type': 'DefinedRegion',
+      addressCountry: 'CZ',
+    },
+    deliveryTime: {
+      '@type': 'ShippingDeliveryTime',
+      handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 1, unitCode: 'DAY' },
+      transitTime: { '@type': 'QuantitativeValue', minValue: minDays, maxValue: maxDays, unitCode: 'DAY' },
+    },
+  }
+}
 
-/** Defaultní shipping pro CZ retailery. Konkrétní hodnoty per-retailer
- *  zatím nesbíráme — typický průměr napříč olivátor partnery (Rohlík, Košík,
- *  reckonasbavi, italyshop atd.) je 79–129 Kč, doručení 1–3 dny. Google
- *  Merchant Listings akceptuje range. */
-const CZ_SHIPPING_DETAILS = {
-  '@type': 'OfferShippingDetails',
-  shippingRate: {
-    '@type': 'MonetaryAmount',
-    value: 99,
-    currency: 'CZK',
-  },
-  shippingDestination: {
-    '@type': 'DefinedRegion',
-    addressCountry: 'CZ',
-  },
-  deliveryTime: {
-    '@type': 'ShippingDeliveryTime',
-    handlingTime: {
-      '@type': 'QuantitativeValue',
-      minValue: 0,
-      maxValue: 1,
-      unitCode: 'DAY',
-    },
-    transitTime: {
-      '@type': 'QuantitativeValue',
-      minValue: 1,
-      maxValue: 3,
-      unitCode: 'DAY',
-    },
-  },
-} as const
+/** Per-retailer return policy. Default 14 dní (CZ zákonné minimum). */
+function buildReturnPolicy(retailer: Retailer) {
+  const days = retailer.returnDays ?? 14
+  return {
+    '@type': 'MerchantReturnPolicy',
+    applicableCountry: 'CZ',
+    returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+    merchantReturnDays: days,
+    returnMethod: 'https://schema.org/ReturnByMail',
+    returnFees: 'https://schema.org/FreeReturn',
+  }
+}
 
 export function productSchema(product: Product, offers: ProductOffer[]) {
   const cheapest = offers[0]
@@ -120,10 +116,10 @@ export function productSchema(product: Product, offers: ProductOffer[]) {
               '@type': 'Organization',
               name: o.retailer.name,
             },
-            // Google Merchant Listings (search console) vyžaduje
-            // shippingDetails + hasMerchantReturnPolicy v každém Offer.
-            shippingDetails: CZ_SHIPPING_DETAILS,
-            hasMerchantReturnPolicy: CZ_RETURN_POLICY,
+            // Per-retailer shipping + return policy. Fallback na CZ defaults
+            // pokud retailer nemá uložená data.
+            shippingDetails: buildShippingDetails(o.retailer),
+            hasMerchantReturnPolicy: buildReturnPolicy(o.retailer),
           })),
         }
       : undefined,

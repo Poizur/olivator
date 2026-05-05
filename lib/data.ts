@@ -121,6 +121,11 @@ function mapRetailer(row: Record<string, unknown>): Retailer {
     xmlFeedUrl: (row.xml_feed_url as string) ?? null,
     xmlFeedFormat: (row.xml_feed_format as string) ?? null,
     xmlFeedLastSynced: (row.xml_feed_last_synced as string) ?? null,
+    shippingRateCzk: row.shipping_rate_czk != null ? Number(row.shipping_rate_czk) : null,
+    freeShippingThresholdCzk: row.free_shipping_threshold_czk != null ? Number(row.free_shipping_threshold_czk) : null,
+    deliveryDaysMin: row.delivery_days_min != null ? Number(row.delivery_days_min) : null,
+    deliveryDaysMax: row.delivery_days_max != null ? Number(row.delivery_days_max) : null,
+    returnDays: row.return_days != null ? Number(row.return_days) : null,
   }
 }
 
@@ -151,7 +156,9 @@ const PRODUCT_LISTING_COLUMNS =
 const RETAILER_PUBLIC_COLUMNS =
   'id, name, slug, domain, affiliate_network, default_commission_pct, ' +
   'is_active, market, rating, rating_count, rating_source, ' +
-  'tagline, founders, headquarters, founded_year, specialization, logo_url'
+  'tagline, founders, headquarters, founded_year, specialization, logo_url, ' +
+  // Shipping/return data pro Google Merchant Listings rich snippet
+  'shipping_rate_czk, free_shipping_threshold_czk, delivery_days_min, delivery_days_max, return_days'
 
 export async function getProducts(): Promise<Product[]> {
   const { data, error } = await supabaseAdmin
