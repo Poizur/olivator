@@ -64,9 +64,21 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  return NextResponse.next({
+  const response = NextResponse.next({
     request: { headers: requestHeaders },
   })
+
+  // No-cache pro /admin a /api/admin — admin data se mění rychle (drafty,
+  // discovery, learnings, retailery), browser cache způsobuje rozdíl mezi
+  // zařízeními. force-dynamic na server zaručí čerstvý server response,
+  // ale browser/CDN by stále cache hold. Tyhle headers to vypnou.
+  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
+    response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+  }
+
+  return response
 }
 
 export const config = {
