@@ -287,7 +287,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(breadcrumbSchema([
             { name: 'Olivator', url: '/' },
-            { name: 'Srovnávač', url: '/srovnavac' },
+            { name: 'Katalog', url: '/srovnavac' },
             { name: product.name, url: `/olej/${product.slug}` },
           ])),
         }}
@@ -302,7 +302,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <div className="text-xs text-text3 mb-7">
         <Link href="/" className="text-olive cursor-pointer">Olivator</Link>
         {' › '}
-        <Link href="/srovnavac" className="text-olive cursor-pointer">Srovnávač</Link>
+        <Link href="/srovnavac" className="text-olive cursor-pointer">Katalog</Link>
         {' › '}
         {product.name}
       </div>

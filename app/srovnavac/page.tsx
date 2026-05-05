@@ -3,8 +3,8 @@ import { getProductsWithOffers, getSiteStats } from '@/lib/data'
 import { ListingContent } from './listing-content'
 
 export const metadata = {
-  title: 'Srovnávač olivových olejů',
-  description: 'Porovnejte olivové oleje. Filtry podle typu, původu, certifikace a ceny.',
+  title: 'Katalog olivových olejů',
+  description: 'Procházejte všechny olivové oleje. Filtry podle typu, původu, certifikace a ceny.',
 }
 
 // Bez revalidate by každý bot fetch = celý katalog ze Supabase. 1h cache:

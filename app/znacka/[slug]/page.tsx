@@ -240,7 +240,7 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
             </Link>
             {' › '}
             <Link href="/srovnavac" className="text-olive">
-              Srovnávač
+              Katalog
             </Link>
             {' › '}
             <span>{brand.name}</span>

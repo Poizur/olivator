@@ -6,6 +6,10 @@ interface ProductImageProps {
   className?: string
   fallbackSize?: string
   sizes?: string
+  /** 'cover' (výchozí) vyplní container — produkt větší, žádné šedé pruhy.
+   *  'contain' zachová celou fotku — použij na detail stránce kde nesmí
+   *  být olej cropped. */
+  fit?: 'cover' | 'contain'
 }
 
 export function ProductImage({
@@ -13,6 +17,7 @@ export function ProductImage({
   className = '',
   fallbackSize = 'text-6xl',
   sizes = '(max-width: 768px) 100vw, 400px',
+  fit = 'cover',
 }: ProductImageProps) {
   if (product.imageUrl) {
     return (
@@ -22,7 +27,7 @@ export function ProductImage({
           alt={product.name}
           fill
           sizes={sizes}
-          className="object-contain"
+          className={fit === 'cover' ? 'object-cover object-center' : 'object-contain'}
         />
       </div>
     )

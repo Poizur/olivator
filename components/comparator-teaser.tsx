@@ -32,7 +32,7 @@ export function ComparatorTeaser({
         <div className="text-center mb-8">
           <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2 inline-flex items-center gap-1.5">
             <ArrowLeftRight size={11} strokeWidth={2.25} />
-            Srovnávač olejů
+            Porovnání olejů
           </div>
           <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text leading-tight mb-3">
             Srovnej. <em className="text-olive italic">Rozhodni.</em>

@@ -8,7 +8,7 @@ export default function NotFound() {
         Stránka nenalezena
       </h1>
       <p className="text-[15px] text-text2 font-light mb-8 max-w-md">
-        Tato stránka neexistuje nebo byla přesunuta. Zkuste hledat v našem srovnávači.
+        Tato stránka neexistuje nebo byla přesunuta. Zkuste hledat v našem katalogu.
       </p>
       <div className="flex gap-3">
         <Link
@@ -21,7 +21,7 @@ export default function NotFound() {
           href="/srovnavac"
           className="bg-off text-text rounded-full px-6 py-2.5 text-sm font-medium hover:bg-off2 transition-colors"
         >
-          Srovnávač
+          Katalog
         </Link>
       </div>
     </div>

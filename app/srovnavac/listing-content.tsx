@@ -147,7 +147,7 @@ export function ListingContent({
       <div className="max-w-[1280px] mx-auto">
         <div className="mb-6">
           <h1 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl font-normal text-text mb-1.5">
-            Srovnávač olivových olejů
+            Katalog olivových olejů
           </h1>
           <p className="text-[14px] text-text2 font-light">
             {filtered.length} produktů · aktualizováno dnes

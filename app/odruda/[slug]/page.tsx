@@ -251,7 +251,7 @@ export default async function CultivarPage({
             </Link>
             {' › '}
             <Link href="/srovnavac" className="text-olive">
-              Srovnávač
+              Katalog
             </Link>
             {' › '}
             <span>Odrůda {cultivar.name}</span>

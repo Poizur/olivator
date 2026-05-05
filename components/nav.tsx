@@ -7,7 +7,7 @@ import { usePathname } from 'next/navigation'
 import { useCompare } from '@/lib/compare-context'
 
 const links = [
-  { href: '/srovnavac', label: 'Srovnávač' },
+  { href: '/srovnavac', label: 'Katalog' },
   { href: '/zebricek', label: 'Žebříčky' },
   { href: '/novinky', label: 'Novinky' },
   { href: '/pruvodce', label: 'Průvodce' },
