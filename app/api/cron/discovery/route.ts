@@ -3,7 +3,11 @@ import { runDiscoveryAgent } from '@/lib/discovery-agent'
 import { sendDiscoverySummary } from '@/lib/email'
 import { checkCronAuth } from '@/lib/cron-auth'
 
-export const maxDuration = 300
+// 21 enabled shops × Playwright crawl + auto-rescrape pro nové drafty
+// (~30-60s per shop, plus 30-90s per nový produkt). 800s = Railway max
+// pro většinu plánů. Pokud běh přesáhne, kill timer v scripts/cron/
+// discovery.ts (30 min) ho zachytí a process.exit(2) z standalone runner.
+export const maxDuration = 800
 export const dynamic = 'force-dynamic'
 
 /** Cron-triggered discovery run. Auth: x-cron-secret HEADER only
