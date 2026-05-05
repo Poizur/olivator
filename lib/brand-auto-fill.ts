@@ -13,7 +13,6 @@ import { supabaseAdmin } from './supabase'
 import { callClaude, extractText } from './anthropic'
 import { findProducerUrl, type ProducerUrlCandidate } from './brand-url-finder'
 import { researchBrand, type BrandResearchResult } from './brand-research'
-import { describePhotos } from './brand-vision'
 
 export const MIN_APPLY_CONFIDENCE = 75
 
@@ -363,95 +362,6 @@ async function saveLogo(brand: BrandRow, logoUrl: string, sourceUrl: string): Pr
   return true
 }
 
-async function saveGallery(brand: BrandRow, urls: string[], sourceUrl: string): Promise<number> {
-  if (urls.length === 0) return 0
-
-  // 1. Vision describe — dostane caption + subject + suggestedRole pro každou
-  console.log(`[brand-auto-fill] vision describe ${urls.length} photos for ${brand.slug}…`)
-  const descriptions = await describePhotos(urls, 4)
-  console.log(`[brand-auto-fill] vision returned ${descriptions.size}/${urls.length} captions`)
-
-  // 2. Auto-assign konkrétní image_role per fotka — nesvalujeme všechno
-  //    do 'gallery'. Logic:
-  //    - logo subject → image_role='logo' (jen pokud máme méně než jedno logo)
-  //    - landscape/process → 'hero' (první takový), pak 'editorial'
-  //    - person → 'editorial'
-  //    - product/ostatní → 'gallery'
-  //    Konkrétní pořadí (sort_order) určuje admin v curator UI po faktu.
-  const roleCounters: Record<string, number> = { logo: 0, hero: 0, editorial: 10, gallery: 20 }
-
-  // 3. Dedup + reaktivace
-  const { data: existing } = await supabaseAdmin
-    .from('entity_images')
-    .select('id, url, status, source')
-    .eq('entity_id', brand.id)
-  const existingByUrl = new Map<string, { id: string; status: string; source: string | null }>()
-  for (const r of existing ?? []) {
-    existingByUrl.set((r.url as string).split('?')[0], {
-      id: r.id as string,
-      status: r.status as string,
-      source: r.source as string | null,
-    })
-  }
-
-  let touched = 0
-  const newRows: Array<Record<string, unknown>> = []
-  for (let i = 0; i < urls.length; i++) {
-    const url = urls[i]
-    const base = url.split('?')[0]
-    const existingRow = existingByUrl.get(base)
-    const desc = descriptions.get(url)
-
-    // Zvolit image_role podle vision návrhu (pokud existuje), jinak default gallery
-    const suggestedRole = desc?.suggestedRole ?? 'gallery'
-    // Don't overwrite logos via this path — logo se ukládá separátně přes saveLogo
-    const safeRole: 'hero' | 'editorial' | 'gallery' =
-      suggestedRole === 'logo' ? 'gallery' : suggestedRole
-    const sortOrder = roleCounters[safeRole]++
-
-    if (existingRow) {
-      if (existingRow.source === 'auto_research') {
-        // Update caption + suggested role + reaktivace
-        const updatePatch: Record<string, unknown> = {
-          status: 'active',
-          updated_at: new Date().toISOString(),
-        }
-        if (desc) {
-          updatePatch.caption = desc.caption
-          updatePatch.subject = desc.subject
-          updatePatch.suggested_role = safeRole
-        }
-        await supabaseAdmin.from('entity_images').update(updatePatch).eq('id', existingRow.id)
-        touched++
-      }
-      continue
-    }
-    newRows.push({
-      entity_type: 'brand',
-      entity_id: brand.id,
-      url,
-      alt_text: desc?.caption ? desc.caption.slice(0, 200) : `${brand.name} — fotka ${i + 1}`,
-      caption: desc?.caption ?? null,
-      subject: desc?.subject ?? null,
-      suggested_role: safeRole,
-      source: 'auto_research',
-      source_attribution: `Auto-fetched from ${sourceUrl}`,
-      is_primary: false,
-      sort_order: sortOrder,
-      status: 'active',
-      image_role: safeRole,
-    })
-  }
-
-  if (newRows.length > 0) {
-    const { error } = await supabaseAdmin.from('entity_images').insert(newRows)
-    if (error) {
-      console.warn('[brand-auto-fill] saveGallery insert failed:', error.message)
-      return touched
-    }
-  }
-  return touched + newRows.length
-}
 
 // ────────────────────────────────────────────────────────────────────
 // Persistence pro pending review
@@ -636,7 +546,9 @@ export async function autoFillBrand(slug: string): Promise<AutoFillReport> {
     if (scraped.logoUrl) {
       logoSaved = await saveLogo(brand, scraped.logoUrl, candidate.url)
     }
-    galleryAdded = await saveGallery(brand, scraped.galleryUrls, candidate.url)
+    // Galerie z webu výrobce vypnutá — admin nahraje fotky ručně přes
+    // section UI s WebP optimalizací a Vision alt textem.
+    galleryAdded = 0
     status = 'applied'
   } else {
     status = 'pending_review'

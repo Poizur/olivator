@@ -10,7 +10,7 @@ import { EntityPhotosManager } from '@/components/entity-photos-manager'
 import { EntityProductsList } from '@/components/entity-products-list'
 import { AdminBlock } from '@/components/admin-block'
 import { BrandAutoResearchPanel } from '@/components/brand-auto-research-panel'
-import { BrandPhotoCurator, type CuratorPhoto } from '@/components/brand-photo-curator'
+import { BrandPhotoSections } from '@/components/brand-photo-sections'
 import { ARTICLES } from '@/lib/static-content'
 
 async function getLinkedSlugs(entityType: 'region' | 'brand' | 'cultivar', entitySlug: string) {
@@ -37,14 +37,27 @@ async function getEntityPhotos(entityId: string) {
   return data ?? []
 }
 
-async function getCuratorPhotos(entityId: string): Promise<CuratorPhoto[]> {
+interface SectionPhoto {
+  id: string
+  url: string
+  alt_text: string | null
+  caption: string | null
+  image_role: string
+  sort_order: number
+  width: number | null
+  height: number | null
+  status: string
+}
+
+async function getSectionPhotos(entityId: string): Promise<SectionPhoto[]> {
   const { data } = await supabaseAdmin
     .from('entity_images')
-    .select('id, url, alt_text, caption, subject, suggested_role, image_role, sort_order, status')
+    .select('id, url, alt_text, caption, image_role, sort_order, width, height, status')
     .eq('entity_id', entityId)
     .eq('entity_type', 'brand')
+    .eq('status', 'active')
     .order('sort_order')
-  return (data ?? []) as CuratorPhoto[]
+  return (data ?? []) as SectionPhoto[]
 }
 
 async function getFaqs(entityId: string) {
@@ -64,9 +77,9 @@ export default async function EditBrandPage({ params }: { params: Promise<{ slug
 
   const guideSlugsInDb = ARTICLES.filter((a) => a.category !== 'recept').map((a) => a.slug)
 
-  const [photos, curatorPhotos, faqs, allLinkedSlugs] = await Promise.all([
+  const [photos, sectionPhotos, faqs, allLinkedSlugs] = await Promise.all([
     getEntityPhotos(brand.id),
-    getCuratorPhotos(brand.id),
+    getSectionPhotos(brand.id),
     getFaqs(brand.id),
     getLinkedSlugs('brand', brand.slug),
   ])
@@ -159,30 +172,30 @@ export default async function EditBrandPage({ params }: { params: Promise<{ slug
           />
         </div>
 
-        {/* BLOK 4a — Photo Curator (auto-research fotky) */}
-        {curatorPhotos.length > 0 && (
-          <AdminBlock
-            number={4}
-            icon="🎨"
-            title="Photo curator — z webu výrobce"
-            publicLocation="Hero / Editorial sekce / Galerie atmosféra"
-            description="AI navrhla popis a roli každé fotky. Můžeš přepsat caption, změnit roli (Hero/Editorial/Galerie/Skrýt) nebo přesunout pořadí v editorial sekci."
-          >
-            <BrandPhotoCurator
-              entityId={brand.slug}
-              entityType="brand"
-              initialPhotos={curatorPhotos}
-            />
-          </AdminBlock>
-        )}
+        {/* BLOK 4 — Fotky podle sekcí (text vlevo, drop zone vpravo) */}
+        <AdminBlock
+          number={4}
+          icon="📸"
+          title="Fotky podle sekcí"
+          publicLocation="Hero · Editorial sekce · Galerie atmosféra"
+          description="Každá sekce má text vlevo a slot pro fotku vpravo. Server po uploadu automaticky: WebP konverze, resize na 1920px, strip EXIF, AI alt text dle kontextu. Logo a Hero jsou unikátní (1 fotka), editorial 1 per ## sekci, galerie kolik chceš."
+        >
+          <BrandPhotoSections
+            brandId={brand.id}
+            brandSlug={brand.slug}
+            brandName={brand.name}
+            descriptionLong={brand.description_long}
+            initialPhotos={sectionPhotos}
+          />
+        </AdminBlock>
 
-        {/* BLOK 4b — Klasický photo manager (URL upload, drag-drop) */}
+        {/* BLOK 4b — Záloha: klasický photo manager pro edge cases (manual URL) */}
         <AdminBlock
           number={4}
           icon="🖼️"
-          title="Fotky (manuální upload)"
-          publicLocation="Hero karta · Editorial story · Galerie atmosféra"
-          description="Pro doplnění vlastních fotek nad rámec auto-research."
+          title="Fotky — pokročilé (URL upload)"
+          publicLocation="Pokud potřebuješ přidat fotku přímo z URL"
+          description="Klasický manager pro nahrávání z URL nebo úpravu existujících záznamů. Pro 99% případů použij sekce výš."
         >
           <EntityPhotosManager
             entityId={brand.id}

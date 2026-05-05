@@ -417,11 +417,14 @@ export async function researchBrand(producerUrl: string): Promise<BrandResearchR
     warnings.push('Žádné atmosférické fotky nebyly nalezeny — galerie zůstane prázdná.')
   }
 
+  // Auto-extrakce galerie BYLA vypnutá záměrně — fotky z webu výrobce mívají
+  // špatné poměry stran, hotlink protection, nehodící se obsah. Admin nahrává
+  // fotky ručně přes section-based UI v adminu. Logo z homepage zůstává.
   return {
     ...extracted,
     websiteUrl: extracted.websiteUrl ?? baseUrl,
     logoUrl,
-    galleryUrls,
+    galleryUrls: [],
     pagesScanned,
     warnings,
   }
