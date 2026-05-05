@@ -69,15 +69,16 @@ export function CompareBar() {
               <span className="text-[9px] text-olive font-medium mt-0.5 text-center px-0.5 leading-tight max-w-[72px] overflow-hidden whitespace-nowrap text-ellipsis">
                 {item.nameShort}
               </span>
-              {/* X tlačítko mimo bounding box karty — ne v parent overflow-hidden,
-                  jinak by se odřízlo. Větší 18×18 + tap padding pro mobil. */}
+              {/* X tlačítko UVNITŘ slot karty — parent má overflow-x-auto,
+                  takže pozice mimo bounding box (-top -right) by se odřízla.
+                  top-0.5 right-0.5 = uvnitř, terra barva drží kontrast. */}
               <button
                 onClick={(e) => {
                   e.preventDefault()
                   e.stopPropagation()
                   removeItem(item.id)
                 }}
-                className="absolute -top-2 -right-2 w-[18px] h-[18px] rounded-full bg-terra text-white text-[10px] flex items-center justify-center cursor-pointer font-bold border-[1.5px] border-white hover:bg-text shadow-sm z-10"
+                className="absolute top-0.5 right-0.5 w-[18px] h-[18px] rounded-full bg-terra text-white text-[10px] flex items-center justify-center cursor-pointer font-bold hover:bg-text shadow-sm z-10"
                 aria-label={`Odebrat ${item.name} z porovnání`}
               >
                 ✕

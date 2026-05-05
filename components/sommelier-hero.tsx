@@ -214,7 +214,8 @@ export function SommelierHero({
               AI Sommelier prochází celý katalog. Napiš co hledáš — chuť, cenu, příležitost — a dostaneš tři konkrétní oleje s cenou a důvodem proč.
             </p>
 
-            {/* Search input */}
+            {/* Search input — placeholder krátký, příklady jsou v pills níže.
+                Mobile: ikon-only button (40×40), desktop: full "Zeptat se →". */}
             <div className="relative max-w-[640px]">
               <div className="flex gap-2 items-center bg-white border border-off2 rounded-full pl-5 pr-2 py-2 shadow-[0_4px_24px_rgba(0,0,0,0.04)] focus-within:border-olive focus-within:shadow-[0_4px_24px_rgba(45,106,79,0.12)] transition-all">
                 <input
@@ -223,13 +224,12 @@ export function SommelierHero({
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && send()}
-                  placeholder="Co hledáš? Napiš třeba: lehký řecký do 300 Kč..."
+                  placeholder="Co hledáš?"
                   disabled={loading}
-                  className="flex-1 text-[15px] outline-none placeholder:text-text3 bg-transparent py-2"
+                  className="flex-1 min-w-0 text-[15px] outline-none placeholder:text-text3 bg-transparent py-2"
                 />
                 <button
                   onClick={() => {
-                    // Když je input prázdný, focusneme ho místo "rozbitého" disabled stavu
                     if (!input.trim()) {
                       inputRef.current?.focus()
                       return
@@ -237,12 +237,13 @@ export function SommelierHero({
                     send()
                   }}
                   disabled={loading}
-                  className="bg-olive text-white rounded-full px-5 py-2.5 text-[14px] font-semibold hover:bg-olive2 transition-colors whitespace-nowrap inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-wait"
+                  aria-label="Zeptat se"
+                  className="bg-olive text-white rounded-full sm:px-5 sm:py-2.5 px-3 py-2.5 text-[14px] font-semibold hover:bg-olive2 transition-colors whitespace-nowrap inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-wait shrink-0"
                 >
                   {loading ? '…' : (
                     <>
-                      Zeptat se
-                      <ArrowRight size={14} strokeWidth={2} />
+                      <span className="hidden sm:inline">Zeptat se</span>
+                      <ArrowRight size={16} strokeWidth={2.25} />
                     </>
                   )}
                 </button>
