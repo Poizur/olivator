@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import type { Product, ProductOffer } from '@/lib/types'
 import { countryName, formatPrice, formatPricePer100ml, certLabel } from '@/lib/utils'
 import { ProductImage } from './product-image'
@@ -15,12 +16,19 @@ interface ListCardProps {
 }
 
 export function ListCard({ product, offer, rank, compact = false }: ListCardProps) {
+  const router = useRouter()
   if (compact) {
     return <CompactCard product={product} offer={offer} rank={rank} />
   }
 
+  // Karta není <Link>, ale <div onClick> + sibling anchory uvnitř pro Koupit.
+  // Důvod: Koupit tlačítko vede na /go/[retailer]/[slug] — nested <a> uvnitř
+  // <a> je HTML invalid + React hydration error. Programatická navigace
+  // detailem na ostatních místech kartě a anchor pro affiliate.
+  const goToDetail = () => router.push(`/olej/${product.slug}`)
   return (
-    <Link href={`/olej/${product.slug}`}>
+    <div onClick={goToDetail} role="link" tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter') goToDetail() }}>
       <div className="bg-white border border-off2 rounded-[var(--radius-card)] cursor-pointer transition-all hover:border-olive-light hover:shadow-[0_4px_16px_rgba(0,0,0,.06)] overflow-hidden">
         {/* MOBILE — stacked: hlavička (rank+img+name+score), pak akční řádek (price+button) */}
         <div className="md:hidden">
@@ -74,9 +82,18 @@ export function ListCard({ product, offer, rank, compact = false }: ListCardProp
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <WishlistButton productId={product.id} />
-                <span className="bg-olive text-white rounded-full px-4 py-2 text-[12px] font-medium">
+                {/* Direct affiliate link — preventDefault na parent Link, klik vede
+                    rovnou na /go/[retailer]/[slug] (loguje + redirect na affil URL).
+                    Bez toho by uživatel musel přes detail stranku → 1 klik navíc. */}
+                <a
+                  href={`/go/${offer.retailer.slug}/${product.slug}`}
+                  target="_blank"
+                  rel="noopener sponsored"
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-olive text-white rounded-full px-4 py-2 text-[12px] font-medium hover:bg-olive2 transition-colors"
+                >
                   Koupit
-                </span>
+                </a>
               </div>
             </div>
           )}
@@ -153,13 +170,26 @@ export function ListCard({ product, offer, rank, compact = false }: ListCardProp
             </div>
           )}
 
-          <span className="bg-olive text-white border-none rounded-full px-4 py-2 text-xs font-medium shrink-0">
-            Koupit
-          </span>
+          {/* Direct affiliate — viz mobile branche výš */}
+          {offer ? (
+            <a
+              href={`/go/${offer.retailer.slug}/${product.slug}`}
+              target="_blank"
+              rel="noopener sponsored"
+              onClick={(e) => e.stopPropagation()}
+              className="bg-olive text-white border-none rounded-full px-4 py-2 text-xs font-medium shrink-0 hover:bg-olive2 transition-colors"
+            >
+              Koupit
+            </a>
+          ) : (
+            <span className="bg-off2 text-text3 border-none rounded-full px-4 py-2 text-xs font-medium shrink-0">
+              —
+            </span>
+          )}
           <WishlistButton productId={product.id} className="shrink-0" />
         </div>
       </div>
-    </Link>
+    </div>
   )
 }
 
