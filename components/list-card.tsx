@@ -24,14 +24,14 @@ export function ListCard({ product, offer, rank, compact = false }: ListCardProp
       <div className="bg-white border border-off2 rounded-[var(--radius-card)] cursor-pointer transition-all hover:border-olive-light hover:shadow-[0_4px_16px_rgba(0,0,0,.06)] overflow-hidden">
         {/* MOBILE — stacked: hlavička (rank+img+name+score), pak akční řádek (price+button) */}
         <div className="md:hidden">
-          <div className="flex items-start gap-3 p-4">
-            <div className={`text-[20px] font-bold tabular-nums leading-none mt-1 shrink-0 w-6 text-center ${
+          <div className="flex items-start gap-3 p-3">
+            <div className={`text-[18px] font-bold tabular-nums leading-none mt-2 shrink-0 w-5 text-center ${
               rank <= 3 ? 'text-terra' : 'text-text3'
             }`}>
               {rank}
             </div>
-            <div className="w-16 h-20 bg-off rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
-              <ProductImage product={product} fallbackSize="text-3xl" sizes="64px" />
+            <div className="w-24 h-28 bg-white rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+              <ProductImage product={product} fallbackSize="text-4xl" sizes="96px" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-[10px] text-text3 mb-0.5 uppercase tracking-widest font-medium truncate">
@@ -63,7 +63,7 @@ export function ListCard({ product, offer, rank, compact = false }: ListCardProp
             </div>
           </div>
           {offer && (
-            <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-off bg-off/30">
+            <div className="flex items-center justify-between gap-3 px-3 py-2.5 border-t border-off bg-off/30">
               <div className="min-w-0">
                 <div className="text-[16px] font-semibold text-text tabular-nums leading-none">
                   {formatPrice(offer.price)}
@@ -83,15 +83,15 @@ export function ListCard({ product, offer, rank, compact = false }: ListCardProp
         </div>
 
         {/* DESKTOP — horizontální layout (původní) */}
-        <div className="hidden md:flex items-center gap-5 px-5 py-4">
-          <div className={`text-[22px] font-bold w-8 shrink-0 text-center tabular-nums ${
+        <div className="hidden md:flex items-center gap-4 px-4 py-3">
+          <div className={`text-[22px] font-bold w-7 shrink-0 text-center tabular-nums ${
             rank <= 3 ? 'text-terra' : 'text-off2'
           }`}>
             {rank}
           </div>
 
-          <div className="w-20 h-[6.5rem] bg-off rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
-            <ProductImage product={product} fallbackSize="text-5xl" sizes="80px" />
+          <div className="w-28 h-32 bg-white rounded-lg flex items-center justify-center shrink-0 overflow-hidden">
+            <ProductImage product={product} fallbackSize="text-5xl" sizes="112px" />
           </div>
 
           <div className="flex-1 min-w-0">

@@ -143,13 +143,13 @@ export function ListingContent({
     !!search.trim()
 
   return (
-    <div className="px-6 md:px-10 py-10">
+    <div className="px-4 md:px-8 py-6 md:py-8">
       <div className="max-w-[1280px] mx-auto">
-        <div className="mb-6">
-          <h1 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl font-normal text-text mb-1.5">
+        <div className="mb-4">
+          <h1 className="font-[family-name:var(--font-display)] text-2xl md:text-3xl font-normal text-text mb-1">
             Katalog olivových olejů
           </h1>
-          <p className="text-[14px] text-text2 font-light">
+          <p className="text-[13px] text-text2 font-light">
             {filtered.length} produktů · aktualizováno dnes
           </p>
         </div>
@@ -284,7 +284,7 @@ export function ListingContent({
               <strong className="text-text">{filtered.length}</strong> {filtered.length === 1 ? 'výsledek' : filtered.length < 5 ? 'výsledky' : 'výsledků'}
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
               {filtered.map((p, i) => (
                 <ListCard
                   key={p.id}
