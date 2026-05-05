@@ -46,6 +46,7 @@ export interface AutoFillReport {
   polished: PolishedDraft | null
   appliedFields: string[]
   logoSaved: boolean
+  galleryAdded: number
   message: string
 }
 
@@ -292,8 +293,41 @@ async function saveLogo(brand: BrandRow, logoUrl: string, sourceUrl: string): Pr
     is_primary: true,
     sort_order: 0,
     status: 'active',
+    image_role: 'logo',
   })
   return true
+}
+
+async function saveGallery(brand: BrandRow, urls: string[], sourceUrl: string): Promise<number> {
+  if (urls.length === 0) return 0
+  // Dedup proti existujícím
+  const { data: existing } = await supabaseAdmin
+    .from('entity_images')
+    .select('url')
+    .eq('entity_id', brand.id)
+  const have = new Set((existing ?? []).map((r) => (r.url as string).split('?')[0]))
+
+  const rows = urls
+    .filter((u) => !have.has(u.split('?')[0]))
+    .map((url, i) => ({
+      entity_type: 'brand',
+      entity_id: brand.id,
+      url,
+      alt_text: `${brand.name} — fotka ${i + 1}`,
+      source: 'auto_research',
+      source_attribution: `Auto-fetched from ${sourceUrl}`,
+      is_primary: false,
+      sort_order: i + 10, // 10+ aby logo (sort_order=0) zůstalo první v `is_primary` listingu
+      status: 'active',
+      image_role: 'gallery',
+    }))
+  if (rows.length === 0) return 0
+  const { error } = await supabaseAdmin.from('entity_images').insert(rows)
+  if (error) {
+    console.warn('[brand-auto-fill] saveGallery insert failed:', error.message)
+    return 0
+  }
+  return rows.length
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -339,6 +373,7 @@ export async function autoFillBrand(slug: string): Promise<AutoFillReport> {
     polished: null,
     appliedFields: [],
     logoSaved: false,
+    galleryAdded: 0,
     message: '',
   }
 
@@ -470,6 +505,7 @@ export async function autoFillBrand(slug: string): Promise<AutoFillReport> {
   const overallConfidence = Math.min(candidate.confidence, verification.confidence)
   let appliedFields: string[] = []
   let logoSaved = false
+  let galleryAdded = 0
   let status: AutoFillStatus
 
   if (overallConfidence >= MIN_APPLY_CONFIDENCE) {
@@ -477,6 +513,7 @@ export async function autoFillBrand(slug: string): Promise<AutoFillReport> {
     if (scraped.logoUrl) {
       logoSaved = await saveLogo(brand, scraped.logoUrl, candidate.url)
     }
+    galleryAdded = await saveGallery(brand, scraped.galleryUrls, candidate.url)
     status = 'applied'
   } else {
     status = 'pending_review'
@@ -491,9 +528,10 @@ export async function autoFillBrand(slug: string): Promise<AutoFillReport> {
     polished,
     appliedFields,
     logoSaved,
+    galleryAdded,
     message:
       status === 'applied'
-        ? `Aplikováno (confidence ${overallConfidence}). ${appliedFields.length} polí + ${logoSaved ? 'logo' : 'logo už existovalo'}.`
+        ? `Aplikováno (confidence ${overallConfidence}). ${appliedFields.length} polí, logo ${logoSaved ? 'uloženo' : 'už existovalo'}, ${galleryAdded} fotek do galerie.`
         : `Návrh připraven k revizi (confidence ${overallConfidence} < ${MIN_APPLY_CONFIDENCE}).`,
   }
 

@@ -60,15 +60,17 @@ async function getBrand(slug: string): Promise<BrandRow | null> {
 async function getEntityPhotos(entityId: string) {
   const { data } = await supabaseAdmin
     .from('entity_images')
-    .select('url, alt_text, source_attribution')
+    .select('url, alt_text, source_attribution, image_role, is_primary, sort_order')
     .eq('entity_id', entityId)
     .eq('status', 'active')
-    .order('is_primary', { ascending: false })
     .order('sort_order')
   return (data ?? []) as Array<{
     url: string
     alt_text: string | null
     source_attribution: string | null
+    image_role: string | null
+    is_primary: boolean | null
+    sort_order: number | null
   }>
 }
 
@@ -118,7 +120,11 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
     loadEntityRecipes('brand', slug),
   ])
 
-  const heroPhoto = photos[0] ?? null
+  // Logo (image_role='logo') vs hero/gallery (vše ostatní). Logo se zobrazí
+  // jako badge nad názvem; hero je první atmosférická fotka.
+  const logoPhoto = photos.find((p) => p.image_role === 'logo') ?? null
+  const nonLogoPhotos = photos.filter((p) => p.image_role !== 'logo')
+  const heroPhoto = nonLogoPhotos[0] ?? null
   const products = await loadEntityProducts(productIds)
   const kpis = computeProductKpis(products)
   const country = countryName(brand.country_code)
@@ -189,8 +195,9 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
   const introLead = extractIntroFromDescription(brand.description_long)
   const tldr = brand.tldr ?? brand.description_short ?? null
 
-  // Photo distribution — hero > editorial story > galerie
-  const photosForLayout = photos.slice(1).map((p) => ({ url: p.url, alt: p.alt_text }))
+  // Photo distribution — hero > editorial story > galerie. Logo nikdy
+  // nepoužívat jako landscape (vypadá hrozně cropované).
+  const photosForLayout = nonLogoPhotos.slice(1).map((p) => ({ url: p.url, alt: p.alt_text }))
   const storyPhotos = photosForLayout.slice(0, accordionSections.length)
   const galleryPhotos = photosForLayout.slice(storyPhotos.length)
   const url = `https://olivator.cz/znacka/${slug}`
@@ -204,7 +211,7 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
         websiteUrl={brand.website_url}
         foundedYear={brand.founded_year}
         countryName={country}
-        imageUrl={heroPhoto?.url ?? null}
+        imageUrl={heroPhoto?.url ?? logoPhoto?.url ?? null}
       />
       <FaqJsonLd faqs={faqs} />
 
@@ -224,18 +231,30 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
           </div>
         </div>
 
-        {/* Blok 1 — Hero */}
+        {/* Blok 1 — Hero. Logo se ZOBRAZUJE jako badge na vrchu, ne jako
+            cropovaný landscape. Hero photo (atmosférický landscape) je
+            samostatná vrstva pod logem. */}
         <section className="px-6 md:px-10 mb-6">
           <div className="max-w-[1280px] mx-auto">
             {heroPhoto ? (
-              <div className="relative rounded-[var(--radius-card)] overflow-hidden h-56 md:h-64">
+              <div className="relative rounded-[var(--radius-card)] overflow-hidden h-64 md:h-80">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={heroPhoto.url}
                   alt={heroPhoto.alt_text ?? brand.name}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
+                {logoPhoto && (
+                  <div className="absolute top-4 left-4 md:top-6 md:left-6 bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-md">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={logoPhoto.url}
+                      alt={`${brand.name} logo`}
+                      className="h-8 md:h-10 w-auto object-contain"
+                    />
+                  </div>
+                )}
                 <div className="absolute bottom-0 left-0 p-6">
                   <h1 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl font-normal text-white mb-1">
                     {brand.name}
@@ -245,6 +264,35 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
                       brand.headquarters ?? country,
                       brand.founded_year ? `od ${brand.founded_year}` : null,
                       brand.generation ? `${brand.generation}. generace` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                </div>
+              </div>
+            ) : logoPhoto ? (
+              <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 md:p-10 flex flex-col md:flex-row items-center gap-6 md:gap-10">
+                <div className="shrink-0 bg-off rounded-lg p-4 flex items-center justify-center w-32 h-32 md:w-40 md:h-40">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={logoPhoto.url}
+                    alt={`${brand.name} logo`}
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </div>
+                <div className="flex-1 min-w-0 text-center md:text-left">
+                  <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
+                    — {country}
+                  </div>
+                  <h1 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl font-normal text-text mb-2">
+                    {brand.name}
+                  </h1>
+                  <p className="text-sm text-text2">
+                    {[
+                      brand.headquarters,
+                      brand.founded_year ? `od ${brand.founded_year}` : null,
+                      brand.generation ? `${brand.generation}. generace` : null,
+                      `${kpis.count} olejů v katalogu`,
                     ]
                       .filter(Boolean)
                       .join(' · ')}

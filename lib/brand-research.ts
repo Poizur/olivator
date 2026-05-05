@@ -24,6 +24,10 @@ export interface BrandResearchResult {
   certifications: string[]
   websiteUrl: string | null
   logoUrl: string | null
+  /** Atmosférické fotky z webu výrobce — pan Intini, výroba, hájem, balení.
+   *  Až 8 nejvhodnějších URL — orchestrátor je uloží do entity_images
+   *  s role='gallery'. */
+  galleryUrls: string[]
   pagesScanned: string[]
   warnings: string[]
 }
@@ -78,12 +82,60 @@ interface ScrapedPage {
   url: string
   text: string
   logoUrls: string[]
+  /** Velké atmosférické fotky — kandidáti pro brand gallery (zakladatel,
+   *  výroba, hájem, lahve). Na rozdíl od loga: object-cover, landscape. */
+  galleryUrls: string[]
   metaDescription: string | null
+}
+
+const LOGO_SELECTORS = [
+  'header img[src*="logo" i]',
+  'header img[alt*="logo" i]',
+  'a.logo img',
+  '.logo img',
+  '.site-logo img',
+  '.brand-logo img',
+  '#logo img',
+  'header img',
+  'img[src*="logo" i]',
+  'img[alt*="logo" i]',
+]
+
+// Negativní filtr pro gallery — vyhodit ikonky, sociální badge, sprite, pixel.
+const GALLERY_BAD_PATTERNS = [
+  /logo/i,
+  /icon/i,
+  /favicon/i,
+  /sprite/i,
+  /pixel/i,
+  /tracking/i,
+  /\/cart/i,
+  /social/i,
+  /facebook|instagram|twitter|youtube|linkedin/i,
+  /\.svg(\?|$)/i, // SVG bývá ikona, ne fotka
+  /badge/i,
+  /flag/i,
+  /payment/i,
+]
+
+function isGalleryCandidate(src: string, alt: string | undefined, width: string | undefined, height: string | undefined): boolean {
+  if (src.startsWith('data:')) return false
+  for (const re of GALLERY_BAD_PATTERNS) {
+    if (re.test(src)) return false
+    if (alt && re.test(alt)) return false
+  }
+  // Pokud má atribut width/height a obojí < 200, skip (thumbnail/icon)
+  const w = Number(width)
+  const h = Number(height)
+  if (!isNaN(w) && w > 0 && w < 200) return false
+  if (!isNaN(h) && h > 0 && h < 200) return false
+  // URL musí vést na typický asset/uploads cestu nebo na /wp-content/, /media/
+  return /\/(uploads|media|images|wp-content|content|assets|cdn|static)\//i.test(src) || src.length > 30
 }
 
 function extractFromHtml(url: string, html: string): ScrapedPage {
   const $ = load(html)
-  $('script, style, noscript, iframe, svg').remove()
+  $('script, style, noscript, iframe').remove() // ponechat <svg> ne — některé loga jsou inline SVG
 
   const text = $('body').text().replace(/\s+/g, ' ').trim().slice(0, 8000)
 
@@ -92,31 +144,36 @@ function extractFromHtml(url: string, html: string): ScrapedPage {
     $('meta[property="og:description"]').attr('content') ??
     null
 
-  // Logo kandidáti — preferuj <img> v <header>, src obsahuje "logo", alt obsahuje "logo"
+  // Logo kandidáti
   const logoUrls: string[] = []
-  const selectors = [
-    'header img[src*="logo" i]',
-    'header img[alt*="logo" i]',
-    'a.logo img',
-    '.logo img',
-    '.site-logo img',
-    '.brand-logo img',
-    '#logo img',
-    'header img',
-    'img[src*="logo" i]',
-    'img[alt*="logo" i]',
-  ]
-  for (const sel of selectors) {
+  for (const sel of LOGO_SELECTORS) {
     $(sel).each((_, el) => {
-      const src = $(el).attr('src')
+      const src = $(el).attr('src') ?? $(el).attr('data-src') ?? $(el).attr('data-lazy-src')
       if (src) logoUrls.push(src)
     })
   }
-  // OG image jako fallback
   const ogImage = $('meta[property="og:image"]').attr('content')
   if (ogImage) logoUrls.push(ogImage)
 
-  return { url, text, logoUrls, metaDescription }
+  // Gallery kandidáti — všechny <img> co prošly filtrem + nejsou v hlavičce
+  const galleryUrls: string[] = []
+  const seen = new Set<string>()
+  $('img').each((_, el) => {
+    // Skip <img> uvnitř <header> nebo .site-header / .navbar
+    const inHeader = $(el).closest('header, .site-header, .navbar, .menu, footer, .footer').length > 0
+    if (inHeader) return
+    const src = $(el).attr('src') ?? $(el).attr('data-src') ?? $(el).attr('data-lazy-src') ?? $(el).attr('data-original')
+    if (!src) return
+    const alt = $(el).attr('alt')
+    const w = $(el).attr('width')
+    const h = $(el).attr('height')
+    if (!isGalleryCandidate(src, alt, w, h)) return
+    if (seen.has(src)) return
+    seen.add(src)
+    galleryUrls.push(src)
+  })
+
+  return { url, text, logoUrls, galleryUrls, metaDescription }
 }
 
 function resolveAbsolute(baseUrl: string, maybeRelative: string): string {
@@ -263,16 +320,39 @@ export async function researchBrand(producerUrl: string): Promise<BrandResearchR
   // Logo: aggregate ze všech stránek, vyber nejlepší
   const allLogoUrls = [
     ...homePage.logoUrls,
-    ...aboutPages.flatMap(p => p.logoUrls),
-  ].map(u => resolveAbsolute(baseUrl, u))
+    ...aboutPages.flatMap((p) => p.logoUrls),
+  ].map((u) => resolveAbsolute(baseUrl, u))
   const logoUrl = pickBestLogo(allLogoUrls)
 
   if (!logoUrl) warnings.push('Logo nebylo nalezeno — žádný <img> s "logo" v src/alt.')
+
+  // Gallery: aggregate, dedup, vyfiltruj logo URLs (i jejich varianty bez query)
+  const logoBases = new Set([logoUrl, ...allLogoUrls].filter(Boolean).map((u) => u!.split('?')[0]))
+  const allGalleryRaw = [
+    ...homePage.galleryUrls,
+    ...aboutPages.flatMap((p) => p.galleryUrls),
+  ].map((u) => resolveAbsolute(baseUrl, u))
+
+  const seen = new Set<string>()
+  const galleryUrls: string[] = []
+  for (const url of allGalleryRaw) {
+    const base = url.split('?')[0]
+    if (logoBases.has(base)) continue
+    if (seen.has(base)) continue
+    seen.add(base)
+    galleryUrls.push(url)
+    if (galleryUrls.length >= 8) break
+  }
+
+  if (galleryUrls.length === 0) {
+    warnings.push('Žádné atmosférické fotky nebyly nalezeny — galerie zůstane prázdná.')
+  }
 
   return {
     ...extracted,
     websiteUrl: extracted.websiteUrl ?? baseUrl,
     logoUrl,
+    galleryUrls,
     pagesScanned,
     warnings,
   }

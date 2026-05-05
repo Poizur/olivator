@@ -1069,7 +1069,12 @@ export interface BrandTile {
   name: string
   countryCode: string
   productCount: number
+  /** @deprecated alias pro heroUrl ?? logoUrl, kvůli zpětné kompatibilitě */
   photoUrl: string | null
+  /** Logo značky — render contain + bílé pozadí. */
+  logoUrl: string | null
+  /** Atmosférická landscape fotka (zakladatel, výroba) — render cover. */
+  heroUrl: string | null
 }
 
 export async function getRegionTiles(): Promise<RegionTile[]> {
@@ -1104,31 +1109,53 @@ export async function getRegionTiles(): Promise<RegionTile[]> {
 }
 
 export async function getBrandTiles(): Promise<BrandTile[]> {
-  const [brandsRes, productsRes, photosRes] = await Promise.all([
+  // Načteme všechny brand entity_images a roztřídíme per role.
+  // image_role: 'logo' = brand logo, ostatní (gallery/hero/editorial) = hero kandidát
+  const [brandsRes, productsRes, imagesRes] = await Promise.all([
     supabaseAdmin.from('brands').select('id, slug, name, country_code'),
     supabaseAdmin.from('products').select('brand_slug').eq('status', 'active'),
     supabaseAdmin
       .from('entity_images')
-      .select('entity_id, url')
+      .select('entity_id, url, image_role, is_primary, sort_order')
       .eq('entity_type', 'brand')
       .eq('status', 'active')
-      .eq('is_primary', true),
+      .order('sort_order', { ascending: true }),
   ])
 
   const counts: Record<string, number> = {}
   for (const r of productsRes.data ?? []) {
     if (r.brand_slug) counts[r.brand_slug] = (counts[r.brand_slug] ?? 0) + 1
   }
-  const photoByEntity = new Map((photosRes.data ?? []).map((p: { entity_id: string; url: string }) => [p.entity_id, p.url]))
+
+  const logoByEntity = new Map<string, string>()
+  const heroByEntity = new Map<string, string>()
+  for (const row of (imagesRes.data ?? []) as Array<{
+    entity_id: string
+    url: string
+    image_role: string | null
+    is_primary: boolean | null
+  }>) {
+    if (row.image_role === 'logo' || (row.is_primary && !logoByEntity.has(row.entity_id) && row.image_role !== 'gallery')) {
+      if (!logoByEntity.has(row.entity_id)) logoByEntity.set(row.entity_id, row.url)
+    } else if (!heroByEntity.has(row.entity_id)) {
+      heroByEntity.set(row.entity_id, row.url)
+    }
+  }
 
   return (brandsRes.data ?? [])
-    .map((b: { id: string; slug: string; name: string; country_code: string }) => ({
-      slug: b.slug,
-      name: b.name,
-      countryCode: b.country_code,
-      productCount: counts[b.slug] ?? 0,
-      photoUrl: photoByEntity.get(b.id) ?? null,
-    }))
+    .map((b: { id: string; slug: string; name: string; country_code: string }) => {
+      const logoUrl = logoByEntity.get(b.id) ?? null
+      const heroUrl = heroByEntity.get(b.id) ?? null
+      return {
+        slug: b.slug,
+        name: b.name,
+        countryCode: b.country_code,
+        productCount: counts[b.slug] ?? 0,
+        photoUrl: heroUrl ?? logoUrl,
+        logoUrl,
+        heroUrl,
+      }
+    })
     .filter((b) => b.productCount > 0)
     .sort((a, b) => b.productCount - a.productCount)
 }

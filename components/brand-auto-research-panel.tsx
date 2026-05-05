@@ -53,6 +53,7 @@ interface AutoFillReport {
   polished: PolishedDraft | null
   appliedFields: string[]
   logoSaved: boolean
+  galleryAdded: number
   message: string
 }
 
@@ -452,6 +453,7 @@ function AutoReportView({
           Aplikovaná pole: <strong>{report.appliedFields.join(', ') || '(žádná)'}</strong>
           {report.logoSaved && ' · logo uloženo'}
           {!report.logoSaved && hasPrimaryLogo && ' · logo už existovalo'}
+          {report.galleryAdded > 0 && ` · ${report.galleryAdded} fotek do galerie`}
         </div>
       )}
 

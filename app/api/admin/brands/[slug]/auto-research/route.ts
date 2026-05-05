@@ -69,12 +69,41 @@ export async function POST(
           is_primary: true,
           sort_order: 0,
           status: 'active',
+          image_role: 'logo',
         })
         logoSaved = true
       }
     }
 
-    return NextResponse.json({ ok: true, mode: 'manual', brand: brand.slug, result, logoSaved })
+    // Manuální mode taky ukládá galerii — admin si ji může vyfiltrovat v UI
+    let galleryAdded = 0
+    if (result.galleryUrls.length > 0) {
+      const { data: existingPhotos } = await supabaseAdmin
+        .from('entity_images')
+        .select('url')
+        .eq('entity_id', brand.id)
+      const have = new Set((existingPhotos ?? []).map((r) => (r.url as string).split('?')[0]))
+      const rows = result.galleryUrls
+        .filter((u) => !have.has(u.split('?')[0]))
+        .map((u, i) => ({
+          entity_type: 'brand',
+          entity_id: brand.id,
+          url: u,
+          alt_text: `${brand.name} — fotka ${i + 1}`,
+          source: 'auto_research',
+          source_attribution: `Auto-fetched from ${url}`,
+          is_primary: false,
+          sort_order: i + 10,
+          status: 'active',
+          image_role: 'gallery',
+        }))
+      if (rows.length > 0) {
+        const { error } = await supabaseAdmin.from('entity_images').insert(rows)
+        if (!error) galleryAdded = rows.length
+      }
+    }
+
+    return NextResponse.json({ ok: true, mode: 'manual', brand: brand.slug, result, logoSaved, galleryAdded })
   } catch (err) {
     console.error('[admin/brands/auto-research]', err)
     return NextResponse.json(
