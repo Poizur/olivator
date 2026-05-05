@@ -42,7 +42,7 @@ INSERT INTO discovery_sources (
   'manual',
   'Řecký krétský olej, eHUB partnerství. XML feed (?type=productscz) NEOBSAHUJE olej kategorii — jen kosmetiku/koření. Crawlujeme přes category page /cs/13-olivovy-olej (46 olejů, PrestaShop layout).'
 )
-ON CONFLICT (domain) DO UPDATE SET
+ON CONFLICT (slug) DO UPDATE SET
   status = 'enabled',
   crawler_type = EXCLUDED.crawler_type,
   category_url = EXCLUDED.category_url,

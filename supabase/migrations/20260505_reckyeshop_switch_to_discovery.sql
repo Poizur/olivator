@@ -32,7 +32,7 @@ INSERT INTO discovery_sources (
   'manual',
   'XML Heureka feed má jen 7 olejů, web má 40+. Přepnuto na sitemap crawl 5.5.2026 (BUG-024).'
 )
-ON CONFLICT (domain) DO UPDATE SET
+ON CONFLICT (slug) DO UPDATE SET
   status = 'enabled',
   crawler_type = 'shoptet_sitemap',
   reasoning = EXCLUDED.reasoning,
