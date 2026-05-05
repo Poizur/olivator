@@ -166,13 +166,17 @@ async function crawlShoptetCategory(config: CrawlerConfig): Promise<string[]> {
       const $ = cheerio.load(html)
 
       let foundOnPage = 0
-      // Scoped: find product cards first, then take their links
-      // Shoptet variants: .product, .product-item, .p, .product-list-item
-      const productCards = $('.product, .product-item, .product-list-item, [class*="product-box"]')
+      // Scoped: find product cards first, then take their links.
+      // Shoptet: .product, .product-item, .product-list-item, [class*="product-box"]
+      // PrestaShop: .product-miniature, .product-container, article[data-id-product]
+      const productCards = $(
+        '.product, .product-item, .product-list-item, [class*="product-box"], ' +
+        '.product-miniature, .product-container, article[data-id-product]'
+      )
       productCards.each((_, card) => {
         // Take the most reliable link inside the card
         const link =
-          $(card).find('a.name, a.product-name, h2 > a, h3 > a, a.image, .image > a').first()
+          $(card).find('a.name, a.product-name, .product-title a, h2 > a, h3 > a, a.image, .image > a, .product-thumbnail a').first()
         const href = link.attr('href')
         if (!href) return
         let absolute: string
