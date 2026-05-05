@@ -10,6 +10,7 @@ import { EntityPhotosManager } from '@/components/entity-photos-manager'
 import { EntityProductsList } from '@/components/entity-products-list'
 import { AdminBlock } from '@/components/admin-block'
 import { BrandAutoResearchPanel } from '@/components/brand-auto-research-panel'
+import { BrandPhotoCurator, type CuratorPhoto } from '@/components/brand-photo-curator'
 import { ARTICLES } from '@/lib/static-content'
 
 async function getLinkedSlugs(entityType: 'region' | 'brand' | 'cultivar', entitySlug: string) {
@@ -36,6 +37,16 @@ async function getEntityPhotos(entityId: string) {
   return data ?? []
 }
 
+async function getCuratorPhotos(entityId: string): Promise<CuratorPhoto[]> {
+  const { data } = await supabaseAdmin
+    .from('entity_images')
+    .select('id, url, alt_text, caption, subject, suggested_role, image_role, sort_order, status')
+    .eq('entity_id', entityId)
+    .eq('entity_type', 'brand')
+    .order('sort_order')
+  return (data ?? []) as CuratorPhoto[]
+}
+
 async function getFaqs(entityId: string) {
   const { data } = await supabaseAdmin
     .from('entity_faqs')
@@ -53,8 +64,9 @@ export default async function EditBrandPage({ params }: { params: Promise<{ slug
 
   const guideSlugsInDb = ARTICLES.filter((a) => a.category !== 'recept').map((a) => a.slug)
 
-  const [photos, faqs, allLinkedSlugs] = await Promise.all([
+  const [photos, curatorPhotos, faqs, allLinkedSlugs] = await Promise.all([
     getEntityPhotos(brand.id),
+    getCuratorPhotos(brand.id),
     getFaqs(brand.id),
     getLinkedSlugs('brand', brand.slug),
   ])
@@ -147,13 +159,30 @@ export default async function EditBrandPage({ params }: { params: Promise<{ slug
           />
         </div>
 
-        {/* BLOK 4 — Fotky */}
+        {/* BLOK 4a — Photo Curator (auto-research fotky) */}
+        {curatorPhotos.length > 0 && (
+          <AdminBlock
+            number={4}
+            icon="🎨"
+            title="Photo curator — z webu výrobce"
+            publicLocation="Hero / Editorial sekce / Galerie atmosféra"
+            description="AI navrhla popis a roli každé fotky. Můžeš přepsat caption, změnit roli (Hero/Editorial/Galerie/Skrýt) nebo přesunout pořadí v editorial sekci."
+          >
+            <BrandPhotoCurator
+              entityId={brand.slug}
+              entityType="brand"
+              initialPhotos={curatorPhotos}
+            />
+          </AdminBlock>
+        )}
+
+        {/* BLOK 4b — Klasický photo manager (URL upload, drag-drop) */}
         <AdminBlock
           number={4}
           icon="🖼️"
-          title="Fotky"
+          title="Fotky (manuální upload)"
           publicLocation="Hero karta · Editorial story · Galerie atmosféra"
-          description="Pořadí: 1. fotka = hero, další = editorial sekce, zbytek = galerie."
+          description="Pro doplnění vlastních fotek nad rámec auto-research."
         >
           <EntityPhotosManager
             entityId={brand.id}

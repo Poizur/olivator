@@ -32,26 +32,52 @@ export interface BrandResearchResult {
   warnings: string[]
 }
 
-// "O nás" stránky pro typické olivářské eshopy + výrobcové weby (italsky,
-// řecky, anglicky, česky).
+// "O nás" + galerie + produkty stránky pro typické olivářské weby
+// (italsky, řecky, anglicky, česky). Cílem je sebrat 30+ unikátních fotek
+// — proto i /galleria, /prodotti, /products atd.
 const ABOUT_PATHS = [
+  // English
   '/about',
   '/about-us',
   '/our-story',
   '/our-history',
   '/heritage',
   '/family',
-  '/azienda',           // italsky
-  '/chi-siamo',         // italsky
-  '/storia',            // italsky
-  '/la-famiglia',       // italsky
-  '/etairia',           // řecky
-  '/o-nas',             // česky
-  '/onas',              // česky
-  '/historie',          // česky
+  '/the-family',
+  '/gallery',
+  '/photos',
+  '/products',
+  '/our-oils',
+  '/the-mill',
+  '/farming',
+  '/harvest',
+  // Italian
+  '/azienda',
+  '/chi-siamo',
+  '/storia',
+  '/la-famiglia',
+  '/galleria',
+  '/prodotti',
+  '/oli',
+  '/il-frantoio',
+  '/raccolta',
+  '/uliveti',
+  // Greek
+  '/etairia',
+  '/προϊοντα',
+  // Czech / Slovak
+  '/o-nas',
+  '/onas',
+  '/historie',
+  '/produkty',
+  '/galerie',
+  // Multilingual prefixes
   '/en/about',
   '/en/history',
+  '/en/gallery',
+  '/en/products',
   '/it/azienda',
+  '/it/galleria',
 ]
 
 const FETCH_TIMEOUT_MS = 8000
@@ -291,15 +317,56 @@ export async function researchBrand(producerUrl: string): Promise<BrandResearchR
   const homePage = extractFromHtml(baseUrl, homepage)
   pagesScanned.push(baseUrl)
 
-  // Try about pages — max 2 successful
+  // Crawl about/gallery pages + nav links z homepage. Cílem je sebrat 30+
+  // unikátních fotek + bohatý text. Limit ~10 stránek aby to nešlo navždy.
+  const MAX_PAGES = 10
   const aboutPages: ScrapedPage[] = []
+  const visitedUrls = new Set<string>([baseUrl])
+
+  // 1. Zkus známé "about/gallery" cesty
   for (const path of ABOUT_PATHS) {
-    if (aboutPages.length >= 2) break
+    if (aboutPages.length >= MAX_PAGES - 1) break
     const url = `${baseUrl}${path}`
+    if (visitedUrls.has(url)) continue
+    visitedUrls.add(url)
     const html = await safeFetch(url)
     if (html) {
       aboutPages.push(extractFromHtml(url, html))
       pagesScanned.push(url)
+    }
+  }
+
+  // 2. Pokud máme méně než 5 stránek, vytáhni interní <a href> z homepage
+  //    a zkus je (filter: nesmí být fragment, query-only, jiná doména,
+  //    soubor pdf/docx/zip).
+  if (aboutPages.length < MAX_PAGES - 1) {
+    const $home = load(homepage)
+    const navLinks: string[] = []
+    $home('a[href]').each((_, el) => {
+      const href = $home(el).attr('href')
+      if (!href) return
+      try {
+        const abs = new URL(href, baseUrl)
+        if (abs.origin !== baseUrl) return
+        if (/\.(pdf|docx|zip|rar|mp4|mp3)(\?|$)/i.test(abs.pathname)) return
+        if (abs.pathname === '/' || abs.pathname === '') return
+        const cleaned = `${abs.origin}${abs.pathname}`
+        if (!visitedUrls.has(cleaned)) {
+          navLinks.push(cleaned)
+          visitedUrls.add(cleaned)
+        }
+      } catch {
+        /* skip */
+      }
+    })
+
+    for (const link of navLinks) {
+      if (aboutPages.length >= MAX_PAGES - 1) break
+      const html = await safeFetch(link)
+      if (html) {
+        aboutPages.push(extractFromHtml(link, html))
+        pagesScanned.push(link)
+      }
     }
   }
 
@@ -343,7 +410,7 @@ export async function researchBrand(producerUrl: string): Promise<BrandResearchR
     if (seen.has(base)) continue
     seen.add(base)
     galleryUrls.push(url)
-    if (galleryUrls.length >= 8) break
+    if (galleryUrls.length >= 30) break
   }
 
   if (galleryUrls.length === 0) {

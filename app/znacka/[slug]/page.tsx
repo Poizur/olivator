@@ -120,11 +120,21 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
     loadEntityRecipes('brand', slug),
   ])
 
-  // Logo (image_role='logo') vs hero/gallery (vše ostatní). Logo se zobrazí
-  // jako badge nad názvem; hero je první atmosférická fotka.
+  // Photo distribution dle image_role (admin curator):
+  // - logo:      značkové logo, badge top-left na hero, nebo card v fallback
+  // - hero:      první vyplněná je top-of-page hero
+  // - editorial: vložené do ## sekcí editorial story (jedna foto per sekce)
+  // - gallery:   atmosférická galerie dole
   const logoPhoto = photos.find((p) => p.image_role === 'logo') ?? null
-  const nonLogoPhotos = photos.filter((p) => p.image_role !== 'logo')
-  const heroPhoto = nonLogoPhotos[0] ?? null
+  const heroCandidates = photos.filter((p) => p.image_role === 'hero')
+  const editorialCandidates = photos.filter((p) => p.image_role === 'editorial')
+  const galleryCandidates = photos.filter((p) => p.image_role === 'gallery')
+  // Pokud admin neoznačil žádné jako 'hero', vezmi první z editorial/gallery
+  const heroPhoto =
+    heroCandidates[0] ??
+    editorialCandidates[0] ??
+    galleryCandidates[0] ??
+    null
   const products = await loadEntityProducts(productIds)
   const kpis = computeProductKpis(products)
   const country = countryName(brand.country_code)
@@ -195,11 +205,17 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
   const introLead = extractIntroFromDescription(brand.description_long)
   const tldr = brand.tldr ?? brand.description_short ?? null
 
-  // Photo distribution — hero > editorial story > galerie. Logo nikdy
-  // nepoužívat jako landscape (vypadá hrozně cropované).
-  const photosForLayout = nonLogoPhotos.slice(1).map((p) => ({ url: p.url, alt: p.alt_text }))
-  const storyPhotos = photosForLayout.slice(0, accordionSections.length)
-  const galleryPhotos = photosForLayout.slice(storyPhotos.length)
+  // Story photos = označené jako editorial. Pokud chybí, fall back na zbytek.
+  // Pokud heroPhoto byl vzat z editorial/gallery (žádný explicitní hero),
+  // vyfiltrovat ho z dalších listů aby se neopakoval.
+  const usedAsHero = heroPhoto?.url
+  const storyPhotos = editorialCandidates
+    .filter((p) => p.url !== usedAsHero)
+    .map((p) => ({ url: p.url, alt: p.alt_text }))
+    .slice(0, accordionSections.length)
+  const galleryPhotos = galleryCandidates
+    .filter((p) => p.url !== usedAsHero)
+    .map((p) => ({ url: p.url, alt: p.alt_text }))
   const url = `https://olivator.cz/znacka/${slug}`
 
   return (

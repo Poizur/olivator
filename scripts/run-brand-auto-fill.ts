@@ -7,7 +7,7 @@
  * S argumentem (např. "intini"): jen tu jednu.
  */
 
-async function main() {
+async function runBrandAutoFillMain() {
   // Dynamic import — env musí být načtený před modulem
   const { autoFillBrand } = await import('@/lib/brand-auto-fill')
   const { supabaseAdmin } = await import('@/lib/supabase')
@@ -76,7 +76,7 @@ async function main() {
   console.log('━'.repeat(60))
 }
 
-main().catch((err) => {
+runBrandAutoFillMain().catch((err) => {
   console.error('Fatal:', err)
   process.exit(1)
 })
