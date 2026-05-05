@@ -14,7 +14,8 @@
     "cron:entity-aggregate": "tsx scripts/cron/entity-aggregate.ts",
     "cron:feed-sync": "tsx scripts/cron/feed-sync.ts",
     "cron:radar": "tsx scripts/cron/radar.ts",
-    "cron:learning": "tsx scripts/cron/learning.ts"
+    "cron:learning": "tsx scripts/cron/learning.ts",
+    "audit:coverage": "tsx scripts/coverage-check.ts"
   },
   "engines": {
     "node": ">=20.18.0"
