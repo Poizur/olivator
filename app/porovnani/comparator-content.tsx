@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { useCompare } from '@/lib/compare-context'
 import { formatPrice, formatPricePer100ml, certLabel, typeLabel, countryName } from '@/lib/utils'
+import { productSchema } from '@/lib/schema'
 import type { Product, ProductOffer } from '@/lib/types'
 
 const PACKAGING_LABELS: Record<string, string> = {
@@ -347,7 +348,10 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
         )
       })()}
 
-      {/* Schema.org ItemList — Google rich result */}
+      {/* Schema.org ItemList — Google rich result.
+          Každý item je plný Product schema z lib/schema.ts (description,
+          shippingDetails, hasMerchantReturnPolicy — Google Merchant
+          Listings compliance). */}
       {items.length >= 2 && (
         <script
           type="application/ld+json"
@@ -356,35 +360,21 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
               '@context': 'https://schema.org',
               '@type': 'ItemList',
               name: items.map((p) => p.nameShort).join(' vs '),
-              description: `Porovnání ${items.length} olivových olejů`,
+              description: `Porovnání ${items.length} olivových olejů — Score, cena, polyfenoly, kyselost, původ.`,
               numberOfItems: items.length,
-              itemListElement: items.map((item, i) => ({
-                '@type': 'ListItem',
-                position: i + 1,
-                item: {
-                  '@type': 'Product',
-                  name: item.name,
-                  image: item.imageUrl ?? undefined,
-                  brand: { '@type': 'Brand', name: item.nameShort },
-                  ...(item.ean ? { gtin13: item.ean } : {}),
-                  url: `https://olivator.cz/olej/${item.slug}`,
-                  aggregateRating: {
-                    '@type': 'AggregateRating',
-                    ratingValue: item.olivatorScore,
-                    bestRating: 100,
-                    worstRating: 0,
-                    ratingCount: 1,
-                  },
-                  offers: getCheapestOffer(item.id)
-                    ? {
-                        '@type': 'Offer',
-                        price: getCheapestOffer(item.id)!.price,
-                        priceCurrency: getCheapestOffer(item.id)!.currency ?? 'CZK',
-                        availability: 'https://schema.org/InStock',
-                      }
-                    : undefined,
-                },
-              })),
+              itemListElement: items.map((item, i) => {
+                const offer = getCheapestOffer(item.id)
+                const productJson = productSchema(item, offer ? [offer] : []) as Record<string, unknown>
+                // Pro ItemList nemáme @context na inner item (root má jeden)
+                delete productJson['@context']
+                productJson.url = `https://olivator.cz/olej/${item.slug}`
+                if (item.imageUrl) productJson.image = item.imageUrl
+                return {
+                  '@type': 'ListItem',
+                  position: i + 1,
+                  item: productJson,
+                }
+              }),
             }),
           }}
         />
