@@ -135,7 +135,9 @@ function isGalleryCandidate(src: string, alt: string | undefined, width: string 
 
 function extractFromHtml(url: string, html: string): ScrapedPage {
   const $ = load(html)
-  $('script, style, noscript, iframe').remove() // ponechat <svg> ne — některé loga jsou inline SVG
+  // SVG odstranit — inline SVG path stringy / titles znečišťují body text
+  // a Claude Haiku pak extrahuje míň reálných dat (verify pak rejectne).
+  $('script, style, noscript, iframe, svg').remove()
 
   const text = $('body').text().replace(/\s+/g, ' ').trim().slice(0, 8000)
 
