@@ -20,7 +20,10 @@ interface Props {
 }
 
 export function BrandStory({ brandName, timeline, portfolio }: Props) {
-  const hasContent = timeline.length > 0 || portfolio.some((p) => p.count > 0)
+  // Skryj buckety s 0 produkty — admin nezná cultivary nebo brand má jen
+  // monovarietály (zbytek 0 → matoucí "0 blendů, 0 specialit")
+  const visiblePortfolio = portfolio.filter((p) => p.count > 0)
+  const hasContent = timeline.length > 0 || visiblePortfolio.length > 0
   if (!hasContent) return null
 
   return (
@@ -55,13 +58,13 @@ export function BrandStory({ brandName, timeline, portfolio }: Props) {
           </div>
         )}
 
-        {portfolio.length > 0 && (
+        {visiblePortfolio.length > 0 && (
           <div>
             <h3 className="text-[12px] font-semibold uppercase tracking-wider text-olive mb-4">
               Portfolio {brandName}
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {portfolio.map((bucket, i) => (
+            <div className={`grid grid-cols-1 gap-3 ${visiblePortfolio.length === 1 ? 'md:grid-cols-1' : visiblePortfolio.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
+              {visiblePortfolio.map((bucket, i) => (
                 <div
                   key={i}
                   className="bg-white border border-off2 rounded-[var(--radius-card)] p-4"
