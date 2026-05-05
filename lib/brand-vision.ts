@@ -4,6 +4,10 @@
 // Výstup: 1-věta CZ caption + subject klasifikace (person/product/landscape/...)
 //         + suggested_role (logo/hero/editorial/gallery).
 //
+// Strategie: stáhneme obrázek lokálně a pošleme jako base64. URL source
+// někdy selže (hotlink protection, Cloudflare bot filter, slow CDN) a
+// Anthropic z toho vrací neexplicitní chyby.
+//
 // Cena: ~$0.001 za fotku přes Haiku 4.5.
 // Concurrency: orchestrátor volá max 4 paralelně (Anthropic rate limit).
 
@@ -76,13 +80,53 @@ function detectMediaType(url: string): 'image/jpeg' | 'image/png' | 'image/gif' 
   return null
 }
 
+// Limit pro download — Anthropic má 5MB max per image. Naše fotky bývají 0.1-2MB.
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const FETCH_TIMEOUT_MS = 10_000
+
+async function fetchImageAsBase64(
+  url: string
+): Promise<{ data: string; mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' } | null> {
+  const detected = detectMediaType(url)
+  if (!detected) return null
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'OlivatorBot/1.0 (+https://olivator.cz)' },
+      signal: controller.signal,
+      redirect: 'follow',
+    })
+    clearTimeout(timer)
+    if (!res.ok) return null
+    const contentType = (res.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase()
+    let mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' = detected
+    if (
+      contentType === 'image/jpeg' ||
+      contentType === 'image/png' ||
+      contentType === 'image/gif' ||
+      contentType === 'image/webp'
+    ) {
+      mediaType = contentType
+    }
+    const buf = Buffer.from(await res.arrayBuffer())
+    if (buf.byteLength === 0 || buf.byteLength > MAX_IMAGE_BYTES) return null
+    return { data: buf.toString('base64'), mediaType }
+  } catch {
+    return null
+  }
+}
+
 /**
- * Popíše jednu fotku. Vrátí null pokud Claude selže nebo URL není
- * podporovaný formát. Caller má sám zajistit dedup a concurrency.
+ * Popíše jednu fotku. Vrátí null pokud Claude selže, fetch selže nebo URL
+ * není podporovaný formát. Caller má sám zajistit dedup a concurrency.
  */
 export async function describePhoto(url: string): Promise<PhotoDescription | null> {
-  const mediaType = detectMediaType(url)
-  if (!mediaType || !SUPPORTED_IMAGE_TYPES.has(mediaType)) return null
+  const image = await fetchImageAsBase64(url)
+  if (!image) {
+    console.warn('[brand-vision] fetchImage failed:', url.slice(0, 80))
+    return null
+  }
 
   try {
     const response = await callClaude({
@@ -97,7 +141,7 @@ export async function describePhoto(url: string): Promise<PhotoDescription | nul
           content: [
             {
               type: 'image',
-              source: { type: 'url', url },
+              source: { type: 'base64', media_type: image.mediaType, data: image.data },
             },
             { type: 'text', text: 'Popiš tuto fotku.' },
           ],
@@ -106,7 +150,10 @@ export async function describePhoto(url: string): Promise<PhotoDescription | nul
     })
 
     const toolUse = response.content.find((b) => b.type === 'tool_use')
-    if (!toolUse || toolUse.type !== 'tool_use') return null
+    if (!toolUse || toolUse.type !== 'tool_use') {
+      console.warn('[brand-vision] no tool_use block, stop_reason=', response.stop_reason)
+      return null
+    }
     const input = toolUse.input as Record<string, unknown>
     const caption = typeof input.caption === 'string' ? input.caption.trim().slice(0, 200) : null
     const subject = (typeof input.subject === 'string' ? input.subject : 'other') as PhotoSubject
@@ -114,13 +161,15 @@ export async function describePhoto(url: string): Promise<PhotoDescription | nul
     if (!caption) return null
     return { caption, subject, suggestedRole }
   } catch (err) {
-    console.warn('[brand-vision] describePhoto failed for', url.slice(0, 80), err instanceof Error ? err.message : err)
-    // Fallback — skipnu, ale ne crashnu pipeline. URL pošleme s null caption.
-    return {
-      caption: '',
-      subject: 'other',
-      suggestedRole: 'gallery',
-    }
+    const status = (err as { status?: number }).status
+    const apiError = (err as { error?: { error?: { message?: string } } }).error?.error?.message
+    console.warn(
+      '[brand-vision] describePhoto failed:',
+      `HTTP ${status ?? '?'}`,
+      apiError ?? (err instanceof Error ? err.message : 'unknown'),
+      url.slice(0, 80)
+    )
+    return null
   }
 }
 
