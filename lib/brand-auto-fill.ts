@@ -287,11 +287,21 @@ async function applyDraftToBrand(brand: BrandRow, draft: PolishedDraft): Promise
 async function saveLogo(brand: BrandRow, logoUrl: string, sourceUrl: string): Promise<boolean> {
   const { data: existing } = await supabaseAdmin
     .from('entity_images')
-    .select('id')
+    .select('id, status')
     .eq('entity_id', brand.id)
     .eq('url', logoUrl)
     .maybeSingle()
-  if (existing) return false
+  if (existing) {
+    // Pokud byl soft-smazaný, reaktivuj — admin klikl auto-fill, chce logo živé.
+    if (existing.status !== 'active') {
+      await supabaseAdmin
+        .from('entity_images')
+        .update({ status: 'active', image_role: 'logo', is_primary: true })
+        .eq('id', existing.id)
+      return true
+    }
+    return false
+  }
 
   await supabaseAdmin.from('entity_images').insert({
     entity_type: 'brand',
@@ -310,16 +320,38 @@ async function saveLogo(brand: BrandRow, logoUrl: string, sourceUrl: string): Pr
 
 async function saveGallery(brand: BrandRow, urls: string[], sourceUrl: string): Promise<number> {
   if (urls.length === 0) return 0
-  // Dedup proti existujícím
+  // Dedup + reaktivace soft-smazaných auto_research fotek
   const { data: existing } = await supabaseAdmin
     .from('entity_images')
-    .select('url')
+    .select('id, url, status, source')
     .eq('entity_id', brand.id)
-  const have = new Set((existing ?? []).map((r) => (r.url as string).split('?')[0]))
+  const existingByUrl = new Map<string, { id: string; status: string; source: string | null }>()
+  for (const r of existing ?? []) {
+    existingByUrl.set((r.url as string).split('?')[0], {
+      id: r.id as string,
+      status: r.status as string,
+      source: r.source as string | null,
+    })
+  }
 
-  const rows = urls
-    .filter((u) => !have.has(u.split('?')[0]))
-    .map((url, i) => ({
+  let touched = 0
+  const newRows: Array<Record<string, unknown>> = []
+  for (let i = 0; i < urls.length; i++) {
+    const url = urls[i]
+    const base = url.split('?')[0]
+    const existingRow = existingByUrl.get(base)
+    if (existingRow) {
+      // Reaktivuj jen auto_research fotky — nezasahuj do unsplash/manual uploads
+      if (existingRow.status !== 'active' && existingRow.source === 'auto_research') {
+        await supabaseAdmin
+          .from('entity_images')
+          .update({ status: 'active', image_role: 'gallery' })
+          .eq('id', existingRow.id)
+        touched++
+      }
+      continue
+    }
+    newRows.push({
       entity_type: 'brand',
       entity_id: brand.id,
       url,
@@ -327,17 +359,20 @@ async function saveGallery(brand: BrandRow, urls: string[], sourceUrl: string): 
       source: 'auto_research',
       source_attribution: `Auto-fetched from ${sourceUrl}`,
       is_primary: false,
-      sort_order: i + 10, // 10+ aby logo (sort_order=0) zůstalo první v `is_primary` listingu
+      sort_order: i + 10,
       status: 'active',
       image_role: 'gallery',
-    }))
-  if (rows.length === 0) return 0
-  const { error } = await supabaseAdmin.from('entity_images').insert(rows)
-  if (error) {
-    console.warn('[brand-auto-fill] saveGallery insert failed:', error.message)
-    return 0
+    })
   }
-  return rows.length
+
+  if (newRows.length > 0) {
+    const { error } = await supabaseAdmin.from('entity_images').insert(newRows)
+    if (error) {
+      console.warn('[brand-auto-fill] saveGallery insert failed:', error.message)
+      return touched
+    }
+  }
+  return touched + newRows.length
 }
 
 // ────────────────────────────────────────────────────────────────────
