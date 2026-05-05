@@ -170,6 +170,42 @@ VÝSTUP — POUZE validní JSON:
 // do UI report.message místo generického "Polish selhal".
 let _lastPolishError: string | null = null
 
+// Tool schema pro structured output — Claude vrátí JSON validovaný schématem.
+// Tool_use eliminuje JSON parse chyby způsobené nekorektně escapovanými
+// stringy (multiline markdown, kontrolní znaky, neplatné escape sekvence).
+const POLISH_TOOL_SCHEMA = {
+  name: 'output_polished_brand_draft',
+  description: 'Vrátí finální polished draft značky v češtině.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      tldr: { type: 'string', description: 'Max 280 znaků, 1-2 věty hook' },
+      descriptionShort: { type: 'string', description: 'Max 200 znaků, listing karta' },
+      descriptionLong: { type: 'string', description: '3-6 odstavců markdown s ## sekcemi' },
+      story: { type: 'string', description: 'Konkrétní příběh 2-3 odstavce markdown' },
+      philosophy: { type: 'string', description: '1-2 odstavce markdown' },
+      foundedYear: { type: 'integer', description: 'Rok založení nebo 0 pokud neznámý' },
+      headquarters: { type: 'string', description: 'Sídlo v češtině, např. "Apulie, Itálie"' },
+      websiteUrl: { type: 'string', description: 'URL webu výrobce' },
+      timeline: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            year: { type: 'integer' },
+            label: { type: 'string', description: 'Krátký popisek do 60 znaků' },
+          },
+          required: ['year', 'label'],
+        },
+        description: 'Až 5 milníků',
+      },
+      metaTitle: { type: 'string', description: 'Max 70 znaků' },
+      metaDescription: { type: 'string', description: 'Max 160 znaků' },
+    },
+    required: ['tldr', 'descriptionShort', 'descriptionLong'],
+  },
+}
+
 async function polishToCzech(args: {
   brandName: string
   candidateUrl: string
@@ -194,7 +230,7 @@ async function polishToCzech(args: {
     `familyOwned: ${args.scraped.familyOwned ?? '(nic)'}`,
     `certifications: ${args.scraped.certifications.join(', ') || '(žádné)'}`,
     ``,
-    `Vytvoř polished draft v češtině dle schématu výše.`,
+    `Zavolej tool output_polished_brand_draft s polished CZ draftem.`,
   ].join('\n')
 
   try {
@@ -202,12 +238,17 @@ async function polishToCzech(args: {
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4000,
       system: POLISH_SYSTEM,
+      tools: [POLISH_TOOL_SCHEMA],
+      tool_choice: { type: 'tool', name: 'output_polished_brand_draft' },
       messages: [{ role: 'user', content: userMsg }],
     })
-    const raw = extractText(response).trim().replace(/^```(?:json)?\s*|\s*```$/g, '')
-    const match = raw.match(/\{[\s\S]*\}/)
-    const jsonStr = match ? match[0] : raw
-    const parsed = JSON.parse(jsonStr) as Record<string, unknown>
+
+    const toolUse = response.content.find((b) => b.type === 'tool_use')
+    if (!toolUse || toolUse.type !== 'tool_use') {
+      _lastPolishError = `Sonnet nevrátil tool_use block (stop_reason=${response.stop_reason})`
+      return null
+    }
+    const parsed = toolUse.input as Record<string, unknown>
 
     const timelineRaw = Array.isArray(parsed.timeline) ? parsed.timeline : []
     const timeline = timelineRaw
@@ -217,6 +258,12 @@ async function polishToCzech(args: {
       })
       .slice(0, 5)
 
+    const foundedYearRaw = parsed.foundedYear
+    const foundedYear =
+      typeof foundedYearRaw === 'number' && foundedYearRaw >= 1500 && foundedYearRaw <= 2100
+        ? foundedYearRaw
+        : null
+
     return {
       tldr: typeof parsed.tldr === 'string' ? parsed.tldr.trim().slice(0, 280) : null,
       descriptionShort:
@@ -224,10 +271,7 @@ async function polishToCzech(args: {
       descriptionLong: typeof parsed.descriptionLong === 'string' ? parsed.descriptionLong.trim() : null,
       story: typeof parsed.story === 'string' ? parsed.story.trim() : null,
       philosophy: typeof parsed.philosophy === 'string' ? parsed.philosophy.trim() : null,
-      foundedYear:
-        typeof parsed.foundedYear === 'number' && parsed.foundedYear >= 1500 && parsed.foundedYear <= 2100
-          ? parsed.foundedYear
-          : null,
+      foundedYear,
       headquarters: typeof parsed.headquarters === 'string' ? parsed.headquarters.trim() : null,
       websiteUrl: typeof parsed.websiteUrl === 'string' ? parsed.websiteUrl.trim() : args.candidateUrl,
       timeline,
