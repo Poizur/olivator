@@ -166,12 +166,17 @@ VÝSTUP — POUZE validní JSON:
   "metaDescription": "max 160 znaků, vystihuje co značka dělá + co najdeš na Olivator"
 }`
 
+// Poslední polish chyba — uloží se sem, aby orchestrátor mohl chybu surfovat
+// do UI report.message místo generického "Polish selhal".
+let _lastPolishError: string | null = null
+
 async function polishToCzech(args: {
   brandName: string
   candidateUrl: string
   scraped: BrandResearchResult
   productNames: string[]
 }): Promise<PolishedDraft | null> {
+  _lastPolishError = null
   const userMsg = [
     `Značka: ${args.brandName}`,
     `Web výrobce: ${args.candidateUrl}`,
@@ -231,7 +236,12 @@ async function polishToCzech(args: {
         typeof parsed.metaDescription === 'string' ? parsed.metaDescription.trim().slice(0, 160) : null,
     }
   } catch (err) {
-    console.error('[brand-auto-fill] polish failed:', err)
+    const status = (err as { status?: number }).status
+    const apiError = (err as { error?: { error?: { message?: string } } }).error?.error?.message
+    const msg = err instanceof Error ? err.message : 'unknown'
+    _lastPolishError = apiError ? `${msg} (${apiError})` : msg
+    if (status) _lastPolishError = `HTTP ${status}: ${_lastPolishError}`
+    console.error('[brand-auto-fill] polish failed:', _lastPolishError, err)
     return null
   }
 }
@@ -488,7 +498,7 @@ export async function autoFillBrand(slug: string): Promise<AutoFillReport> {
       candidate,
       scrapedRaw: scraped,
       verification,
-      message: 'Polish selhal (Claude Sonnet)',
+      message: `Polish selhal (Claude Sonnet): ${_lastPolishError ?? 'unknown'}`,
     }
     await saveDraft({
       brandId: brand.id,
