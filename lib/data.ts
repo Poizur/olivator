@@ -1,6 +1,7 @@
 // Data access layer — queries Supabase, same signatures as old mock-data.ts
 // All queries run server-side via supabaseAdmin (service key, bypasses RLS)
 
+import { cache } from 'react'
 import { supabaseAdmin } from './supabase'
 import type { Product, ProductOffer, Retailer } from './types'
 
@@ -160,7 +161,10 @@ const RETAILER_PUBLIC_COLUMNS =
   // Shipping/return data pro Google Merchant Listings rich snippet
   'shipping_rate_czk, free_shipping_threshold_czk, delivery_days_min, delivery_days_max, return_days'
 
-export async function getProducts(): Promise<Product[]> {
+// React `cache()` — memoize per request. Pokud homepage volá Promise.all
+// [getProductsWithOffers(), getSiteStats()] paralelně a getSiteStats uvnitř
+// taky volá getProductsWithOffers, díky cache() se DB query provede 1×.
+export const getProducts = cache(async (): Promise<Product[]> => {
   const { data, error } = await supabaseAdmin
     .from('products')
     .select(PRODUCT_PUBLIC_COLUMNS)
@@ -168,7 +172,7 @@ export async function getProducts(): Promise<Product[]> {
     .order('olivator_score', { ascending: false })
   if (error) throw error
   return (data as unknown as ProductRow[]).map(mapProduct)
-}
+})
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   // Detail page potřebuje extracted_facts pro „Klíčová fakta" sekci.
@@ -204,7 +208,7 @@ export async function getProductsBySlugs(slugs: string[]): Promise<Product[]> {
 }
 
 // Returns all active products with their cheapest offer pre-joined
-export async function getProductsWithOffers(): Promise<Array<Product & { cheapestOffer: ProductOffer | null }>> {
+export const getProductsWithOffers = cache(async (): Promise<Array<Product & { cheapestOffer: ProductOffer | null }>> => {
   const products = await getProducts()
   const ids = products.map(p => p.id)
   if (ids.length === 0) return []
@@ -235,7 +239,7 @@ export async function getProductsWithOffers(): Promise<Array<Product & { cheapes
   }
 
   return products.map(p => ({ ...p, cheapestOffer: offersByProduct.get(p.id) ?? null }))
-}
+})
 
 export async function getOffersForProduct(productId: string): Promise<ProductOffer[]> {
   const { data, error } = await supabaseAdmin
@@ -275,7 +279,7 @@ export interface SiteStats {
   highOleocanthal: number
 }
 
-export async function getSiteStats(): Promise<SiteStats> {
+export const getSiteStats = cache(async (): Promise<SiteStats> => {
   const products = await getProductsWithOffers()
 
   const byOrigin: Record<string, number> = {}
@@ -314,7 +318,7 @@ export async function getSiteStats(): Promise<SiteStats> {
     highPolyphenols,
     highOleocanthal,
   }
-}
+})
 
 // ── Admin: Retailers ──────────────────────────────────────────────────
 
