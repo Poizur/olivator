@@ -50,7 +50,7 @@ export function CompareBar() {
           {items.map(item => (
             <div
               key={item.id}
-              className="w-20 h-14 shrink-0 border border-olive-light bg-olive-bg rounded-xl flex flex-col items-center justify-center relative cursor-pointer transition-all overflow-hidden"
+              className="w-20 h-14 shrink-0 border border-olive-light bg-olive-bg rounded-xl flex flex-col items-center justify-center relative cursor-pointer transition-all"
               title={item.name}
             >
               {item.imageUrl ? (
@@ -69,9 +69,16 @@ export function CompareBar() {
               <span className="text-[9px] text-olive font-medium mt-0.5 text-center px-0.5 leading-tight max-w-[72px] overflow-hidden whitespace-nowrap text-ellipsis">
                 {item.nameShort}
               </span>
+              {/* X tlačítko mimo bounding box karty — ne v parent overflow-hidden,
+                  jinak by se odřízlo. Větší 18×18 + tap padding pro mobil. */}
               <button
-                onClick={() => removeItem(item.id)}
-                className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-text2 text-white text-[9px] flex items-center justify-center cursor-pointer font-bold border-[1.5px] border-white hover:bg-terra"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  removeItem(item.id)
+                }}
+                className="absolute -top-2 -right-2 w-[18px] h-[18px] rounded-full bg-terra text-white text-[10px] flex items-center justify-center cursor-pointer font-bold border-[1.5px] border-white hover:bg-text shadow-sm z-10"
+                aria-label={`Odebrat ${item.name} z porovnání`}
               >
                 ✕
               </button>
