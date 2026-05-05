@@ -38,10 +38,14 @@ export async function loadEntityProducts(productIds: string[]): Promise<ProductT
   // Cheapest offers paralelně
   const offers = await Promise.all(products.map((p) => getCheapestOffer(p.id)))
 
-  // Cultivar linky pro tyto produkty (s reálnými jmény)
+  // Cultivar linky pro tyto produkty. LEFT join — pokud cultivar_slug ještě
+  // není v cultivars tabulce (např. nově detekovaný 'leccino' z product
+  // scrape, ale stub stránka /odruda/leccino nehotová), stejně ho zobrazíme
+  // jako fallback name = slug. Inner join by ten produkt z portfolio tiše
+  // vyřazoval → matoucí "0 monovarietály".
   const cultivarLinksPromise = supabaseAdmin
     .from('product_cultivars')
-    .select('product_id, cultivar_slug, cultivars!inner(name)')
+    .select('product_id, cultivar_slug, cultivars!left(name)')
     .in('product_id', ids)
 
   // Skutečný brand/region/country per produkt (NENÍ v Product type)
