@@ -1,15 +1,10 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { headers } from 'next/headers'
 import { NewsletterSignup } from './newsletter-signup'
 
-export async function Footer() {
-  // Defense-in-depth: na /admin žádný public footer
-  const headersList = await headers()
-  const pathname =
-    headersList.get('x-pathname') || headersList.get('next-url') || ''
-  if (pathname.startsWith('/admin')) return null
-
+// Footer je statický — nepotřebuje headers()/cookies(). Render decisions
+// (skrýt na /admin) řeší LayoutChrome client-side přes usePathname.
+export function Footer() {
   return (
     <footer className="bg-off border-t border-off2 mt-12">
       <div className="max-w-[1280px] mx-auto px-6 md:px-10 py-10 grid grid-cols-1 md:grid-cols-3 gap-8 items-start">

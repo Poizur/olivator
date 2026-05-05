@@ -1,15 +1,12 @@
 // Admin toolbar — zobrazuje se na veřejném webu jen přihlášenému adminovi.
-// Server shell: auth check + render. Edit tlačítko je klientský komponent
-// (usePathname) aby fungovalo spolehlivě i při ISR/SSG stránkách.
+// Auth check teď dělá <LayoutChrome> klientsky přes /api/admin/me, tady
+// jen renderujeme UI. Bez tohoto refactoru by import isAdminAuthenticated
+// z client-side <LayoutChrome> selhal (next/headers je server-only).
 
 import Link from 'next/link'
-import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { AdminBarEdit } from './admin-bar-edit'
 
-export async function AdminBar() {
-  const isAdmin = await isAdminAuthenticated()
-  if (!isAdmin) return null
-
+export function AdminBar() {
   return (
     <>
       <div aria-hidden className="h-9" />
