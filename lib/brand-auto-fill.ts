@@ -149,7 +149,14 @@ PRAVIDLA:
 - Konkrétní fakta, jména, roky — pokud nejsou ve vstupu, NEVYMÝŠLEJ
 - Pokud zdrojová data o něčem mlčí, vrať null pro to pole
 - Překládej názvy regionů (Apulia → Apulie, Crete → Kréta)
-- Nepřekládej názvy produktů ani jména
+- Nepřekládej názvy produktů ani jména rodin
+- Cizojazyčné názvy ocenění a kategorií PŘELOŽ DO ČEŠTINY a doplň kontext.
+  Příklady:
+    "Flos Olei Azienda dell'anno" → "Olejárna roku dle průvodce Flos Olei"
+    "Gambero Rosso Tre Foglie" → "Gambero Rosso — Tre Foglie (tři listy)"
+    "Best European Extra Virgin Oil" → "Nejlepší evropský extra panenský olej"
+    "NYIOOC Gold Award" → "Zlatá medaile NYIOOC"
+  Cíl: český čtenář pochopí co cena znamená, nejen vidí cizí jméno.
 
 VÝSTUP — POUZE validní JSON:
 {
