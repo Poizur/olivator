@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
 import { RegenerateAllButton } from '@/components/regenerate-all-button'
+import { BrandAutoFillBulkButton } from '@/components/brand-auto-fill-bulk-button'
 import { StatusBadge } from '@/components/admin/status-badge'
 import { StatusFilters } from '@/components/admin/status-filters'
 
@@ -39,6 +40,7 @@ export default async function AdminBrandsPage({
     draft: brands.filter((b) => b.status === 'draft').length,
     inactive: brands.filter((b) => b.status === 'inactive').length,
   }
+  const emptyCount = brands.filter((b) => !b.description_long || (b.description_long as string).length === 0).length
 
   return (
     <div>
@@ -53,6 +55,10 @@ export default async function AdminBrandsPage({
           estimatedCount={brands.length}
           label="Přepsat editorial obsah všech značek"
         />
+      </div>
+
+      <div className="mb-6">
+        <BrandAutoFillBulkButton emptyCount={emptyCount} />
       </div>
 
       <StatusFilters

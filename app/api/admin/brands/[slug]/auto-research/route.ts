@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { researchBrand } from '@/lib/brand-research'
+import { autoFillBrand } from '@/lib/brand-auto-fill'
 
-// Admin endpoint — fetch URL výrobce + AI extrakt + uloží do entity_images.
-// Vrátí JSON s návrhem dat, admin v UI rozhodne co převzít.
-export const maxDuration = 60
+// Plný auto-fill (mode='auto'): web search → research → verify → polish CZ → apply.
+// Manuální mode (default): admin pošle URL, jen vrátí návrh + uloží logo.
+//
+// 300 s strop — auto mode dělá 3 Claude calls + scrape + DB upsert.
+// Web search bývá 5–15 s, scrape 5–10 s, polish (Sonnet) 10–20 s.
+export const maxDuration = 300
 export const dynamic = 'force-dynamic'
 
 export async function POST(
@@ -18,6 +22,14 @@ export async function POST(
   try {
     const { slug } = await params
     const body = await request.json().catch(() => ({}))
+    const mode = (body?.mode as string | undefined) ?? 'manual'
+
+    if (mode === 'auto') {
+      const report = await autoFillBrand(slug)
+      return NextResponse.json({ ok: true, mode: 'auto', report })
+    }
+
+    // Manual mode — admin zadal URL, jen scrape + návrh + uloží logo
     const url = (body?.url as string | undefined)?.trim()
     if (!url) {
       return NextResponse.json(
@@ -37,10 +49,8 @@ export async function POST(
 
     const result = await researchBrand(url)
 
-    // Pokud našli logo, uložit do entity_images jako primary (entity_type='brand').
     let logoSaved = false
     if (result.logoUrl) {
-      // Skip pokud už existuje stejné URL pro tento brand
       const { data: existing } = await supabaseAdmin
         .from('entity_images')
         .select('id')
@@ -64,7 +74,7 @@ export async function POST(
       }
     }
 
-    return NextResponse.json({ ok: true, brand: brand.slug, result, logoSaved })
+    return NextResponse.json({ ok: true, mode: 'manual', brand: brand.slug, result, logoSaved })
   } catch (err) {
     console.error('[admin/brands/auto-research]', err)
     return NextResponse.json(
