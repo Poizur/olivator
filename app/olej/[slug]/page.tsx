@@ -688,7 +688,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                       >
                         <div className="relative shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-olive-bg border border-olive-border">
                           {entityLinks.region.photoUrl ? (
-                            <Image src={entityLinks.region.photoUrl} alt={entityLinks.region.name} fill sizes="48px" className="object-cover" />
+                            // Plain <img> — photoUrl muze byt z externi domeny
+                            // (Wikimedia maps, atd.) ne v next.config allowlist.
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={entityLinks.region.photoUrl} alt={entityLinks.region.name} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <span className="font-[family-name:var(--font-display)] text-xl italic text-olive-dark leading-none">
@@ -713,7 +716,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                       >
                         <div className="relative shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-olive-bg border border-olive-border">
                           {entityLinks.brand.photoUrl ? (
-                            <Image src={entityLinks.brand.photoUrl} alt={entityLinks.brand.name} fill sizes="48px" className="object-cover" />
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={entityLinks.brand.photoUrl} alt={entityLinks.brand.name} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <span className="font-[family-name:var(--font-display)] text-xl italic text-olive-dark leading-none">
@@ -739,7 +743,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                       >
                         <div className="relative shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-olive-bg border border-olive-border">
                           {c.photoUrl ? (
-                            <Image src={c.photoUrl} alt={c.name} fill sizes="48px" className="object-cover" />
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={c.photoUrl} alt={c.name} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <span className="font-[family-name:var(--font-display)] text-xl italic text-olive-dark leading-none">
