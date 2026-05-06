@@ -9,5 +9,8 @@ builder = "NIXPACKS"
 [deploy]
 healthcheckPath = "/api/health"
 healthcheckTimeout = 30
-restartPolicyType = "ON_FAILURE"
-restartPolicyMaxRetries = 3
+# ALWAYS místo ON_FAILURE: instrumentation.ts dělá process.exit(0) každých
+# 24h pro RAM reset (memory leak na Railway hobby). exit(0) je success
+# exit, ON_FAILURE by ho nezachytil → ALWAYS restart pokrývá oba scénáře.
+restartPolicyType = "ALWAYS"
+restartPolicyMaxRetries = 10
