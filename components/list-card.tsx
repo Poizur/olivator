@@ -206,8 +206,9 @@ function CompactCard({ product, offer, rank }: { product: Product; offer?: Produ
         }`}>
           {rank}
         </div>
-        {/* Foto — větší pro lepší vizibilitu (15×20 = 60×80px) */}
-        <div className="w-15 h-20 bg-off rounded-lg flex items-center justify-center shrink-0 overflow-hidden" style={{ width: '3.75rem' }}>
+        {/* Foto — větší pro lepší vizibilitu (15×20 = 60×80px). bg-white aby
+            se nezobrazovaly šedé pruhy u object-contain fotek. */}
+        <div className="w-15 h-20 bg-white rounded-lg flex items-center justify-center shrink-0 overflow-hidden" style={{ width: '3.75rem' }}>
           <ProductImage product={product} fallbackSize="text-3xl" sizes="60px" />
         </div>
         <div className="flex-1 min-w-0">

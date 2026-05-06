@@ -91,15 +91,11 @@ export function ComparatorTeaser({
                       key={p.id}
                       className="bg-off rounded-lg p-2 flex flex-col items-center text-center"
                     >
-                      {/* Aspect 3:4 (portrait) místo 1:1 — sjednocuje s natural
-                          bottle proportions, méně cropping. Plus zoom 1.5 ořízne
-                          whitespace u source fotek s velkým paddingem. */}
-                      <div className="w-full aspect-[3/4] bg-white rounded mb-1.5 overflow-hidden">
+                      <div className="w-full aspect-square bg-white rounded mb-1.5 overflow-hidden">
                         <ProductImage
                           product={p}
                           fallbackSize="text-2xl"
                           sizes="80px"
-                          zoom={1.5}
                         />
                       </div>
                       <div className="text-[9px] font-semibold text-text leading-tight line-clamp-2 mb-1.5 min-h-[2.2em]">

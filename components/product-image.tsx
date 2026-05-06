@@ -6,13 +6,12 @@ interface ProductImageProps {
   className?: string
   fallbackSize?: string
   sizes?: string
-  /** 'cover' (výchozí) vyplní container — produkt větší, žádné šedé pruhy.
-   *  'contain' zachová celou fotku — použij na detail stránce kde nesmí
-   *  být olej cropped. */
+  /** 'contain' (výchozí) zachová celou fotku — Apple-style čistý vzhled.
+   *  Container by měl být bg-white (ne bg-off) pro hladký přechod do photo
+   *  whitespace. 'cover' vyplní container ale crop láhve — použij vzácně. */
   fit?: 'cover' | 'contain'
-  /** Zoom factor — default 1.25 (cover) ořízne whitespace padding ze
-   *  source fotek. Jednotlivé retailery mají různě široký okraj kolem
-   *  lahve, scale-125 řeší 90 % případů. Nastav 1 pro detail/gallery. */
+  /** Volitelný zoom factor (1 = bez zoom, default). Pouze pokud má source
+   *  fotka výrazný whitespace padding který chceš oříznout. */
   zoom?: number
 }
 
@@ -21,11 +20,9 @@ export function ProductImage({
   className = '',
   fallbackSize = 'text-6xl',
   sizes = '(max-width: 768px) 100vw, 400px',
-  fit = 'cover',
-  zoom,
+  fit = 'contain',
+  zoom = 1,
 }: ProductImageProps) {
-  // Default zoom = 1.25 pro cover (ořízne whitespace), 1 pro contain
-  const effectiveZoom = zoom ?? (fit === 'cover' ? 1.25 : 1)
   if (product.imageUrl) {
     return (
       <div className={`relative w-full h-full overflow-hidden ${className}`}>
@@ -35,7 +32,7 @@ export function ProductImage({
           fill
           sizes={sizes}
           className={fit === 'cover' ? 'object-cover object-center' : 'object-contain'}
-          style={effectiveZoom !== 1 ? { transform: `scale(${effectiveZoom})` } : undefined}
+          style={zoom !== 1 ? { transform: `scale(${zoom})` } : undefined}
         />
       </div>
     )

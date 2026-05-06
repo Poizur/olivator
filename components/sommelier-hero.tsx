@@ -466,7 +466,7 @@ function ProductMiniCard({ product }: { product: ProductWithOffer }) {
       href={`/olej/${product.slug}`}
       className="bg-white border border-off2 rounded-xl p-3 flex gap-3 hover:border-olive-light hover:shadow-md transition-all group"
     >
-      <div className="w-16 h-16 shrink-0 bg-off rounded-lg overflow-hidden">
+      <div className="w-16 h-16 shrink-0 bg-white rounded-lg overflow-hidden">
         <ProductImage product={product} fallbackSize="text-2xl" sizes="64px" />
       </div>
       <div className="flex-1 min-w-0">
