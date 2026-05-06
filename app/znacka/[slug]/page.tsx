@@ -377,6 +377,22 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
                   : [],
               },
               {
+                // Cross-linking: brand → /oblast/[slug] = posílí page authority
+                // entity sítě + lepší crawl coverage. Bez tohoto Google nezná
+                // vztah mezi značkou a regionem.
+                title: 'Regiony původu',
+                chips: Array.from(
+                  new Map(
+                    products
+                      .filter((p) => p.regionSlug && p.regionName)
+                      .map((p) => [p.regionSlug as string, { slug: p.regionSlug as string, name: p.regionName as string }])
+                  ).values()
+                ).map((r) => ({
+                  href: `/oblast/${r.slug}`,
+                  label: r.name,
+                })),
+              },
+              {
                 title: 'Odrůdy ze sortimentu',
                 chips: Array.from(cultivarMap.values()).map((c) => ({
                   href: `/odruda/${c.slug}`,

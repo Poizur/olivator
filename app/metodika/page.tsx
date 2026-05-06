@@ -3,6 +3,7 @@ import Link from 'next/link'
 export const metadata = {
   title: 'Metodika — Jak počítáme Olivator Score',
   description: 'Transparentní metodika hodnocení olivových olejů. 4 komponenty, váhy a výpočet.',
+  alternates: { canonical: 'https://olivator.cz/metodika' },
 }
 
 const COMPONENTS = [

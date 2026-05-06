@@ -4,6 +4,7 @@ export const metadata = {
   title: 'O projektu — Olivator',
   description:
     'Olivator je nezávislý srovnávač olivových olejů v ČR. Jak fungujeme, odkud jsou fotky, jak vyděláváme.',
+  alternates: { canonical: 'https://olivator.cz/o-projektu' },
 }
 
 export default function OProjektuPage() {

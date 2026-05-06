@@ -4,6 +4,7 @@ import { getRankings } from '@/lib/static-content'
 export const metadata = {
   title: 'Žebříčky olivových olejů',
   description: 'Přehled žebříčků — nejlepší oleje podle Olivator Score, původu, certifikace a ceny.',
+  alternates: { canonical: 'https://olivator.cz/zebricek' },
 }
 
 export default function ZebrickyPage() {

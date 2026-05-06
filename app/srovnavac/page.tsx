@@ -5,6 +5,9 @@ import { ListingContent } from './listing-content'
 export const metadata = {
   title: 'Katalog olivových olejů',
   description: 'Procházejte všechny olivové oleje. Filtry podle typu, původu, certifikace a ceny.',
+  // Explicit canonical — query string varianty (?origin=GR&type=evoo) by jinak
+  // mohly být brány jako duplicate content. Konsoliduje page authority.
+  alternates: { canonical: 'https://olivator.cz/srovnavac' },
 }
 
 // Bez revalidate by každý bot fetch = celý katalog ze Supabase. 1h cache:

@@ -68,6 +68,7 @@ export default async function ArticleDetailPage({
     readTime: string | null
     category: string
     body: string | null
+    publishedAt: string | null
   } | null = null
 
   if (dbArticle) {
@@ -79,6 +80,7 @@ export default async function ArticleDetailPage({
       readTime: dbArticle.readTime,
       category: dbArticle.category,
       body: dbArticle.bodyMarkdown,
+      publishedAt: dbArticle.publishedAt,
     }
   } else {
     const sa = getStaticArticle(slug)
@@ -91,6 +93,7 @@ export default async function ArticleDetailPage({
       readTime: sa.readTime,
       category: sa.category,
       body: sa.body ?? null,
+      publishedAt: null, // static articles nemají datum, fallback na build-time
     }
   }
 
@@ -126,14 +129,27 @@ export default async function ArticleDetailPage({
 
   const recipeArticles = getArticles().filter((a) => a.category === 'recept').slice(0, 2)
 
-  // Schema.org Article
+  // Schema.org Article — datePublished/dateModified povinné pro Google rich
+  // results (article snippet s autorem + datem). Bez nich Google nezobrazí.
+  // Static články dostanou aktuální build time jako fallback.
+  const buildTime = new Date().toISOString()
   const articleSchema = {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: article.title,
     description: article.excerpt,
+    datePublished: article.publishedAt ?? buildTime,
+    dateModified: article.publishedAt ?? buildTime,
     author: { '@type': 'Organization', name: 'Olivátor', url: 'https://olivator.cz' },
-    publisher: { '@type': 'Organization', name: 'Olivátor', url: 'https://olivator.cz' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Olivátor',
+      url: 'https://olivator.cz',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://olivator.cz/logo-wordmark.png',
+      },
+    },
     mainEntityOfPage: {
       '@type': 'WebPage',
       '@id': `https://olivator.cz/pruvodce/${article.slug}`,

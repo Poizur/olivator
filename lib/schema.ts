@@ -61,16 +61,23 @@ function buildReturnPolicy(retailer: Retailer) {
 
 export function productSchema(product: Product, offers: ProductOffer[]) {
   const cheapest = offers[0]
+  // Canonical URL produktu — Google Rich Results Test vyžaduje absolute URL
+  const url = `https://olivator.cz/olej/${product.slug}`
+  // image jako array — Google preferuje 1+ obrázek pro Product schema rich snippet
+  // (hvězdičky + cena v SERP). Bez tohoto pole se rich result NEZOBRAZUJE.
+  const image = product.imageUrl ? [product.imageUrl] : undefined
 
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.name,
     description: buildDescription(product),
+    url,
+    ...(image ? { image } : {}),
     ...(product.ean ? { sku: product.ean, gtin13: product.ean } : {}),
     brand: {
       '@type': 'Brand',
-      name: product.name.split(' ')[0],
+      name: product.nameShort || product.name.split(' ')[0],
     },
     countryOfOrigin: {
       '@type': 'Country',

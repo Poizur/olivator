@@ -5,6 +5,7 @@ import { getArticles } from '@/lib/static-content'
 export const metadata = {
   title: 'Průvodce olivovými oleji',
   description: 'Články, návody a srovnání — vše co potřebujete vědět o olivových olejích.',
+  alternates: { canonical: 'https://olivator.cz/pruvodce' },
 }
 
 // 60 → 3600 (1h). Boti crawlovali listing každou minutu = 1440 cache misses/den

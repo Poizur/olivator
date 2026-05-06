@@ -5,6 +5,7 @@ import { getArticles } from '@/lib/static-content'
 export const metadata = {
   title: 'Recepty s olivovým olejem',
   description: 'Recepty kde kvalita olivového oleje dělá rozdíl. S doporučením konkrétního oleje.',
+  alternates: { canonical: 'https://olivator.cz/recept' },
 }
 
 // 60 → 3600 (1h). Recepty se nemění minutu po minutě, 1h cache je bezpečné.
