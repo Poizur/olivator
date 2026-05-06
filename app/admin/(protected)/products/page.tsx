@@ -3,6 +3,7 @@ import { getAllProductsAdmin } from '@/lib/data'
 import { typeLabel, extractBrand } from '@/lib/utils'
 import { calculateCompleteness, completenessColor } from '@/lib/completeness'
 import { BulkRescrapeButton } from './bulk-rescrape-button'
+import { BackfillDraftsButton } from './backfill-drafts-button'
 import { StatusBadge as SharedStatusBadge } from '@/components/admin/status-badge'
 import { StatusFilters } from '@/components/admin/status-filters'
 
@@ -94,17 +95,20 @@ export default async function AdminProductsPage({
       </div>
 
       {showBulkRescrape && (
-        <div className="bg-olive-bg/30 border border-olive-border rounded-xl p-4 mb-3 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-medium text-olive-dark">
-              ✨ Drafty čekají na zpracování
+        <>
+          <BackfillDraftsButton draftCount={statusCounts.draft} />
+          <div className="bg-olive-bg/30 border border-olive-border rounded-xl p-4 mb-3 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] font-medium text-olive-dark">
+                ✨ Drafty čekají na zpracování
+              </div>
+              <p className="text-[12px] text-olive-dark/80 mt-0.5 leading-snug">
+                Spusť plnou AI pipeline (scrape + fakta + popisy + Score + galerie + lab scan) pro všechny — pak už jen zkontroluješ a publikuješ.
+              </p>
             </div>
-            <p className="text-[12px] text-olive-dark/80 mt-0.5 leading-snug">
-              Spusť plnou AI pipeline (scrape + fakta + popisy + Score + galerie + lab scan) pro všechny — pak už jen zkontroluješ a publikuješ.
-            </p>
+            <BulkRescrapeButton draftCount={statusCounts.draft} />
           </div>
-          <BulkRescrapeButton draftCount={statusCounts.draft} />
-        </div>
+        </>
       )}
 
       <StatusFilters

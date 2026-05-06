@@ -171,12 +171,18 @@ export async function linkAndRecomputeForProduct(
   productDescription: string | null
 ): Promise<void> {
   try {
-    const { extractBrandSlug, extractRegionSlug, detectCultivars } = await import(
+    const { extractBrandSlug, extractRegionSlug, extractRegionFromText, detectCultivars } = await import(
       '@/lib/entity-extractor'
     )
 
     const brandSlug = extractBrandSlug(productName)
-    const regionSlug = extractRegionSlug(productOriginCountry ?? '', productOriginRegion ?? '')
+    // Pořadí: 1) explicit originRegion (z scrape/admin), 2) fuzzy match
+    // z product name (XML drafty obvykle "Sitia P.D.O. Kréta", "Plakias",
+    // "Zakynthos" — name obsahuje region), 3) fallback na raw_description.
+    const regionSlug =
+      extractRegionSlug(productOriginCountry ?? '', productOriginRegion ?? '') ||
+      extractRegionFromText(productOriginCountry, productName) ||
+      extractRegionFromText(productOriginCountry, productDescription)
     const cultivars = detectCultivars(productName, productDescription ?? null)
 
     // ── Brand: auto-create stub pokud neexistuje ────────────────────────

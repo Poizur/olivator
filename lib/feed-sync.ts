@@ -238,11 +238,18 @@ async function ensureProduct(
   if (validEan) {
     const { data: existing, error: queryErr } = await supabaseAdmin
       .from('products')
-      .select('id, status')
+      .select('id, status, image_url')
       .eq('ean', validEan)
       .maybeSingle()
     if (queryErr) throw new Error(`Product query (EAN): ${queryErr.message}`)
     if (existing) {
+      // Backfill image_url pro existující produkty bez fotky
+      if (!existing.image_url && item.imgUrl) {
+        await supabaseAdmin
+          .from('products')
+          .update({ image_url: item.imgUrl, image_source: 'heureka_feed' })
+          .eq('id', existing.id as string)
+      }
       return {
         productId: existing.id as string,
         created: false,
@@ -256,11 +263,19 @@ async function ensureProduct(
   //    je per-product unique.
   const { data: byUrl, error: urlErr } = await supabaseAdmin
     .from('products')
-    .select('id, status')
+    .select('id, status, image_url')
     .eq('source_url', item.url)
     .maybeSingle()
   if (urlErr) throw new Error(`Product query (URL): ${urlErr.message}`)
   if (byUrl) {
+    // Backfill image_url pro existující produkty které ho dosud nemají
+    // — XML feed teď obsahuje IMGURL, dříve jsme ho neukládali.
+    if (!byUrl.image_url && item.imgUrl) {
+      await supabaseAdmin
+        .from('products')
+        .update({ image_url: item.imgUrl, image_source: 'heureka_feed' })
+        .eq('id', byUrl.id as string)
+    }
     return {
       productId: byUrl.id as string,
       created: false,
@@ -287,6 +302,11 @@ async function ensureProduct(
       packaging: detectPackaging(item),
       source_url: item.url,
       raw_description: item.description,
+      // Image z Heureka XML IMGURL — ulož přímo, admin pak nemusí scrapovat.
+      // Bez tohoto draft přicházel bez fotky a admin ho nemohl publikovat
+      // bez dalšího kroku.
+      image_url: item.imgUrl || null,
+      image_source: item.imgUrl ? 'heureka_feed' : null,
       status: 'draft',
     })
     .select('id')

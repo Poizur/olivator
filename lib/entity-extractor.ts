@@ -111,6 +111,36 @@ export function extractRegionSlug(countryCode: string, originRegion: string): st
   return REGION_MAP[cc]?.[key] ?? null
 }
 
+/**
+ * Fuzzy region detection z product name + raw description.
+ * Použij pokud originRegion není explicitně zadán (XML feed obvykle nemá).
+ *
+ * Iteruje všechny region keys v REGION_MAP[countryCode] a zkouší je matchovat
+ * jako substring v normalizovaném textu. Bere první match (REGION_MAP je
+ * uspořádaný od specifičtějšího k obecnějšímu).
+ *
+ * Příklad:
+ *   "Plakias - Premium BIO Extra panenský olivový olej 500 ml" + cc=GR
+ *   → null (Plakias je vesnice na Krétě, ne mainstream region key)
+ *   "Sitia P.D.O. Kréta Extra panenský 5 l" + cc=GR
+ *   → "kreta" (matchne "kreta" / "kréta")
+ */
+export function extractRegionFromText(
+  countryCode: string | null,
+  text: string | null
+): string | null {
+  if (!countryCode || !text) return null
+  const cc = countryCode.toLowerCase()
+  const map = REGION_MAP[cc]
+  if (!map) return null
+  const normalized = normaliseRegionKey(text)
+  // Iteruj všechny aliasy regionu — první substring match vyhrává.
+  for (const [alias, slug] of Object.entries(map)) {
+    if (normalized.includes(alias)) return slug
+  }
+  return null
+}
+
 // ── Cultivar detection ────────────────────────────────────────────────────────
 
 interface CultivarMatch {
