@@ -164,6 +164,35 @@ const RETAILER_PUBLIC_COLUMNS =
 // React `cache()` — memoize per request. Pokud homepage volá Promise.all
 // [getProductsWithOffers(), getSiteStats()] paralelně a getSiteStats uvnitř
 // taky volá getProductsWithOffers, díky cache() se DB query provede 1×.
+/**
+ * In-place override `imageUrl` na products array — pokud má produkt v
+ * product_images tabulce primary approved obrázek, použije ho místo
+ * products.image_url (často low-res XML feed thumbnail).
+ *
+ * Detail stránka už používá gallery (přes ProductGallery), tahle
+ * funkce sjednocuje listing/cards aby uživatel viděl stejnou kvalitu.
+ */
+async function enrichWithGalleryImages(products: Product[]): Promise<void> {
+  if (products.length === 0) return
+  const ids = products.map((p) => p.id)
+  const { data } = await supabaseAdmin
+    .from('product_images')
+    .select('product_id, url')
+    .in('product_id', ids)
+    .eq('is_primary', true)
+    .neq('source', 'scraper_candidate') // jen approved/manual
+
+  if (!data || data.length === 0) return
+  const galleryByProduct = new Map<string, string>()
+  for (const r of data) {
+    galleryByProduct.set(r.product_id as string, r.url as string)
+  }
+  for (const p of products) {
+    const galleryUrl = galleryByProduct.get(p.id)
+    if (galleryUrl) p.imageUrl = galleryUrl
+  }
+}
+
 export const getProducts = cache(async (): Promise<Product[]> => {
   const { data, error } = await supabaseAdmin
     .from('products')
@@ -171,7 +200,12 @@ export const getProducts = cache(async (): Promise<Product[]> => {
     .eq('status', 'active')
     .order('olivator_score', { ascending: false })
   if (error) throw error
-  return (data as unknown as ProductRow[]).map(mapProduct)
+  const products = (data as unknown as ProductRow[]).map(mapProduct)
+  // Override imageUrl s primary obrázkem z product_images gallery (high-res
+  // schválený obrázek). Detail stránka používá gallery, listing teď taky —
+  // sjednocuje user-visible kvalitu fotek napříč webem.
+  await enrichWithGalleryImages(products)
+  return products
 })
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
@@ -192,7 +226,9 @@ export async function getProductsByIds(ids: string[]): Promise<Product[]> {
     .select(PRODUCT_PUBLIC_COLUMNS)
     .in('id', ids)
   if (error) throw error
-  return (data as unknown as ProductRow[]).map(mapProduct)
+  const products = (data as unknown as ProductRow[]).map(mapProduct)
+  await enrichWithGalleryImages(products)
+  return products
 }
 
 export async function getProductsBySlugs(slugs: string[]): Promise<Product[]> {
@@ -204,7 +240,9 @@ export async function getProductsBySlugs(slugs: string[]): Promise<Product[]> {
   if (error) throw error
   // Preserve input order
   const bySlug = new Map((data as unknown as ProductRow[]).map(r => [r.slug, mapProduct(r)]))
-  return slugs.map(s => bySlug.get(s)).filter((p): p is Product => !!p)
+  const ordered = slugs.map(s => bySlug.get(s)).filter((p): p is Product => !!p)
+  await enrichWithGalleryImages(ordered)
+  return ordered
 }
 
 // Returns all active products with their cheapest offer pre-joined
