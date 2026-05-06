@@ -40,13 +40,17 @@ export function RetailerCard({ retailer, productSlug, price, photos = [] }: Prop
         {/* Logo + 2 fotky pod sebou */}
         <div className="flex flex-col gap-2">
           {retailer.logoUrl ? (
-            <div className="relative w-24 h-24 bg-off rounded-[var(--radius-card)] p-3">
-              <Image
+            // Plain <img> místo Next.js Image — retailer logy přicházejí z 8+
+            // různých CDN domén (cretamart.com, static.albert.cz, kosik.cz, atd.)
+            // a explicitní allowlist v next.config je nepraktický. Logos jsou
+            // navíc malé (<50KB), Next optimization je overkill.
+            <div className="w-24 h-24 bg-off rounded-[var(--radius-card)] p-3 flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={retailer.logoUrl}
                 alt={`${retailer.name} logo`}
-                fill
-                sizes="96px"
-                className="object-contain p-2"
+                className="max-w-full max-h-full object-contain"
+                loading="lazy"
               />
             </div>
           ) : (
