@@ -29,11 +29,7 @@ export function BackfillDraftsButton({ draftCount }: { draftCount: number }) {
   async function run() {
     if (
       !confirm(
-        `Spustit backfill pro ${draftCount} draftů? Pro každý dohraje:\n\n` +
-          `• Obrázek (og:image z URL retailera)\n` +
-          `• Meta description (Claude Haiku, ~$0.001 / draft)\n` +
-          `• Region slug (fuzzy match z názvu)\n\n` +
-          `Trvá ~${Math.ceil((draftCount * 4) / 60)} min.`
+        `Dokončit ${draftCount} draftů? Doplníme jim fotky, meta description a region. Trvá ~${Math.ceil((draftCount * 4) / 60)} min, $${(draftCount * 0.001).toFixed(2)} celkem.`
       )
     ) {
       return
@@ -55,25 +51,24 @@ export function BackfillDraftsButton({ draftCount }: { draftCount: number }) {
   }
 
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-3">
+    <div className="bg-olive-bg/40 border border-olive-border rounded-xl p-5 mb-3">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex-1 min-w-0">
-          <div className="text-[13px] font-medium text-amber-900">
-            🔧 Backfill chybějících polí
+          <div className="text-[14px] font-semibold text-olive-dark">
+            ✨ Dokončit drafty
           </div>
-          <p className="text-[12px] text-amber-900/80 mt-0.5 leading-snug">
-            Drafty z XML feedů (Heureka) přicházely bez fotek a meta_description. Tento
-            backfill dohraje obrázek (og:image), meta a region. Pro budoucí drafty se
-            vše ukládá automaticky.
+          <p className="text-[12px] text-olive-dark/80 mt-1 leading-snug">
+            Doplní chybějící <strong>fotky</strong>, <strong>meta description</strong> a <strong>region</strong> u všech draftů.
+            Když je vše vyplněné, draft je připravený k publikaci. Trvá ~{Math.ceil((draftCount * 4) / 60)} min, ~$0,001/draft.
           </p>
         </div>
         <button
           type="button"
           onClick={run}
           disabled={running}
-          className="bg-amber-600 text-white rounded-full px-4 py-2 text-[12px] font-medium hover:bg-amber-700 disabled:opacity-50 transition-colors"
+          className="bg-olive text-white rounded-full px-5 py-2.5 text-[13px] font-medium hover:bg-olive2 disabled:opacity-50 transition-colors whitespace-nowrap"
         >
-          {running ? '⏳ Backfill běží…' : `Spustit pro ${draftCount} draftů`}
+          {running ? '⏳ Pracuju…' : `Dokončit ${draftCount} draftů →`}
         </button>
       </div>
 

@@ -97,17 +97,25 @@ export default async function AdminProductsPage({
       {showBulkRescrape && (
         <>
           <BackfillDraftsButton draftCount={statusCounts.draft} />
-          <div className="bg-olive-bg/30 border border-olive-border rounded-xl p-4 mb-3 flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex-1 min-w-0">
-              <div className="text-[13px] font-medium text-olive-dark">
-                ✨ Drafty čekají na zpracování
+          {/* Pokročilé: plný rescrape přes Playwright. Skryto pod expanderem —
+              běžný workflow je Backfill (rychlejší, levnější, řeší 95 % případů).
+              Rescrape jen když chceš nové lab data nebo retailer změnil web. */}
+          <details className="mb-3 group">
+            <summary className="text-[12px] text-text3 cursor-pointer hover:text-text px-1 select-none">
+              ⚙️ Pokročilé: Plný rescrape přes Playwright
+            </summary>
+            <div className="bg-off/40 border border-off2 rounded-xl p-4 mt-2 flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex-1 min-w-0">
+                <div className="text-[12px] font-medium text-text2">
+                  Plná AI pipeline od nuly
+                </div>
+                <p className="text-[11px] text-text3 mt-0.5 leading-snug">
+                  Znovu projde URL produktu, vytáhne kompletní data (price, lab parametry, galerii, EAN), vygeneruje všechny AI popisy. ~30-60 s/draft, $0,05/draft. Použij když retailer změnil web nebo chceš obnovit lab data.
+                </p>
               </div>
-              <p className="text-[12px] text-olive-dark/80 mt-0.5 leading-snug">
-                Spusť plnou AI pipeline (scrape + fakta + popisy + Score + galerie + lab scan) pro všechny — pak už jen zkontroluješ a publikuješ.
-              </p>
+              <BulkRescrapeButton draftCount={statusCounts.draft} />
             </div>
-            <BulkRescrapeButton draftCount={statusCounts.draft} />
-          </div>
+          </details>
         </>
       )}
 
