@@ -1,29 +1,11 @@
 import Link from 'next/link'
 import { getAllProductsAdmin } from '@/lib/data'
-import { typeLabel, extractBrand } from '@/lib/utils'
-import { calculateCompleteness, completenessColor } from '@/lib/completeness'
+import { extractBrand } from '@/lib/utils'
+import { calculateCompleteness } from '@/lib/completeness'
 import { BulkRescrapeButton } from './bulk-rescrape-button'
 import { BackfillDraftsButton } from './backfill-drafts-button'
-import { StatusBadge as SharedStatusBadge } from '@/components/admin/status-badge'
+import { ProductsBulkTable } from './products-bulk-table'
 import { StatusFilters } from '@/components/admin/status-filters'
-
-function CompletenessBadge({ result }: { result: ReturnType<typeof calculateCompleteness> }) {
-  const { bg, text } = completenessColor(result.weightedPercent)
-  const tooltip = result.missing.length > 0
-    ? `Chybí: ${result.missing.map((m) => m.label).join(', ')}`
-    : 'Vše vyplněno'
-  return (
-    <span
-      className={`text-[11px] ${bg} ${text} px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block`}
-      title={tooltip}
-    >
-      {result.weightedPercent}%
-    </span>
-  )
-}
-
-// Re-export shared component pod stejným jménem aby zbytek souboru fungoval beze změn
-const StatusBadge = SharedStatusBadge
 
 export default async function AdminProductsPage({
   searchParams,
@@ -162,116 +144,7 @@ export default async function AdminProductsPage({
         </div>
       </div>
 
-      <div className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-off">
-            <tr>
-              <th className="px-3 py-3 w-[56px]"></th>
-              <th className="text-left px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Produkt</th>
-              <th className="text-left px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Výrobce</th>
-              <th className="text-left px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3 whitespace-nowrap">EAN</th>
-              <th className="text-left px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Typ</th>
-              <th className="text-right px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Score</th>
-              <th className="text-right px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3 whitespace-nowrap">Kyselost</th>
-              <th className="text-center px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">
-                <Link
-                  href={sort === 'completeness' ? '/admin/products' : '/admin/products?sort=completeness'}
-                  className={`hover:text-olive transition-colors ${sort === 'completeness' ? 'text-olive' : ''}`}
-                  title="Kliknutím seřadit od nejvíce neúplných"
-                >
-                  Komplet {sort === 'completeness' ? '↑' : '↕'}
-                </Link>
-              </th>
-              <th className="text-center px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Stav</th>
-              <th className="px-3 py-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={10} className="px-4 py-10 text-center text-text3 text-sm">
-                  Žádné produkty neodpovídají vybraným filtrům
-                </td>
-              </tr>
-            )}
-            {filtered.map(p => (
-              <tr key={p.id} className="border-t border-off2 hover:bg-off/60">
-                <td className="px-3 py-2">
-                  <Link href={`/admin/products/${p.id}`} className="block w-10 h-10 bg-off rounded overflow-hidden border border-off2">
-                    {p.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={p.imageUrl}
-                        alt={p.name}
-                        className="w-full h-full object-contain"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center font-[family-name:var(--font-display)] text-base italic text-text3/40">{p.name.charAt(0)}</div>
-                    )}
-                  </Link>
-                </td>
-                <td className="px-3 py-3">
-                  <div className="text-sm font-medium text-text">
-                    {p.name}
-                  </div>
-                  <div className="text-xs text-text3">
-                    {p.originRegion}{p.volumeMl ? ` · ${p.volumeMl} ml` : ''}
-                  </div>
-                  {(p.status === 'inactive' || p.status === 'excluded') && (p.statusReasonCode || p.statusReasonNote) && (
-                    <div className={`mt-1 inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded ${p.status === 'excluded' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-800'}`}>
-                      <span>{p.statusChangedBy === 'auto' ? '🤖' : '👤'}</span>
-                      <span>
-                        {p.statusReasonCode === 'url_404' && 'URL nedostupné'}
-                        {p.statusReasonCode === 'out_of_stock' && 'Vyprodáno'}
-                        {p.statusReasonCode === 'duplicate' && 'Duplikát'}
-                        {p.statusReasonCode === 'low_quality' && 'Málo dat'}
-                        {p.statusReasonCode === 'wrong_category' && 'Špatná kategorie'}
-                        {p.statusReasonCode === 'price_anomaly' && 'Cenová anomálie'}
-                        {p.statusReasonCode === 'not_interesting' && 'Mimo fokus'}
-                        {p.statusReasonCode === 'custom' && (p.statusReasonNote ?? 'Vlastní')}
-                        {!p.statusReasonCode && p.statusReasonNote}
-                      </span>
-                      {p.statusReasonNote && p.statusReasonCode && p.statusReasonCode !== 'custom' && (
-                        <span className="opacity-70">· {p.statusReasonNote}</span>
-                      )}
-                    </div>
-                  )}
-                </td>
-                <td className="px-3 py-3 text-xs text-text2">
-                  {extractBrand(p.name)}
-                </td>
-                <td className="px-3 py-3 text-xs text-text2 font-mono whitespace-nowrap">
-                  {p.ean ?? <span className="text-text3 italic">—</span>}
-                </td>
-                <td className="px-3 py-3 text-xs text-text2">{typeLabel(p.type)}</td>
-                <td className="px-3 py-3 text-right">
-                  <span className="text-sm font-semibold text-amber-700 tabular-nums">
-                    {p.olivatorScore || '—'}
-                  </span>
-                </td>
-                <td className="px-3 py-3 text-right text-sm text-text tabular-nums whitespace-nowrap">
-                  {p.acidity ? `${p.acidity}%` : '—'}
-                </td>
-                <td className="px-3 py-3 text-center">
-                  <CompletenessBadge result={p._completeness} />
-                </td>
-                <td className="px-3 py-3 text-center">
-                  <StatusBadge status={p.status} />
-                </td>
-                <td className="px-3 py-3 text-right">
-                  <Link
-                    href={`/admin/products/${p.id}`}
-                    className="text-[12px] text-olive hover:text-olive-dark whitespace-nowrap"
-                  >
-                    Upravit →
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <ProductsBulkTable products={filtered} sort={sort} />
 
       <div className="mt-3 text-xs text-text3">
         Zobrazeno {filtered.length} z {allProducts.length} produktů
