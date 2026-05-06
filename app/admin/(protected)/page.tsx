@@ -396,7 +396,7 @@ async function getActivityFeed() {
 }
 
 async function getNeedsAttention() {
-  const [draftsRes, missingTplRes, missingAffiliateRes, draftNewslettersRes] = await Promise.all([
+  const [draftsRes, missingTplRes, missingAffiliateRes, draftNewslettersRes, discoveryReviewRes] = await Promise.all([
     supabaseAdmin.from('products').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
     supabaseAdmin.from('retailers').select('id, name, base_tracking_url'),
     supabaseAdmin
@@ -407,6 +407,10 @@ async function getNeedsAttention() {
       .from('newsletter_drafts')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'draft'),
+    supabaseAdmin
+      .from('discovery_candidates')
+      .select('id', { count: 'exact', head: true })
+      .in('status', ['needs_review', 'pending']),
   ])
 
   return {
@@ -416,6 +420,7 @@ async function getNeedsAttention() {
     ),
     offersWithoutAffiliate: missingAffiliateRes.count ?? 0,
     pendingNewsletters: draftNewslettersRes.count ?? 0,
+    discoveryReview: discoveryReviewRes.count ?? 0,
   }
 }
 
@@ -496,10 +501,65 @@ export default async function AdminDashboardPage() {
     year: 'numeric',
   })
 
+  // Action items pro "Co dělat dnes" widget — seřazené dle priority
+  // (publikace draftů > review discovery > newsletter > affiliate setup)
+  const actionItems: Array<{
+    icon: string
+    title: string
+    count: number
+    description: string
+    href: string
+    cta: string
+    urgent?: boolean
+  }> = []
+
+  if (attention.drafts > 0) {
+    actionItems.push({
+      icon: '📦',
+      title: 'Publikovat drafty',
+      count: attention.drafts,
+      description: 'Drafty čekající na tvoji kontrolu a zveřejnění',
+      href: '/admin/products?status=draft',
+      cta: 'Zpracovat',
+      urgent: true,
+    })
+  }
+  if (attention.discoveryReview > 0) {
+    actionItems.push({
+      icon: '🔎',
+      title: 'Schválit kandidáty',
+      count: attention.discoveryReview,
+      description: 'Surové scrape výsledky čekající na schválení',
+      href: '/admin/discovery',
+      cta: 'Zkontrolovat',
+    })
+  }
+  if (attention.pendingNewsletters > 0) {
+    actionItems.push({
+      icon: '📧',
+      title: 'Schválit newsletter',
+      count: attention.pendingNewsletters,
+      description: 'Newsletter draft čeká na tvé schválení',
+      href: '/admin/newsletter/drafts',
+      cta: 'Otevřít',
+      urgent: true,
+    })
+  }
+  if (attention.missingTemplates.length > 0) {
+    actionItems.push({
+      icon: '🔗',
+      title: 'Doplnit affiliate šablony',
+      count: attention.missingTemplates.length,
+      description: 'Retaileři bez tracking URL — bez nich nevyděláváš',
+      href: '/admin/retailers',
+      cta: 'Nastavit',
+    })
+  }
+
   return (
     <div>
       {/* Page header */}
-      <div className="flex items-end justify-between mb-8 flex-wrap gap-4">
+      <div className="flex items-end justify-between mb-6 flex-wrap gap-4">
         <div>
           <h1 className="font-[family-name:var(--font-display)] text-3xl text-text mb-1.5">
             Přehled
@@ -511,22 +571,6 @@ export default async function AdminDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {attention.pendingNewsletters > 0 && (
-            <Link
-              href="/admin/newsletter/drafts"
-              className="text-[13px] text-olive-dark border border-olive-border bg-olive-bg/40 hover:bg-olive-bg rounded-md px-3.5 py-2 transition-colors font-medium"
-            >
-              📧 Schválit newsletter <span className="opacity-60">({attention.pendingNewsletters})</span>
-            </Link>
-          )}
-          {attention.drafts > 0 && (
-            <Link
-              href="/admin/products?status=draft"
-              className="text-[13px] text-text2 border border-off2 bg-white hover:bg-off rounded-md px-3.5 py-2 transition-colors"
-            >
-              Drafty produktů <span className="text-text3">({attention.drafts})</span>
-            </Link>
-          )}
           <Link
             href="/admin/products/import"
             className="inline-flex items-center gap-1.5 text-[13px] text-text border border-off2 bg-white hover:bg-off2 rounded-md px-3.5 py-2 transition-colors"
@@ -536,6 +580,65 @@ export default async function AdminDashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* Co dělat dnes — primární action items */}
+      {actionItems.length > 0 && (
+        <section className="mb-8">
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="text-[15px] font-semibold text-text">
+              Co dělat dnes
+            </h2>
+            <span className="text-[12px] text-text3">{actionItems.length} úkolů</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {actionItems.map((item, i) => (
+              <Link
+                key={i}
+                href={item.href}
+                className={`group flex items-center gap-3 p-4 rounded-xl border transition-all hover:shadow-sm ${
+                  item.urgent
+                    ? 'bg-amber-50/60 border-amber-200 hover:border-amber-300 hover:bg-amber-50'
+                    : 'bg-white border-off2 hover:border-olive-light'
+                }`}
+              >
+                <div className="text-2xl shrink-0">{item.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-[14px] font-semibold text-text">
+                      {item.title}
+                    </span>
+                    <span className={`text-[12px] font-bold tabular-nums ${
+                      item.urgent ? 'text-amber-700' : 'text-olive'
+                    }`}>
+                      {item.count}
+                    </span>
+                  </div>
+                  <p className="text-[12px] text-text3 leading-snug truncate">
+                    {item.description}
+                  </p>
+                </div>
+                <span className={`text-[12px] font-medium shrink-0 transition-colors ${
+                  item.urgent ? 'text-amber-700' : 'text-olive'
+                }`}>
+                  {item.cta} →
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {actionItems.length === 0 && (
+        <section className="mb-8 bg-olive-bg/30 border border-olive-border rounded-xl p-5 text-center">
+          <div className="text-3xl mb-2">✨</div>
+          <h2 className="text-[15px] font-semibold text-text mb-1">
+            Vše je vyřízené
+          </h2>
+          <p className="text-[12px] text-text2">
+            Žádné drafty, kandidáti ani newsletter k schválení. Pipeline bude přidávat další.
+          </p>
+        </section>
+      )}
 
       {/* KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
