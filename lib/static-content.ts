@@ -6,7 +6,7 @@ import { ARTICLE_BODIES } from './article-bodies'
 
 export const ARTICLES: Article[] = [
   { slug: 'jak-vybrat-olivovy-olej', title: 'Jak vybrat olivový olej: na co opravdu záleží', category: 'pruvodce', excerpt: 'Kyselost, polyfenoly, certifikace — vysvětlujeme, co znamenají čísla na etiketě a proč na nich záleží.', readTime: '8 min čtení', emoji: '📖' },
-  { slug: 'nejlepsi-olivovy-olej-2025', title: 'Nejlepší olivový olej 2025: testujeme 28 produktů', category: 'zebricek', excerpt: 'Nezávislý test 28 olejů dostupných v ČR. Hodnotíme kyselost, polyfenoly, certifikace a cenu za 100 ml.', readTime: '15 min čtení', emoji: '🏆' },
+  { slug: 'nejlepsi-olivovy-olej-2025', title: 'Nejlepší olivový olej 2026: testujeme 100+ produktů', category: 'zebricek', excerpt: 'Nezávislý test olivových olejů dostupných v ČR. Olivator Score, kyselost, polyfenoly, certifikace, cena za 100 ml. Aktualizováno pro rok 2026.', readTime: '15 min čtení', emoji: '🏆' },
   { slug: 'recky-vs-italsky', title: 'Řecký vs italský olivový olej — který vybrat?', category: 'srovnani', excerpt: 'Dva největší hráči na trhu olivových olejů. Srovnáváme chuťové profily, certifikace a ceny.', readTime: '6 min čtení', emoji: '🇬🇷' },
   { slug: 'polyfenoly-proc-na-nich-zalezi', title: 'Polyfenoly v olivovém oleji: proč na nich záleží', category: 'vzdelavani', excerpt: 'Polyfenoly jsou klíčem ke zdravotním benefitům olivového oleje. Kolik jich potřebujete a kde je najdete?', readTime: '5 min čtení', emoji: '⚗️' },
   { slug: 'bruschetta-s-rajcaty', title: 'Bruschetta s rajčaty a bazalkou', category: 'recept', excerpt: 'Klasika italské kuchyně, kde kvalita olivového oleje dělá rozdíl. S doporučením konkrétního oleje.', readTime: '3 min čtení', emoji: '🍅' },
