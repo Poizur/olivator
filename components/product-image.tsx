@@ -10,6 +10,10 @@ interface ProductImageProps {
    *  'contain' zachová celou fotku — použij na detail stránce kde nesmí
    *  být olej cropped. */
   fit?: 'cover' | 'contain'
+  /** Zoom factor — default 1.25 (cover) ořízne whitespace padding ze
+   *  source fotek. Jednotlivé retailery mají různě široký okraj kolem
+   *  lahve, scale-125 řeší 90 % případů. Nastav 1 pro detail/gallery. */
+  zoom?: number
 }
 
 export function ProductImage({
@@ -18,16 +22,20 @@ export function ProductImage({
   fallbackSize = 'text-6xl',
   sizes = '(max-width: 768px) 100vw, 400px',
   fit = 'cover',
+  zoom,
 }: ProductImageProps) {
+  // Default zoom = 1.25 pro cover (ořízne whitespace), 1 pro contain
+  const effectiveZoom = zoom ?? (fit === 'cover' ? 1.25 : 1)
   if (product.imageUrl) {
     return (
-      <div className={`relative w-full h-full ${className}`}>
+      <div className={`relative w-full h-full overflow-hidden ${className}`}>
         <Image
           src={product.imageUrl}
           alt={product.name}
           fill
           sizes={sizes}
           className={fit === 'cover' ? 'object-cover object-center' : 'object-contain'}
+          style={effectiveZoom !== 1 ? { transform: `scale(${effectiveZoom})` } : undefined}
         />
       </div>
     )
