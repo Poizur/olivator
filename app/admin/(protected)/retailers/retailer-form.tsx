@@ -280,7 +280,7 @@ export function RetailerForm({ initial, initialPhotos = [] }: { initial?: Retail
         <textarea
           value={baseTrackingUrl}
           onChange={e => setBaseTrackingUrl(e.target.value)}
-          placeholder="https://ehub.cz/system/scripts/click.php?a_aid=XXX&a_bid=YYY&data1={product_slug}&url={product_url}"
+          placeholder="https://ehub.cz/system/scripts/click.php?a_aid=XXX&a_bid=YYY&data1={product_slug}&desturl={product_url}"
           rows={3}
           className="w-full px-3 py-2 border border-off2 rounded-lg text-sm font-mono focus:outline-none focus:border-olive"
         />
