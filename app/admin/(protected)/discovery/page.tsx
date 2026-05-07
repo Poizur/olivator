@@ -23,27 +23,54 @@ interface DiscoveryRow {
   created_at: string
 }
 
-async function getCandidates(): Promise<DiscoveryRow[]> {
-  const { data, error } = await supabaseAdmin
+// Načítáme dvě oddělené sady:
+// 1) needs_review — VŠECHNY (limit 500) protože tyhle admin reviewuje
+// 2) ostatní statusy — posledních 100 napříč pro stats, ne pro action
+async function getCandidates(): Promise<{ all: DiscoveryRow[]; counts: Record<string, number> }> {
+  const { data: needsReview, error: e1 } = await supabaseAdmin
     .from('discovery_candidates')
     .select('*')
+    .in('status', ['needs_review', 'pending'])
+    .order('created_at', { ascending: false })
+    .limit(500)
+  if (e1) {
+    if (e1.code === '42P01' || e1.code === 'PGRST205') return { all: [], counts: {} }
+    throw e1
+  }
+
+  const { data: recent } = await supabaseAdmin
+    .from('discovery_candidates')
+    .select('*')
+    .not('status', 'in', '(needs_review,pending)')
     .order('created_at', { ascending: false })
     .limit(100)
-  if (error) {
-    if (error.code === '42P01' || error.code === 'PGRST205') return []
-    throw error
+
+  // Real counts per status (head:true count)
+  const statuses = ['needs_review', 'pending', 'auto_published', 'auto_added_offer', 'rejected', 'approved', 'failed']
+  const counts: Record<string, number> = {}
+  for (const s of statuses) {
+    const { count } = await supabaseAdmin
+      .from('discovery_candidates')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', s)
+    counts[s] = count ?? 0
   }
-  return (data ?? []) as DiscoveryRow[]
+
+  return {
+    all: [...((needsReview ?? []) as DiscoveryRow[]), ...((recent ?? []) as DiscoveryRow[])],
+    counts,
+  }
 }
 
 export default async function DiscoveryPage() {
-  const all = await getCandidates()
+  const { all, counts } = await getCandidates()
   const needsReview = all.filter(c => c.status === 'needs_review' || c.status === 'pending')
   const autoPublished = all.filter(c => c.status === 'auto_published')
   const autoAdded = all.filter(c => c.status === 'auto_added_offer')
   const rejected = all.filter(c => c.status === 'rejected')
   const approved = all.filter(c => c.status === 'approved')
   const failed = all.filter(c => c.status === 'failed')
+  const totalAll = Object.values(counts).reduce((s, n) => s + n, 0)
 
   return (
     <div>
@@ -65,14 +92,14 @@ export default async function DiscoveryPage() {
         <DiscoveryRunner />
       </div>
 
-      {/* Stats summary */}
+      {/* Stats summary — exact DB counts (ne in-memory filter z limited fetch) */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
-        <Stat label="Celkem" value={all.length} color="text" />
-        <Stat label="Ke schválení" value={needsReview.length} color="terra" />
-        <Stat label="Automaticky publikované" value={autoPublished.length} color="olive" />
-        <Stat label="Schválené" value={approved.length} color="olive" />
-        <Stat label="Selhalo" value={failed.length} color="red" />
-        <Stat label="Zamítnuté" value={rejected.length} color="text3" />
+        <Stat label="Celkem" value={totalAll} color="text" />
+        <Stat label="Ke schválení" value={(counts.needs_review ?? 0) + (counts.pending ?? 0)} color="terra" />
+        <Stat label="Automaticky publikované" value={counts.auto_published ?? 0} color="olive" />
+        <Stat label="Schválené" value={counts.approved ?? 0} color="olive" />
+        <Stat label="Selhalo" value={counts.failed ?? 0} color="red" />
+        <Stat label="Zamítnuté" value={counts.rejected ?? 0} color="text3" />
       </div>
 
       {needsReview.length > 0 && (
