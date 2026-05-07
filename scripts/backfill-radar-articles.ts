@@ -105,31 +105,35 @@ async function main() {
       const fullText = item.original_url ? await fetchArticleText(item.original_url) : null
 
       const patch: Record<string, string | null> = {}
+      let unsplashQuery: string | null = null
 
       if (!item.czech_article || !item.slug) {
         const gen = await generateContent(item, fullText)
         if (gen.czech_article) patch.czech_article = gen.czech_article
         if (gen.meta_title) patch.meta_title = gen.meta_title.slice(0, 70)
         if (gen.meta_description) patch.meta_description = gen.meta_description.slice(0, 200)
-
-        if (!item.image_url && gen.unsplash_query) {
-          try {
-            const photos = await searchUnsplash(gen.unsplash_query, 1)
-            const p = photos[0]
-            if (p) {
-              patch.image_url = p.url
-              patch.image_alt = p.altText || item.czech_title
-              patch.image_attribution = p.attribution
-              patch.image_source_url = p.sourceUrl
-            }
-          } catch {
-            // best effort
-          }
-        }
+        unsplashQuery = gen.unsplash_query ?? null
       }
 
       if (!item.slug) {
         patch.slug = await uniqueSlug(item.czech_title, item.id)
+      }
+
+      // Image fetch — pokud chybí, použij Claude query nebo fallback z badge
+      if (!item.image_url) {
+        const query = unsplashQuery ?? `olive oil ${item.badge ?? 'mediterranean'}`
+        try {
+          const photos = await searchUnsplash(query, 1)
+          const p = photos[0]
+          if (p) {
+            patch.image_url = p.url
+            patch.image_alt = p.altText || item.czech_title
+            patch.image_attribution = p.attribution
+            patch.image_source_url = p.sourceUrl
+          }
+        } catch (err) {
+          console.log(`unsplash err: ${err instanceof Error ? err.message.slice(0, 50) : 'unknown'}`)
+        }
       }
 
       if (Object.keys(patch).length === 0) {
