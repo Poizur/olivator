@@ -119,9 +119,20 @@ export default async function AdminNovinkyPage() {
                         </span>
                       )}
                     </div>
-                    <div className="text-[14px] text-text font-medium leading-tight line-clamp-2">
-                      {it.czech_title}
-                    </div>
+                    {it.original_url ? (
+                      <a
+                        href={it.original_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[14px] text-text font-medium leading-tight line-clamp-2 hover:text-olive-dark hover:underline block"
+                      >
+                        {it.czech_title}
+                      </a>
+                    ) : (
+                      <div className="text-[14px] text-text font-medium leading-tight line-clamp-2">
+                        {it.czech_title}
+                      </div>
+                    )}
                     {it.fingerprint && (
                       <div className="text-[10px] text-text3 font-mono mt-1">
                         fp: {it.fingerprint}
