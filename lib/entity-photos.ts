@@ -29,19 +29,26 @@ const REGION_QUERIES: Record<string, string[]> = {
 }
 
 const BRAND_QUERIES: Record<string, string> = {
-  intini:      'artisan olive oil bottle italy dark',
-  corinto:     'greek extra virgin olive oil bottle',
-  evoilino:    'corfu greece olive oil premium',
-  orino:       'mountain greece olive oil artisan',
-  'sitia-kreta': 'crete premium olive oil bottle',
+  intini:      'olive oil bottle dark glass premium',
+  corinto:     'olive oil bottle greek',
+  evoilino:    'olive oil bottle greece',
+  orino:       'olive oil bottle artisan',
+  'sitia-kreta': 'olive oil bottle crete greek',
+  alfa:        'olive oil bottle premium',
 }
 
+// Niche cultivar names ("koroneiki", "cima-di-mola") na Unsplash nemají hity.
+// Použij geographically-anchored queries — Unsplash má hodně fotek z Greece/Italy
+// olive groves obecně, což je pro illustration vizuálně dostatečné.
 const CULTIVAR_QUERIES: Record<string, string> = {
-  koroneiki:      'koroneiki small olives greece harvest',
-  manaki:         'greek olives harvest peloponnese',
-  kalamata:       'kalamata olives dark purple greek',
-  coratina:       'coratina olives puglia italy harvest',
-  'cima-di-mola': 'apulia olive harvest artisan italy',
+  koroneiki:      'olive grove greece harvest',
+  manaki:         'olive grove peloponnese greece',
+  kalamata:       'olive trees greek countryside',
+  coratina:       'olive grove puglia italy',
+  'cima-di-mola': 'olive grove apulia italy',
+  frantoio:       'tuscany olive grove italy',
+  leccino:        'tuscany olive grove italy autumn',
+  olivastra:      'tuscany olive trees italy',
 }
 
 interface InsertResult {
@@ -138,13 +145,30 @@ export async function importRegionPhotos(slugFilter?: string): Promise<EntityPho
   }
 }
 
-export async function importBrandPhotos(slugFilter?: string): Promise<EntityPhotosResult> {
+export async function importBrandPhotos(
+  slugFilter?: string,
+  options?: { allDbBrands?: boolean }
+): Promise<EntityPhotosResult> {
   const results: InsertResult[] = []
-  const slugs = slugFilter ? [slugFilter] : Object.keys(BRAND_QUERIES)
+  let slugs: string[]
+  if (slugFilter) {
+    slugs = [slugFilter]
+  } else if (options?.allDbBrands) {
+    // Fetch všechny brand slugy z DB (i drafty bez queries v BRAND_QUERIES).
+    // Fallback query je "artisan olive oil bottle" — generic ale topical.
+    const { data } = await supabaseAdmin.from('brands').select('slug')
+    slugs = ((data ?? []) as { slug: string }[]).map((r) => r.slug)
+  } else {
+    slugs = Object.keys(BRAND_QUERIES)
+  }
 
   for (const slug of slugs) {
-    const query = BRAND_QUERIES[slug] ?? 'artisan olive oil bottle'
-    const r = await importPhotosForEntity('brand', slug, [query], 1)
+    // Multiple fallback queries — Unsplash má širší match pro "olive oil"
+    // než pro "artisan ... premium". Vyzkoušíme postupně.
+    const queries = BRAND_QUERIES[slug]
+      ? [BRAND_QUERIES[slug]]
+      : ['olive oil bottle', 'extra virgin olive oil', 'olive oil mediterranean']
+    const r = await importPhotosForEntity('brand', slug, queries, 1)
     results.push(r)
   }
 

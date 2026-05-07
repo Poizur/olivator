@@ -18,6 +18,9 @@ import {
 
 const ONLY = process.argv.find((a) => a.startsWith('--only='))?.split('=')[1]
 const TARGET_SLUG = process.argv.find((a) => a.startsWith('--slug='))?.split('=')[1]
+// --skip-existing — pomine entity, které už mají description_long (>100 ch).
+// Užitečné pro bulk run přes draft brandy bez re-generování live obsahu.
+const SKIP_EXISTING = process.argv.includes('--skip-existing')
 
 function log(msg: string) { process.stdout.write(msg + '\n') }
 
@@ -66,6 +69,11 @@ async function processRegions() {
 
   for (const region of regions ?? []) {
     log(`  → ${region.slug}`)
+
+    if (SKIP_EXISTING && region.description_long && region.description_long.length > 100) {
+      log(`    ⏭️  already has content (${region.description_long.length}ch), skipping`)
+      continue
+    }
 
     // Fetch products for this region
     const { data: products } = await supabaseAdmin
@@ -135,6 +143,11 @@ async function processBrands() {
 
   for (const brand of brands ?? []) {
     log(`  → ${brand.slug}`)
+
+    if (SKIP_EXISTING && brand.description_long && brand.description_long.length > 100) {
+      log(`    ⏭️  already has content (${brand.description_long.length}ch), skipping`)
+      continue
+    }
 
     const { data: products } = await supabaseAdmin
       .from('products')
@@ -214,6 +227,9 @@ const CULTIVAR_PROFILES: Record<string, { acidity: string; polyphenols: string; 
   kalamata:     { acidity: '0.3–0.6 %', polyphenols: '300–600 mg/kg', flavor: 'ovocný, sladší, jemná hořkost' },
   coratina:     { acidity: '0.1–0.3 %', polyphenols: '500–1000 mg/kg', flavor: 'velmi intenzivní, hořký, štiplavý, artičokový' },
   'cima-di-mola': { acidity: '0.2–0.4 %', polyphenols: '300–600 mg/kg', flavor: 'ovocný, elegantní, středně hořký, bylinky' },
+  frantoio:     { acidity: '0.2–0.4 %', polyphenols: '300–600 mg/kg', flavor: 'ovocný, středně hořký, mírně štiplavý, artičokový, bylinkový (toskánský klasik)' },
+  leccino:      { acidity: '0.2–0.4 %', polyphenols: '200–450 mg/kg', flavor: 'jemný, sladší, mandlový, slabší hořkost, harmonická chuť (toskánský partner Frantoio)' },
+  olivastra:    { acidity: '0.2–0.4 %', polyphenols: '250–500 mg/kg', flavor: 'ovocný, mandlový, mírná hořkost, jemně štiplavý, čerstvé byliny (Olivastra Seggianese, Toskánsko)' },
 }
 
 async function processCultivars() {
@@ -226,6 +242,11 @@ async function processCultivars() {
 
   for (const cultivar of cultivars ?? []) {
     log(`  → ${cultivar.slug}`)
+
+    if (SKIP_EXISTING && cultivar.description_long && cultivar.description_long.length > 100) {
+      log(`    ⏭️  already has content (${cultivar.description_long.length}ch), skipping`)
+      continue
+    }
 
     // Products with this cultivar
     const { data: links } = await supabaseAdmin
