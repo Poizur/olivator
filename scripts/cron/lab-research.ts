@@ -52,6 +52,7 @@ async function main() {
       .neq('type', 'flavored')
       .or('acidity.is.null,polyphenols.is.null')
       .not('brand_slug', 'is', null)
+      .order('lab_research_attempted_at', { ascending: true, nullsFirst: true })
       .limit(MAX_PRODUCTS_PER_RUN * 3)
     if (queryErr) throw new Error(`Products query: ${queryErr.message}`)
 
