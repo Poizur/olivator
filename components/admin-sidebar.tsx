@@ -197,12 +197,17 @@ export async function AdminSidebar() {
                   <li key={item.href}>
                     <Link
                       href={item.href}
-                      className={`flex items-center gap-2.5 px-2.5 py-1.5 text-[13px] rounded-md transition-colors ${
+                      aria-current={active ? 'page' : undefined}
+                      className={`relative flex items-center gap-2.5 px-2.5 py-1.5 text-[13px] rounded-md transition-colors ${
                         active
-                          ? 'bg-off/60 text-text'
+                          ? 'bg-olive-bg text-olive-dark font-medium'
                           : 'text-text2 hover:text-text hover:bg-off'
                       }`}
                     >
+                      {/* Levý zelený proužek u aktivní položky — jednoznačný visual cue. */}
+                      {active && (
+                        <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-olive rounded-r" aria-hidden="true" />
+                      )}
                       <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${dotColor}`} />
                       <span className="flex-1 truncate">{item.label}</span>
                       {item.badge != null && item.badge > 0 && (
@@ -228,9 +233,10 @@ export async function AdminSidebar() {
                             <li key={sub.href}>
                               <Link
                                 href={sub.href}
+                                aria-current={subActive ? 'page' : undefined}
                                 className={`flex items-center gap-2 px-2 py-1 text-[12px] rounded-md transition-colors ${
                                   subActive
-                                    ? 'bg-off/60 text-text'
+                                    ? 'bg-olive-bg text-olive-dark font-medium'
                                     : 'text-text3 hover:text-text2 hover:bg-off'
                                 }`}
                               >
