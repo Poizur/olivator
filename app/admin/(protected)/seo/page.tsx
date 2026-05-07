@@ -7,6 +7,7 @@ import { TaskRow } from './task-row'
 import { TabNav } from './tab-nav'
 import { HistorieView } from './historie-view'
 import { InsightsView } from './insights-view'
+import { NavrhyView } from './navrhy-view'
 import { RunAuditButton } from './run-audit-button'
 
 export const dynamic = 'force-dynamic'
@@ -167,8 +168,8 @@ export default async function SeoDashboardPage({
 }) {
   const { tab = 'stav' } = await searchParams
 
-  // Pro počet badge na Historie + Insights tabech
-  const [tasksRes, metrics, activityCount, openNotesCount] = await Promise.all([
+  // Pro počet badge na Historie + Insights + Návrhy tabech
+  const [tasksRes, metrics, activityCount, openNotesCount, pendingProposalsCount] = await Promise.all([
     supabaseAdmin
       .from('seo_tasks')
       .select('task_key, phase, sort_order, title, description, estimated_time, status, auto_metric, notes')
@@ -177,6 +178,7 @@ export default async function SeoDashboardPage({
     loadMetrics(),
     supabaseAdmin.from('seo_activity_log').select('*', { count: 'exact', head: true }),
     supabaseAdmin.from('seo_notes').select('*', { count: 'exact', head: true }).eq('status', 'open'),
+    supabaseAdmin.from('seo_proposals').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
   ])
 
   const tasks = (tasksRes.data ?? []) as SeoTask[]
@@ -215,11 +217,13 @@ export default async function SeoDashboardPage({
       <TabNav
         tabs={[
           { key: 'stav', label: 'Stav', badge: `${overallPct}%` },
+          { key: 'navrhy', label: 'Návrhy', badge: pendingProposalsCount.count ?? 0 },
           { key: 'historie', label: 'Historie', badge: activityCount.count ?? 0 },
           { key: 'insights', label: 'Insights', badge: openNotesCount.count ?? 0 },
         ]}
       />
 
+      {tab === 'navrhy' && <NavrhyView />}
       {tab === 'historie' && <HistorieView />}
       {tab === 'insights' && <InsightsView />}
       {tab === 'stav' && <StavView

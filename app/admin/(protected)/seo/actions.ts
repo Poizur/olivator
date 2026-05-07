@@ -137,6 +137,76 @@ export async function takeSnapshotNow() {
   return result
 }
 
+// ── Návrhy oprav (proposal-audit) ────────────────────────────────────────────
+export async function applyProposal(proposalId: string) {
+  const { applyProposalById } = await import('@/lib/audit-applier')
+  const result = await applyProposalById(proposalId)
+  await logActivity({
+    action_type: result.ok ? 'milestone' : 'audit',
+    title: result.ok ? 'Návrh aplikován' : 'Návrh selhal',
+    description: result.note,
+    metadata: { proposal_id: proposalId },
+    source: 'admin_ui',
+  })
+  revalidatePath('/admin/seo')
+  return result
+}
+
+export async function dismissProposal(proposalId: string) {
+  const { dismissProposalById } = await import('@/lib/audit-applier')
+  await dismissProposalById(proposalId, 'Admin ignored')
+  revalidatePath('/admin/seo')
+  return { ok: true }
+}
+
+export async function applyAllProposalsByRule(ruleId: string) {
+  const { data } = await supabaseAdmin
+    .from('seo_proposals')
+    .select('id')
+    .eq('rule_id', ruleId)
+    .eq('status', 'pending')
+  const ids = ((data ?? []) as Array<{ id: string }>).map(r => r.id)
+  let ok = 0, failed = 0
+  const { applyProposalById } = await import('@/lib/audit-applier')
+  for (const id of ids) {
+    const r = await applyProposalById(id)
+    if (r.ok) ok++
+    else failed++
+  }
+  await logActivity({
+    action_type: 'milestone',
+    title: `Bulk apply ${ruleId}`,
+    description: `${ok} ok, ${failed} failed (z ${ids.length})`,
+    source: 'admin_ui',
+  })
+  revalidatePath('/admin/seo')
+  return { ok, failed, total: ids.length }
+}
+
+export async function runProposalAuditNow() {
+  const { runAllAuditRules, persistProposals } = await import('@/lib/audit-rules')
+  const startedAt = Date.now()
+  const results = await runAllAuditRules()
+  let totalDetected = 0
+  let totalNew = 0
+  for (const r of results) {
+    if (r.detected === 0) continue
+    const persist = await persistProposals(r.proposals)
+    totalDetected += r.detected
+    totalNew += persist.inserted
+  }
+  const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1)
+  await logActivity({
+    action_type: 'audit',
+    title: 'Proposal audit (manual)',
+    description: `${totalDetected} návrhů detekováno (${totalNew} new) za ${elapsed}s`,
+    metadata: { results: results.map(r => ({ rule: r.rule, count: r.detected })) },
+    source: 'admin_ui',
+  })
+  revalidatePath('/admin/seo')
+  return { ok: true, totalDetected, totalNew, elapsed }
+}
+
 // Manuální spuštění master auto-audit z UI. Spustí stejné kroky jako denní cron.
 // Vrací počet fixed napříč všemi oblastmi.
 export async function runAutoAuditNow() {
