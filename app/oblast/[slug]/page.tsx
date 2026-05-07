@@ -23,7 +23,7 @@ import { EntitySeoAccordion } from '@/components/entity-page/entity-seo-accordio
 import { EntityEditorialStory } from '@/components/entity-page/entity-editorial-story'
 import { EntityAtmosphereGallery } from '@/components/entity-page/entity-atmosphere-gallery'
 import { RegionTerroir } from '@/components/entity-page/region-terroir'
-import { FaqJsonLd, PlaceJsonLd } from '@/components/entity-page/entity-jsonld'
+import { FaqJsonLd, PlaceJsonLd, BreadcrumbJsonLd } from '@/components/entity-page/entity-jsonld'
 
 export const revalidate = 3600
 
@@ -212,6 +212,12 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
         imageUrl={heroPhoto?.url ?? null}
       />
       <FaqJsonLd faqs={faqs} />
+      <BreadcrumbJsonLd
+        items={[
+          { name: 'Olivátor', url: '/' },
+          { name: region.name, url: `/oblast/${slug}` },
+        ]}
+      />
 
       <div className="bg-off pb-16">
         {/* Breadcrumb */}

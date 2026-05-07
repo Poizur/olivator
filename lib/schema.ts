@@ -2,13 +2,17 @@ import type { Product, ProductOffer, Retailer } from './types'
 import { countryName, typeLabel } from './utils'
 
 /** Product description s fallbacky — zaručí že schema vždy má `description`.
- *  Google Search Console hlásí 'Chybí pole description' když je prázdné. */
+ *  Google preferuje delší description (až ~5000 znaků) — descriptionLong dává
+ *  bohatší kontext do Product schema rich snippetu. */
 function buildDescription(product: Product): string {
+  // Preferuj descriptionLong (typicky 500-1500 slov) — Google si z něj vezme
+  // klíčová slova a entity. Cap na 4900 znaků (Google limit ~5000).
+  if (product.descriptionLong && product.descriptionLong.trim().length > 50) {
+    const trimmed = product.descriptionLong.trim()
+    return trimmed.length > 4900 ? trimmed.slice(0, 4897) + '…' : trimmed
+  }
   if (product.descriptionShort && product.descriptionShort.trim().length > 10) {
     return product.descriptionShort.trim()
-  }
-  if (product.descriptionLong && product.descriptionLong.trim().length > 10) {
-    return product.descriptionLong.trim().slice(0, 200) + '…'
   }
   // Generic fallback z dostupných dat
   const parts: string[] = []

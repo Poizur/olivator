@@ -10,6 +10,7 @@ import { formatPrice } from '@/lib/utils'
 type ProductWithOffers = Product & { cheapestOffer: ProductOffer | null }
 import { ArticleBody } from '@/components/article-body'
 import { ProductImage } from '@/components/product-image'
+import { breadcrumbSchema } from '@/lib/schema'
 
 // 60 → 3600 — viz recept/page.tsx.
 export const revalidate = 3600
@@ -160,11 +161,21 @@ export default async function RecipeDetailPage({
     })),
   }
 
+  const breadcrumbs = breadcrumbSchema([
+    { name: 'Olivátor', url: '/' },
+    { name: 'Recepty', url: '/recept' },
+    { name: recipe.title, url: `/recept/${recipe.slug}` },
+  ])
+
   return (
     <div className="max-w-[760px] mx-auto px-6 md:px-10 py-8 md:py-10">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(recipeSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
       />
 
       <div className="text-xs text-text3 mb-6">

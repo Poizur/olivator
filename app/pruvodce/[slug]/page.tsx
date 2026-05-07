@@ -8,6 +8,7 @@ import { resolveTemplateVars } from '@/lib/template-vars'
 import { getProductsWithOffers } from '@/lib/data'
 import { formatPrice } from '@/lib/utils'
 import { ProductImage } from '@/components/product-image'
+import { breadcrumbSchema } from '@/lib/schema'
 
 // 60 → 3600 — viz pruvodce/page.tsx, stejný důvod.
 export const revalidate = 3600
@@ -156,11 +157,21 @@ export default async function ArticleDetailPage({
     },
   }
 
+  const breadcrumbs = breadcrumbSchema([
+    { name: 'Olivátor', url: '/' },
+    { name: 'Průvodce', url: '/pruvodce' },
+    { name: article.title, url: `/pruvodce/${article.slug}` },
+  ])
+
   return (
     <div className="max-w-[1280px] mx-auto px-6 md:px-10 py-8 md:py-10">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
       />
 
       <div className="text-xs text-text3 mb-6">

@@ -22,7 +22,7 @@ import { EntitySeoAccordion } from '@/components/entity-page/entity-seo-accordio
 import { EntityEditorialStory } from '@/components/entity-page/entity-editorial-story'
 import { EntityAtmosphereGallery } from '@/components/entity-page/entity-atmosphere-gallery'
 import { BrandStory } from '@/components/entity-page/brand-story'
-import { FaqJsonLd, OrganizationJsonLd } from '@/components/entity-page/entity-jsonld'
+import { FaqJsonLd, OrganizationJsonLd, BreadcrumbJsonLd } from '@/components/entity-page/entity-jsonld'
 
 export const revalidate = 3600
 
@@ -234,6 +234,13 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
         imageUrl={heroPhoto?.url ?? logoPhoto?.url ?? null}
       />
       <FaqJsonLd faqs={faqs} />
+      <BreadcrumbJsonLd
+        items={[
+          { name: 'Olivátor', url: '/' },
+          { name: 'Katalog', url: '/srovnavac' },
+          { name: brand.name, url: `/znacka/${slug}` },
+        ]}
+      />
 
       <div className="bg-off pb-16">
         {/* Breadcrumb */}

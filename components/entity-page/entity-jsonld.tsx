@@ -121,6 +121,31 @@ export function OrganizationJsonLd({
   )
 }
 
+interface BreadcrumbItem {
+  name: string
+  url: string  // path only (e.g. '/oblast/peloponnes'), prefixed with origin
+}
+
+export function BreadcrumbJsonLd({ items }: { items: BreadcrumbItem[] }) {
+  if (items.length === 0) return null
+  const data = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: item.name,
+      item: `https://olivator.cz${item.url}`,
+    })),
+  }
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: safeJsonLd(data) }}
+    />
+  )
+}
+
 interface ArticleJsonLdProps {
   headline: string
   description: string

@@ -22,7 +22,7 @@ import { EntitySeoAccordion } from '@/components/entity-page/entity-seo-accordio
 import { EntityEditorialStory } from '@/components/entity-page/entity-editorial-story'
 import { EntityAtmosphereGallery } from '@/components/entity-page/entity-atmosphere-gallery'
 import { VarietyProfile } from '@/components/entity-page/variety-profile'
-import { FaqJsonLd, ArticleJsonLd } from '@/components/entity-page/entity-jsonld'
+import { FaqJsonLd, ArticleJsonLd, BreadcrumbJsonLd } from '@/components/entity-page/entity-jsonld'
 
 export const revalidate = 3600
 
@@ -244,6 +244,13 @@ export default async function CultivarPage({
         imageUrl={heroPhoto?.url ?? null}
       />
       <FaqJsonLd faqs={faqs} />
+      <BreadcrumbJsonLd
+        items={[
+          { name: 'Olivátor', url: '/' },
+          { name: 'Katalog', url: '/srovnavac' },
+          { name: `Odrůda ${cultivar.name}`, url: `/odruda/${slug}` },
+        ]}
+      />
 
       <div className="bg-off pb-16">
         <div className="max-w-[1280px] mx-auto px-6 md:px-10 pt-6 pb-3">
