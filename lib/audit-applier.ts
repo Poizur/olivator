@@ -160,6 +160,36 @@ async function applyGenerateProductDescription(p: ProposalRow): Promise<{ ok: bo
   }
 }
 
+async function applyRegenerateSlug(p: ProposalRow): Promise<{ ok: boolean; note: string }> {
+  const action = p.suggested_action as { current_name?: string }
+  if (!action.current_name) return { ok: false, note: 'No current_name in action' }
+  const newSlug = action.current_name.toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80)
+  if (newSlug.length < 5) return { ok: false, note: 'Generated slug too short' }
+  // Check unique
+  const { data: existing } = await supabaseAdmin
+    .from('products')
+    .select('id')
+    .eq('slug', newSlug)
+    .neq('id', p.target_id ?? '')
+    .maybeSingle()
+  const finalSlug = existing ? `${newSlug}-${(p.target_id ?? '').slice(0, 6)}` : newSlug
+
+  const { error } = await supabaseAdmin
+    .from('products')
+    .update({ slug: finalSlug, image_url: null, updated_at: new Date().toISOString() })
+    .eq('id', p.target_id)
+  if (error) return { ok: false, note: error.message.slice(0, 100) }
+
+  // Smaž stale images — přijdou nové z source_url při dalším scraper runu
+  await supabaseAdmin.from('product_images').delete().eq('product_id', p.target_id)
+
+  return { ok: true, note: `slug → ${finalSlug}, stale images smazány` }
+}
+
 async function applyGenerateBrandContent(p: ProposalRow): Promise<{ ok: boolean; note: string }> {
   // Tato akce vyžaduje plně async generate-entity-content.ts s ANTHROPIC_API_KEY +
   // existující content-generator. Spustí celý flow pro 1 brand.
@@ -193,6 +223,9 @@ export async function applyProposalById(id: string): Promise<{ ok: boolean; note
       break
     case 'generate_brand_content':
       result = await applyGenerateBrandContent(p)
+      break
+    case 'regenerate_slug_from_name':
+      result = await applyRegenerateSlug(p)
       break
     default:
       result = { ok: false, note: `No applier for action "${action}"` }

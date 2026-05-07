@@ -164,7 +164,25 @@ export function ProductsBulkTable({ products, sort }: Props) {
                     </Link>
                   </td>
                   <td className="px-3 py-3">
-                    <div className="text-sm font-medium text-text">{p.name}</div>
+                    <div className="flex items-center gap-1.5">
+                      <Link
+                        href={`/admin/products/${p.id}`}
+                        className="text-sm font-medium text-text hover:text-olive transition-colors"
+                      >
+                        {p.name}
+                      </Link>
+                      {p.status === 'active' && (
+                        <a
+                          href={`/olej/${p.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="Otevřít na webu"
+                          className="text-text3 hover:text-olive text-[11px]"
+                        >
+                          ↗
+                        </a>
+                      )}
+                    </div>
                     <div className="text-xs text-text3">
                       {p.originRegion}{p.volumeMl ? ` · ${p.volumeMl} ml` : ''}
                     </div>

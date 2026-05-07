@@ -274,6 +274,45 @@ async function ruleProductNoDescription(): Promise<ProposalDraft[]> {
   }))
 }
 
+// ── Rule 10: Frankenstein — name a slug ze 2 různých produktů ─────────────
+// Detekuje produkty kde scraper přepsal name z nového source_url ale slug
+// zůstal z původního importu = inkonzistence. Fix: regenerovat slug z name +
+// smazat stale obrázek (přijde nový z aktuálního source_url).
+async function ruleFrankensteinProduct(): Promise<ProposalDraft[]> {
+  const { data: products } = await supabaseAdmin
+    .from('products')
+    .select('id, slug, name, source_url')
+    .eq('status', 'active')
+
+  const GENERIC = ['extra', 'panensky', 'panenský', 'olivovy', 'olivový', 'olej', 'oil', 'olive', 'bio']
+  const drafts: ProposalDraft[] = []
+  for (const p of (products ?? []) as Array<{ id: string; slug: string; name: string; source_url: string | null }>) {
+    if (!p.slug || !p.name) continue
+    const nameTokens = p.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').split(/[\s\-_,()]+/).filter(t => t.length >= 4 && !GENERIC.includes(t) && !/^\d+(\.\d+)?$/.test(t))
+    const slugTokens = p.slug.toLowerCase().split(/[\s\-_]+/).filter(t => t.length >= 4 && !GENERIC.includes(t) && !/^\d+(\.\d+)?$/.test(t))
+    if (nameTokens.length < 2) continue
+    const overlap = nameTokens.filter(t => slugTokens.includes(t))
+    if (overlap.length > 0) continue
+
+    drafts.push({
+      rule_id: 'frankenstein_product',
+      severity: 'high',
+      target_type: 'product',
+      target_id: p.id,
+      target_slug: p.slug,
+      target_label: p.name,
+      title: `${p.name.slice(0, 50)}: slug nesedí s name`,
+      reason: `Slug "${p.slug.slice(0, 40)}" a name "${p.name.slice(0, 40)}" nemají společný token. Pravděpodobně scraper přepsal data ze source_url ale slug zachoval z předchozího importu. Image může taky nesedět.`,
+      suggested_action: {
+        action: 'regenerate_slug_from_name',
+        current_slug: p.slug,
+        current_name: p.name,
+      },
+    })
+  }
+  return drafts
+}
+
 // ── Rule 9: Product status=inactive ale offers stále in_stock ───────────────
 async function ruleInactiveWithStock(): Promise<ProposalDraft[]> {
   const { data: products } = await supabaseAdmin
@@ -327,6 +366,7 @@ export async function runAllAuditRules(): Promise<AuditResult[]> {
     { name: 'brand_no_country', fn: ruleBrandNoCountry },
     { name: 'product_no_description', fn: ruleProductNoDescription },
     { name: 'inactive_with_stock', fn: ruleInactiveWithStock },
+    { name: 'frankenstein_product', fn: ruleFrankensteinProduct },
   ]
 
   const results: AuditResult[] = []
