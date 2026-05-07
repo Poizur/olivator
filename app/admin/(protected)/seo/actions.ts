@@ -136,3 +136,105 @@ export async function takeSnapshotNow() {
   revalidatePath('/admin/seo')
   return result
 }
+
+// Manuální spuštění master auto-audit z UI. Spustí stejné kroky jako denní cron.
+// Vrací počet fixed napříč všemi oblastmi.
+export async function runAutoAuditNow() {
+  const startedAt = Date.now()
+
+  // Inline import a spuštění klíčových kroků (bez Claude — to je drahé, oddělené)
+  let totalFixed = 0
+  const detail: Record<string, number> = {}
+
+  // 1. Junk brands — najdi brandy s name jako "Extra"/"Panenský" a re-link
+  const SUSPICIOUS = ['extra', 'panensky', 'panenský', 'olivovy', 'oil', 'olive', 'premium', 'bio', 'eko']
+  const { data: brands } = await supabaseAdmin.from('brands').select('id, slug, name')
+  let junkFixed = 0
+  for (const b of (brands ?? []) as Array<{ id: string; slug: string; name: string }>) {
+    if (!SUSPICIOUS.includes(b.name.toLowerCase().trim())) continue
+    const { data: ps } = await supabaseAdmin.from('products').select('id, name').eq('brand_slug', b.slug)
+    const products = (ps ?? []) as Array<{ id: string; name: string }>
+    if (products.length === 0) {
+      await supabaseAdmin.from('brands').delete().eq('slug', b.slug)
+      junkFixed++
+      continue
+    }
+    // Heuristika: nejčastější ne-suspicious slovo z product names
+    const candidates = new Map<string, number>()
+    for (const p of products) {
+      const cleanName = p.name.replace(/\d+\s*(ml|l|g)/gi, '').trim()
+      const words = cleanName.split(/\s+/)
+      for (let i = words.length - 1; i >= Math.max(0, words.length - 3); i--) {
+        const w = words[i].replace(/[^\p{L}]/gu, '')
+        if (w.length < 3 || SUSPICIOUS.includes(w.toLowerCase())) continue
+        candidates.set(w, (candidates.get(w) ?? 0) + 1)
+      }
+    }
+    const sorted = [...candidates.entries()].sort((a, b) => b[1] - a[1])
+    if (sorted.length === 0 || sorted[0][1] < products.length / 2) {
+      await supabaseAdmin.from('products').update({ brand_slug: null }).eq('brand_slug', b.slug)
+      await supabaseAdmin.from('brands').delete().eq('slug', b.slug)
+      junkFixed++
+      continue
+    }
+    const newName = sorted[0][0]
+    const newSlug = newName.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+    const { data: existing } = await supabaseAdmin.from('brands').select('id').eq('slug', newSlug).maybeSingle()
+    if (existing) {
+      await supabaseAdmin.from('products').update({ brand_slug: newSlug }).eq('brand_slug', b.slug)
+      await supabaseAdmin.from('brands').delete().eq('slug', b.slug)
+    } else {
+      await supabaseAdmin.from('brands').update({ slug: newSlug, name: newName, updated_at: new Date().toISOString() }).eq('id', b.id)
+      await supabaseAdmin.from('products').update({ brand_slug: newSlug }).eq('brand_slug', b.slug)
+    }
+    junkFixed++
+  }
+  detail.junkBrands = junkFixed
+  totalFixed += junkFixed
+
+  // 2. Quick quality fixes — jen deterministické (bez Claude)
+  let quickFixed = 0
+  const { data: invIssues } = await supabaseAdmin.from('quality_issues').select('id, product_id').eq('rule_id', 'inactive_with_offers').eq('status', 'open')
+  for (const i of (invIssues ?? []) as Array<{ id: string; product_id: string }>) {
+    await supabaseAdmin.from('product_offers').update({ in_stock: false, last_checked: new Date().toISOString() }).eq('product_id', i.product_id)
+    await supabaseAdmin.from('quality_issues').update({
+      status: 'resolved', auto_fix_attempted: true, auto_fix_succeeded: true,
+      resolved_at: new Date().toISOString(), resolution_note: 'Auto: offers in_stock=false',
+    }).eq('id', i.id)
+    quickFixed++
+  }
+  const { data: noOffer } = await supabaseAdmin.from('quality_issues').select('id, product_id').eq('rule_id', 'no_offers').eq('status', 'open')
+  for (const i of (noOffer ?? []) as Array<{ id: string; product_id: string }>) {
+    await supabaseAdmin.from('products').update({
+      status: 'inactive', status_reason_code: 'no_offers',
+      status_reason_note: 'Auto-deaktivováno (žádné nabídky)',
+      status_changed_by: 'auto', status_changed_at: new Date().toISOString(),
+    }).eq('id', i.product_id)
+    await supabaseAdmin.from('quality_issues').update({
+      status: 'resolved', auto_fix_attempted: true, auto_fix_succeeded: true,
+      resolved_at: new Date().toISOString(), resolution_note: 'Auto: product → inactive',
+    }).eq('id', i.id)
+    quickFixed++
+  }
+  detail.qualityFixes = quickFixed
+  totalFixed += quickFixed
+
+  // 3. Snapshot
+  const { takeMetricSnapshot } = await import('@/lib/seo-activity')
+  const snap = await takeMetricSnapshot()
+  detail.snapshots = snap.snapshots
+
+  const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1)
+
+  await logActivity({
+    action_type: 'audit',
+    title: 'Auto-audit (manual)',
+    description: `Opraveno ${totalFixed} položek (${elapsed}s)`,
+    metadata: detail,
+    source: 'admin_ui',
+  })
+
+  revalidatePath('/admin/seo')
+  revalidatePath('/admin')
+  return { ok: true, totalFixed, detail, elapsed }
+}

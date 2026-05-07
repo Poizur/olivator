@@ -7,6 +7,7 @@ import { TaskRow } from './task-row'
 import { TabNav } from './tab-nav'
 import { HistorieView } from './historie-view'
 import { InsightsView } from './insights-view'
+import { RunAuditButton } from './run-audit-button'
 
 export const dynamic = 'force-dynamic'
 
@@ -197,15 +198,18 @@ export default async function SeoDashboardPage({
   return (
     <div>
       {/* Header */}
-      <div className="mb-4">
-        <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">
-          — SEO Plán
+      <div className="mb-4 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">
+            — SEO Plán
+          </div>
+          <h1 className="font-[family-name:var(--font-display)] text-3xl text-text">SEO Action Plan</h1>
+          <p className="text-[13px] text-text2 mt-1 max-w-[640px]">
+            Strategický plán SEO ze 8 fází. <strong>Stav</strong> = aktuální metriky + úkoly,{' '}
+            <strong>Historie</strong> = co a kdy se udělalo, <strong>Insights</strong> = strategické poznámky.
+          </p>
         </div>
-        <h1 className="font-[family-name:var(--font-display)] text-3xl text-text">SEO Action Plan</h1>
-        <p className="text-[13px] text-text2 mt-1 max-w-[640px]">
-          Strategický plán SEO ze 8 fází. <strong>Stav</strong> = aktuální metriky + úkoly,{' '}
-          <strong>Historie</strong> = co a kdy se udělalo, <strong>Insights</strong> = strategické poznámky.
-        </p>
+        <RunAuditButton />
       </div>
 
       <TabNav
