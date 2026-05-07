@@ -29,19 +29,15 @@ export async function GET(request: NextRequest) {
   if (authError) return authError
 
   try {
-    // Vyhledej produkty s chybějícími lab daty + jejich brand websites
+    // brand_slug je VARCHAR, ne FK — musíme dělat 2 dotazy a join v JS
     const { data: candidates, error: queryErr } = await supabaseAdmin
       .from('products')
-      .select(`
-        id, name, slug, type, acidity, polyphenols, peroxide_value,
-        oleic_acid_pct, certifications, volume_ml, brand_slug,
-        brands ( website_url )
-      `)
+      .select('id, name, slug, type, acidity, polyphenols, peroxide_value, oleic_acid_pct, certifications, volume_ml, brand_slug')
       .eq('status', 'active')
       .neq('type', 'flavored')   // aromatizované přeskočíme — score nedostávají
       .or('acidity.is.null,polyphenols.is.null')
       .not('brand_slug', 'is', null)
-      .limit(MAX_PRODUCTS_PER_RUN * 3) // overhead pro filter dále
+      .limit(MAX_PRODUCTS_PER_RUN * 3)
 
     if (queryErr) throw new Error(`DB query: ${queryErr.message}`)
 
@@ -57,11 +53,23 @@ export async function GET(request: NextRequest) {
       certifications: string[] | null
       volume_ml: number | null
       brand_slug: string | null
-      brands: { website_url: string | null } | null
     }
 
-    const eligible = ((candidates as unknown as CandidateRow[]) ?? [])
-      .filter(p => p.brands?.website_url)
+    const cands = (candidates as unknown as CandidateRow[]) ?? []
+    const brandSlugs = Array.from(new Set(cands.map(c => c.brand_slug).filter((s): s is string => !!s)))
+    const { data: brands } = await supabaseAdmin
+      .from('brands')
+      .select('slug, website_url')
+      .in('slug', brandSlugs)
+      .not('website_url', 'is', null)
+    const brandUrl = new Map<string, string>(
+      (brands ?? []).map(b => [b.slug as string, b.website_url as string])
+    )
+
+    type Eligible = CandidateRow & { brandWebsiteUrl: string }
+    const eligible: Eligible[] = cands
+      .filter(p => p.brand_slug && brandUrl.has(p.brand_slug))
+      .map(p => ({ ...p, brandWebsiteUrl: brandUrl.get(p.brand_slug!)! }))
       .slice(0, MAX_PRODUCTS_PER_RUN)
 
     let researched = 0
@@ -72,7 +80,7 @@ export async function GET(request: NextRequest) {
       try {
         const result = await researchProductLabData(
           p.name,
-          p.brands?.website_url ?? null
+          p.brandWebsiteUrl
         )
         researched++
         if (!result || result.confidence === 'low') continue
