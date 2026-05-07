@@ -79,9 +79,12 @@ async function getRegionProductIds(slug: string): Promise<string[]> {
 }
 
 export async function generateStaticParams() {
-  const { data } = await supabaseAdmin.from('regions').select('slug')
-  return (data ?? []).map((r: { slug: string }) => ({ slug: r.slug }))
+  // Prazdne = ISR on-demand. Pri buildu Supabase rate-limit casto timeoutuje.
+  // User feedback 2026-05-07.
+  return []
 }
+
+export const dynamicParams = true
 
 // Genitivní tvary regionů — slug bez diakritiky pro spolehlivý lookup
 // (DB slug 'toskansko' nematchne klíč 'toskánsko' s diakritikou).

@@ -10,7 +10,9 @@ export const metadata: Metadata = {
 
 // 1h cache. Bez ní každý uživatel = full katalog ze Supabase. Filter probíhá
 // client-side podle localStorage IDs, takže fresh fetched stejně potřebujeme.
-export const revalidate = 3600
+// dynamic = stránka se NIKDY neprerendí pri buildu (skip Supabase query).
+// Generuje se on-demand pri prvni navsteve a cachuje 1h.
+export const dynamic = 'force-dynamic'
 
 export default async function OblibbenePage() {
   const products = await getProductsWithOffers()

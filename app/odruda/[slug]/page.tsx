@@ -97,9 +97,11 @@ async function getCultivarProductIds(slug: string): Promise<string[]> {
 }
 
 export async function generateStaticParams() {
-  const { data } = await supabaseAdmin.from('cultivars').select('slug')
-  return (data ?? []).map((r: { slug: string }) => ({ slug: r.slug }))
+  // Prazdne = ISR on-demand. User feedback 2026-05-07.
+  return []
 }
+
+export const dynamicParams = true
 
 export async function generateMetadata({
   params,

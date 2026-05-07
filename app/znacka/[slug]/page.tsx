@@ -85,9 +85,13 @@ async function getBrandProductIds(slug: string): Promise<string[]> {
 }
 
 export async function generateStaticParams() {
-  const { data } = await supabaseAdmin.from('brands').select('slug')
-  return (data ?? []).map((r: { slug: string }) => ({ slug: r.slug }))
+  // Prazdne = vse on-demand pres ISR (revalidate 1h). Bez tohoto triggeruje
+  // 28 brands × heavy queries Supabase ConnectTimeoutError pri buildu.
+  // User feedback 2026-05-07.
+  return []
 }
+
+export const dynamicParams = true
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params

@@ -19,9 +19,21 @@ import { ProductActions } from './product-actions'
 import { ScoreBadge } from '@/components/score-badge'
 
 export async function generateStaticParams() {
+  // Prerender JEN top 30 produktů (podle score). Zbytek = ISR on-demand —
+  // jakmile někdo navštíví, stránka se vygeneruje a cachuje 1h.
+  // Důvod: 131+ produktů × 10 queries × 31 paralelních workers triggeroval
+  // Supabase rate limit (ConnectTimeoutError) při buildu. User feedback 2026-05-07.
   const products = await getProducts()
-  return products.map(p => ({ slug: p.slug }))
+  const top = products
+    .filter(p => p.olivatorScore != null && p.olivatorScore > 0)
+    .sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
+    .slice(0, 30)
+  return top.map(p => ({ slug: p.slug }))
 }
+
+// Pro slugy mimo top 30 — Next.js je vygeneruje on-demand pri prvni navsteve
+// (cachuje pak 1h dle revalidate). Bez 'true' by 404nul vsechny ostatni slugy.
+export const dynamicParams = true
 
 // Detail produktu cache 1h. Každý request bez cache fetchoval product +
 // offers + gallery + facts + variants + entity links + retailer photos —
