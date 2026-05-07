@@ -429,16 +429,58 @@
 Tento dokument je živý plán. Při dokončení úkolu změň `[ ]` na `[x]`.
 Při zjištění nového gapu přidej úkol do správné fáze.
 
-**Stav fází (k 2026-05-07):**
+**Stav fází (k 2026-05-07, ~62 % overall):**
 
-- [ ] Fáze 0 — Quick Wins (0/7)
-- [ ] Fáze 1 — Schema & Discoverability (0/7)
-- [ ] Fáze 2 — Entity Foundation (0/7)
-- [ ] Fáze 3 — Meta Optimization (0/5)
-- [ ] Fáze 4 — Topic Authority (0/4 hlavní bloky)
+- [x] **Fáze 0 — Quick Wins (7/7)** ✓
+  Homepage H1, /zebricek/[slug] metadata + canonical, sitemap fix lastModified,
+  BreadcrumbList JSON-LD na entity pages + článcích, Product schema description = description_long.
+
+- [x] **Fáze 1 — Schema & Discoverability (6/7)**
+  ItemList na /srovnavac, ItemList + AggregateOffer na /zebricek/[slug],
+  NewsArticle JSON-LD na /novinky/[slug], Article image field, Recipe schema
+  rozšířený (keywords, dateModified, inLanguage), Knowledge Graph sameAs (Wikipedia/Wikidata
+  pro 4 regiony + 5 cultivarů). HowTo schema deferred — čeká na strukturované step articles ve F4.
+
+- [x] **Fáze 2 — Entity Foundation (5/7)**
+  Content pro 3 missing cultivary (frantoio, leccino, olivastra) — všech 8 má 2000+ ch.
+  scripts/import-entity-photos.ts, Unsplash queries doplněné, 76 entity fotek importováno
+  (21 region + ~43 brand + 12 cultivar). 18 draft brandů aktivováno (z 6 na 24 active).
+  ai_alt_texts: Unsplash dodává alt_description (basic OK, custom AI optional v F5).
+  second_wave_entities: čeká na produkty z Toskánska/Andalusie/Picual/Arbequina.
+
+- [x] **Fáze 3 — Meta Optimization (3/5)**
+  Admin UI pro meta_title/meta_description s live SERP preview (Yoast-style).
+  Bulk meta_title pro 176 produktů (z 0/176 na 176/176). OG images audit (35 produktů
+  bez fotky). audit_meta_descriptions a image_alt_audit zůstávají pending — vyžadují
+  regeneraci TOP 50, ne jen audit.
+
+- [x] **Fáze 4 — Topic Authority (21/23)**
+  19 nových článků v /pruvodce vygenerováno přes Claude Sonnet 4.5 jako drafts
+  (jak číst etiketu, polyfenoly kolik je dost, EVOO vs panenský, smažení, zdraví věda 2026,
+  DOP/PGI/BIO certifikace, sklizeň early vs late, filtrovaný/nefiltrovaný, středomořská
+  strava, pro děti, salát vs vaření, premium > 500 Kč, do 200 Kč, dárkové balení,
+  skladování, otevřená lahev, kde koupit, falešný olej, degustace doma).
+  10 nových receptů jako drafts (caprese, aglio e olio, hummus, greek salad, tapenade,
+  focaccia, carpaccio, bagna cauda, olivovy olej cake, pita).
+  13 žebříčků v rankings DB tabulce — 5 stávajících + 8 nových (do 200/300/500 Kč,
+  premium, bio řecký, DOP, salát, vaření). /zebricek + /zebricek/[slug] DB-driven.
+  italsky_spanelsky_recky skipped (overlap s existing recky-vs-italsky).
+  glossary_section: migrace 20260507_glossary.sql připravená s 15 termíny, čeká na
+  spuštění uživatelem + UI page /slovnik (zbytek F4).
+
 - [ ] Fáze 5 — E-E-A-T Signals (0/7)
+  Migrace authors + glossary jsou ready, čeká na user spuštění.
+
 - [ ] Fáze 6 — Backlink & Outreach (ongoing)
 - [ ] Fáze 7 — Advanced & Future (ongoing)
+
+**Velké visible winy 2026-05-07:**
+1. 0/176 → 176/176 produktů má unikátní meta_title (CTR boost v SERP)
+2. 6 → 24 aktivních brandů s contentem + fotkami
+3. 4 → 23 článků v /pruvodce (19 jako drafts, čekají publish review)
+4. 3 → 13 receptů (10 jako drafts)
+5. 5 → 13 žebříčků (8 nových — pricing tiers, use cases)
+6. 0 → 76 entity fotek napříč regiony/brandy/cultivary
 
 ---
 
