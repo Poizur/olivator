@@ -1,8 +1,12 @@
 // SEO action plan dashboard — postupné fajfkování úkolů z SEO_STRATEGY.md.
-// Live metriky nahoře, fáze rozdělené níže. Status persistován v seo_tasks DB tabulce.
+// 3 taby: Stav (current), Historie (activity log + trendy), Insights (notes).
+// Status persistován v seo_tasks DB tabulce.
 
 import { supabaseAdmin } from '@/lib/supabase'
 import { TaskRow } from './task-row'
+import { TabNav } from './tab-nav'
+import { HistorieView } from './historie-view'
+import { InsightsView } from './insights-view'
 
 export const dynamic = 'force-dynamic'
 
@@ -155,14 +159,23 @@ function metricForTask(autoMetric: string | null, m: LiveMetrics): TaskRowMetric
   }
 }
 
-export default async function SeoDashboardPage() {
-  const [tasksRes, metrics] = await Promise.all([
+export default async function SeoDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>
+}) {
+  const { tab = 'stav' } = await searchParams
+
+  // Pro počet badge na Historie + Insights tabech
+  const [tasksRes, metrics, activityCount, openNotesCount] = await Promise.all([
     supabaseAdmin
       .from('seo_tasks')
       .select('task_key, phase, sort_order, title, description, estimated_time, status, auto_metric, notes')
       .order('phase')
       .order('sort_order'),
     loadMetrics(),
+    supabaseAdmin.from('seo_activity_log').select('*', { count: 'exact', head: true }),
+    supabaseAdmin.from('seo_notes').select('*', { count: 'exact', head: true }).eq('status', 'open'),
   ])
 
   const tasks = (tasksRes.data ?? []) as SeoTask[]
@@ -184,17 +197,63 @@ export default async function SeoDashboardPage() {
   return (
     <div>
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-4">
         <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">
           — SEO Plán
         </div>
         <h1 className="font-[family-name:var(--font-display)] text-3xl text-text">SEO Action Plan</h1>
         <p className="text-[13px] text-text2 mt-1 max-w-[640px]">
-          Postupné fajfkování úkolů z 8 fází. Live metriky nahoře, akční kroky dole.
-          Plné znění v <code className="text-[12px] bg-off rounded px-1.5 py-0.5">SEO_STRATEGY.md</code>.
+          Strategický plán SEO ze 8 fází. <strong>Stav</strong> = aktuální metriky + úkoly,{' '}
+          <strong>Historie</strong> = co a kdy se udělalo, <strong>Insights</strong> = strategické poznámky.
         </p>
       </div>
 
+      <TabNav
+        tabs={[
+          { key: 'stav', label: 'Stav', badge: `${overallPct}%` },
+          { key: 'historie', label: 'Historie', badge: activityCount.count ?? 0 },
+          { key: 'insights', label: 'Insights', badge: openNotesCount.count ?? 0 },
+        ]}
+      />
+
+      {tab === 'historie' && <HistorieView />}
+      {tab === 'insights' && <InsightsView />}
+      {tab === 'stav' && <StavView
+        tasks={tasks}
+        byPhase={byPhase}
+        metrics={metrics}
+        doneTasks={doneTasks}
+        totalTasks={totalTasks}
+        inProgressTasks={inProgressTasks}
+        skippedTasks={skippedTasks}
+        overallPct={overallPct}
+      />}
+    </div>
+  )
+}
+
+// ── Stav view (původní obsah) ─────────────────────────────────────────────
+function StavView({
+  tasks,
+  byPhase,
+  metrics,
+  doneTasks,
+  totalTasks,
+  inProgressTasks,
+  skippedTasks,
+  overallPct,
+}: {
+  tasks: SeoTask[]
+  byPhase: Map<number, SeoTask[]>
+  metrics: LiveMetrics
+  doneTasks: number
+  totalTasks: number
+  inProgressTasks: number
+  skippedTasks: number
+  overallPct: number
+}) {
+  return (
+    <>
       {/* Overall progress */}
       <div className="bg-white border border-off2 rounded-xl p-5 mb-6">
         <div className="flex items-center justify-between mb-3">
@@ -346,7 +405,7 @@ export default async function SeoDashboardPage() {
           Když přidáš nový úkol, zapiš ho i tam — slouží jako durable reference.
         </p>
       </div>
-    </div>
+    </>
   )
 }
 
