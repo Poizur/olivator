@@ -14,12 +14,14 @@ import { AdminBarLogout } from './admin-bar-logout'
 import { AdminSidebarNav, type AdminNavSection } from './admin-sidebar-nav'
 
 async function getBadges(): Promise<Record<string, { value: number; tone: 'amber' | 'red' | 'olive' }>> {
-  const [drafts, pendingDiscovery, qualityIssues, draftBrands] = await Promise.all([
+  const [drafts, pendingDiscovery, qualityIssues, draftBrands, seoPending] = await Promise.all([
     supabaseAdmin.from('products').select('*', { count: 'exact', head: true }).eq('status', 'draft'),
     supabaseAdmin.from('discovery_candidates').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
     supabaseAdmin.from('products').select('*', { count: 'exact', head: true }).lt('completeness_score', 50),
     // Auto-vytvořené brand stubs (status='draft') — admin musí doplnit obsah
     supabaseAdmin.from('brands').select('*', { count: 'exact', head: true }).eq('status', 'draft'),
+    // SEO úkoly co čekají na práci (pending nebo in_progress)
+    supabaseAdmin.from('seo_tasks').select('*', { count: 'exact', head: true }).in('status', ['pending', 'in_progress']),
   ])
 
   const badges: Record<string, { value: number; tone: 'amber' | 'red' | 'olive' }> = {}
@@ -27,6 +29,7 @@ async function getBadges(): Promise<Record<string, { value: number; tone: 'amber
   if ((pendingDiscovery.count ?? 0) > 0) badges['/admin/discovery'] = { value: pendingDiscovery.count!, tone: 'olive' }
   if ((qualityIssues.count ?? 0) > 0) badges['/admin/quality'] = { value: qualityIssues.count!, tone: 'red' }
   if ((draftBrands.count ?? 0) > 0) badges['/admin/brands'] = { value: draftBrands.count!, tone: 'amber' }
+  if ((seoPending.count ?? 0) > 0) badges['/admin/seo'] = { value: seoPending.count!, tone: 'olive' }
   return badges
 }
 
@@ -114,6 +117,12 @@ export async function AdminSidebar() {
     {
       group: 'Systém',
       items: [
+        {
+          href: '/admin/seo',
+          label: 'SEO Plán',
+          badge: badges['/admin/seo']?.value,
+          badgeTone: badges['/admin/seo']?.tone,
+        },
         { href: '/admin/nastaveni', label: 'Nastavení' },
         { href: '/admin/learnings', label: 'Learnings' },
       ],
