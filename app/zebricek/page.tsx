@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { getRankings } from '@/lib/static-content'
+import { getActiveRankings } from '@/lib/rankings-db'
+import { getRankings as getStaticRankings } from '@/lib/static-content'
 
 export const metadata = {
   title: 'Žebříčky olivových olejů',
@@ -7,8 +8,20 @@ export const metadata = {
   alternates: { canonical: 'https://olivator.cz/zebricek' },
 }
 
-export default function ZebrickyPage() {
-  const rankings = getRankings()
+export const revalidate = 3600
+
+export default async function ZebrickyPage() {
+  // DB-first, fallback na static (pre-migration period).
+  const dbRankings = await getActiveRankings()
+  const rankings = dbRankings.length > 0
+    ? dbRankings
+    : getStaticRankings().map((r) => ({
+        slug: r.slug,
+        title: r.title,
+        description: r.description ?? null,
+        emoji: r.emoji ?? null,
+        productSlugs: r.productIds,
+      }))
 
   return (
     <div className="max-w-[1080px] mx-auto px-10 py-10">
@@ -28,11 +41,13 @@ export default function ZebrickyPage() {
             href={`/zebricek/${r.slug}`}
             className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 flex items-start gap-4 transition-all hover:border-olive-light hover:shadow-[0_8px_24px_rgba(0,0,0,.06)] hover:-translate-y-0.5"
           >
-            <span className="text-4xl">{r.emoji}</span>
+            <span className="text-4xl">{r.emoji ?? '📊'}</span>
             <div>
               <div className="text-base font-medium text-text mb-1">{r.title}</div>
-              <div className="text-[13px] text-text2 font-light">{r.description}</div>
-              <div className="text-xs text-olive mt-2">{r.productIds.length} olejů →</div>
+              <div className="text-[13px] text-text2 font-light">{r.description ?? ''}</div>
+              <div className="text-xs text-olive mt-2">
+                {r.productSlugs.length > 0 ? `${r.productSlugs.length} olejů →` : 'Detail →'}
+              </div>
             </div>
           </Link>
         ))}

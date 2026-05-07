@@ -1,12 +1,16 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { getRankings, getRankingBySlug } from '@/lib/static-content'
+import { getRankings, getRankingBySlug as getStaticRankingBySlug } from '@/lib/static-content'
+import { getActiveRankings, getRankingBySlug as getDbRankingBySlug } from '@/lib/rankings-db'
 import { getProductsBySlugs, getCheapestOffer } from '@/lib/data'
 import { ListCard } from '@/components/list-card'
 import { breadcrumbSchema } from '@/lib/schema'
 
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  // DB-first → fallback static. Generuje slugy pro pre-build.
+  const dbRankings = await getActiveRankings()
+  if (dbRankings.length > 0) return dbRankings.map(r => ({ slug: r.slug }))
   return getRankings().map(r => ({ slug: r.slug }))
 }
 
@@ -14,15 +18,48 @@ export function generateStaticParams() {
 // per page byl volán každý request. 1h cache = N× méně Supabase queries.
 export const revalidate = 3600
 
+interface ResolvedRanking {
+  slug: string
+  title: string
+  description: string | null
+  emoji: string | null
+  productSlugs: string[]
+  metaTitle?: string | null
+  metaDescription?: string | null
+}
+
+async function loadRanking(slug: string): Promise<ResolvedRanking | null> {
+  const db = await getDbRankingBySlug(slug)
+  if (db) {
+    return {
+      slug: db.slug,
+      title: db.title,
+      description: db.description,
+      emoji: db.emoji,
+      productSlugs: db.productSlugs,
+      metaTitle: db.metaTitle,
+      metaDescription: db.metaDescription,
+    }
+  }
+  const stat = getStaticRankingBySlug(slug)
+  if (!stat) return null
+  return {
+    slug: stat.slug,
+    title: stat.title,
+    description: stat.description ?? null,
+    emoji: stat.emoji ?? null,
+    productSlugs: stat.productIds,
+  }
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
-  const ranking = getRankingBySlug(slug)
+  const ranking = await loadRanking(slug)
   if (!ranking) return { title: 'Žebříček nenalezen' }
 
-  // Layout přidá "| Olivator" suffix přes title.template — nepřidávat sami.
   const url = `https://olivator.cz/zebricek/${ranking.slug}`
-  const title = ranking.title
-  const description = ranking.description ?? `Žebříček: ${ranking.title}. Olivator Score, kyselost, polyfenoly, ceny u prodejců.`
+  const title = ranking.metaTitle || ranking.title
+  const description = ranking.metaDescription || ranking.description || `Žebříček: ${ranking.title}. Olivator Score, kyselost, polyfenoly, ceny u prodejců.`
 
   return {
     title,
@@ -39,10 +76,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function RankingDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const ranking = getRankingBySlug(slug)
+  const ranking = await loadRanking(slug)
   if (!ranking) notFound()
 
-  const products = await getProductsBySlugs(ranking.productIds)
+  const products = await getProductsBySlugs(ranking.productSlugs)
   const offers = await Promise.all(products.map(p => getCheapestOffer(p.id)))
 
   const breadcrumbs = breadcrumbSchema([
@@ -58,7 +95,7 @@ export default async function RankingDetailPage({ params }: { params: Promise<{ 
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name: ranking.title,
-    description: ranking.description,
+    description: ranking.description ?? undefined,
     itemListOrder: 'https://schema.org/ItemListOrderDescending',
     numberOfItems: products.length,
     itemListElement: products.map((p, i) => ({
@@ -100,23 +137,36 @@ export default async function RankingDetailPage({ params }: { params: Promise<{ 
       </div>
 
       <div className="mb-8">
-        <div className="text-4xl mb-3">{ranking.emoji}</div>
+        {ranking.emoji && <div className="text-4xl mb-3">{ranking.emoji}</div>}
         <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-text mb-1.5">
           {ranking.title}
         </h1>
-        <p className="text-[15px] text-text2 font-light">{ranking.description}</p>
+        {ranking.description && (
+          <p className="text-[15px] text-text2 font-light">{ranking.description}</p>
+        )}
       </div>
 
-      <div className="flex flex-col gap-3">
-        {products.map((p, i) => (
-          <ListCard
-            key={p.id}
-            product={p}
-            offer={offers[i] ?? undefined}
-            rank={i + 1}
-          />
-        ))}
-      </div>
+      {products.length === 0 ? (
+        <div className="bg-off/40 border border-off2 rounded-xl p-10 text-center">
+          <h2 className="text-[16px] font-medium text-text mb-2">Žebříček se právě sestavuje</h2>
+          <p className="text-[13px] text-text3 max-w-[400px] mx-auto">
+            Připravujeme seznam produktů pro tento žebříček. Zatím se podívej na{' '}
+            <Link href="/zebricek" className="text-olive">ostatní žebříčky</Link> nebo{' '}
+            <Link href="/srovnavac" className="text-olive">celý katalog</Link>.
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {products.map((p, i) => (
+            <ListCard
+              key={p.id}
+              product={p}
+              offer={offers[i] ?? undefined}
+              rank={i + 1}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
