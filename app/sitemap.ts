@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next'
 import { getArticles, getRankings } from '@/lib/static-content'
 import { supabaseAdmin } from '@/lib/supabase'
+import { getActiveTerms } from '@/lib/glossary-db'
 
 // Sitemap default = dynamic (každý bot request → fetchne ze Supabase).
 // Google + Bing + OpenAI/Anthropic crawlers chodí denně → 4× fetch products
@@ -23,7 +24,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/pruvodce`, lastModified: buildTime, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${baseUrl}/recept`, lastModified: buildTime, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${baseUrl}/novinky`, lastModified: buildTime, changeFrequency: 'hourly', priority: 0.6 },
+    { url: `${baseUrl}/slovnik`, lastModified: buildTime, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${baseUrl}/metodika`, lastModified: buildTime, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${baseUrl}/o-projektu`, lastModified: buildTime, changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${baseUrl}/editorial-policy`, lastModified: buildTime, changeFrequency: 'yearly', priority: 0.4 },
+    { url: `${baseUrl}/pro-novinare`, lastModified: buildTime, changeFrequency: 'monthly', priority: 0.4 },
   ]
 
   const [productsRes, regions, brands, cultivars] = await Promise.all([
@@ -88,5 +93,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }))
 
-  return [...staticPages, ...productPages, ...rankingPages, ...articlePages, ...regionPages, ...brandPages, ...cultivarPages]
+  // Glossary — pre-migration vrátí prázdné, jakmile bude tabulka, naplníme.
+  const glossaryTerms = await getActiveTerms()
+  const glossaryPages: MetadataRoute.Sitemap = glossaryTerms.map((t) => ({
+    url: `${baseUrl}/slovnik/${t.slug}`,
+    lastModified: buildTime,
+    changeFrequency: 'monthly' as const,
+    priority: 0.6,
+  }))
+
+  return [...staticPages, ...productPages, ...rankingPages, ...articlePages, ...regionPages, ...brandPages, ...cultivarPages, ...glossaryPages]
 }

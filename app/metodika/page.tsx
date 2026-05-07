@@ -194,6 +194,35 @@ export default function MetodikaPage() {
         </div>
       </div>
 
+      {/* Source data */}
+      <div className="mt-12">
+        <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-3">
+          Odkud bereme data
+        </h2>
+        <p className="text-[14px] text-text2 leading-relaxed mb-4 font-light">
+          Pro každou ze 4 komponent Score vyhledáváme parametry z primárních zdrojů.
+          Žádné odhady, žádné &bdquo;průměry&ldquo; jako náhrada za chybějící data.
+        </p>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="bg-off/40 rounded-lg p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-olive mb-1">Etiketa produktu</div>
+            <p className="text-[13px] text-text2">Kyselost, harvest year, BIO/DOP značky — primární zdroj. Foto ze stránky výrobce nebo prodejce.</p>
+          </div>
+          <div className="bg-off/40 rounded-lg p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-olive mb-1">Lab reporty</div>
+            <p className="text-[13px] text-text2">Polyfenoly, peroxidové číslo, oleic acid — z dokumentů výrobce nebo NYIOOC databáze.</p>
+          </div>
+          <div className="bg-off/40 rounded-lg p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-olive mb-1">EU databáze</div>
+            <p className="text-[13px] text-text2">DOP/CHOP a CHZO ověřujeme přes EU eAmbrosia Register.</p>
+          </div>
+          <div className="bg-off/40 rounded-lg p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-wider text-olive mb-1">Ceny u prodejců</div>
+            <p className="text-[13px] text-text2">Aktualizované 1× za 24 h scraperem. 18+ prodejců v ČR. Cena za 100 ml jako benchmark.</p>
+          </div>
+        </div>
+      </div>
+
       {/* Trust section */}
       <div className="mt-12 bg-olive-bg rounded-[var(--radius-card)] p-6">
         <h2 className="font-[family-name:var(--font-display)] text-xl font-normal text-text mb-3">
@@ -205,6 +234,13 @@ export default function MetodikaPage() {
           <li>• <strong>Data-driven:</strong> Vycházíme z certifikací, chemických analýz a reálných cen</li>
           <li>• <strong>Aktualizace:</strong> Score se přepočítává při každé změně ceny nebo certifikace</li>
         </ul>
+      </div>
+
+      {/* Related editorial pages */}
+      <div className="mt-10 pt-6 border-t border-off2 text-[13px] text-text2 leading-relaxed">
+        Více o tom, jak fungujeme: <Link href="/editorial-policy" className="text-olive underline decoration-dotted">Redakční zásady</Link>
+        {' · '}<Link href="/o-projektu" className="text-olive underline decoration-dotted">O projektu</Link>
+        {' · '}<Link href="/pro-novinare" className="text-olive underline decoration-dotted">Pro novináře (mediakit)</Link>
       </div>
     </div>
   )

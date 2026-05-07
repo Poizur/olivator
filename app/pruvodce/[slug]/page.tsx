@@ -210,8 +210,19 @@ export default async function ArticleDetailPage({
 
           <p className="text-[15px] text-text2 leading-relaxed mb-5">{article.excerpt}</p>
 
-          <div className="text-xs text-text3 mb-8 flex items-center gap-2">
+          <div className="text-xs text-text3 mb-8 flex items-center gap-3 flex-wrap">
             <span>{article.readTime}</span>
+            {article.publishedAt && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>
+                  Publikováno{' '}
+                  <time dateTime={article.publishedAt}>
+                    {new Date(article.publishedAt).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </time>
+                </span>
+              </>
+            )}
           </div>
 
           <div className="bg-olive-bg/40 rounded-[var(--radius-card)] aspect-[16/9] flex items-center justify-center text-6xl md:text-7xl mb-8">
