@@ -5,6 +5,47 @@ import { IssueRow } from './issue-row'
 
 export const dynamic = 'force-dynamic'
 
+interface LabProduct {
+  id: string
+  name: string
+  slug: string
+  acidity: number | null
+  polyphenols: number | null
+  brand_slug: string | null
+  lab_research_attempted_at: string | null
+}
+
+async function getLabDataStatus() {
+  const { data: products } = await supabaseAdmin
+    .from('products')
+    .select('id, name, slug, acidity, polyphenols, brand_slug, lab_research_attempted_at')
+    .eq('status', 'active')
+    .neq('type', 'flavored')
+    .or('acidity.is.null,polyphenols.is.null')
+    .order('name')
+
+  const { data: brands } = await supabaseAdmin
+    .from('brands')
+    .select('slug, website_url')
+    .not('website_url', 'is', null)
+
+  const brandHasWeb = new Set((brands ?? []).map(b => b.slug as string))
+
+  const items = (products ?? []) as unknown as LabProduct[]
+
+  const waitingForCron = items.filter(p =>
+    p.brand_slug && brandHasWeb.has(p.brand_slug) && !p.lab_research_attempted_at
+  )
+  const cronFailed = items.filter(p =>
+    p.brand_slug && brandHasWeb.has(p.brand_slug) && !!p.lab_research_attempted_at
+  )
+  const needsManual = items.filter(p =>
+    !p.brand_slug || !brandHasWeb.has(p.brand_slug!)
+  )
+
+  return { waitingForCron, cronFailed, needsManual }
+}
+
 interface IssueWithProduct {
   id: string
   rule_id: string
@@ -72,6 +113,7 @@ async function getIssues(): Promise<IssueWithProduct[]> {
 
 export default async function QualityPage() {
   const issues = await getIssues()
+  const labStatus = await getLabDataStatus()
   const open = issues.filter(i => i.status === 'open')
   const errors = open.filter(i => i.severity === 'error')
   const warnings = open.filter(i => i.severity === 'warning')
@@ -152,7 +194,59 @@ export default async function QualityPage() {
         </div>
       )}
 
-      <div className="mt-12 pt-6 border-t border-off2">
+      <div className="mt-10 pt-6 border-t border-off2">
+        <h2 className="text-base font-semibold text-text mb-1">🔬 Lab data (acidita + polyfenoly)</h2>
+        <p className="text-[12px] text-text2 mb-4">
+          Produkty bez acidity nebo polyfenolů nemají plný Olivator Score.
+          Cron:lab-research je postupně doplňuje z webů výrobců.
+        </p>
+        <div className="grid grid-cols-3 gap-3 mb-5">
+          <div className="bg-white border border-off2 rounded-lg p-3">
+            <div className="text-2xl font-semibold text-amber-600">{labStatus.waitingForCron.length}</div>
+            <div className="text-[11px] text-text3 mt-0.5">⏳ Čeká na cron</div>
+            <div className="text-[10px] text-text3 mt-1">brand web existuje, cron ještě nezkoušel</div>
+          </div>
+          <div className="bg-white border border-off2 rounded-lg p-3">
+            <div className="text-2xl font-semibold text-red-600">{labStatus.cronFailed.length}</div>
+            <div className="text-[11px] text-text3 mt-0.5">❌ Cron nezískal data</div>
+            <div className="text-[10px] text-text3 mt-1">zkusil, nenašel → zadej ručně</div>
+          </div>
+          <div className="bg-white border border-off2 rounded-lg p-3">
+            <div className="text-2xl font-semibold text-text2">{labStatus.needsManual.length}</div>
+            <div className="text-[11px] text-text3 mt-0.5">✋ Jen ručně</div>
+            <div className="text-[10px] text-text3 mt-1">žádný web výrobce nebo chybí brand</div>
+          </div>
+        </div>
+
+        {labStatus.cronFailed.length > 0 && (
+          <details className="bg-white border border-off2 rounded-lg mb-3" open>
+            <summary className="cursor-pointer px-4 py-3 text-[13px] font-medium text-red-700 select-none">
+              ❌ Cron nezískal data — zadej ručně ({labStatus.cronFailed.length})
+            </summary>
+            <LabTable products={labStatus.cronFailed} />
+          </details>
+        )}
+
+        {labStatus.needsManual.length > 0 && (
+          <details className="bg-white border border-off2 rounded-lg mb-3">
+            <summary className="cursor-pointer px-4 py-3 text-[13px] font-medium text-text2 select-none">
+              ✋ Jen ručně — bez webu výrobce ({labStatus.needsManual.length})
+            </summary>
+            <LabTable products={labStatus.needsManual} />
+          </details>
+        )}
+
+        {labStatus.waitingForCron.length > 0 && (
+          <details className="bg-white border border-off2 rounded-lg">
+            <summary className="cursor-pointer px-4 py-3 text-[13px] font-medium text-amber-700 select-none">
+              ⏳ Čeká na cron ({labStatus.waitingForCron.length})
+            </summary>
+            <LabTable products={labStatus.waitingForCron} />
+          </details>
+        )}
+      </div>
+
+      <div className="mt-10 pt-6 border-t border-off2">
         <h2 className="text-base font-semibold text-text mb-3">
           📚 Aktivní pravidla
         </h2>
@@ -228,6 +322,36 @@ function Section({ title, subtle, children }: { title: string; subtle?: boolean;
         {title}
       </h2>
       {children}
+    </div>
+  )
+}
+
+function LabTable({ products }: { products: LabProduct[] }) {
+  return (
+    <div className="divide-y divide-off2 px-4 pb-3">
+      {products.map(p => (
+        <div key={p.id} className="flex items-center gap-3 py-2">
+          <div className="flex-1 min-w-0">
+            <Link
+              href={`/admin/products/${p.id}`}
+              className="text-[13px] font-medium text-text hover:text-olive-dark truncate block"
+            >
+              {p.name}
+            </Link>
+            <div className="text-[11px] text-text3 mt-0.5 flex gap-3">
+              {p.brand_slug && <span>značka: {p.brand_slug}</span>}
+              {p.acidity == null && <span className="text-red-500">acidita chybí</span>}
+              {p.polyphenols == null && <span className="text-red-500">polyfenoly chybí</span>}
+            </div>
+          </div>
+          <Link
+            href={`/admin/products/${p.id}`}
+            className="shrink-0 text-[11px] text-olive-dark border border-olive-border rounded px-2 py-1 hover:bg-olive-bg"
+          >
+            Upravit
+          </Link>
+        </div>
+      ))}
     </div>
   )
 }

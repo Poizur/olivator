@@ -92,6 +92,12 @@ async function main() {
         ])
         researched++
 
+        // Vždy označit že cron zkusil — i když nic nenašel
+        await supabaseAdmin
+          .from('products')
+          .update({ lab_research_attempted_at: new Date().toISOString() })
+          .eq('id', p.id)
+
         if (!result || result.confidence === 'low') {
           console.log(result ? `low confidence (${result.notes.slice(0, 40)})` : 'no result')
           continue
