@@ -15,6 +15,7 @@
     "cron:feed-sync": "tsx scripts/cron/feed-sync.ts",
     "cron:radar": "tsx scripts/cron/radar.ts",
     "cron:learning": "tsx scripts/cron/learning.ts",
+    "cron:lab-research": "tsx scripts/cron/lab-research.ts",
     "audit:coverage": "tsx scripts/coverage-check.ts"
   },
   "engines": {
