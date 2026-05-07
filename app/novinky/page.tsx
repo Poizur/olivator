@@ -117,57 +117,61 @@ export default async function NovinkyPage() {
                 return (
                   <article
                     key={item.id}
-                    className="bg-white border border-off2 rounded-xl overflow-hidden hover:border-olive3/40 transition-colors flex flex-col sm:flex-row"
+                    className="bg-white border border-off2 rounded-xl p-5 md:p-6 hover:border-olive3/40 transition-colors"
                   >
-                    {item.image_url && (
-                      <Link
-                        href={detailHref}
-                        className="block sm:w-[200px] sm:flex-shrink-0 bg-off"
-                        aria-label={item.czech_title}
+                    <div className="flex items-center gap-2 flex-wrap mb-3 text-[11px]">
+                      <span
+                        className={`${badge.bg} ${badge.text} rounded-full px-2.5 py-0.5 font-semibold inline-flex items-center gap-1`}
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={item.image_url}
-                          alt={item.image_alt ?? item.czech_title}
-                          className="w-full h-44 sm:h-full object-cover"
-                          loading="lazy"
-                        />
-                      </Link>
-                    )}
-                    <div className="p-5 md:p-6 flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-3 text-[11px]">
-                        <span
-                          className={`${badge.bg} ${badge.text} rounded-full px-2.5 py-0.5 font-semibold inline-flex items-center gap-1`}
-                        >
-                          <span>{badge.emoji}</span>
-                          {badge.label}
-                        </span>
-                        <span className="text-text3">·</span>
-                        <span className="text-text3">{sourceLabel}</span>
-                        <span className="text-text3">·</span>
-                        <span className="text-text3 tabular-nums">{formatRelativeTime(item.published_at)}</span>
-                      </div>
-
-                      <h2 className="font-[family-name:var(--font-display)] text-xl md:text-2xl text-text leading-tight mb-2">
-                        <Link href={detailHref} className="hover:text-olive-dark">
-                          {item.czech_title}
-                        </Link>
-                      </h2>
-                      <p className="text-[14px] text-text2 leading-relaxed mb-3">
-                        {item.czech_summary}
-                      </p>
-                      {item.cz_context && (
-                        <div className="bg-olive-bg/40 border-l-2 border-olive rounded-r px-4 py-2 text-[13px] text-olive-dark mb-3">
-                          <strong className="font-medium">Pro Česko:</strong> {item.cz_context}
-                        </div>
-                      )}
-                      <Link
-                        href={detailHref}
-                        className="inline-flex items-center gap-1 text-[12px] text-olive hover:text-olive-dark"
-                      >
-                        Číst celý článek →
-                      </Link>
+                        <span>{badge.emoji}</span>
+                        {badge.label}
+                      </span>
+                      <span className="text-text3">·</span>
+                      <span className="text-text3">{sourceLabel}</span>
+                      <span className="text-text3">·</span>
+                      <span className="text-text3 tabular-nums">{formatRelativeTime(item.published_at)}</span>
                     </div>
+
+                    <div className="flex gap-4 items-start">
+                      <div className="flex-1 min-w-0">
+                        <h2 className="font-[family-name:var(--font-display)] text-xl md:text-2xl text-text leading-tight mb-2">
+                          <Link href={detailHref} className="hover:text-olive-dark">
+                            {item.czech_title}
+                          </Link>
+                        </h2>
+                        <p className="text-[14px] text-text2 leading-relaxed">
+                          {item.czech_summary}
+                        </p>
+                      </div>
+                      {item.image_url && (
+                        <Link
+                          href={detailHref}
+                          className="block w-20 h-20 md:w-28 md:h-28 flex-shrink-0 rounded-lg overflow-hidden bg-off"
+                          aria-label={item.czech_title}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={item.image_url}
+                            alt={item.image_alt ?? item.czech_title}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        </Link>
+                      )}
+                    </div>
+
+                    {item.cz_context && (
+                      <div className="bg-olive-bg/40 border-l-2 border-olive rounded-r px-4 py-2 text-[13px] text-olive-dark mt-3">
+                        <strong className="font-medium">Pro Česko:</strong> {item.cz_context}
+                      </div>
+                    )}
+
+                    <Link
+                      href={detailHref}
+                      className="inline-flex items-center gap-1 text-[12px] text-olive hover:text-olive-dark mt-3"
+                    >
+                      Číst celý článek →
+                    </Link>
                   </article>
                 )
               })}
