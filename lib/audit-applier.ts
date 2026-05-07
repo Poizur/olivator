@@ -133,23 +133,28 @@ async function applyGenerateProductDescription(p: ProposalRow): Promise<{ ok: bo
   if (!prod) return { ok: false, note: 'Product not found' }
 
   try {
+    const r = prod as Record<string, unknown>
     const result = await generateProductDescriptions({
-      name: (prod as Record<string, unknown>).name as string,
-      type: (prod as Record<string, unknown>).type as string,
-      originCountry: (prod as Record<string, unknown>).origin_country as string | null,
-      originRegion: (prod as Record<string, unknown>).origin_region as string | null,
-      acidity: (prod as Record<string, unknown>).acidity != null ? Number((prod as Record<string, unknown>).acidity) : null,
-      polyphenols: (prod as Record<string, unknown>).polyphenols as number | null,
-      certifications: ((prod as Record<string, unknown>).certifications as string[] | null) ?? [],
-      olivatorScore: (prod as Record<string, unknown>).olivator_score as number | null,
-      rawDescription: ((prod as Record<string, unknown>).raw_description as string | null) ?? null,
+      name: r.name as string,
+      type: r.type as string,
+      origin: r.origin_country as string | null,
+      region: r.origin_region as string | null,
+      acidity: r.acidity != null ? Number(r.acidity) : null,
+      polyphenols: r.polyphenols as number | null,
+      certifications: (r.certifications as string[] | null) ?? [],
+      olivatorScore: r.olivator_score as number | null,
+      rawDescription: (r.raw_description as string | null) ?? null,
     })
-    if (!result.short || result.short.length < 50) return { ok: false, note: 'short too short' }
+    if (!result.shortDescription || result.shortDescription.length < 50) return { ok: false, note: 'short too short' }
     await supabaseAdmin
       .from('products')
-      .update({ description_short: result.short, description_long: result.long, updated_at: new Date().toISOString() })
+      .update({
+        description_short: result.shortDescription,
+        description_long: result.longDescription,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', p.target_id)
-    return { ok: true, note: `short=${result.short.length}ch, long=${result.long.length}ch` }
+    return { ok: true, note: `short=${result.shortDescription.length}ch, long=${result.longDescription.length}ch` }
   } catch (err) {
     return { ok: false, note: err instanceof Error ? err.message.slice(0, 100) : 'unknown' }
   }

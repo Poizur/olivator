@@ -165,27 +165,27 @@ async function fixDescriptions() {
       const result = await generateProductDescriptions({
         name: prod.name as string,
         type: prod.type as string,
-        originCountry: prod.origin_country as string | null,
-        originRegion: prod.origin_region as string | null,
+        origin: prod.origin_country as string | null,
+        region: prod.origin_region as string | null,
         acidity: prod.acidity != null ? Number(prod.acidity) : null,
         polyphenols: prod.polyphenols as number | null,
         certifications: (prod.certifications as string[] | null) ?? [],
         olivatorScore: prod.olivator_score as number | null,
         rawDescription: (prod.raw_description as string | null) ?? null,
       })
-      if (!result.short || result.short.length < 50) {
+      if (!result.shortDescription || result.shortDescription.length < 50) {
         await markResolved(i.id, false, 'short too short')
         continue
       }
       await supabaseAdmin
         .from('products')
         .update({
-          description_short: result.short,
-          description_long: result.long,
+          description_short: result.shortDescription,
+          description_long: result.longDescription,
           updated_at: new Date().toISOString(),
         })
         .eq('id', i.product_id)
-      await markResolved(i.id, true, `Regenerated short=${result.short.length}ch long=${result.long.length}ch`)
+      await markResolved(i.id, true, `Regenerated short=${result.shortDescription.length}ch long=${result.longDescription.length}ch`)
       ok++
     } catch (err) {
       const msg = err instanceof Error ? err.message.slice(0, 80) : 'unknown'

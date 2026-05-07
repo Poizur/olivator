@@ -92,7 +92,7 @@ export async function addNote(input: {
 
   // Log do activity feedu — note je viditelný i v Historie
   await logActivity({
-    action_type: input.category === 'win' ? 'milestone' : input.category === 'insight' as 'insight' ? 'insight' : 'note',
+    action_type: input.category === 'win' ? 'milestone' : input.category === 'idea' ? 'insight' : 'note',
     title: input.title.trim(),
     description: input.body?.slice(0, 200) ?? null,
     metadata: { category: input.category, note_id: (data as { id: string })?.id, related_phase: input.related_phase },
