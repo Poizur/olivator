@@ -16,6 +16,7 @@
     "cron:radar": "tsx scripts/cron/radar.ts",
     "cron:learning": "tsx scripts/cron/learning.ts",
     "cron:lab-research": "tsx scripts/cron/lab-research.ts",
+    "cron:seo-snapshot": "tsx scripts/cron/seo-snapshot.ts",
     "audit:coverage": "tsx scripts/coverage-check.ts",
     "backfill:radar-articles": "tsx scripts/backfill-radar-articles.ts"
   },
