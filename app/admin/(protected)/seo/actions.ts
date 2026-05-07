@@ -263,13 +263,22 @@ export async function runAutoAuditNow() {
   totalFixed += junkFixed
 
   // 2. Quick quality fixes — jen deterministické (bez Claude)
+  // POZOR: rule 'inactive_with_offers' je misnomer — detekuje 'draft + má offers'.
+  // Správný fix: publikovat draft, ne deaktivovat offers.
   let quickFixed = 0
   const { data: invIssues } = await supabaseAdmin.from('quality_issues').select('id, product_id').eq('rule_id', 'inactive_with_offers').eq('status', 'open')
   for (const i of (invIssues ?? []) as Array<{ id: string; product_id: string }>) {
-    await supabaseAdmin.from('product_offers').update({ in_stock: false, last_checked: new Date().toISOString() }).eq('product_id', i.product_id)
+    await supabaseAdmin.from('products').update({
+      status: 'active',
+      status_changed_by: 'auto',
+      status_changed_at: new Date().toISOString(),
+      status_reason_code: null,
+      status_reason_note: 'Auto-publish (draft + má offers)',
+      updated_at: new Date().toISOString(),
+    }).eq('id', i.product_id).eq('status', 'draft')
     await supabaseAdmin.from('quality_issues').update({
       status: 'resolved', auto_fix_attempted: true, auto_fix_succeeded: true,
-      resolved_at: new Date().toISOString(), resolution_note: 'Auto: offers in_stock=false',
+      resolved_at: new Date().toISOString(), resolution_note: 'Auto: published (draft → active)',
     }).eq('id', i.id)
     quickFixed++
   }

@@ -166,7 +166,9 @@ async function quickQualityFixes(): Promise<StepResult> {
   let attempted = 0
   let fixed = 0
 
-  // a) inactive_with_offers — auto-fix
+  // a) inactive_with_offers — POZOR: rule je misnomer, ve skutečnosti detekuje
+  // 'draft + má offers'. Správný fix: publikovat draft (produkt connection
+  // ready). NEDEAKTIVOVAT offers — to je ztráta dat.
   const { data: issues } = await supabaseAdmin
     .from('quality_issues')
     .select('id, product_id')
@@ -174,13 +176,21 @@ async function quickQualityFixes(): Promise<StepResult> {
     .eq('status', 'open')
   for (const i of (issues ?? []) as Array<{ id: string; product_id: string }>) {
     attempted++
-    await supabaseAdmin.from('product_offers').update({ in_stock: false, last_checked: new Date().toISOString() }).eq('product_id', i.product_id)
+    // Publikuj produkt: draft → active
+    await supabaseAdmin.from('products').update({
+      status: 'active',
+      status_changed_by: 'auto',
+      status_changed_at: new Date().toISOString(),
+      status_reason_code: null,
+      status_reason_note: 'Auto-publish (draft + má offers)',
+      updated_at: new Date().toISOString(),
+    }).eq('id', i.product_id).eq('status', 'draft')  // jen pokud je STÁLE draft
     await supabaseAdmin.from('quality_issues').update({
       status: 'resolved',
       auto_fix_attempted: true,
       auto_fix_succeeded: true,
       resolved_at: new Date().toISOString(),
-      resolution_note: 'Auto: offers in_stock=false (product inactive)',
+      resolution_note: 'Auto: published (draft → active, má offers)',
     }).eq('id', i.id)
     fixed++
   }
