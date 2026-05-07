@@ -97,15 +97,20 @@ export function certLabel(cert: string): string {
 // the start of the product name (Gaea Fresh, Terra Creta Estate, etc).
 // Known multi-word brands are hardcoded; everything else falls back to
 // first word.
-const MULTI_WORD_BRANDS: readonly string[] = [
-  'Terra Creta',
-  'Frantoio Franci',
-  'Olival Selection',
-]
-
+// Display label pro značku z product name. Pouzite v admin tabulce
+// (column Výrobce) — sdílí logiku s extractBrandSlug ale vraci capitalized
+// human-readable label místo slugu.
+//
+// User feedback 2026-05-07: predtim "first word" extraction produkovalo
+// falesne "značky" jako Extra (16), Picual (11), Dárkové (1) atd.
+// Nyni reuses extractBrandSlug logiku ktera skipuje generic prefixy + cultivars.
 export function extractBrand(name: string): string {
-  for (const brand of MULTI_WORD_BRANDS) {
-    if (name.startsWith(brand)) return brand
-  }
-  return name.split(/\s+/)[0] ?? name
+  // Reuse extraction logic from entity-extractor — synchronizovano via slug
+  // (brand_slug v DB je kanonicky zdroj pravdy). Tady jen pretlumocime.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { extractBrandSlug } = require('./entity-extractor') as typeof import('./entity-extractor')
+  const slug: string | null = extractBrandSlug(name)
+  if (!slug) return '—'
+  // Capitalize prvni pismeno + replace dashes na space
+  return slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, ' ')
 }

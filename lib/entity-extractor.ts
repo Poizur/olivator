@@ -9,26 +9,87 @@ const MULTI_WORD_BRANDS: [string, string][] = [
   ['terra creta', 'terra-creta'],
   ['frantoio franci', 'frantoio-franci'],
   ['evolia platinum', 'evolia-platinum'],
+  ['gourmet partners', 'gourmet-partners'],
+  ['antica sicilia', 'antica-sicilia'],
   ['sitia kréta', 'sitia-kreta'],
   ['sitia kreta', 'sitia-kreta'],
+  ['sitia premium', 'sitia-kreta'],
   ['pallada kréta', 'pallada-kreta'],
   ['pallada kreta', 'pallada-kreta'],
   ['petromilos zakynthos', 'petromilos-zakynthos'],
   ['intini extra', 'intini'],
   ['intini cima', 'intini'],
+  ['intini olivastra', 'intini'],
+  ['intini coratina', 'intini'],
+  ['intini lemon', 'intini'],
+  ['intini oro', 'intini'],
   ['corinto pelopones', 'corinto'],
   ['corinto peloponés', 'corinto'],
+  ['corinto aryballos', 'corinto'],
   ['evoilino korfu', 'evoilino'],
+  ['theoni kalamata', 'theoni'],
+  ['nikolos kalamata', 'nikolos'],
+  ['orino sitia', 'orino'],
+  ['orino sithia', 'orino'],
+  ['adelfos zakros', 'adelfos'],
+  ['motakis kréta', 'motakis'],
+  ['motakis kreta', 'motakis'],
+  ['plakias premium', 'plakias'],
+  ['abea bio', 'abea'],
+  ['iliada kalamata', 'iliada'],
+  ['neotis pelopones', 'neotis'],
+  ['neotis peloponés', 'neotis'],
+  ['theikos kréta', 'theikos'],
+  ['theikos kreta', 'theikos'],
+  ['petromilos zakynthos', 'petromilos-zakynthos'],
+  ['askra early', 'askra'],
 ]
 
 // First words that are product descriptors, not brand names.
+// Rozšířeno 2026-05-07: user reported "Extra (16), Picual (11), 15 (2), Dárkové (1)"
+// jako značky v admin filtru. To jsou descriptors / cultivars / čísla balení.
 const GENERIC_PREFIXES = new Set([
-  'extra', 'prémiový', 'olivový', 'liofyto', 'organický', 'bio',
-  'griechisches', 'organic', 'premium',
+  // Type descriptors
+  'extra', 'prémiový', 'prémium', 'premium', 'olivový', 'olej', 'olivovy',
+  'panenský', 'panensky', 'organický', 'organicky', 'organic', 'bio',
+  'rafinovaný', 'rafinovany', 'griechisches', 'sicilský', 'sicilsky',
+  'řecký', 'recky', 'italský', 'italsky', 'fresh', 'original', 'classic',
+  'nefiltrovaný', 'nefiltrovany', 'filtrovaný', 'filtrovany',
+  // Marketing words
+  'dárkové', 'darkove', 'dárek', 'darek', 'gourmet', 'luxusní', 'luxusni',
+  'edice', 'edition', 'limited', 'dětský', 'detsky', 'pro',
+  // Cultivars (NE značky)
+  'picual', 'arbequina', 'manaki', 'koroneiki', 'hojiblanca', 'cornicabra',
+  'frantoio', 'leccino', 'coratina', 'kalamata', 'olivastra', 'taggiasca',
+  'pendolino', 'moraiolo', 'agoureleo',
+  // BIO/cert words
+  'eco', 'demeter', 'pdo', 'pgi', 'igp', 'dop', 'cs-bio',
+  // Volume / unit words
+  'ml', 'l', 'kg', 'g', 'litr', 'litry', 'litrů', 'kus', 'kusů',
+  // Property words
+  'kyselost', 'acidita', 'baleni', 'balení', 'lahev', 'láhev',
+  'čerstvý', 'cerstvy', 'karafa', 'design', 'plain',
+  'farmářský', 'farmarsky', 'farmer', 'rodinný', 'rodinny',
+  'plech', 'sklo', 'skleněný', 'sklenny', 'pet', 'plast', 'plastový', 'plastovy',
+  'tin', 'glass', 'plastic',
+  // Months (z dat sklizně)
+  'leden', 'únor', 'unor', 'březen', 'brezen', 'duben', 'květen', 'kveten',
+  'červen', 'cerven', 'červenec', 'cervenec', 'srpen', 'září', 'zari',
+  'říjen', 'rijen', 'listopad', 'prosinec',
+  'sklizeň', 'sklizen', 'harvest', 'early',
+  // Filler
+  'ze', 'od', 'with', 'partners',  // "partners" když nemáme "Gourmet Partners" multi-word match
 ])
 
+// Detekce patterns: "8 × ...", "15 × ...", "3 × 5l ..." — celý leading "N × kvantita"
+// se přeskočí jako balení, ne značka.
+const PACKAGE_PREFIX = /^\d+\s*[×x]\s*(?:\d+(?:[,.]?\d+)?\s*(?:l|ml|g|kg)\s+)?/i
+
 export function extractBrandSlug(name: string): string | null {
-  const lower = name.toLowerCase().trim()
+  let cleaned = name.trim()
+  // Strip "8 × ", "15 × 500 ml " atd.
+  cleaned = cleaned.replace(PACKAGE_PREFIX, '')
+  const lower = cleaned.toLowerCase()
 
   for (const [pattern, slug] of MULTI_WORD_BRANDS) {
     if (lower.startsWith(pattern)) return slug
@@ -36,11 +97,26 @@ export function extractBrandSlug(name: string): string | null {
 
   const words = lower.split(/\s+/)
   let idx = 0
-  // Skip leading generic prefix words
-  while (idx < words.length - 1 && GENERIC_PREFIXES.has(words[idx])) idx++
+  // Skip leading generic prefix words + numerické tokens (např. "100% italiano")
+  while (idx < words.length - 1) {
+    // Strip leading/trailing punctuation pro matching ("(kyselost" → "kyselost")
+    const w = words[idx].replace(/^[(\[«„"'.,]+|[)\]»".,!?:;]+$/g, '')
+    if (!w) { idx++; continue }
+    if (GENERIC_PREFIXES.has(w)) { idx++; continue }
+    if (/^\d+(?:[%×x][a-z]*)?$/i.test(w)) { idx++; continue }  // "100%", "8x", samotné číslo
+    if (/^\d+(?:[,.]?\d+)?(?:ml|l|g|kg)$/i.test(w)) { idx++; continue }  // "750ml", "1l", "5l"
+    if (/^[><=]\s*\d/.test(w)) { idx++; continue }  // "<0.3"
+    // Update words[idx] to stripped version pro extrahování brandu
+    words[idx] = w
+    break
+  }
 
   const brandWord = words[idx]
   if (!brandWord || brandWord.length < 2) return null
+  // Slovo musí být alfanumerické (ne "—", "·", "&" atd.)
+  if (!/[a-zřáčéíóúůěščžýňťď]/i.test(brandWord)) return null
+  // Rejection list: pokud i po skipping zustane generic, vrátíme null
+  if (GENERIC_PREFIXES.has(brandWord)) return null
 
   return brandWord
     .normalize('NFD')

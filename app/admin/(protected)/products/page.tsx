@@ -1,11 +1,14 @@
 import Link from 'next/link'
 import { getAllProductsAdmin } from '@/lib/data'
-import { extractBrand } from '@/lib/utils'
+import { supabaseAdmin } from '@/lib/supabase'
 import { calculateCompleteness } from '@/lib/completeness'
 import { BulkRescrapeButton } from './bulk-rescrape-button'
 import { BackfillDraftsButton } from './backfill-drafts-button'
 import { ProductsBulkTable } from './products-bulk-table'
 import { StatusFilters } from '@/components/admin/status-filters'
+
+// Sentinel pro produkty bez brand_slug (zatím nezařazené do žádné značky)
+const NO_BRAND = '__none__'
 
 export default async function AdminProductsPage({
   searchParams,
@@ -17,13 +20,35 @@ export default async function AdminProductsPage({
   // Fetch all products (no status filter) for global brand list + counts
   const allProducts = await getAllProductsAdmin()
 
+  // Načti brand_slug + brand display names — vyhneme se name parsingu (extractBrand)
+  // který produkoval falešné "značky" jako "Extra", "Picual", "8", "Dárkové".
+  // Mapa: product.id → { slug, name } z brands tabulky.
+  const productIds = allProducts.map(p => p.id)
+  const [brandSlugMapResult, brandsResult] = await Promise.all([
+    supabaseAdmin.from('products').select('id, brand_slug').in('id', productIds),
+    supabaseAdmin.from('brands').select('slug, name').order('name'),
+  ])
+  const productBrandSlug = new Map<string, string | null>(
+    (brandSlugMapResult.data ?? []).map((r) => [r.id as string, r.brand_slug as string | null])
+  )
+  const brandNameBySlug = new Map<string, string>(
+    (brandsResult.data ?? []).map((b) => [b.slug as string, b.name as string])
+  )
+
   // Pre-compute completeness for each product (used in badge + sort)
-  const withCompleteness = allProducts.map((p) => ({ ...p, _completeness: calculateCompleteness(p) }))
+  const withCompleteness = allProducts.map((p) => ({
+    ...p,
+    _completeness: calculateCompleteness(p),
+    _brandSlug: productBrandSlug.get(p.id) ?? null,
+  }))
 
   // Apply filters client-side using single DB fetch
   let filtered = [...withCompleteness]
   if (status) filtered = filtered.filter(p => p.status === status)
-  if (brand) filtered = filtered.filter(p => extractBrand(p.name) === brand)
+  if (brand) {
+    if (brand === NO_BRAND) filtered = filtered.filter(p => !p._brandSlug)
+    else filtered = filtered.filter(p => p._brandSlug === brand)
+  }
 
   // Sort: default = newest, ?sort=completeness = worst first (admin sees gaps to fix)
   if (sort === 'completeness') {
@@ -40,14 +65,21 @@ export default async function AdminProductsPage({
 
   // Brand list with counts (respecting current status filter)
   const brandSource = status
-    ? allProducts.filter(p => p.status === status)
-    : allProducts
+    ? withCompleteness.filter(p => p.status === status)
+    : withCompleteness
   const brandCounts = new Map<string, number>()
+  let noBrandCount = 0
   for (const p of brandSource) {
-    const b = extractBrand(p.name)
-    brandCounts.set(b, (brandCounts.get(b) ?? 0) + 1)
+    if (!p._brandSlug) {
+      noBrandCount++
+      continue
+    }
+    brandCounts.set(p._brandSlug, (brandCounts.get(p._brandSlug) ?? 0) + 1)
   }
-  const brands = [...brandCounts.entries()].sort((a, b) => b[1] - a[1])
+  // [slug, count, displayLabel]
+  const brands: Array<[string, number, string]> = [...brandCounts.entries()]
+    .map(([slug, count]) => [slug, count, brandNameBySlug.get(slug) ?? slug] as [string, number, string])
+    .sort((a, b) => b[1] - a[1])
 
   function brandHref(value?: string) {
     const p = new URLSearchParams()
@@ -128,19 +160,32 @@ export default async function AdminProductsPage({
           >
             Všichni
           </Link>
-          {brands.map(([b, count]) => (
+          {brands.map(([slug, count, label]) => (
             <Link
-              key={b}
-              href={brandHref(b)}
+              key={slug}
+              href={brandHref(slug)}
               className={`text-[13px] px-3 py-1.5 rounded-full transition-colors ${
-                brand === b
+                brand === slug
                   ? 'bg-olive text-white'
                   : 'bg-white border border-off2 text-text2 hover:border-olive3 hover:text-olive'
               }`}
             >
-              {b} ({count})
+              {label} ({count})
             </Link>
           ))}
+          {noBrandCount > 0 && (
+            <Link
+              href={brandHref(NO_BRAND)}
+              className={`text-[13px] px-3 py-1.5 rounded-full transition-colors ${
+                brand === NO_BRAND
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-amber-50 border border-amber-200 text-amber-700 hover:border-amber-400'
+              }`}
+              title="Produkty bez přiřazené značky — admin musí doplnit"
+            >
+              Bez výrobce ({noBrandCount})
+            </Link>
+          )}
         </div>
       </div>
 
