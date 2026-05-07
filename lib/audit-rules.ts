@@ -41,41 +41,46 @@ async function ruleProductNoImage(): Promise<ProposalDraft[]> {
   }))
 }
 
-// ── Rule 2: Offers bez affiliate URL ─────────────────────────────────────────
-async function ruleOfferNoAffiliate(): Promise<ProposalDraft[]> {
-  const { data: offers } = await supabaseAdmin
-    .from('product_offers')
-    .select(`id, product_id, retailer_id, product_url, affiliate_url,
-             products!inner(slug, name),
-             retailers!inner(slug, name, base_tracking_url)`)
-    .or('affiliate_url.is.null,affiliate_url.eq.')
-    .eq('in_stock', true)
-    .limit(100)
+// ── Rule 2: Retaileři bez tracking template ─────────────────────────────────
+// Pozor: nesletujeme jednotlivé offers (té nemusí mít cached affiliate_url —
+// /go/ redirect generuje URL z retailer.base_tracking_url on-the-fly), ale
+// agregovaně retailery, kteří template VŮBEC nemají = ztracená provize.
+async function ruleRetailerNoTemplate(): Promise<ProposalDraft[]> {
+  const { data: retailers } = await supabaseAdmin
+    .from('retailers')
+    .select('id, slug, name, base_tracking_url, is_active, affiliate_network')
+    .eq('is_active', true)
 
-  return ((offers ?? []) as unknown as Array<{
-    id: string
-    product_id: string
-    products: { slug: string; name: string }
-    retailers: { slug: string; name: string; base_tracking_url: string | null }
-    product_url: string | null
-  }>).map(o => ({
-    rule_id: 'offer_no_affiliate',
-    severity: 'high',
-    target_type: 'offer',
-    target_id: o.id,
-    target_slug: o.products.slug,
-    target_label: `${o.products.name} @ ${o.retailers.name}`,
-    title: `${o.retailers.name}: chybí affiliate URL`,
-    reason: o.retailers.base_tracking_url
-      ? `Retailer má tracking template, ale URL u tohoto offeru není zalinkovaná. Bez ní žádná provize.`
-      : `Retailer "${o.retailers.name}" nemá nastavenou tracking URL šablonu.`,
-    suggested_action: {
-      action: o.retailers.base_tracking_url ? 'build_affiliate_url' : 'configure_retailer_template',
-      product_url: o.product_url,
-      retailer_slug: o.retailers.slug,
-      template: o.retailers.base_tracking_url,
-    },
-  }))
+  const drafts: ProposalDraft[] = []
+  for (const r of (retailers ?? []) as Array<{ id: string; slug: string; name: string; base_tracking_url: string | null; affiliate_network: string | null }>) {
+    if (r.base_tracking_url && r.base_tracking_url.length > 0) continue
+    // Kolik offers má tento retailer in_stock?
+    const { count } = await supabaseAdmin
+      .from('product_offers')
+      .select('*', { count: 'exact', head: true })
+      .eq('retailer_id', r.id)
+      .eq('in_stock', true)
+
+    if ((count ?? 0) === 0) continue  // nejsou-li nabídky, žádný problém
+
+    drafts.push({
+      rule_id: 'retailer_no_template',
+      severity: 'high',
+      target_type: 'brand',  // používá se brand_slug typu pro UI link, ale je to retailer
+      target_id: r.id,
+      target_slug: r.slug,
+      target_label: r.name,
+      title: `${r.name}: chybí affiliate template (${count} aktivních offerů)`,
+      reason: `Retailer ${r.affiliate_network ? `je v síti "${r.affiliate_network}" ale ` : ''}nemá nastavenou base_tracking_url. Všech ${count} klikání na "Koupit" jdou bez provize.`,
+      suggested_action: {
+        action: 'configure_retailer_template',
+        retailer_slug: r.slug,
+        affected_offers: count,
+        admin_url: `/admin/retailers`,
+      },
+    })
+  }
+  return drafts
 }
 
 // ── Rule 3: Articles bez hero image ─────────────────────────────────────────
@@ -314,7 +319,7 @@ export interface AuditResult {
 export async function runAllAuditRules(): Promise<AuditResult[]> {
   const rules: Array<{ name: string; fn: () => Promise<ProposalDraft[]> }> = [
     { name: 'product_no_image', fn: ruleProductNoImage },
-    { name: 'offer_no_affiliate', fn: ruleOfferNoAffiliate },
+    { name: 'retailer_no_template', fn: ruleRetailerNoTemplate },
     { name: 'article_no_hero', fn: ruleArticleNoHero },
     { name: 'recipe_no_hero', fn: ruleRecipeNoHero },
     { name: 'brand_incomplete', fn: ruleBrandIncomplete },
