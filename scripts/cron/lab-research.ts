@@ -11,12 +11,11 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { researchProductLabData } from '@/lib/product-lab-research'
 import { calculateScore } from '@/lib/score'
 
-// Limity (po user incident 2026-05-07: skript běžel 34+ min, timeout neuhasil):
-// - 10 produktů per run (ne 30) — kazdy produkt = ~30s, 10×30s = 5 min
-// - 5 min runtime hard limit
-// - Per-product timeout 60s (escape hatch pokud Claude/web fetch visi)
-const MAX_PRODUCTS_PER_RUN = 10
-const MAX_RUNTIME_MS = 5 * 60 * 1000  // 5 min total
+// Limity: per-product timeout 60s zajišťuje že 1 visící web nezabije run.
+// 30 produktů × 60s worst-case = 30 min, ale reálně ~10-15 min (většina < 30s).
+// Hard kill 20 min = pojistka.
+const MAX_PRODUCTS_PER_RUN = 30
+const MAX_RUNTIME_MS = 20 * 60 * 1000  // 20 min total
 const PER_PRODUCT_TIMEOUT_MS = 60 * 1000  // 60s per produkt
 
 interface ProductRow {
