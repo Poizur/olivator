@@ -23,6 +23,7 @@ import { EntityEditorialStory } from '@/components/entity-page/entity-editorial-
 import { EntityAtmosphereGallery } from '@/components/entity-page/entity-atmosphere-gallery'
 import { BrandStory } from '@/components/entity-page/brand-story'
 import { FaqJsonLd, OrganizationJsonLd, BreadcrumbJsonLd } from '@/components/entity-page/entity-jsonld'
+import { getBrandSameAs } from '@/lib/knowledge-graph'
 
 export const revalidate = 3600
 
@@ -232,6 +233,7 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
         foundedYear={brand.founded_year}
         countryName={country}
         imageUrl={heroPhoto?.url ?? logoPhoto?.url ?? null}
+        extraSameAs={getBrandSameAs(slug)}
       />
       <FaqJsonLd faqs={faqs} />
       <BreadcrumbJsonLd

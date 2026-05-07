@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase'
+import { breadcrumbSchema } from '@/lib/schema'
 
 export const dynamic = 'force-dynamic'
 
@@ -105,8 +106,82 @@ export default async function NovinkaDetailPage({ params }: { params: Promise<{ 
     .map(p => p.trim())
     .filter(Boolean)
 
+  // NewsArticle JSON-LD — eligible pro Google News, Top Stories, Discover.
+  // articleBody = plný překlad, image = hero foto, source = původní zdroj
+  // (Olive Oil Times atd.) jako citation.
+  const canonical = item.slug
+    ? `https://olivator.cz/novinky/${item.slug}`
+    : `https://olivator.cz/novinky/${item.id}`
+  const newsSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'NewsArticle',
+    headline: item.czech_title,
+    description: item.czech_summary ?? item.czech_title,
+    url: canonical,
+    datePublished: item.published_at ?? new Date().toISOString(),
+    dateModified: item.published_at ?? new Date().toISOString(),
+    inLanguage: 'cs-CZ',
+    isAccessibleForFree: true,
+    author: {
+      '@type': 'Organization',
+      name: 'Olivátor',
+      url: 'https://olivator.cz',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Olivátor',
+      url: 'https://olivator.cz',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://olivator.cz/logo-wordmark.png',
+      },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': canonical,
+    },
+    ...(item.image_url
+      ? {
+          image: {
+            '@type': 'ImageObject',
+            url: item.image_url,
+            ...(item.image_alt ? { caption: item.image_alt } : {}),
+          },
+        }
+      : {}),
+    ...(item.czech_article ? { articleBody: item.czech_article } : {}),
+    ...(item.original_url
+      ? {
+          citation: {
+            '@type': 'CreativeWork',
+            url: item.original_url,
+            name: item.original_title ?? sourceLabel,
+            publisher: { '@type': 'Organization', name: sourceLabel },
+          },
+        }
+      : {}),
+  }
+
+  const breadcrumbs = breadcrumbSchema([
+    { name: 'Olivátor', url: '/' },
+    { name: 'Novinky', url: '/novinky' },
+    {
+      name: item.czech_title.slice(0, 60),
+      url: item.slug ? `/novinky/${item.slug}` : `/novinky/${item.id}`,
+    },
+  ])
+
   return (
     <article className="max-w-[760px] mx-auto px-5 md:px-8 py-10 md:py-14">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(newsSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
+      />
+
       <div className="text-xs text-text3 mb-6">
         <Link href="/" className="text-olive">Olivátor</Link>
         {' › '}

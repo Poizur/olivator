@@ -52,10 +52,12 @@ interface PlaceJsonLdProps {
   countryName: string
   url: string
   imageUrl?: string | null
+  /** Wikipedia, Wikidata, GeoNames URL — Knowledge Graph signál */
+  sameAs?: string[]
 }
 
-export function PlaceJsonLd({ name, description, countryName, url, imageUrl }: PlaceJsonLdProps) {
-  const data = {
+export function PlaceJsonLd({ name, description, countryName, url, imageUrl, sameAs }: PlaceJsonLdProps) {
+  const data: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Place',
     name,
@@ -67,6 +69,7 @@ export function PlaceJsonLd({ name, description, countryName, url, imageUrl }: P
     },
     url,
     ...(imageUrl ? { image: imageUrl } : {}),
+    ...(sameAs && sameAs.length > 0 ? { sameAs } : {}),
   }
   return (
     <script
@@ -84,6 +87,8 @@ interface OrganizationJsonLdProps {
   foundedYear?: number | null
   countryName?: string | null
   imageUrl?: string | null
+  /** Extra sameAs URLs (Wikipedia, Wikidata, social) — kombinuje s websiteUrl */
+  extraSameAs?: string[]
 }
 
 export function OrganizationJsonLd({
@@ -94,14 +99,16 @@ export function OrganizationJsonLd({
   foundedYear,
   countryName,
   imageUrl,
+  extraSameAs,
 }: OrganizationJsonLdProps) {
+  const sameAs = [websiteUrl, ...(extraSameAs ?? [])].filter((u): u is string => !!u)
   const data: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name,
     description,
     url,
-    ...(websiteUrl ? { sameAs: [websiteUrl] } : {}),
+    ...(sameAs.length > 0 ? { sameAs } : {}),
     ...(foundedYear ? { foundingDate: String(foundedYear) } : {}),
     ...(imageUrl ? { logo: imageUrl, image: imageUrl } : {}),
     ...(countryName
@@ -152,6 +159,8 @@ interface ArticleJsonLdProps {
   url: string
   datePublished: string  // ISO
   imageUrl?: string | null
+  /** Wikipedia/Wikidata URLs — pro entity articles (cultivary) */
+  sameAs?: string[]
 }
 
 export function ArticleJsonLd({
@@ -160,14 +169,16 @@ export function ArticleJsonLd({
   url,
   datePublished,
   imageUrl,
+  sameAs,
 }: ArticleJsonLdProps) {
-  const data = {
+  const data: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline,
     description,
     url,
     datePublished,
+    inLanguage: 'cs-CZ',
     author: {
       '@type': 'Organization',
       name: 'Olivator',
@@ -177,8 +188,13 @@ export function ArticleJsonLd({
       '@type': 'Organization',
       name: 'Olivator',
       url: 'https://olivator.cz',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://olivator.cz/logo-wordmark.png',
+      },
     },
-    ...(imageUrl ? { image: imageUrl } : {}),
+    ...(imageUrl ? { image: { '@type': 'ImageObject', url: imageUrl } } : {}),
+    ...(sameAs && sameAs.length > 0 ? { sameAs } : {}),
   }
   return (
     <script

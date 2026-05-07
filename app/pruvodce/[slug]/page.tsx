@@ -70,6 +70,7 @@ export default async function ArticleDetailPage({
     category: string
     body: string | null
     publishedAt: string | null
+    heroImageUrl: string | null
   } | null = null
 
   if (dbArticle) {
@@ -82,6 +83,7 @@ export default async function ArticleDetailPage({
       category: dbArticle.category,
       body: dbArticle.bodyMarkdown,
       publishedAt: dbArticle.publishedAt,
+      heroImageUrl: dbArticle.heroImageUrl,
     }
   } else {
     const sa = getStaticArticle(slug)
@@ -95,6 +97,7 @@ export default async function ArticleDetailPage({
       category: sa.category,
       body: sa.body ?? null,
       publishedAt: null, // static articles nemají datum, fallback na build-time
+      heroImageUrl: sa.imageUrl ?? null,
     }
   }
 
@@ -139,8 +142,20 @@ export default async function ArticleDetailPage({
     '@type': 'Article',
     headline: article.title,
     description: article.excerpt,
+    inLanguage: 'cs-CZ',
     datePublished: article.publishedAt ?? buildTime,
     dateModified: article.publishedAt ?? buildTime,
+    // image — Google Article rich snippet vyžaduje image pole (1200×675 ideálně).
+    // Static články bez heroImageUrl: padají do fallback bez image (Google
+    // pak Article rich result nezobrazí, ale zbytek schémy stále funguje).
+    ...(article.heroImageUrl
+      ? {
+          image: {
+            '@type': 'ImageObject',
+            url: article.heroImageUrl,
+          },
+        }
+      : {}),
     author: { '@type': 'Organization', name: 'Olivátor', url: 'https://olivator.cz' },
     publisher: {
       '@type': 'Organization',

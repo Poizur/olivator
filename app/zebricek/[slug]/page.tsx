@@ -51,11 +51,44 @@ export default async function RankingDetailPage({ params }: { params: Promise<{ 
     { name: ranking.title, url: `/zebricek/${ranking.slug}` },
   ])
 
+  // ItemList — žebříček = explicitní ranking. Google může zobrazit jako
+  // carousel rich result. Position 1-N = poradí v žebříčku.
+  const validOffers = offers.filter((o): o is NonNullable<typeof o> => o != null)
+  const itemListSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: ranking.title,
+    description: ranking.description,
+    itemListOrder: 'https://schema.org/ItemListOrderDescending',
+    numberOfItems: products.length,
+    itemListElement: products.map((p, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: `https://olivator.cz/olej/${p.slug}`,
+      name: p.name,
+    })),
+    ...(validOffers.length > 0
+      ? {
+          aggregateOffer: {
+            '@type': 'AggregateOffer',
+            priceCurrency: 'CZK',
+            lowPrice: Math.min(...validOffers.map((o) => o.price)),
+            highPrice: Math.max(...validOffers.map((o) => o.price)),
+            offerCount: validOffers.length,
+          },
+        }
+      : {}),
+  }
+
   return (
     <div className="max-w-[1080px] mx-auto px-10 py-10">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
       />
 
       <div className="text-xs text-text3 mb-7">

@@ -23,6 +23,7 @@ import { EntityEditorialStory } from '@/components/entity-page/entity-editorial-
 import { EntityAtmosphereGallery } from '@/components/entity-page/entity-atmosphere-gallery'
 import { VarietyProfile } from '@/components/entity-page/variety-profile'
 import { FaqJsonLd, ArticleJsonLd, BreadcrumbJsonLd } from '@/components/entity-page/entity-jsonld'
+import { getCultivarSameAs } from '@/lib/knowledge-graph'
 
 export const revalidate = 3600
 
@@ -242,6 +243,7 @@ export default async function CultivarPage({
         url={url}
         datePublished={cultivar.created_at}
         imageUrl={heroPhoto?.url ?? null}
+        sameAs={getCultivarSameAs(slug)}
       />
       <FaqJsonLd faqs={faqs} />
       <BreadcrumbJsonLd

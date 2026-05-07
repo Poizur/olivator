@@ -24,6 +24,7 @@ import { EntityEditorialStory } from '@/components/entity-page/entity-editorial-
 import { EntityAtmosphereGallery } from '@/components/entity-page/entity-atmosphere-gallery'
 import { RegionTerroir } from '@/components/entity-page/region-terroir'
 import { FaqJsonLd, PlaceJsonLd, BreadcrumbJsonLd } from '@/components/entity-page/entity-jsonld'
+import { getRegionSameAs } from '@/lib/knowledge-graph'
 
 export const revalidate = 3600
 
@@ -210,6 +211,7 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
         countryName={country}
         url={url}
         imageUrl={heroPhoto?.url ?? null}
+        sameAs={getRegionSameAs(slug)}
       />
       <FaqJsonLd faqs={faqs} />
       <BreadcrumbJsonLd

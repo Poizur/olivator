@@ -119,6 +119,18 @@ export default async function RecipeDetailPage({
   const allProducts = await getProductsWithOffers()
   const paired = pickPairedProducts(recipe, allProducts)
 
+  // Keywords pro Recipe schema — Google je používá pro topical relevance.
+  // Combine cuisine + cultivars + regions + "olivový olej" base term.
+  const keywords = [
+    'olivový olej',
+    recipe.cuisine && CUISINE_LABEL[recipe.cuisine] ? `${CUISINE_LABEL[recipe.cuisine]} kuchyně` : null,
+    ...recipe.recommendedCultivars.map((c) => c.charAt(0).toUpperCase() + c.slice(1)),
+    ...recipe.recommendedRegions.map((r) => r.charAt(0).toUpperCase() + r.slice(1)),
+    ...recipe.recommendedOilTypes,
+  ]
+    .filter(Boolean)
+    .join(', ')
+
   // ── Schema.org Recipe (s ingredients + instructions = rich snippet eligible) ──
   const recipeSchema = {
     '@context': 'https://schema.org',
@@ -126,21 +138,28 @@ export default async function RecipeDetailPage({
     name: recipe.title,
     description: recipe.excerpt,
     image: recipe.heroImageUrl ? [recipe.heroImageUrl] : undefined,
-    author: { '@type': 'Organization', name: 'Olivátor' },
+    inLanguage: 'cs-CZ',
+    author: { '@type': 'Organization', name: 'Olivátor', url: 'https://olivator.cz' },
     publisher: {
       '@type': 'Organization',
       name: 'Olivátor',
       url: 'https://olivator.cz',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://olivator.cz/logo-wordmark.png',
+      },
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
       '@id': `https://olivator.cz/recept/${recipe.slug}`,
     },
     datePublished: recipe.publishedAt,
+    dateModified: recipe.updatedAt ?? recipe.publishedAt,
     recipeCategory: 'Hlavní jídlo',
     recipeCuisine: recipe.cuisine
       ? CUISINE_SCHEMA[recipe.cuisine] ?? 'Mediterranean'
       : 'Mediterranean',
+    keywords: keywords || undefined,
     prepTime: recipe.prepTimeMin ? `PT${recipe.prepTimeMin}M` : undefined,
     cookTime:
       recipe.cookTimeMin && recipe.cookTimeMin > 0 ? `PT${recipe.cookTimeMin}M` : undefined,
