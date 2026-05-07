@@ -395,6 +395,41 @@ async function getActivityFeed() {
     .slice(0, 10)
 }
 
+// SEO progres — celkový postup z 8 fází (seo_tasks tabulka).
+// Zobrazuje na admin Přehledu → uživatel vidí na první pohled kam plán šel.
+async function getSeoProgress() {
+  const [totalRes, doneRes, inProgressRes, byPhase] = await Promise.all([
+    supabaseAdmin.from('seo_tasks').select('*', { count: 'exact', head: true }),
+    supabaseAdmin.from('seo_tasks').select('*', { count: 'exact', head: true }).eq('status', 'done'),
+    supabaseAdmin.from('seo_tasks').select('*', { count: 'exact', head: true }).eq('status', 'in_progress'),
+    supabaseAdmin.from('seo_tasks').select('phase, status'),
+  ])
+
+  const total = totalRes.count ?? 0
+  const done = doneRes.count ?? 0
+  const inProgress = inProgressRes.count ?? 0
+  const skipped = (byPhase.data ?? []).filter((r: { status: string }) => r.status === 'skipped').length
+  const pct = total - skipped > 0 ? Math.round((done / (total - skipped)) * 100) : 0
+
+  // Per-phase progress (8 fází: 0-7)
+  const phases = (byPhase.data ?? []) as Array<{ phase: number; status: string }>
+  const phaseStats: Array<{ phase: number; done: number; total: number; pct: number }> = []
+  for (let i = 0; i <= 7; i++) {
+    const items = phases.filter(p => p.phase === i)
+    const phaseDone = items.filter(p => p.status === 'done').length
+    const phaseSkipped = items.filter(p => p.status === 'skipped').length
+    const phaseTotal = items.length - phaseSkipped
+    phaseStats.push({
+      phase: i,
+      done: phaseDone,
+      total: phaseTotal,
+      pct: phaseTotal > 0 ? Math.round((phaseDone / phaseTotal) * 100) : 0,
+    })
+  }
+
+  return { total, done, inProgress, skipped, pct, phases: phaseStats }
+}
+
 async function getNeedsAttention() {
   const [draftsRes, missingTplRes, missingAffiliateRes, draftNewslettersRes, discoveryReviewRes] = await Promise.all([
     supabaseAdmin.from('products').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
@@ -425,7 +460,7 @@ async function getNeedsAttention() {
 }
 
 export default async function AdminDashboardPage() {
-  const [stats, retailers, clickStats, newsletterStats, catalogHealth, activity, attention] = await Promise.all([
+  const [stats, retailers, clickStats, newsletterStats, catalogHealth, activity, attention, seoProgress] = await Promise.all([
     getSiteStats(),
     getAllRetailers(),
     getClickStats(),
@@ -433,6 +468,7 @@ export default async function AdminDashboardPage() {
     getCatalogHealth(),
     getActivityFeed(),
     getNeedsAttention(),
+    getSeoProgress(),
   ])
 
   const clickDelta = delta(clickStats.last7d, clickStats.prev7d)
@@ -639,6 +675,58 @@ export default async function AdminDashboardPage() {
           </p>
         </section>
       )}
+
+      {/* SEO Plán — postup z 8 fází (durable plán v SEO_STRATEGY.md, status v
+          seo_tasks tabulce). Vidíš na první pohled, kam strategický plán šel. */}
+      <section className="mb-8 bg-white border border-off2 rounded-xl overflow-hidden">
+        <Link
+          href="/admin/seo"
+          className="flex items-center justify-between px-5 py-4 hover:bg-off/40 transition-colors"
+        >
+          <div className="flex items-center gap-4">
+            <div className="text-2xl">📈</div>
+            <div>
+              <h2 className="text-[14px] font-medium text-text">SEO Plán</h2>
+              <p className="text-[11px] text-text3 mt-0.5">
+                {seoProgress.done}/{seoProgress.total - seoProgress.skipped} úkolů hotovo
+                {seoProgress.inProgress > 0 && ` · ${seoProgress.inProgress} rozpracovaných`}
+                {seoProgress.skipped > 0 && ` · ${seoProgress.skipped} vyřazených`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-right">
+              <div className={`text-2xl font-[family-name:var(--font-display)] ${
+                seoProgress.pct >= 50 ? 'text-olive' : 'text-text2'
+              }`}>
+                {seoProgress.pct}%
+              </div>
+            </div>
+            <ArrowUpRight size={16} strokeWidth={1.75} className="text-text3" />
+          </div>
+        </Link>
+        {/* Per-phase mini progress — hned vidíš která fáze pokulhává */}
+        <div className="border-t border-off2 px-5 py-3">
+          <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+            {seoProgress.phases.map((p) => (
+              <div key={p.phase} className="text-center">
+                <div className="text-[9px] text-text3 mb-1">F{p.phase}</div>
+                <div className="h-1.5 bg-off rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      p.pct === 100 ? 'bg-emerald-500' : p.pct > 0 ? 'bg-olive' : 'bg-off2'
+                    }`}
+                    style={{ width: `${p.pct}%` }}
+                  />
+                </div>
+                <div className="text-[10px] text-text2 mt-1 tabular-nums">
+                  {p.done}/{p.total}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
