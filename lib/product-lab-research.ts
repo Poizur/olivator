@@ -147,8 +147,10 @@ async function findProductPage(
 
   if (keywords.length === 0) return null
 
-  // Stáhni homepage + product listings
-  const candidatePaths = ['/', '/products', '/produkte', '/prodotti', '/our-oils', '/nase-oleje', '/eshop']
+  // Limit zatízení per produkt — predtim 7 paths × 3 ranked = 24 fetches × 10s
+  // = 4 min worst case. User incident 2026-05-07: 30 produktů × 4 min = >> 15 min timeout.
+  // Ted: 3 paths max + 1 ranked candidate = max 4 fetches × 10s = 40s per produkt.
+  const candidatePaths = ['/', '/products', '/prodotti']
   const allLinks = new Set<string>()
 
   for (const path of candidatePaths) {
@@ -176,6 +178,8 @@ async function findProductPage(
     } catch (err) {
       // ignore — best effort
     }
+    // Pokud uz mame nejake matche, dal nehledame
+    if (allLinks.size >= 5) break
   }
 
   // Vyber nejlepší match — link s nejvíc keywordy v URL
@@ -186,7 +190,8 @@ async function findProductPage(
     }))
     .sort((a, b) => b.score - a.score)
 
-  for (const candidate of ranked.slice(0, 3)) {
+  // Jen 1 nejlepsi kandidat — bylo 3 ale to znasobovalo fetch volani.
+  for (const candidate of ranked.slice(0, 1)) {
     if (candidate.score === 0) break
     const html = await fetchHtml(candidate.url)
     if (html) return { url: candidate.url, html }
@@ -198,8 +203,11 @@ async function findProductPage(
 async function fetchHtml(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'OlivatorBot/1.0 (+https://olivator.cz)' },
-      signal: AbortSignal.timeout(10000),
+      // Browser User-Agent — boutique webs (Cloudflare) blokují generic OlivatorBot
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+      signal: AbortSignal.timeout(6000),  // 6s místo 10s — kratsi worst-case
     })
     if (!res.ok) return null
     return await res.text()

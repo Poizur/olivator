@@ -11,8 +11,13 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { researchProductLabData } from '@/lib/product-lab-research'
 import { calculateScore } from '@/lib/score'
 
-const MAX_PRODUCTS_PER_RUN = 30
-const MAX_RUNTIME_MS = 15 * 60 * 1000  // 15 min hard limit
+// Limity (po user incident 2026-05-07: skript běžel 34+ min, timeout neuhasil):
+// - 10 produktů per run (ne 30) — kazdy produkt = ~30s, 10×30s = 5 min
+// - 5 min runtime hard limit
+// - Per-product timeout 60s (escape hatch pokud Claude/web fetch visi)
+const MAX_PRODUCTS_PER_RUN = 10
+const MAX_RUNTIME_MS = 5 * 60 * 1000  // 5 min total
+const PER_PRODUCT_TIMEOUT_MS = 60 * 1000  // 60s per produkt
 
 interface ProductRow {
   id: string
@@ -32,11 +37,12 @@ async function main() {
   const startedAt = Date.now()
   console.log('[cron:lab-research] start', new Date().toISOString())
 
+  // Hard timeout — bez .unref() aby timer SKUTECNE drzel process pri zivote
+  // a tedy fired (predtim s unref se nekdy nestihl spustit). User feedback 2026-05-07.
   const killTimer = setTimeout(() => {
-    console.error('[cron:lab-research] TIMEOUT — exceeded 15 min, forcing exit')
+    console.error(`[cron:lab-research] TIMEOUT — exceeded ${MAX_RUNTIME_MS / 1000}s, forcing exit`)
     process.exit(2)
   }, MAX_RUNTIME_MS)
-  killTimer.unref()
 
   try {
     // 1) Najdi kandidáty bez lab dat
@@ -78,7 +84,13 @@ async function main() {
         const url = brandUrl.get(p.brand_slug!)!
         process.stdout.write(`  ${p.name.slice(0, 50)} → `)
 
-        const result = await researchProductLabData(p.name, url)
+        // Per-product timeout — escape pokud findProductPage visi na pomalem webu
+        const result = await Promise.race([
+          researchProductLabData(p.name, url),
+          new Promise<null>((_, reject) =>
+            setTimeout(() => reject(new Error(`per-product timeout ${PER_PRODUCT_TIMEOUT_MS}ms`)), PER_PRODUCT_TIMEOUT_MS)
+          ),
+        ])
         researched++
 
         if (!result || result.confidence === 'low') {
