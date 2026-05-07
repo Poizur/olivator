@@ -16,7 +16,8 @@
     "cron:radar": "tsx scripts/cron/radar.ts",
     "cron:learning": "tsx scripts/cron/learning.ts",
     "cron:lab-research": "tsx scripts/cron/lab-research.ts",
-    "audit:coverage": "tsx scripts/coverage-check.ts"
+    "audit:coverage": "tsx scripts/coverage-check.ts",
+    "backfill:radar-articles": "tsx scripts/backfill-radar-articles.ts"
   },
   "engines": {
     "node": ">=20.18.0"

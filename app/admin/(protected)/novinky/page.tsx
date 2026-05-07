@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic'
 
 interface RadarRow {
   id: string
+  slug: string | null
   source: string | null
   original_url: string | null
   czech_title: string
@@ -16,6 +17,8 @@ interface RadarRow {
   fingerprint: string | null
   published_at: string | null
   is_published: boolean
+  image_url: string | null
+  czech_article: string | null
 }
 
 const BADGE_LABEL: Record<string, string> = {
@@ -37,7 +40,7 @@ function formatDateTime(iso: string | null): string {
 export default async function AdminNovinkyPage() {
   const { data, error } = await supabaseAdmin
     .from('radar_items')
-    .select('id, source, original_url, czech_title, badge, fingerprint, published_at, is_published')
+    .select('id, slug, source, original_url, czech_title, badge, fingerprint, published_at, is_published, image_url, czech_article')
     .order('published_at', { ascending: false })
     .limit(50)
 
@@ -120,11 +123,23 @@ export default async function AdminNovinkyPage() {
                       )}
                     </div>
                     <Link
-                      href={`/novinky/${it.id}`}
+                      href={`/novinky/${it.slug ?? it.id}`}
                       className="text-[14px] text-text font-medium leading-tight line-clamp-2 hover:text-olive-dark hover:underline block"
                     >
                       {it.czech_title}
                     </Link>
+                    <div className="flex gap-2 mt-1 text-[10px]">
+                      {!it.image_url && (
+                        <span className="text-amber-700 bg-amber-50 rounded px-1.5 py-0.5">
+                          bez obrázku
+                        </span>
+                      )}
+                      {!it.czech_article && (
+                        <span className="text-amber-700 bg-amber-50 rounded px-1.5 py-0.5">
+                          bez článku
+                        </span>
+                      )}
+                    </div>
                     {it.fingerprint && (
                       <div className="text-[10px] text-text3 font-mono mt-1">
                         fp: {it.fingerprint}

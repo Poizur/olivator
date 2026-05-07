@@ -15,6 +15,9 @@ import { supabaseAdmin } from './supabase'
 import { fetchAllOliveFeeds, type RssItem } from './rss-fetcher'
 import { makeFingerprint, jaccard } from './fingerprint'
 import { callClaude, extractText } from './anthropic'
+import { fetchArticleText } from './article-fetcher'
+import { searchUnsplash } from './unsplash'
+import { slugify } from './utils'
 
 // Klíčová slova pro filter — chceme jen zprávy které opravdu hýbou trhem.
 // Generic "olive oil" article projde přes RSS, ale bez signal nepublikujeme.
@@ -112,61 +115,129 @@ async function haikuSameStory(titleA: string, titleB: string): Promise<boolean> 
 interface TranslationResult {
   czechTitle: string
   czechSummary: string
+  czechArticle: string
   czContext: string
   badge: string
+  metaTitle: string
+  metaDescription: string
+  unsplashQuery: string
   isRelevant: boolean
 }
 
-const TRANSLATION_PROMPT = (source: string, title: string, description: string) =>
+const TRANSLATION_PROMPT = (source: string, title: string, description: string, fullText: string | null) =>
   `Jsi redaktor Olivator.cz — největšího srovnávače olivových olejů v ČR.\n\n` +
-  `Dostaneš zprávu ze světového tisku o olivovém oleji.\n` +
-  `Přelož a lokalizuj ji pro české čtenáře.\n\n` +
+  `Dostal jsi zahraniční zprávu o olivovém oleji. Napiš z ní český článek pro\n` +
+  `naše čtenáře — kteří neumí anglicky a chtějí pochopit co se děje a proč.\n\n` +
   `Výstup POUZE validní JSON, žádné backticks:\n` +
   `{\n` +
-  `  "czech_title": "Nadpis česky, max 80 znaků, konkrétní a informativní",\n` +
-  `  "czech_summary": "Dvě věty česky — co se stalo a proč je to důležité",\n` +
-  `  "cz_context": "Jedna věta — co to znamená pro ceny nebo dostupnost olivového oleje v ČR",\n` +
+  `  "czech_title": "Nadpis česky, max 80 znaků, konkrétní (čísla, místo, dopad)",\n` +
+  `  "czech_summary": "2-3 věty — TL;DR pro listing card",\n` +
+  `  "czech_article": "Plnohodnotný článek 350-600 slov ve 4-6 odstavcích, oddělené \\n\\n. První odstavec = lead (kdo, co, kdy, kde). Další odstavce = kontext, čísla, citace, pozadí. Poslední odstavec = co to znamená pro českého spotřebitele/trh. Piš česky, plynule, novinářsky — ne jen překlad. Žádné marketingové fráze.",\n` +
+  `  "cz_context": "1 věta — konkrétní dopad na české ceny/dostupnost",\n` +
   `  "badge": "harvest|price|award|science|quality|news",\n` +
+  `  "meta_title": "SEO title, max 60 znaků, klíčové slovo na začátku",\n` +
+  `  "meta_description": "SEO description, 140-160 znaků, vysvětlení + benefit pro čtenáře",\n` +
+  `  "unsplash_query": "Topic-specific anglicky 3-5 slov pro hero foto — KONKRÉTNĚ k článku, ne 'olive oil'. Příklady: 'olive harvest greece tractor', 'mediterranean olive grove sunset', 'olive oil bottling factory'",\n` +
   `  "is_relevant": true\n` +
   `}\n\n` +
-  `Pokud zpráva nesouvisí s olivovým olejem (jen okrajová zmínka, jiné téma):\n` +
-  `{"is_relevant": false}\n\n` +
-  `Nepoužívej marketingové fráze. Buď konkrétní — čísla, procenta, země.\n\n` +
+  `Pokud zpráva nesouvisí s olivovým olejem: {"is_relevant": false}\n\n` +
+  `Pravidla pro článek:\n` +
+  `- Piš novinářsky: aktivní hlas, konkrétní čísla, jména, místa\n` +
+  `- Pokud zdroj má citace, přelož je v uvozovkách s atribucí\n` +
+  `- Vyhni se "podle zdroje", "uvádí článek" — piš jako bys to věděl sám\n` +
+  `- Český kontext patří JEN do cz_context a posledního odstavce, ne do leadu\n\n` +
   `Zpráva:\n` +
   `Zdroj: ${source}\n` +
   `Titulek: ${title}\n` +
-  `Popis: ${description}`
+  `Krátký popis: ${description}\n\n` +
+  (fullText
+    ? `Plný text článku (z webu zdroje):\n${fullText}`
+    : `(Plný text se nepodařilo stáhnout — vycházej jen z titulku + popisu.)`)
 
-async function translateAndLocalize(item: RssItem): Promise<TranslationResult | null> {
+async function translateAndLocalize(item: RssItem, fullText: string | null): Promise<TranslationResult | null> {
   try {
     const resp = await callClaude({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 400,
-      system: 'Jsi redaktor olivator.cz. Vracíš jen validní JSON.',
-      messages: [{ role: 'user', content: TRANSLATION_PROMPT(item.source, item.title, item.description) }],
+      max_tokens: 2500,
+      system: 'Jsi redaktor olivator.cz. Píšeš česky, novinářsky, věcně. Vracíš jen validní JSON.',
+      messages: [{ role: 'user', content: TRANSLATION_PROMPT(item.source, item.title, item.description, fullText) }],
     })
     const raw = extractText(resp).trim().replace(/^```(?:json)?\s*|\s*```$/g, '')
     const data = JSON.parse(raw) as Partial<{
       czech_title: string
       czech_summary: string
+      czech_article: string
       cz_context: string
       badge: string
+      meta_title: string
+      meta_description: string
+      unsplash_query: string
       is_relevant: boolean
     }>
     if (data.is_relevant === false) {
-      return { czechTitle: '', czechSummary: '', czContext: '', badge: 'news', isRelevant: false }
+      return {
+        czechTitle: '', czechSummary: '', czechArticle: '', czContext: '',
+        badge: 'news', metaTitle: '', metaDescription: '', unsplashQuery: '',
+        isRelevant: false,
+      }
     }
     return {
       czechTitle: (data.czech_title ?? item.title).slice(0, 200),
       czechSummary: data.czech_summary ?? '',
+      czechArticle: data.czech_article ?? '',
       czContext: data.cz_context ?? '',
       badge: data.badge ?? 'news',
+      metaTitle: (data.meta_title ?? data.czech_title ?? '').slice(0, 70),
+      metaDescription: (data.meta_description ?? data.czech_summary ?? '').slice(0, 200),
+      unsplashQuery: data.unsplash_query ?? 'olive oil mediterranean',
       isRelevant: true,
     }
   } catch (err) {
     console.warn(`[radar] translation failed for "${item.title.slice(0, 50)}":`, err instanceof Error ? err.message : err)
     return null
   }
+}
+
+interface HeroImage {
+  url: string
+  alt: string
+  attribution: string
+  sourceUrl: string
+}
+
+async function fetchHeroImage(query: string, fallbackAlt: string): Promise<HeroImage | null> {
+  try {
+    const photos = await searchUnsplash(query, 1)
+    const p = photos[0]
+    if (!p) return null
+    return {
+      url: p.url,
+      alt: p.altText || fallbackAlt,
+      attribution: p.attribution,
+      sourceUrl: p.sourceUrl,
+    }
+  } catch (err) {
+    console.warn(`[radar] unsplash failed for "${query}":`, err instanceof Error ? err.message : err)
+    return null
+  }
+}
+
+async function generateUniqueSlug(czechTitle: string, currentId?: string): Promise<string> {
+  const base = slugify(czechTitle).slice(0, 80) || 'novinka'
+  let candidate = base
+  let n = 2
+  while (n < 50) {
+    const { data } = await supabaseAdmin
+      .from('radar_items')
+      .select('id')
+      .eq('slug', candidate)
+      .limit(1)
+    const conflict = (data ?? []).find(r => r.id !== currentId)
+    if (!conflict) return candidate
+    candidate = `${base}-${n}`
+    n++
+  }
+  return `${base}-${Date.now().toString(36).slice(-4)}`
 }
 
 const ALLOWED_BADGES = new Set(['harvest', 'price', 'award', 'science', 'quality', 'news'])
@@ -245,7 +316,10 @@ export async function runRadarAgent(opts: { hoursBack?: number; maxItems?: numbe
 
   // Translate + save
   for (const item of topItems) {
-    const translation = await translateAndLocalize(item)
+    // Stáhni full article text z originálu (best effort, ~8s timeout)
+    const fullText = await fetchArticleText(item.url)
+
+    const translation = await translateAndLocalize(item, fullText)
     if (!translation) {
       result.errors.push(`translate failed: ${item.title.slice(0, 50)}`)
       continue
@@ -258,6 +332,12 @@ export async function runRadarAgent(opts: { hoursBack?: number; maxItems?: numbe
 
     const badge = ALLOWED_BADGES.has(translation.badge) ? translation.badge : 'news'
 
+    // Hero image z Unsplash (best effort)
+    const hero = await fetchHeroImage(translation.unsplashQuery, translation.czechTitle)
+
+    // Unikátní slug
+    const slug = await generateUniqueSlug(translation.czechTitle)
+
     // Upsert do radar_items (UNIQUE original_url)
     const { error: upsertErr } = await supabaseAdmin
       .from('radar_items')
@@ -266,10 +346,18 @@ export async function runRadarAgent(opts: { hoursBack?: number; maxItems?: numbe
           source: item.source,
           original_url: item.url,
           original_title: item.title,
+          slug,
           czech_title: translation.czechTitle,
           czech_summary: translation.czechSummary,
+          czech_article: translation.czechArticle,
           cz_context: translation.czContext,
           badge,
+          meta_title: translation.metaTitle,
+          meta_description: translation.metaDescription,
+          image_url: hero?.url ?? null,
+          image_alt: hero?.alt ?? null,
+          image_attribution: hero?.attribution ?? null,
+          image_source_url: hero?.sourceUrl ?? null,
           fingerprint: item.fingerprint,
           published_at: (item.pubDate ?? new Date()).toISOString(),
           is_published: true,
