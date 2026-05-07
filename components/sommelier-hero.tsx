@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { Trophy, ArrowRight } from 'lucide-react'
 import { ProductImage } from './product-image'
+import { ScoreBadge } from './score-badge'
 import { formatPrice, formatPricePer100ml, countryName } from '@/lib/utils'
 import type { Product, ProductOffer } from '@/lib/types'
 
@@ -304,8 +305,8 @@ export function SommelierHero({
                         )}
                       </div>
                     </div>
-                    <div className="text-[11px] font-bold text-white tabular-nums bg-terra rounded-full px-2 py-0.5 shrink-0">
-                      {p.olivatorScore}
+                    <div className="shrink-0">
+                      <ScoreBadge score={p.olivatorScore} type={p.type} size="small" />
                     </div>
                   </Link>
                 ))}
@@ -474,9 +475,8 @@ function ProductMiniCard({ product }: { product: ProductWithOffer }) {
           {product.name}
         </div>
         <div className="flex items-center gap-2 text-[11px] text-text3">
-          <span className="bg-terra text-white rounded-full px-1.5 py-0 tabular-nums font-bold">
-            {product.olivatorScore}
-          </span>
+          <ScoreBadge score={product.olivatorScore} type={product.type} size="small" />
+
           {product.cheapestOffer && (
             <span className="font-semibold text-text">{formatPrice(product.cheapestOffer.price)}</span>
           )}

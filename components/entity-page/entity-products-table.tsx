@@ -222,10 +222,18 @@ export function EntityProductsTable({ products, entityType, filters = [], filter
                     </Link>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-block text-[12px] font-medium px-2 py-0.5 rounded-full tabular-nums ${scorePillClass(p.olivatorScore)}`}>
-                      {p.olivatorScore ?? '—'}
-                    </span>
-                    <span className="sr-only">{p.olivatorScore != null && p.olivatorScore >= 60 ? 'vysoké' : p.olivatorScore != null && p.olivatorScore >= 45 ? 'střední' : 'nízké'} skóre</span>
+                    {p.type === 'flavored' ? (
+                      <span className="inline-block text-[10px] font-bold bg-terra text-white px-2 py-0.5 rounded-full uppercase tracking-wider" title="Aromatizovaný olej">
+                        Aroma
+                      </span>
+                    ) : (
+                      <>
+                        <span className={`inline-block text-[12px] font-medium px-2 py-0.5 rounded-full tabular-nums ${scorePillClass(p.olivatorScore)}`}>
+                          {p.olivatorScore ?? '—'}
+                        </span>
+                        <span className="sr-only">{p.olivatorScore != null && p.olivatorScore >= 60 ? 'vysoké' : p.olivatorScore != null && p.olivatorScore >= 45 ? 'střední' : 'nízké'} skóre</span>
+                      </>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-[13px] text-text2 tabular-nums">
                     {p.acidity != null ? `${p.acidity} %` : '—'}
@@ -272,9 +280,15 @@ export function EntityProductsTable({ products, entityType, filters = [], filter
                       <span className="text-[22px] opacity-30">🫒</span>
                     )}
                   </div>
-                  <span className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded-full tabular-nums shrink-0 mt-0.5 ${scorePillClass(p.olivatorScore)}`}>
-                    {p.olivatorScore ?? '—'}
-                  </span>
+                  {p.type === 'flavored' ? (
+                    <span className="inline-block text-[9px] font-bold bg-terra text-white px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 mt-0.5" title="Aromatizovaný">
+                      Aroma
+                    </span>
+                  ) : (
+                    <span className={`inline-block text-[11px] font-medium px-2 py-0.5 rounded-full tabular-nums shrink-0 mt-0.5 ${scorePillClass(p.olivatorScore)}`}>
+                      {p.olivatorScore ?? '—'}
+                    </span>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-medium text-text leading-tight">{p.name}</div>
                     <div className="text-[11px] text-text3 mt-0.5">

@@ -223,11 +223,35 @@ export function detectPackaging(item: HeurekaItem): string | null {
 
 // Detekce typu oleje. Většina reckonasbavi je extra panenský — default 'evoo'.
 // Refinovaný / pomace má v názvu typicky odlišný pattern.
-export function detectType(item: HeurekaItem): 'evoo' | 'virgin' | 'refined' | 'olive_oil' | 'pomace' {
+// Aromatizované (s lanýžem, bazalkou, česnekem...) detekujeme jako 'flavored' —
+// nedostávají Olivator Score, protože přidaná aromata diluují EVOO chemii.
+export function detectType(item: HeurekaItem): 'evoo' | 'virgin' | 'refined' | 'olive_oil' | 'pomace' | 'flavored' {
   const name = item.productName.toLowerCase()
+  if (isFlavoredOilName(name)) return 'flavored'
   if (name.includes('extra panensk')) return 'evoo'
   if (name.includes('panensk')) return 'virgin'
   if (name.includes('rafinov')) return 'refined'
   if (name.includes('pomace') || name.includes('výlisk')) return 'pomace'
   return 'evoo'  // konzervativní default pro specialty eshop
+}
+
+// Aromatizované oleje — keyword detekce z názvu. Pokrývá CZ + IT názvy
+// (italyshop má italské názvy "al tartufo", "aglio e peperoncino").
+//
+// Nepoužívat samotný "citron"/"chilli" — některé EVOO mají chuťové noty
+// "s citrusovou nuancí" v marketingu. Hledáme spíš:
+//  - explicitní "s X" (česká norma popisu)
+//  - italské infuze ("al X", "con X")
+//  - tartufo/truffle (samostatný keyword OK — nikdo neříká "tartufo nuance")
+const FLAVORED_OIL_PATTERNS: RegExp[] = [
+  /\b(?:s|se)\s+(?:lanýž|bazalk|česnek|rozmarýn|chilli|citr[oó]n|bíl[ýé]m\s+lanýž|čern[ýé]m\s+lanýž|hřib|houb|porcin|peperonc|česnekov|bazalkov|trufl)/,
+  /\b(?:al|con)\s+(?:tartuf|aglio|basilico|peperonc|limon|rosmarin|funghi)/,
+  /\btartuf|truffle\b/,
+  /\baglio\s+e\s+peperonc/,
+  /\b(?:aroma|příchu[ťt]|s\s+příchut)/,  // explicitní "s aroma", "příchutí"
+  /\bsicilia.*peperonc|funghi\s+porcini/,
+]
+
+export function isFlavoredOilName(nameLower: string): boolean {
+  return FLAVORED_OIL_PATTERNS.some(re => re.test(nameLower))
 }

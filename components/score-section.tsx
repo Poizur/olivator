@@ -8,6 +8,8 @@ export function ScoreSection({ product }: { product: Product }) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const { scoreBreakdown } = product
   const total = product.olivatorScore
+  const isFlavored = product.type === 'flavored'
+  const hasScore = !isFlavored && total != null && total > 0
 
   // Close on click outside + Escape key
   useEffect(() => {
@@ -29,6 +31,45 @@ export function ScoreSection({ product }: { product: Product }) {
       document.removeEventListener('keydown', onKeyDown)
     }
   }, [tooltipOpen])
+
+  // Aromatizovaný olej — místo Score zobrazíme vysvětlení proč nehodnotíme.
+  if (isFlavored) {
+    return (
+      <div className="bg-off rounded-xl p-5 mb-5">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-[13px] font-medium text-text">Olivator Score</h2>
+          <span className="text-[14px] font-bold text-terra uppercase tracking-wider">Aromatizovaný</span>
+        </div>
+        <p className="text-[12px] text-text2 leading-relaxed mt-2">
+          Tento olej obsahuje přidané aromata (lanýž, bylinky, citrus apod.).
+          Naše metrika je navržená pro čisté EVOO — kyselost, polyfenoly, certifikace
+          a cena. U aromatizovaných olejů by srovnání nebylo férové, takže Score
+          neudělujeme. Posuďte podle popisu chuti, použití a ceny.
+        </p>
+      </div>
+    )
+  }
+
+  // Nedostatek dat → "připravujeme" stav
+  if (!hasScore) {
+    const missing: string[] = []
+    if (product.acidity == null) missing.push('kyselost')
+    if (product.polyphenols == null) missing.push('polyfenoly')
+    if (product.certifications.length === 0) missing.push('certifikace')
+    return (
+      <div className="bg-off rounded-xl p-5 mb-5">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-[13px] font-medium text-text">Olivator Score</h2>
+          <span className="text-[14px] font-medium text-text3">Připravujeme</span>
+        </div>
+        <p className="text-[12px] text-text2 leading-relaxed mt-2">
+          Hodnocení {missing.length > 0 ? `tohoto oleje připravujeme — chybí ${missing.join(', ')}.` : 'tohoto oleje připravujeme.'}
+          {' '}Skóre 0/100 by nebylo férové vůči produktu, takže ho zatím nezobrazujeme.
+          Doplníme jakmile získáme lab data od výrobce.
+        </p>
+      </div>
+    )
+  }
 
   const items = [
     {
@@ -60,7 +101,7 @@ export function ScoreSection({ product }: { product: Product }) {
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-[13px] font-medium text-text">Olivator Score</h2>
         <div ref={wrapperRef} className="flex items-center gap-1.5 relative">
-          <span className="text-[22px] font-bold text-terra tracking-tight">{total} / 100</span>
+          <span className="text-[22px] font-bold text-terra tracking-tight">{total ?? 0} / 100</span>
           <button
             type="button"
             onClick={() => setTooltipOpen(v => !v)}
@@ -108,7 +149,7 @@ export function ScoreSection({ product }: { product: Product }) {
       <div className="h-1.5 bg-off2 rounded-full overflow-hidden">
         <div
           className="h-full rounded-full bg-terra animate-score-fill"
-          style={{ width: `${total}%` }}
+          style={{ width: `${total ?? 0}%` }}
         />
       </div>
 

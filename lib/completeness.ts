@@ -35,7 +35,7 @@ const FIELDS: FieldDef[] = [
   { key: 'meta_description', label: 'SEO meta description', weight: 2, isFilled: (p) => !!p.metaDescription && p.metaDescription.length > 50 },
 
   // Score
-  { key: 'score', label: 'Olivator Score', weight: 1, isFilled: (p) => p.olivatorScore > 0 },
+  { key: 'score', label: 'Olivator Score', weight: 1, isFilled: (p) => p.olivatorScore != null && p.olivatorScore > 0 },
 ]
 
 export interface CompletenessResult {

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useWishlist } from '@/lib/wishlist-context'
 import { formatPrice, formatPricePer100ml } from '@/lib/utils'
 import { WishlistButton } from '@/components/wishlist-button'
+import { ScoreBadge } from '@/components/score-badge'
 import type { Product, ProductOffer } from '@/lib/types'
 
 type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
@@ -63,12 +64,16 @@ export function OblibeneContent({ allProducts }: Props) {
                 <div className="text-sm font-semibold text-text hover:text-olive leading-snug">
                   {p.name}
                 </div>
-                <div className="text-[11px] text-text3 mt-0.5">Score {p.olivatorScore}</div>
+                <div className="text-[11px] text-text3 mt-0.5">
+                  {p.type === 'flavored'
+                    ? <span className="text-terra font-bold uppercase tracking-wider text-[10px]">Aromatizovaný</span>
+                    : p.olivatorScore != null && p.olivatorScore > 0
+                      ? <>Score {p.olivatorScore}</>
+                      : <>Score —</>}
+                </div>
               </Link>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-[11px] font-bold bg-terra text-white rounded-full px-2 py-0.5">
-                  {p.olivatorScore}
-                </span>
+                <ScoreBadge score={p.olivatorScore} type={p.type} size="small" />
                 <WishlistButton productId={p.id} />
               </div>
             </div>

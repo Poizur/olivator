@@ -75,7 +75,8 @@ function mapProduct(row: ProductRow): Product {
     useCases: row.use_cases ?? [],
     volumeMl: row.volume_ml ?? 0,
     packaging: row.packaging ?? '',
-    olivatorScore: row.olivator_score ?? 0,
+    // null = nedostatek dat / flavored type. UI rozliší a zobrazí "Připravujeme" / "Aroma".
+    olivatorScore: row.olivator_score,
     scoreBreakdown: {
       acidity: row.score_breakdown?.acidity ?? 0,
       certifications: row.score_breakdown?.certifications ?? 0,
@@ -198,7 +199,9 @@ export const getProducts = cache(async (): Promise<Product[]> => {
     .from('products')
     .select(PRODUCT_PUBLIC_COLUMNS)
     .eq('status', 'active')
-    .order('olivator_score', { ascending: false })
+    // nullsFirst: false → produkty bez score (flavored / data missing) jdou na konec
+    // místo na začátek (Postgres default při DESC dává NULL první).
+    .order('olivator_score', { ascending: false, nullsFirst: false })
   if (error) throw error
   const products = (data as unknown as ProductRow[]).map(mapProduct)
   // Override imageUrl s primary obrázkem z product_images gallery (high-res
@@ -630,6 +633,7 @@ export interface VariantProduct {
   cheapestPrice: number | null
   olivatorScore: number | null
   imageUrl: string | null
+  type: string | null
 }
 
 /** Find sibling products of given product (same brand + region + base name).
@@ -651,7 +655,7 @@ export async function getVariantProducts(productId: string): Promise<VariantProd
   // Match products with same brand. If no brand, fall back to same region.
   let query = supabaseAdmin
     .from('products')
-    .select('id, slug, name, volume_ml, packaging, olivator_score, name_short, origin_region, image_url')
+    .select('id, slug, name, volume_ml, packaging, olivator_score, name_short, origin_region, image_url, type')
     .eq('status', 'active')
     .neq('id', productId)
   if (brand) {
@@ -695,6 +699,7 @@ export async function getVariantProducts(productId: string): Promise<VariantProd
       cheapestPrice: cheapestByProduct.get(c.id as string) ?? null,
       olivatorScore: c.olivator_score as number | null,
       imageUrl: c.image_url as string | null,
+      type: c.type as string | null,
     }))
     .sort((a, b) => (a.volumeMl ?? 0) - (b.volumeMl ?? 0))
 }

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { QUIZ_QUESTIONS, findRecommendations, type QuizAnswers } from '@/lib/quiz'
 import { formatPrice, formatPricePer100ml } from '@/lib/utils'
 import type { Product, ProductOffer } from '@/lib/types'
+import { ScoreBadge } from './score-badge'
 
 type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
 
@@ -184,7 +185,7 @@ function QuizResults({
           Co jsme pro tebe vybrali
         </h2>
         <p className="text-sm text-text3">
-          Z {products.filter(p => p.olivatorScore > 0).length} olejů v databázi — seřazeno dle shody
+          Z {products.filter(p => p.olivatorScore != null && p.olivatorScore > 0).length} olejů v databázi — seřazeno dle shody
         </p>
       </div>
 
@@ -216,8 +217,8 @@ function QuizResults({
                     >
                       {p.name}
                     </Link>
-                    <span className="shrink-0 text-[11px] font-bold bg-terra text-white rounded-full px-2.5 py-0.5">
-                      {p.olivatorScore}
+                    <span className="shrink-0">
+                      <ScoreBadge score={p.olivatorScore} type={p.type} size="small" />
                     </span>
                   </div>
 

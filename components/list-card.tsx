@@ -6,6 +6,7 @@ import type { Product, ProductOffer } from '@/lib/types'
 import { countryName, formatPrice, formatPricePer100ml, certLabel } from '@/lib/utils'
 import { ProductImage } from './product-image'
 import { WishlistButton } from './wishlist-button'
+import { ScoreBadge } from './score-badge'
 
 interface ListCardProps {
   product: Product
@@ -64,10 +65,24 @@ export function ListCard({ product, offer, rank, compact = false }: ListCardProp
               </div>
             </div>
             <div className="text-center shrink-0 ml-1">
-              <div className="text-[24px] font-bold text-terra leading-none tracking-tight">
-                {product.olivatorScore}
-              </div>
-              <div className="text-[9px] text-text3 uppercase tracking-wider mt-0.5">Score</div>
+              {product.type === 'flavored' ? (
+                <>
+                  <div className="text-[10px] font-bold text-terra uppercase tracking-wider leading-tight">Aroma</div>
+                  <div className="text-[8px] text-text3 mt-0.5">olej</div>
+                </>
+              ) : product.olivatorScore != null && product.olivatorScore > 0 ? (
+                <>
+                  <div className="text-[24px] font-bold text-terra leading-none tracking-tight">
+                    {product.olivatorScore}
+                  </div>
+                  <div className="text-[9px] text-text3 uppercase tracking-wider mt-0.5">Score</div>
+                </>
+              ) : (
+                <>
+                  <div className="text-[24px] font-bold text-text3 leading-none tracking-tight">—</div>
+                  <div className="text-[8px] text-text3 mt-0.5">připravujeme</div>
+                </>
+              )}
             </div>
           </div>
           {offer && (
@@ -148,12 +163,26 @@ export function ListCard({ product, offer, rank, compact = false }: ListCardProp
           </div>
 
           <div className="text-center shrink-0">
-            <div className="text-2xl font-bold text-terra tracking-tight">
-              {product.olivatorScore}
-            </div>
-            <div className="text-[10px] text-text3 uppercase tracking-wider">
-              Score
-            </div>
+            {product.type === 'flavored' ? (
+              <>
+                <div className="text-[11px] font-bold text-terra uppercase tracking-wider">Aroma</div>
+                <div className="text-[9px] text-text3 mt-0.5">olej</div>
+              </>
+            ) : product.olivatorScore != null && product.olivatorScore > 0 ? (
+              <>
+                <div className="text-2xl font-bold text-terra tracking-tight">
+                  {product.olivatorScore}
+                </div>
+                <div className="text-[10px] text-text3 uppercase tracking-wider">
+                  Score
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold text-text3 tracking-tight">—</div>
+                <div className="text-[9px] text-text3 mt-0.5">připravujeme</div>
+              </>
+            )}
           </div>
 
           {offer && (
@@ -219,8 +248,8 @@ function CompactCard({ product, offer, rank }: { product: Product; offer?: Produ
             {product.name}
           </div>
         </div>
-        <div className="bg-terra text-white text-[11px] font-bold px-2 py-0.5 rounded-full tabular-nums shrink-0">
-          {product.olivatorScore}
+        <div className="shrink-0">
+          <ScoreBadge score={product.olivatorScore} type={product.type} size="small" />
         </div>
       </div>
 

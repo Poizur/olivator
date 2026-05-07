@@ -16,6 +16,7 @@ import { RetailerCard } from '@/components/retailer-card'
 import { PriceSparkline } from '@/components/price-sparkline'
 import { PriceAlertButton } from '@/components/price-alert-button'
 import { ProductActions } from './product-actions'
+import { ScoreBadge } from '@/components/score-badge'
 
 export async function generateStaticParams() {
   const products = await getProducts()
@@ -39,11 +40,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const product = await getProductBySlug(slug)
   if (!product) return { title: 'Nenalezeno' }
 
-  const title = product.metaTitle || `${product.name} — Score ${product.olivatorScore}/100 · ceny, recenze`
+  // Pro aromatizované oleje a produkty bez kompletních dat → SEO bez Score čísla
+  const hasScore = product.type !== 'flavored' && product.olivatorScore != null && product.olivatorScore > 0
+  const title = product.metaTitle || (hasScore
+    ? `${product.name} — Score ${product.olivatorScore}/100 · ceny, recenze`
+    : `${product.name} — ceny, recenze, kde koupit`)
   const description = trimMeta(
     product.metaDescription ||
       product.descriptionShort ||
-      `${product.name} — Olivator Score ${product.olivatorScore}/100. Srovnání cen z 18 prodejců.`
+      (hasScore
+        ? `${product.name} — Olivator Score ${product.olivatorScore}/100. Srovnání cen z 18 prodejců.`
+        : `${product.name}. Srovnání cen z 18 prodejců, certifikace a parametry.`)
   )
   const url = `https://olivator.cz/olej/${product.slug}`
 
@@ -146,8 +153,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     // jen produkt s nejvyšším Score. Bez toho by se v Vyzkoušíš jiný? ukázaly
     // 3× Orino 1L/3L/5L (varianty stejného oleje). User feedback: "vadí mi
     // že je v nabídce 3 orino — jiná balení".
+    // Aromatizovaným olejům doporučujeme jen aromatizované (a naopak) — score 10/100
+    // u Bartolini lanýžových mátlo, nehodí se k EVOO; user feedback 2026-05-07.
+    const sameKind = rawCandidates.filter(p =>
+      product.type === 'flavored' ? p.type === 'flavored' : p.type !== 'flavored'
+    )
     const bestPerGroup = new Map<string, (typeof rawCandidates)[number]>()
-    for (const p of [...rawCandidates].sort((a, b) => b.olivatorScore - a.olivatorScore)) {
+    for (const p of [...sameKind].sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))) {
       const key = `${p.nameShort ?? ''}|${p.originRegion ?? ''}`
       if (!bestPerGroup.has(key)) bestPerGroup.set(key, p)
     }
@@ -163,7 +175,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         s += 0.3
         reasons.push(`stejná země`)
       }
-      const scoreDiff = Math.abs(p.olivatorScore - product.olivatorScore)
+      const scoreDiff = p.olivatorScore != null && product.olivatorScore != null
+        ? Math.abs(p.olivatorScore - product.olivatorScore)
+        : 999
       if (scoreDiff <= 10) {
         s += 0.2
         reasons.push(`Score ±${scoreDiff || 0}`)
@@ -319,12 +333,22 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             isPrimary: g.isPrimary,
           }))}
           scoreBadge={
-            <div className="bg-terra text-white text-sm font-bold px-4 py-2 rounded-full flex items-center gap-1.5 shadow-md">
-              <svg width="13" height="13" fill="#fff" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
-              Score {product.olivatorScore}
-            </div>
+            product.type === 'flavored' ? (
+              <div className="bg-terra text-white text-[12px] font-bold px-4 py-2 rounded-full uppercase tracking-wider shadow-md" title="Aromatizovaný olej — nehodnotíme EVOO škálou">
+                Aroma
+              </div>
+            ) : product.olivatorScore != null && product.olivatorScore > 0 ? (
+              <div className="bg-terra text-white text-sm font-bold px-4 py-2 rounded-full flex items-center gap-1.5 shadow-md">
+                <svg width="13" height="13" fill="#fff" viewBox="0 0 24 24">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                </svg>
+                Score {product.olivatorScore}
+              </div>
+            ) : (
+              <div className="bg-text3 text-white text-[11px] font-medium px-3 py-1.5 rounded-full shadow-md" title="Hodnocení připravujeme — chybí lab data">
+                Hodnocení připravujeme
+              </div>
+            )
           }
         />
 
@@ -468,11 +492,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   <span className="absolute top-1.5 left-1.5 z-10 text-[8px] font-bold uppercase tracking-wider bg-white/90 backdrop-blur-sm text-text3 rounded px-1.5 py-0.5">
                     Balení
                   </span>
-                  {v.olivatorScore != null && v.olivatorScore > 0 && (
-                    <span className="absolute top-1.5 right-1.5 z-10 text-[10px] font-bold bg-terra text-white rounded-full w-7 h-7 flex items-center justify-center tabular-nums">
-                      {v.olivatorScore}
-                    </span>
-                  )}
+                  <span className="absolute top-1.5 right-1.5 z-10">
+                    <ScoreBadge score={v.olivatorScore} type={v.type} size="small" />
+                  </span>
                   <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
                     {v.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -654,17 +676,31 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   {product.harvestYear && (
                     <FactRow label="Sklizeň" value={String(product.harvestYear)} />
                   )}
-                  <FactRow
-                    label="Score"
-                    value={`${product.olivatorScore}/100`}
-                    note={
-                      product.olivatorScore >= 80
-                        ? 'výjimečná kvalita'
-                        : product.olivatorScore >= 60
-                        ? 'kvalitní EVOO'
-                        : 'standardní'
-                    }
-                  />
+                  {product.type === 'flavored' ? (
+                    <FactRow
+                      label="Score"
+                      value="—"
+                      note="aromatizovaný olej, EVOO škálou nehodnotíme"
+                    />
+                  ) : product.olivatorScore != null && product.olivatorScore > 0 ? (
+                    <FactRow
+                      label="Score"
+                      value={`${product.olivatorScore}/100`}
+                      note={
+                        product.olivatorScore >= 80
+                          ? 'výjimečná kvalita'
+                          : product.olivatorScore >= 60
+                          ? 'kvalitní EVOO'
+                          : 'standardní'
+                      }
+                    />
+                  ) : (
+                    <FactRow
+                      label="Score"
+                      value="—"
+                      note="hodnocení připravujeme, chybí lab data"
+                    />
+                  )}
                   {product.certifications.length > 0 && (
                     <FactRow
                       label="Certifikace"
@@ -810,8 +846,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:border-olive-light"
               >
                 <div className="relative aspect-[4/5] bg-white overflow-hidden">
-                  <span className="absolute top-1.5 right-1.5 z-10 text-[10px] font-bold bg-terra text-white rounded-full w-7 h-7 flex items-center justify-center tabular-nums">
-                    {p.olivatorScore}
+                  <span className="absolute top-1.5 right-1.5 z-10">
+                    <ScoreBadge score={p.olivatorScore} type={p.type} size="small" />
                   </span>
                   <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
                     {p.imageUrl ? (

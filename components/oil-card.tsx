@@ -31,8 +31,20 @@ export function OilCard({ product, offer, isTop }: OilCardProps) {
           <div className="absolute inset-0 transition-transform duration-300 hover:scale-105">
             <ProductImage product={product} fallbackSize="text-[80px]" sizes="(max-width: 768px) 50vw, 300px" />
           </div>
-          <div className="absolute bottom-3 right-3 bg-terra text-white text-[11px] font-semibold px-2.5 py-1 rounded-full shadow-sm">
-            Score {product.olivatorScore}
+          <div className="absolute bottom-3 right-3 shadow-sm">
+            {product.type === 'flavored' ? (
+              <span className="bg-terra text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                Aroma
+              </span>
+            ) : product.olivatorScore != null && product.olivatorScore > 0 ? (
+              <span className="bg-terra text-white text-[11px] font-semibold px-2.5 py-1 rounded-full">
+                Score {product.olivatorScore}
+              </span>
+            ) : (
+              <span className="bg-text3 text-white text-[10px] font-medium px-2.5 py-1 rounded-full">
+                Připravujeme
+              </span>
+            )}
           </div>
         </div>
         <div className="px-4 pb-4 pt-3">

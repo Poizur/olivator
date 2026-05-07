@@ -92,16 +92,18 @@ const rules: QualityRule[] = [
         peroxideValue: p.peroxide_value,
         certifications: certs.length > 0 ? certs : p.certifications,
         pricePer100ml,
+        type: p.type,
       })
+      const dbScoreValue = score.insufficientData ? null : score.total
       await supabaseAdmin
         .from('products')
         .update({
           certifications: certs.length > 0 ? certs : p.certifications,
-          olivator_score: score.total,
+          olivator_score: dbScoreValue,
           score_breakdown: score.breakdown,
         })
         .eq('id', p.id)
-      return { ok: true, message: `Score recomputed: ${score.total}` }
+      return { ok: true, message: score.insufficientData ? 'Score n/a (chybí data)' : `Score recomputed: ${score.total}` }
     },
   },
 

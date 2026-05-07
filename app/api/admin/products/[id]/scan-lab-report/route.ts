@@ -38,7 +38,7 @@ export async function POST(
     // Read current product to only fill NULL fields
     const { data: product, error: readErr } = await supabaseAdmin
       .from('products')
-      .select('acidity, polyphenols, oleocanthal, peroxide_value, oleic_acid_pct, certifications, volume_ml')
+      .select('acidity, polyphenols, oleocanthal, peroxide_value, oleic_acid_pct, certifications, volume_ml, type')
       .eq('id', id)
       .maybeSingle()
     if (readErr) throw readErr
@@ -102,12 +102,14 @@ export async function POST(
         peroxideValue: peroxide,
         certifications: (product.certifications as string[]) ?? [],
         pricePer100ml,
+        type: (product.type as string) ?? null,
       })
+      const dbScoreValue = score.insufficientData ? null : score.total
       await supabaseAdmin
         .from('products')
-        .update({ olivator_score: score.total, score_breakdown: score.breakdown })
+        .update({ olivator_score: dbScoreValue, score_breakdown: score.breakdown })
         .eq('id', id)
-      newScore = score.total
+      newScore = dbScoreValue
       scoreBreakdown = score.breakdown
     }
 

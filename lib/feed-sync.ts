@@ -26,6 +26,7 @@ import {
 import { slugify } from './utils'
 import { runRescrape } from './product-rescrape'
 import { linkAndRecomputeForProduct } from './entity-aggregator'
+import { detectCertificationsInText } from './cert-detector'
 
 // Default země původu per XML retailer. Bez tohoto by všechny XML produkty
 // dostaly hardcode 'GR' (původně reckonasbavi-only). Italyshop má italský
@@ -288,6 +289,14 @@ async function ensureProduct(
   const baseSlug = slugify(item.productName)
   const slug = await uniqueSlug(baseSlug)
 
+  // Auto-detect certifikací z názvu + popisu (high-confidence only).
+  // Bez tohoto Bartolini IGP/DOP/Biologico produkty dostávaly score 10/100,
+  // protože certs zůstávaly prázdné. User feedback 2026-05-07.
+  const certText = `${item.productName}\n${item.description}`
+  const detectedCerts = detectCertificationsInText(certText)
+    .filter(c => c.confidence === 'high')
+    .map(c => c.cert)
+
   const { data: newProduct, error: insertErr } = await supabaseAdmin
     .from('products')
     .insert({
@@ -300,6 +309,7 @@ async function ensureProduct(
       peroxide_value: extractPeroxideValue(item),
       volume_ml: extractVolumeMl(item),
       packaging: detectPackaging(item),
+      certifications: detectedCerts,
       source_url: item.url,
       raw_description: item.description,
       // Image z Heureka XML IMGURL — ulož přímo, admin pak nemusí scrapovat.

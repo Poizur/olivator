@@ -25,6 +25,7 @@ interface ProductRow {
   oleic_acid_pct: number | null
   certifications: string[] | null
   volume_ml: number | null
+  type: string | null
 }
 
 async function getCheapestPricePer100ml(productId: string, volumeMl: number | null): Promise<number | null> {
@@ -92,7 +93,7 @@ export async function POST() {
   // ── Step 2: Lab scan ─────────────────────────────────────────────
   const { data: products } = await supabaseAdmin
     .from('products')
-    .select('id, name, slug, acidity, polyphenols, oleocanthal, peroxide_value, oleic_acid_pct, certifications, volume_ml')
+    .select('id, name, slug, acidity, polyphenols, oleocanthal, peroxide_value, oleic_acid_pct, certifications, volume_ml, type')
     .eq('status', 'active')
     .returns<ProductRow[]>()
   const needScan = (products ?? []).filter(
@@ -133,12 +134,13 @@ export async function POST() {
             polyphenols: merged.polyphenols,
             peroxideValue: merged.peroxide_value,
             pricePer100ml,
+            type: merged.type,
           })
           await supabaseAdmin
             .from('products')
             .update({
               ...patch,
-              olivator_score: score.total,
+              olivator_score: score.insufficientData ? null : score.total,
               score_breakdown: score.breakdown,
               updated_at: new Date().toISOString(),
             })

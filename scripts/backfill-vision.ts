@@ -37,6 +37,7 @@ interface ProductRow {
   oleic_acid_pct: number | null
   certifications: string[] | null
   volume_ml: number | null
+  type: string | null
 }
 
 async function getCheapestPricePer100ml(productId: string, volumeMl: number | null): Promise<number | null> {
@@ -102,7 +103,7 @@ async function step2_lab() {
   console.log('\n[2/2] Auto-scan lab reports pro produkty s chybějící chemií')
   const { data: products, error } = await supabaseAdmin
     .from('products')
-    .select('id, name, slug, acidity, polyphenols, peroxide_value, oleic_acid_pct, certifications, volume_ml')
+    .select('id, name, slug, acidity, polyphenols, peroxide_value, oleic_acid_pct, certifications, volume_ml, type')
     .eq('status', 'active')
     .returns<ProductRow[]>()
   if (error || !products) { console.error(error); return }
@@ -149,13 +150,14 @@ async function step2_lab() {
           polyphenols: merged.polyphenols,
           peroxideValue: merged.peroxide_value,
           pricePer100ml,
+          type: merged.type,
         })
 
         await supabaseAdmin
           .from('products')
           .update({
             ...patch,
-            olivator_score: score.total,
+            olivator_score: score.insufficientData ? null : score.total,
             score_breakdown: score.breakdown,
             updated_at: new Date().toISOString(),
           })

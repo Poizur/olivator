@@ -14,7 +14,7 @@ export interface Product {
   nameShort: string
   originCountry: string
   originRegion: string
-  type: 'evoo' | 'virgin' | 'refined' | 'olive_oil' | 'pomace'
+  type: 'evoo' | 'virgin' | 'refined' | 'olive_oil' | 'pomace' | 'flavored'
   acidity: number | null           // null when not tested / not published
   polyphenols: number | null       // null is common — lab analysis is expensive
   oleocanthal: number | null       // mg/kg — protizánětlivý fenol, pálivý vjem v hrdle
@@ -27,7 +27,8 @@ export interface Product {
   useCases: string[]
   volumeMl: number
   packaging: string
-  olivatorScore: number
+  /** null = nedostatek dat pro férové score (chybí 2+ klíčové komponenty) nebo type='flavored' */
+  olivatorScore: number | null
   scoreBreakdown: ScoreBreakdown
   descriptionShort: string
   descriptionLong: string

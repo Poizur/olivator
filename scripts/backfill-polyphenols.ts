@@ -20,6 +20,7 @@ interface ProductRow {
   volume_ml: number | null
   description_short: string | null
   description_long: string | null
+  type: string | null
 }
 
 interface OfferRow {
@@ -49,7 +50,7 @@ async function main() {
   const { data: products, error } = await supabaseAdmin
     .from('products')
     .select(
-      'id, name, slug, acidity, certifications, polyphenols, peroxide_value, volume_ml, description_short, description_long'
+      'id, name, slug, acidity, certifications, polyphenols, peroxide_value, volume_ml, description_short, description_long, type'
     )
     .eq('status', 'active')
     .is('polyphenols', null)
@@ -86,13 +87,14 @@ async function main() {
       polyphenols: value,
       peroxideValue: p.peroxide_value,
       pricePer100ml,
+      type: p.type,
     })
 
     const { error: updateErr } = await supabaseAdmin
       .from('products')
       .update({
         polyphenols: value,
-        olivator_score: score.total,
+        olivator_score: score.insufficientData ? null : score.total,
         score_breakdown: score.breakdown,
         updated_at: new Date().toISOString(),
       })

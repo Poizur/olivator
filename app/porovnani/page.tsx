@@ -49,10 +49,12 @@ export async function generateMetadata({
   }
 
   const names = items.map((p) => p.nameShort).join(' vs ')
-  const winner = [...items].sort((a, b) => b.olivatorScore - a.olivatorScore)[0]
+  const winner = [...items].sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))[0]
+  const winnerScore = winner.type !== 'flavored' && winner.olivatorScore != null && winner.olivatorScore > 0
+    ? ` (Score ${winner.olivatorScore})` : ''
   const desc = `Porovnání ${items.length} olivových olejů: ${items
     .map((p) => p.nameShort)
-    .join(', ')}. Nejlepší: ${winner.nameShort} (Score ${winner.olivatorScore}).`
+    .join(', ')}. Nejlepší: ${winner.nameShort}${winnerScore}.`
 
   return {
     title: `${names} — porovnání`,

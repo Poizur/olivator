@@ -63,6 +63,7 @@ export function typeLabel(type: string): string {
     refined: 'Rafinovaný',
     olive_oil: 'Olivový olej',
     pomace: 'Pokrutinový',
+    flavored: 'Aromatizovaný',
   }
   return labels[type] || type
 }

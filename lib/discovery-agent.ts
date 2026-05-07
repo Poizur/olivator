@@ -570,10 +570,12 @@ export async function publishCandidate(
     certifications: detectedCerts,
     pricePer100ml:
       scraped.price && scraped.volumeMl ? (scraped.price / scraped.volumeMl) * 100 : null,
+    type: scraped.type,
   })
+  const dbScoreValue = score.insufficientData ? null : score.total
   await supabaseAdmin
     .from('products')
-    .update({ olivator_score: score.total, score_breakdown: score.breakdown })
+    .update({ olivator_score: dbScoreValue, score_breakdown: score.breakdown })
     .eq('id', productId)
 
   // Use cases

@@ -18,6 +18,7 @@ import { ComparatorTeaser, type Duel } from '@/components/comparator-teaser'
 import { countryName, countryFlag, formatPrice, formatPricePer100ml } from '@/lib/utils'
 import { computeBadges, pickByCategory, type ProductBadge } from '@/lib/product-badges'
 import type { Product, ProductOffer } from '@/lib/types'
+import { ScoreBadge } from '@/components/score-badge'
 
 export const revalidate = 3600
 
@@ -38,8 +39,8 @@ export default async function Home() {
 
   // Top 3 by Score for hero sidebar
   const topPicks = [...allProducts]
-    .filter((p) => p.cheapestOffer != null && p.olivatorScore >= 60)
-    .sort((a, b) => b.olivatorScore - a.olivatorScore)
+    .filter((p) => p.cheapestOffer != null && p.olivatorScore != null && p.olivatorScore >= 60)
+    .sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
     .slice(0, 3)
 
   // Lookup table for AI sommelier reply → product card
@@ -47,9 +48,11 @@ export default async function Home() {
   for (const p of allProducts) productLookup[p.slug] = p
 
   // Top 12 olejů této chvíle (catalog teaser — 3×4 grid)
+  // Filter na produkty se score (vyřazujeme flavored/insufficient data — homepage
+  // featuruje jen oleje, kde má smysl Score srovnávat).
   const topTwelve = [...allProducts]
-    .filter((p) => p.cheapestOffer != null)
-    .sort((a, b) => b.olivatorScore - a.olivatorScore)
+    .filter((p) => p.cheapestOffer != null && p.olivatorScore != null && p.olivatorScore > 0)
+    .sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
     .slice(0, 12)
 
   // Auto-vypočítané badges pro top 12 (Top Score / Nejvíc polyfenolů / …)
@@ -64,7 +67,8 @@ export default async function Home() {
   const withOffer = allProducts.filter((p) => p.cheapestOffer != null)
 
   const duelTopScore = [...withOffer]
-    .sort((a, b) => b.olivatorScore - a.olivatorScore)
+    .filter((p) => p.olivatorScore != null && p.olivatorScore > 0)
+    .sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
     .slice(0, 3)
 
   const duelBioGreek = withOffer
@@ -88,9 +92,10 @@ export default async function Home() {
     .filter(
       (p) =>
         p.cheapestOffer!.price <= 500 &&
+        p.olivatorScore != null && p.olivatorScore > 0 &&
         !duelTopScore.some((t) => t.id === p.id)
     )
-    .sort((a, b) => b.olivatorScore - a.olivatorScore)
+    .sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
     .slice(0, 3)
 
   const duels: Duel[] = [
@@ -290,9 +295,11 @@ export default async function Home() {
                     fallbackSize="text-[100px]"
                     sizes="(max-width: 768px) 100vw, 280px"
                   />
-                  <div className="absolute top-4 left-4 bg-terra text-white rounded-full px-3 py-1 text-xs font-bold tabular-nums shadow-md">
-                    {oilOfDay.olivatorScore}/100
-                  </div>
+                  {oilOfDay.olivatorScore != null && oilOfDay.olivatorScore > 0 && oilOfDay.type !== 'flavored' && (
+                    <div className="absolute top-4 left-4 bg-terra text-white rounded-full px-3 py-1 text-xs font-bold tabular-nums shadow-md">
+                      {oilOfDay.olivatorScore}/100
+                    </div>
+                  )}
                 </div>
 
                 <div className="p-6 md:p-8 flex flex-col">
@@ -601,8 +608,8 @@ function TopProductCard({
           </span>
         )}
         {/* Score — menší kruh pro užší kartu */}
-        <span className="absolute top-1.5 right-1.5 z-10 text-[12px] font-bold bg-terra text-white rounded-full w-9 h-9 flex items-center justify-center tabular-nums shadow-md">
-          {product.olivatorScore}
+        <span className="absolute top-1.5 right-1.5 z-10 shadow-md rounded-full">
+          <ScoreBadge score={product.olivatorScore} type={product.type} size="medium" />
         </span>
         {/* Vlajka — menší */}
         <span
@@ -684,8 +691,8 @@ function FeaturedTip({
       <div className="grid grid-cols-[120px_1fr] gap-0">
         <div className="aspect-square bg-white relative">
           <ProductImage product={product} fallbackSize="text-[44px]" sizes="120px" />
-          <div className="absolute top-2 left-2 bg-terra text-white rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums">
-            {product.olivatorScore}
+          <div className="absolute top-2 left-2">
+            <ScoreBadge score={product.olivatorScore} type={product.type} size="small" />
           </div>
         </div>
         <div className="p-4 flex flex-col">

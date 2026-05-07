@@ -11,6 +11,7 @@ const TYPE_OPTIONS = [
   { value: 'refined', label: 'Rafinovaný' },
   { value: 'olive_oil', label: 'Olivový olej' },
   { value: 'pomace', label: 'Pokrutinový' },
+  { value: 'flavored', label: 'Aromatizovaný (s lanýžem, bylinkami…)' },
 ]
 const CERT_OPTIONS: { value: string; label: string }[] = [
   { value: 'dop', label: 'DOP' },                // Chráněné označení původu
@@ -336,12 +337,14 @@ export function ProductForm({
                 polyphenols: polyphenols ? Number(polyphenols) : null,
                 peroxideValue: peroxideValue ? Number(peroxideValue) : null,
                 pricePer100ml,
+                type,
               })
               setSbA(String(result.breakdown.acidity))
               setSbC(String(result.breakdown.certifications))
               setSbQ(String(result.breakdown.quality))
               setSbV(String(result.breakdown.value))
-              setScore(String(result.total))
+              // Při insufficientData (flavored nebo <50% váhy) nech score prázdné
+              setScore(result.insufficientData ? '' : String(result.total))
             }}
             className="bg-olive text-white rounded-full px-4 py-1.5 text-[13px] font-medium hover:bg-olive-dark transition-colors"
           >

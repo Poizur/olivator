@@ -215,7 +215,7 @@ function inferBrand(name: string | null): string | null {
   return extractBrand(name) || null
 }
 
-function extractAcidity(text: string | null): number | null {
+export function extractAcidity(text: string | null): number | null {
   if (!text) return null
   // Patterns to handle (in order of specificity):
   //   "acidita: 0,3%"             → 0.3

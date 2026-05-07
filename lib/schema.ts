@@ -67,6 +67,11 @@ export function productSchema(product: Product, offers: ProductOffer[]) {
   // (hvězdičky + cena v SERP). Bez tohoto pole se rich result NEZOBRAZUJE.
   const image = product.imageUrl ? [product.imageUrl] : undefined
 
+  // Rating schema vynechej pro flavored / null score — Google penalizuje
+  // "rating without basis" v rich results (shows "Schema review marked as spam").
+  // Lepší žádný rating než falešný 0/100.
+  const hasRating = product.type !== 'flavored' && product.olivatorScore != null && product.olivatorScore > 0
+
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -88,23 +93,25 @@ export function productSchema(product: Product, offers: ProductOffer[]) {
       ...(product.polyphenols != null ? [{ '@type': 'PropertyValue', name: 'Polyfenoly', value: `${product.polyphenols} mg/kg` }] : []),
       { '@type': 'PropertyValue', name: 'Typ', value: typeLabel(product.type) },
     ],
-    review: {
-      '@type': 'Review',
-      author: { '@type': 'Organization', name: 'Olivator.cz' },
-      reviewRating: {
-        '@type': 'Rating',
+    ...(hasRating ? {
+      review: {
+        '@type': 'Review',
+        author: { '@type': 'Organization', name: 'Olivator.cz' },
+        reviewRating: {
+          '@type': 'Rating',
+          ratingValue: product.olivatorScore,
+          bestRating: 100,
+          worstRating: 0,
+        },
+      },
+      aggregateRating: {
+        '@type': 'AggregateRating',
         ratingValue: product.olivatorScore,
         bestRating: 100,
         worstRating: 0,
+        ratingCount: 1,
       },
-    },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: product.olivatorScore,
-      bestRating: 100,
-      worstRating: 0,
-      ratingCount: 1,
-    },
+    } : {}),
     offers: cheapest
       ? {
           '@type': 'AggregateOffer',

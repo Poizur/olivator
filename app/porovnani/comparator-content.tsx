@@ -7,6 +7,7 @@ import { useCompare } from '@/lib/compare-context'
 import { formatPrice, formatPricePer100ml, certLabel, typeLabel, countryName } from '@/lib/utils'
 import { productSchema } from '@/lib/schema'
 import type { Product, ProductOffer } from '@/lib/types'
+import { ScoreBadge } from '@/components/score-badge'
 
 const PACKAGING_LABELS: Record<string, string> = {
   dark_glass: 'Tmavé sklo',
@@ -52,7 +53,7 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
   const notInCompare = allProducts.filter(p => !items.some(i => i.id === p.id))
 
   const winner = items.length >= 2
-    ? items.reduce((best, p) => p.olivatorScore > best.olivatorScore ? p : best)
+    ? items.reduce((best, p) => (p.olivatorScore ?? 0) > (best.olivatorScore ?? 0) ? p : best)
     : null
 
   // Smart suggestions: pro každý kandidát spočítáme podobnost vůči všem
@@ -61,14 +62,16 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
   const suggestions = (() => {
     if (notInCompare.length === 0) return []
     if (items.length === 0) {
-      return [...notInCompare].sort((a, b) => b.olivatorScore - a.olivatorScore).slice(0, 4)
+      return [...notInCompare].sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0)).slice(0, 4)
     }
     const scored = notInCompare.map((p) => {
       const similarity = items.reduce((sum, item) => {
         let s = 0
         if (p.originCountry && p.originCountry === item.originCountry) s += 0.3
         if (p.originRegion && p.originRegion === item.originRegion) s += 0.2
-        const scoreDiff = Math.abs(p.olivatorScore - item.olivatorScore)
+        const scoreDiff = p.olivatorScore != null && item.olivatorScore != null
+          ? Math.abs(p.olivatorScore - item.olivatorScore)
+          : 999
         s += Math.max(0, (20 - scoreDiff) / 20) * 0.2
         const sharedCerts = p.certifications.filter((c) => item.certifications.includes(c)).length
         s += Math.min(sharedCerts * 0.1, 0.2)
@@ -90,8 +93,12 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
   const metrics = [
     {
       label: 'Olivator Score',
-      getValue: (p: Product) => p.olivatorScore,
-      format: (v: number) => String(v),
+      getValue: (p: Product) => p.olivatorScore ?? 0,
+      format: (v: number, p?: Product) => {
+        if (p?.type === 'flavored') return 'Aroma'
+        if (v === 0) return '—'
+        return String(v)
+      },
       higherBetter: true,
       showBar: true,
     },
@@ -204,8 +211,8 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                     {item.originCountry}
                   </div>
                 )}
-                <div className="absolute top-1.5 right-1.5 bg-terra text-white text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
-                  {item.olivatorScore}
+                <div className="absolute top-1.5 right-1.5">
+                  <ScoreBadge score={item.olivatorScore} type={item.type} size="small" />
                 </div>
               </div>
               <div className="text-base font-semibold text-text leading-tight mb-1.5 line-clamp-2 min-h-[40px]">
@@ -275,7 +282,13 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                       {p.volumeMl > 0 && <span className="text-text3 ml-1">{p.volumeMl >= 1000 ? `${p.volumeMl / 1000}l` : `${p.volumeMl}ml`}</span>}
                     </div>
                     <div className="text-[10px] text-text3 mt-0.5 flex items-center gap-1.5">
-                      <span className="text-terra font-semibold">Score {p.olivatorScore}</span>
+                      {p.type === 'flavored' ? (
+                        <span className="text-terra font-semibold uppercase tracking-wider text-[9px]">Aroma</span>
+                      ) : p.olivatorScore != null && p.olivatorScore > 0 ? (
+                        <span className="text-terra font-semibold">Score {p.olivatorScore}</span>
+                      ) : (
+                        <span className="text-text3">Score —</span>
+                      )}
                       {offer && <span>· {offer.price} Kč</span>}
                     </div>
                   </div>
@@ -306,7 +319,9 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
           if (winner.certifications.length > 0) {
             parts.push(`certifikace ${winner.certifications.map(certLabel).join(' + ')}`)
           }
-          return parts.length > 0 ? parts.join(', ') + '.' : `Celkové skóre ${winner.olivatorScore}/100.`
+          if (parts.length > 0) return parts.join(', ') + '.'
+          if (winner.olivatorScore != null && winner.olivatorScore > 0) return `Celkové skóre ${winner.olivatorScore}/100.`
+          return 'Vybráno na základě profilu.'
         })()
 
         return (
@@ -328,7 +343,10 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                 Olivator doporučuje
               </div>
               <Link href={`/olej/${winner.slug}`} className="text-sm font-medium text-text leading-tight block hover:text-olive-dark transition-colors">
-                {winner.name} <span className="text-text3 font-normal">— Score {winner.olivatorScore}</span>
+                {winner.name}
+                {winner.type !== 'flavored' && winner.olivatorScore != null && winner.olivatorScore > 0 && (
+                  <span className="text-text3 font-normal"> — Score {winner.olivatorScore}</span>
+                )}
               </Link>
               <div className="text-xs text-text2 mt-1">{reasons}</div>
             </div>
@@ -408,7 +426,8 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                       </div>
                     )}
                   </div>
-                  <div className="bg-terra text-white text-sm font-bold px-2.5 py-1 rounded-full">{item.olivatorScore}</div>
+                  <ScoreBadge score={item.olivatorScore} type={item.type} size="medium" />
+
                 </Link>
                 <div className="divide-y divide-off">
                   {metrics.map((metric) => {

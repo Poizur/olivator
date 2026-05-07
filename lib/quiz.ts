@@ -109,7 +109,7 @@ export function scoreProductForAnswers(
       score += 12
       reasons.push(`${p.polyphenols} mg/kg polyfenolů — splňuje EU Health Claim`)
     }
-    if (uc === 'gift' && p.olivatorScore >= 75) {
+    if (uc === 'gift' && p.olivatorScore != null && p.olivatorScore >= 75) {
       score += 18
       reasons.push(`Score ${p.olivatorScore}/100 — důstojný dárek`)
     }
@@ -198,7 +198,7 @@ export function scoreProductForAnswers(
   }
 
   // Olivator Score je univerzální tiebreaker — bonus za top score
-  score += p.olivatorScore / 10
+  score += (p.olivatorScore ?? 0) / 10
 
   return { score, reasons }
 }
@@ -209,7 +209,8 @@ export function findRecommendations(
   answers: QuizAnswers
 ): ScoredProduct[] {
   const scored = products
-    .filter((p) => p.olivatorScore > 0) // skip produkty bez Score
+    // Skip flavored a produkty bez Score — quiz doporučuje jen čistý EVOO
+    .filter((p) => p.type !== 'flavored' && p.olivatorScore != null && p.olivatorScore > 0)
     .map((p) => {
       const result = scoreProductForAnswers(p, answers)
       return { product: p, ...result }

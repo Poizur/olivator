@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Trophy, Leaf, Gift, ArrowLeftRight, Check } from 'lucide-react'
 import { ProductImage } from './product-image'
+import { ScoreBadge } from './score-badge'
 import { formatPrice } from '@/lib/utils'
 import type { Product, ProductOffer } from '@/lib/types'
 
@@ -102,9 +103,8 @@ export function ComparatorTeaser({
                         {p.nameShort || p.name}
                       </div>
                       <div className="flex flex-col items-center gap-0.5">
-                        <span className="text-[9px] font-bold bg-terra text-white rounded-full px-1.5 py-0.5 tabular-nums leading-none">
-                          {p.olivatorScore}
-                        </span>
+                        <ScoreBadge score={p.olivatorScore} type={p.type} size="small" />
+
                         {p.cheapestOffer && (
                           <span className="text-[10px] font-semibold text-text tabular-nums">
                             {formatPrice(p.cheapestOffer.price)}

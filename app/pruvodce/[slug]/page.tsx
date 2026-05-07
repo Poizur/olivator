@@ -250,7 +250,13 @@ export default async function ArticleDetailPage({
                           {p.nameShort || p.name}
                         </div>
                         <div className="text-[11px] text-text3 mt-0.5 flex items-center gap-2">
-                          <span className="text-terra font-semibold">{p.olivatorScore}</span>
+                          {p.type === 'flavored' ? (
+                            <span className="text-terra font-bold uppercase tracking-wider text-[9px]">Aroma</span>
+                          ) : p.olivatorScore != null && p.olivatorScore > 0 ? (
+                            <span className="text-terra font-semibold">{p.olivatorScore}</span>
+                          ) : (
+                            <span className="text-text3">—</span>
+                          )}
                           {p.cheapestOffer && (
                             <span>· {formatPrice(p.cheapestOffer.price)}</span>
                           )}

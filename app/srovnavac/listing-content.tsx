@@ -128,7 +128,7 @@ export function ListingContent({
         list.sort((a, b) => (b.polyphenols ?? 0) - (a.polyphenols ?? 0))
         break
       default:
-        list.sort((a, b) => b.olivatorScore - a.olivatorScore)
+        list.sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
     }
 
     return list

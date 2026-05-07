@@ -222,7 +222,7 @@ export async function runRescrape(
   // ── 6. Score recalculation ──────────────────────────────────────────────
   const { data: freshProduct } = await supabaseAdmin
     .from('products')
-    .select('acidity, polyphenols, peroxide_value, certifications, volume_ml')
+    .select('acidity, polyphenols, peroxide_value, certifications, volume_ml, type')
     .eq('id', productId)
     .maybeSingle()
   const { data: offers } = await supabaseAdmin
@@ -241,14 +241,18 @@ export async function runRescrape(
     peroxideValue: freshProduct?.peroxide_value != null ? Number(freshProduct.peroxide_value) : null,
     certifications: (freshProduct?.certifications as string[]) ?? [],
     pricePer100ml,
+    type: (freshProduct?.type as string) ?? null,
   })
+  // insufficientData → olivator_score = null. Frontend pak místo "10/100" zobrazí
+  // "Hodnocení připravujeme" / "Aromatizovaný" badge.
+  const dbScoreValue = score.insufficientData ? null : score.total
   await supabaseAdmin
     .from('products')
-    .update({ olivator_score: score.total, score_breakdown: score.breakdown })
+    .update({ olivator_score: dbScoreValue, score_breakdown: score.breakdown })
     .eq('id', productId)
-  scoreTotal = score.total
+  scoreTotal = score.insufficientData ? null : score.total
   scoreBreakdown = score.breakdown
-  steps.push(`Score ${score.total}/100`)
+  steps.push(score.insufficientData ? 'Score n/a (chybí data)' : `Score ${score.total}/100`)
 
   // ── 6b. Use cases (rule-based) ──────────────────────────────────────────
   const { data: flavorRow } = await supabaseAdmin

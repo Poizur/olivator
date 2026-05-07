@@ -47,11 +47,11 @@ function pricePer100ml(p: ProductWithOffer): number | null {
  *  neseděl s realitou. Teď týden = stálé doporučení po celý týden. */
 export function pickOilOfDay(all: ProductWithOffer[]): ProductWithOffer | null {
   const candidates = all
-    .filter((p) => p.olivatorScore >= 60 && p.cheapestOffer != null && p.volumeMl > 0)
+    .filter((p) => p.olivatorScore != null && p.olivatorScore >= 60 && p.cheapestOffer != null && p.volumeMl > 0)
     .map((p) => {
       const ppm = pricePer100ml(p)!
       // value = score / log(price per 100ml). Vyšší = lepší.
-      const value = p.olivatorScore / Math.log(Math.max(ppm, 10))
+      const value = (p.olivatorScore ?? 0) / Math.log(Math.max(ppm, 10))
       return { p, value }
     })
     .sort((a, b) => b.value - a.value)
@@ -66,14 +66,14 @@ export function pickOilOfDay(all: ProductWithOffer[]): ProductWithOffer | null {
 export function pickScoreFeature(all: ProductWithOffer[]): ProductWithOffer | null {
   const candidates = all
     .filter((p) => {
-      if (p.olivatorScore < 65) return false
+      if (p.olivatorScore == null || p.olivatorScore < 65) return false
       if (p.cheapestOffer == null) return false
       const sb = p.scoreBreakdown
       // Potřebujeme všechny 4 komponenty pro vizuální breakdown
       if (!sb || typeof sb.acidity !== 'number') return false
       return true
     })
-    .sort((a, b) => b.olivatorScore - a.olivatorScore)
+    .sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
     .slice(0, 8)
 
   if (candidates.length === 0) return null

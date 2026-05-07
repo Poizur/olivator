@@ -346,7 +346,11 @@ export default async function RecipeDetailPage({
                         {p.name}
                       </div>
                       <div className="text-[11px] text-text2">
-                        Score {p.olivatorScore}
+                        {p.type === 'flavored'
+                          ? <span className="uppercase tracking-wider text-[10px] text-terra font-bold">Aroma</span>
+                          : p.olivatorScore != null && p.olivatorScore > 0
+                            ? <>Score {p.olivatorScore}</>
+                            : <span className="text-text3">Score —</span>}
                         {p.originRegion && <> · {p.originRegion}</>}
                       </div>
                     </div>

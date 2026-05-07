@@ -35,9 +35,10 @@ export function computeBadges(
   if (products.length === 0) return badges
 
   // ─── Hlavní sólo vítězové ─────────────────────────────────────────
-  // 1. Top Score
-  const topScore = [...products].sort((a, b) => b.olivatorScore - a.olivatorScore)[0]
-  if (topScore && topScore.olivatorScore >= 70) {
+  // 1. Top Score (jen produkty se score; flavored přeskočíme)
+  const scorable = products.filter((p) => p.type !== 'flavored' && p.olivatorScore != null && p.olivatorScore > 0)
+  const topScore = [...scorable].sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))[0]
+  if (topScore && topScore.olivatorScore != null && topScore.olivatorScore >= 70) {
     badges.set(topScore.id, {
       label: 'Top Score',
       tone: 'gold',
@@ -57,12 +58,12 @@ export function computeBadges(
     })
   }
 
-  // 3. Nejlepší cena/Score — výhra pro budget choice
+  // 3. Nejlepší cena/Score — výhra pro budget choice (jen scorable)
   const bestValue = products
-    .filter((p) => !badges.has(p.id) && p.cheapestOffer && p.volumeMl > 0)
+    .filter((p) => !badges.has(p.id) && p.cheapestOffer && p.volumeMl > 0 && p.olivatorScore != null && p.olivatorScore > 0)
     .map((p) => {
       const pricePer100 = (p.cheapestOffer!.price / p.volumeMl) * 100
-      return { p, ratio: p.olivatorScore / pricePer100 }
+      return { p, ratio: (p.olivatorScore ?? 0) / pricePer100 }
     })
     .sort((a, b) => b.ratio - a.ratio)[0]
   if (bestValue && bestValue.ratio > 0.5) {
@@ -142,7 +143,8 @@ export function pickByCategory(
   category: 'vyrazny' | 'jemny' | 'zdravy'
 ): ProductWithOffer | null {
   const ranked = [...products]
-    .filter((p) => p.cheapestOffer != null)
+    // Skip flavored — pickByCategory featuruje jen čistý EVOO podle chuti/zdraví
+    .filter((p) => p.cheapestOffer != null && p.type !== 'flavored')
     .map((p) => {
       let categoryScore = 0
       if (category === 'vyrazny') {
@@ -156,7 +158,7 @@ export function pickByCategory(
         categoryScore = (p.polyphenols ?? 0) / 10  // normalizováno do 0-100ish
       }
       // Kombinujeme: 70 % chuť/zdraví, 30 % score (musí být i kvalitní)
-      const combined = categoryScore * 0.7 + p.olivatorScore * 0.3
+      const combined = categoryScore * 0.7 + (p.olivatorScore ?? 0) * 0.3
       return { p, combined }
     })
     .sort((a, b) => b.combined - a.combined)

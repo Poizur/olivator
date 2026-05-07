@@ -23,7 +23,7 @@ export async function EntityProductsList({ entityType, entitySlug }: Props) {
     const { data } = await supabaseAdmin
       .from('products')
       .select(`
-        id, slug, name, name_short, olivator_score, origin_country, status,
+        id, slug, name, name_short, olivator_score, origin_country, status, type,
         product_offers ( price, currency )
       `)
       .eq('region_slug', entitySlug)
@@ -34,7 +34,7 @@ export async function EntityProductsList({ entityType, entitySlug }: Props) {
     const { data } = await supabaseAdmin
       .from('products')
       .select(`
-        id, slug, name, name_short, olivator_score, origin_country, status,
+        id, slug, name, name_short, olivator_score, origin_country, status, type,
         product_offers ( price, currency )
       `)
       .eq('brand_slug', entitySlug)
@@ -69,15 +69,20 @@ export async function EntityProductsList({ entityType, entitySlug }: Props) {
     slug: string
     name: string
     name_short: string | null
-    olivator_score: number
+    olivator_score: number | null
     origin_country: string | null
     status: string
+    type: string | null
     product_offers: Array<{ price: number; currency: string }>
   }>
 
   if (items.length === 0) return null
 
-  const avgScore = Math.round(items.reduce((s, p) => s + p.olivator_score, 0) / items.length)
+  // Průměr počítáme jen z produktů s reálným score — null/flavored ignorujeme
+  const scoreItems = items.filter(p => p.olivator_score != null && p.olivator_score > 0)
+  const avgScore = scoreItems.length > 0
+    ? Math.round(scoreItems.reduce((s, p) => s + (p.olivator_score ?? 0), 0) / scoreItems.length)
+    : null
   const cheapest = items
     .flatMap((p) => p.product_offers.map((o) => o.price))
     .filter(Boolean)
@@ -90,7 +95,7 @@ export async function EntityProductsList({ entityType, entitySlug }: Props) {
           Produkty v {ENTITY_LABEL[entityType]} ({items.length})
         </h3>
         <div className="flex gap-4 text-xs text-text3">
-          <span>Průměrný Score: <strong className="text-text">{avgScore}</strong></span>
+          {avgScore != null && <span>Průměrný Score: <strong className="text-text">{avgScore}</strong></span>}
           {cheapest && <span>Nejlevnější: <strong className="text-text">{formatPrice(cheapest)}</strong></span>}
         </div>
       </div>
@@ -125,15 +130,23 @@ export async function EntityProductsList({ entityType, entitySlug }: Props) {
                     <div className="text-[11px] text-text3">{p.origin_country?.toUpperCase()}</div>
                   </td>
                   <td className="px-3 py-2 text-center">
-                    <span className={`inline-block text-[11px] font-bold rounded-full px-2 py-0.5 tabular-nums ${
-                      p.olivator_score >= 80
-                        ? 'bg-olive text-white'
-                        : p.olivator_score >= 70
-                        ? 'bg-olive-bg text-olive-dark'
-                        : 'bg-off text-text2'
-                    }`}>
-                      {p.olivator_score}
-                    </span>
+                    {p.type === 'flavored' ? (
+                      <span className="inline-block text-[10px] font-bold bg-terra text-white rounded-full px-2 py-0.5 uppercase tracking-wider" title="Aromatizovaný olej">
+                        Aroma
+                      </span>
+                    ) : p.olivator_score != null && p.olivator_score > 0 ? (
+                      <span className={`inline-block text-[11px] font-bold rounded-full px-2 py-0.5 tabular-nums ${
+                        p.olivator_score >= 80
+                          ? 'bg-olive text-white'
+                          : p.olivator_score >= 70
+                          ? 'bg-olive-bg text-olive-dark'
+                          : 'bg-off text-text2'
+                      }`}>
+                        {p.olivator_score}
+                      </span>
+                    ) : (
+                      <span className="inline-block text-[11px] font-medium text-text3">—</span>
+                    )}
                   </td>
                   <td className="px-3 py-2 text-right text-[13px] tabular-nums font-medium">
                     {minPrice ? formatPrice(minPrice) : <span className="text-text3">—</span>}
