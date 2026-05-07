@@ -14,8 +14,9 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://olivator.cz/novinky' },
 }
 
-// Cron běží každé 2h, page revalidate 2h = po každé runu se zobrazí nové
-export const revalidate = 7200
+// Cron běží každé 2h, ale backfill/úpravy chceme propagovat rychleji.
+// 5 min cache je kompromis mezi čerstvostí a Supabase load.
+export const revalidate = 300
 
 const BADGE_CONFIG: Record<string, { emoji: string; label: string; bg: string; text: string }> = {
   harvest: { emoji: '🫒', label: 'Sklizeň',  bg: 'bg-olive-bg',   text: 'text-olive-dark' },
