@@ -65,6 +65,10 @@ export function ProductForm({
   const [descriptionShort, setDescShort] = useState(String(productRow.description_short ?? ''))
   const [descriptionLong, setDescLong] = useState(String(productRow.description_long ?? ''))
 
+  // SEO meta — null = use auto-fallback v generateMetadata; vyplněné = override.
+  const [metaTitle, setMetaTitle] = useState(String(productRow.meta_title ?? ''))
+  const [metaDescription, setMetaDescription] = useState(String(productRow.meta_description ?? ''))
+
   // Origin / type
   const [originCountry, setOriginCountry] = useState(String(productRow.origin_country ?? ''))
   const [originRegion, setOriginRegion] = useState(String(productRow.origin_region ?? ''))
@@ -122,6 +126,9 @@ export function ProductForm({
         status: currentStatus,
         descriptionShort: descriptionShort || undefined,
         descriptionLong: descriptionLong || undefined,
+        // null = explicit clear → fallback. '' → null. Hodnota → override.
+        metaTitle: metaTitle.trim() || null,
+        metaDescription: metaDescription.trim() || null,
         originCountry: originCountry || undefined,
         originRegion: originRegion || undefined,
         type,
@@ -215,6 +222,61 @@ export function ProductForm({
           }}
           rawSource={descriptionShort || descriptionLong}
         />
+      </Section>
+
+      {/* SEO meta — Google SERP customization. Empty = auto fallback, vyplněné = override.
+          Title max 60 znaků (Google ořízne), description 130-160 (sweet spot pro CTR). */}
+      <Section title="SEO — Google SERP">
+        <div className="text-[12px] text-text2 mb-3 leading-relaxed">
+          Vyplň jen pokud chceš override defaultního auto-titlu/descripce. Prázdné = Olivator vygeneruje
+          automaticky z názvu, Score a popisu.
+        </div>
+        <Field label="Meta title (max 60 znaků)">
+          <input
+            type="text"
+            value={metaTitle}
+            onChange={e => setMetaTitle(e.target.value)}
+            maxLength={70}
+            className={inputCls}
+            placeholder={`${name} — Score ${olivatorScore || '—'}/100, kyselost ${acidity || '—'}%`}
+          />
+          <div className={`text-[10px] mt-1 ${
+            metaTitle.length > 60 ? 'text-red-600' : metaTitle.length > 50 ? 'text-amber-600' : 'text-text3'
+          }`}>
+            {metaTitle.length} / 60 znaků {metaTitle.length > 60 ? '— Google ořízne!' : ''}
+          </div>
+        </Field>
+        <Field label="Meta description (130-160 znaků)">
+          <textarea
+            value={metaDescription}
+            onChange={e => setMetaDescription(e.target.value)}
+            rows={3}
+            maxLength={200}
+            className={inputCls}
+            placeholder={descriptionShort.slice(0, 155) || 'Krátký popis produktu pro Google snippet…'}
+          />
+          <div className={`text-[10px] mt-1 ${
+            metaDescription.length > 160 ? 'text-red-600' : metaDescription.length < 130 && metaDescription.length > 0 ? 'text-amber-600' : 'text-text3'
+          }`}>
+            {metaDescription.length} / 160 znaků
+            {metaDescription.length === 0 ? '' : metaDescription.length < 130 ? ' — krátké, doplň pro lepší CTR' : metaDescription.length > 160 ? ' — Google ořízne!' : ''}
+          </div>
+        </Field>
+
+        {/* Live SERP preview */}
+        <div className="mt-4 border border-off2 rounded-lg p-4 bg-white">
+          <div className="text-[10px] uppercase tracking-wider text-text3 font-semibold mb-2">
+            Náhled Google SERP
+          </div>
+          <div className="text-[14px] text-text3 truncate">olivator.cz › olej › {slug}</div>
+          <div className="text-[18px] text-blue-700 leading-tight mt-1 hover:underline cursor-pointer truncate">
+            {(metaTitle.trim() || `${name}${olivatorScore ? ` — Score ${olivatorScore}/100` : ''}`).slice(0, 60)}
+            {(metaTitle.trim() || name).length > 60 ? '…' : ''}
+          </div>
+          <div className="text-[13px] text-text2 mt-1 leading-relaxed line-clamp-2">
+            {metaDescription.trim() || descriptionShort || `${name}. Srovnání cen z prodejců.`}
+          </div>
+        </div>
       </Section>
 
       {/* Origin */}

@@ -328,6 +328,70 @@ export async function generateMetaDescription(input: MetaDescriptionInput): Prom
   return fixed
 }
 
+// ── Meta title generation ────────────────────────────────────────────────────
+// Title je nejviditelnější SEO element — co Google ukáže v SERP. Cíl:
+// 50-60 znaků, klíčové slovo "olivový olej" pokud místo, konkrétní number
+// pro CTR boost.
+export interface MetaTitleInput {
+  name: string
+  type: string  // evoo | virgin | flavored | ...
+  originCountry: string | null
+  originRegion: string | null
+  acidity: number | null
+  olivatorScore: number | null
+  certifications: string[]
+  volumeMl: number | null
+}
+
+const META_TITLE_SYSTEM_PROMPT = `Jsi SEO copywriter pro Olivator.cz.
+Píšeš meta title pro Google SERP.
+
+══ HARD CONSTRAINTS ══
+- POVINNĚ 50-60 znaků (Google useká nad 60)
+- ŽÁDNÉ marketingové fráze: "nejlepší", "skvělý", "prémiový", "výjimečný", "luxusní"
+- ŽÁDNÉ uvozovky kolem výstupu
+- Pokud se vejde, zařaď "olivový olej" (top keyword)
+- Konkrétní fakta: Score, kyselost nebo region
+- NIKDY nepřidávej " | Olivátor" — to layout připojí automaticky
+
+══ STRUKTURA ══
+[Stručný název] — [konkrétní fakt nebo dva]
+
+══ PŘÍKLADY DOBRÉ FORMY ══
+"Sitia Kréta PREMIUM 1 L — Score 89/100, kyselost 0,2 %"
+"EVOLIA PLATINUM bio olivový olej — 2012 mg/kg polyfenolů"
+"Intini Coratina DOP olivový olej — Apulie, Score 62/100"
+"Pallada Kréta řecký olej 500ml — kyselost 0,3 %, NYIOOC"
+
+══ OUTPUT ══
+Vrať POUZE jeden řádek meta title, žádný JSON, žádné uvozovky. Bez úvodu/závěru.`
+
+export async function generateMetaTitle(input: MetaTitleInput): Promise<string> {
+  const lines: string[] = [`Název produktu: ${input.name}`]
+  if (input.originCountry) {
+    const region = input.originRegion ? `${input.originRegion}, ${input.originCountry}` : input.originCountry
+    lines.push(`Původ: ${region}`)
+  }
+  if (input.acidity != null) lines.push(`Kyselost: ${input.acidity} %`)
+  if (input.olivatorScore != null) lines.push(`Olivator Score: ${input.olivatorScore}/100`)
+  if (input.certifications.length > 0) lines.push(`Certifikace: ${input.certifications.join(', ').toUpperCase()}`)
+  if (input.volumeMl) lines.push(`Objem: ${input.volumeMl} ml`)
+
+  const res = await callClaudeShared({
+    model: 'claude-haiku-4-5',
+    max_tokens: 100,
+    system: META_TITLE_SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: lines.join('\n') }],
+  })
+  const text = extractText(res)
+    .trim()
+    .replace(/^["'„"]+|["'""]+$/g, '')
+    .replace(/\s*\|\s*Olivátor\s*$/i, '')  // odstranit pokud Claude přidal suffix
+    .replace(/\s*\|\s*Olivator\s*$/i, '')
+  const { fixed } = applyCzechTypographyFixes(text)
+  return fixed
+}
+
 export async function generateProductDescriptions(
   input: ContentInput
 ): Promise<ContentOutput> {

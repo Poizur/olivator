@@ -535,6 +535,8 @@ export interface ProductInput {
   scoreBreakdown?: Record<string, number>
   descriptionShort?: string
   descriptionLong?: string
+  metaTitle?: string | null
+  metaDescription?: string | null
   sourceUrl?: string | null
   rawDescription?: string | null
   status: string
@@ -609,6 +611,10 @@ export async function updateProduct(id: string, input: ProductInput) {
     status: input.status,
     updated_at: new Date().toISOString(),
   }
+  // SEO meta — explicit handling protože pole můžou být prázdná (null) i
+  // s úmyslem vymazat custom hodnotu zpět na auto-fallback v generateMetadata.
+  if (input.metaTitle !== undefined) payload.meta_title = input.metaTitle
+  if (input.metaDescription !== undefined) payload.meta_description = input.metaDescription
   // Only update source_url / raw_description when explicitly provided —
   // admin form doesn't expose them, so omitting keeps existing values.
   if (input.sourceUrl !== undefined) payload.source_url = input.sourceUrl
