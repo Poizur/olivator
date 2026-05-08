@@ -145,10 +145,22 @@ export async function importRegionPhotos(slugFilter?: string): Promise<EntityPho
   }
 }
 
+/**
+ * VAROVÁNÍ: Brand fotky z Unsplash NEPOUŽÍVAT.
+ * Unsplash vrací konkrétní lahve cizích značek (Etolea, Deeliver atd.) —
+ * matoucí. Brand identity musí dodat admin (logo nebo skutečná lahev).
+ *
+ * Funkce zůstává pro CLI flexibility (force run pro region/cultivar testing),
+ * ale defaultně NEPROVÁDÍ nic — vyžaduje explicit `--force` opt-in.
+ */
 export async function importBrandPhotos(
   slugFilter?: string,
-  options?: { allDbBrands?: boolean }
+  options?: { allDbBrands?: boolean; force?: boolean }
 ): Promise<EntityPhotosResult> {
+  if (!options?.force) {
+    console.warn('[entity-photos] importBrandPhotos disabled (Unsplash returns wrong brand bottles). Use --force to override.')
+    return { results: [], totalInserted: 0, totalErrors: 0 }
+  }
   const results: InsertResult[] = []
   let slugs: string[]
   if (slugFilter) {
