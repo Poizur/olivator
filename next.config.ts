@@ -23,6 +23,9 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'images.openfoodfacts.org' },
       { protocol: 'https', hostname: 'static.openfoodfacts.org' },
       { protocol: 'https', hostname: 'world.openfoodfacts.org' },
+      // Unsplash — fallback obrázky pro produkty/articles/recipes/entity bez
+      // primary image (auto-resolver + entity photo importer).
+      { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
   },
 }
