@@ -105,13 +105,13 @@ export function SommelierChat() {
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label="Olík — průvodce výběrem oleje"
-        className="fixed bottom-6 right-6 z-[50] w-14 h-14 rounded-full bg-olive text-white shadow-lg hover:bg-olive2 transition-all flex items-center justify-center"
-        style={{ boxShadow: '0 4px 20px rgba(45,106,79,0.35)' }}
+        className="fixed bottom-6 right-6 z-[50] w-16 h-16 rounded-full bg-white text-olive shadow-lg hover:scale-105 transition-all flex items-center justify-center border-2 border-olive/20"
+        style={{ boxShadow: '0 4px 24px rgba(45,106,79,0.30)' }}
       >
         {open ? (
-          <span className="text-xl leading-none">✕</span>
+          <span className="text-xl leading-none text-olive font-bold">✕</span>
         ) : (
-          <img src="/olik.png" alt="Olík" className="w-10 h-10 object-contain" />
+          <img src="/olik.png" alt="Olík" className="w-12 h-12 object-contain" />
         )}
       </button>
 
