@@ -52,11 +52,11 @@ export function classifyIntensity(product: Pick<Product, 'flavorProfile' | 'name
 export const INTENSITY_LABELS: Record<Intensity, string> = {
   jemny: 'Jemné',
   stredni: 'Střední',
-  pikantni: 'Pikantní',
+  pikantni: 'Výrazné',
 }
 
 export const INTENSITY_DESCRIPTIONS: Record<Intensity, string> = {
-  jemny: 'Ovocné, máselné, bez hořkosti. Ideální na saláty, ryby a dezerty.',
-  stredni: 'Vyvážená hořkost a palčivost. Skvělé do kuchyně i na přímou konzumaci.',
-  pikantni: 'Výrazná hořkost a palčivost. Pro gurmány a silné mediteránní pokrmy.',
+  jemny: 'Ovocné a máselné, bez hořkosti. Skvělé na saláty, ryby a dezerty — nebo pro ty, kdo olej teprve objevují.',
+  stredni: 'Vyvážená hořkost a lehká palčivost v závěru. Všestranné — do kuchyně i na stůl přímo.',
+  pikantni: 'Výrazná hořkost a zřetelná palčivost = hodně polyfenolů. Ranná sklizeň, silný charakter.',
 }

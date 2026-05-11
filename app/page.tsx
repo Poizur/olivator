@@ -72,11 +72,11 @@ export default async function Home() {
   for (const p of scoredWithOffer) {
     intensityGroups[classifyIntensity(p)].push(p)
   }
-  // Top 3 per skupiny dle Score
+  // Top 5 per skupiny dle Score
   const intensityTop: Record<Intensity, ProductWithOffer[]> = {
-    jemny: [...intensityGroups.jemny].sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0)).slice(0, 3),
-    stredni: [...intensityGroups.stredni].sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0)).slice(0, 3),
-    pikantni: [...intensityGroups.pikantni].sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0)).slice(0, 3),
+    jemny: [...intensityGroups.jemny].sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0)).slice(0, 5),
+    stredni: [...intensityGroups.stredni].sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0)).slice(0, 5),
+    pikantni: [...intensityGroups.pikantni].sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0)).slice(0, 5),
   }
 
   // Comparator teaser — 3 prefab duely
@@ -220,13 +220,14 @@ export default async function Home() {
         <div className="max-w-[1280px] mx-auto">
           <div className="text-center mb-10">
             <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
-              — Podle intenzity chuti
+              — Hořkost a pálivost v oleji
             </div>
             <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text leading-tight">
-              Jemné, střední nebo pikantní?
+              Jemné, střední nebo výrazné?
             </h2>
-            <p className="text-[15px] text-text2 font-light mt-3 max-w-lg mx-auto">
-              Každý palec je jiný. Najdi styl, který ti sedí.
+            <p className="text-[15px] text-text2 font-light mt-3 max-w-xl mx-auto leading-relaxed">
+              Hořkost a pálivost nejsou vady — jsou to polyfenoly. Čím ranější sklizeň a více
+              polyfenolů, tím intenzivnější chuť a více zdravých látek. Najdi svoji míru.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -812,17 +813,17 @@ function IntensityCard({
         {INTENSITY_DESCRIPTIONS[intensity]}
       </p>
       {products.length > 0 && (
-        <div className="flex -space-x-3 mb-4">
-          {products.slice(0, 3).map((p) => (
+        <div className="flex gap-2 mb-4">
+          {products.slice(0, 5).map((p) => (
             <div
               key={p.id}
-              className="w-10 h-10 rounded-full border-2 border-white bg-off overflow-hidden flex-shrink-0"
+              className="w-[52px] h-[68px] rounded-lg bg-white border border-off2 overflow-hidden flex-shrink-0 shadow-sm"
               title={p.name}
             >
               {p.imageUrl ? (
-                <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
+                <img src={p.imageUrl} alt={p.name} className="w-full h-full object-contain p-1" loading="lazy" />
               ) : (
-                <span className="flex items-center justify-center w-full h-full text-[18px]">🫒</span>
+                <span className="flex items-center justify-center w-full h-full text-[22px]">🫒</span>
               )}
             </div>
           ))}
