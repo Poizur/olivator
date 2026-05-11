@@ -24,18 +24,14 @@ import {
   extractShippingFromXml,
   type HeurekaItem,
 } from './heureka-feed-parser'
-import { slugify } from './utils'
+import { slugify, inferOriginFromText, extractOriginFromParams } from './utils'
 import { runRescrape } from './product-rescrape'
 import { linkAndRecomputeForProduct } from './entity-aggregator'
 import { detectCertificationsInText } from './cert-detector'
 
-// Default země původu per XML retailer. Bez tohoto by všechny XML produkty
-// dostaly hardcode 'GR' (původně reckonasbavi-only). Italyshop má italský
-// sortiment, takže italské oleje musí mít originCountry='IT'.
-//
-// Pro retailery které nejsou v mapě → null = origin se neuhádl, admin
-// musí v draftu vyplnit ručně (rescrape Playwright pak často odhadne z webu).
-const RETAILER_DEFAULT_ORIGIN: Record<string, string | null> = {
+// Hardcoded default origin per retailer slug — used as highest-priority source.
+// Fallback order: retailer map → PARAM "Země původu" → inferOriginFromText(name+desc)
+const RETAILER_DEFAULT_ORIGIN: Record<string, string> = {
   reckonasbavi: 'GR',
   italyshop: 'IT',
   reckyeshop: 'GR',
@@ -94,7 +90,7 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
 
   // Země původu pro tuto retailer cestu — použijeme do ensureProduct
   // (origin_country pro nový draft) a linkAndRecomputeForProduct (region_slug).
-  const defaultOriginCountry = RETAILER_DEFAULT_ORIGIN[retailer.slug as string] ?? null
+  const retailerDefaultOrigin = RETAILER_DEFAULT_ORIGIN[retailer.slug as string] ?? null
 
   const result: FeedSyncResult = {
     total: items.length,
@@ -139,7 +135,10 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
     }
 
     try {
-      const { productId, created, excluded } = await ensureProduct(item, defaultOriginCountry)
+      const itemOrigin = retailerDefaultOrigin
+        ?? extractOriginFromParams(item.params)
+        ?? inferOriginFromText(`${item.productName} ${item.description}`).country
+      const { productId, created, excluded } = await ensureProduct(item, itemOrigin)
 
       // Blocklist: admin tento produkt vyřadil → nedělej upsert offer ani
       // price_history. Záznam zůstává, ale sync ho neaktualizuje.
