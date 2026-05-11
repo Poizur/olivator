@@ -239,7 +239,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       key: 'Rok sklizně',
       value: product.harvestYear ? String(product.harvestYear) : '— nezveřejněno',
       missing: !product.harvestYear,
-      note: product.harvestYear ? 'ověřit u výrobce' : undefined,
+      note: product.harvestYear ? 'dle stránky prodejce' : undefined,
     },
     {
       key: 'Zpracování',
