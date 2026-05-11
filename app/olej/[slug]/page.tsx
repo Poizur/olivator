@@ -239,6 +239,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       key: 'Rok sklizně',
       value: product.harvestYear ? String(product.harvestYear) : '— nezveřejněno',
       missing: !product.harvestYear,
+      note: product.harvestYear ? 'ověřit u výrobce' : undefined,
     },
     {
       key: 'Zpracování',
@@ -447,7 +448,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               <div key={s.key} className="flex justify-between py-2.5 border-b border-off last:border-b-0">
                 <span className="text-[13px] text-text3">{s.key}</span>
                 {s.missing && cheapest ? (
-                  // Místo "— nezveřejněno" odkaz na prodejce (affiliate /go/...)
                   <Link
                     href={`/go/${cheapest.retailer.slug}/${product.slug}`}
                     target="_blank"
@@ -459,8 +459,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                     <span className="text-[10px]">↗</span>
                   </Link>
                 ) : (
-                  <span className={`text-[13px] ${s.missing ? 'text-text3 italic' : 'font-medium text-text'}`}>
+                  <span className={`text-[13px] text-right ${s.missing ? 'text-text3 italic' : 'font-medium text-text'}`}>
                     {s.value}
+                    {'note' in s && s.note && (
+                      <span className="block text-[10px] font-normal text-text3 italic">{s.note}</span>
+                    )}
                   </span>
                 )}
               </div>
