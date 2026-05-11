@@ -228,7 +228,7 @@ Vrať JSON podle template v system promptu.`
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: userPrompt }],
   })
-  let raw = extractText(res).trim().replace(/^```(?:json)?\s*|\s*```$/g, '')
+  const raw = extractText(res).trim().replace(/^```(?:json)?\s*|\s*```$/g, '')
   // Robustnost — Claude občas vrátí JSON s newlines uvnitř stringů (markdown
   // body), což strict JSON.parse nesnese. Použijeme JSON5-like cleanup:
   // - Multi-line strings → \n escape

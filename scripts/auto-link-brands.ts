@@ -29,7 +29,7 @@ async function main() {
   console.log(`${unbranded.length} unbranded active produktů\n`)
 
   let linked = 0
-  let skipped: string[] = []
+  const skipped: string[] = []
 
   for (const p of unbranded) {
     const nameLower = p.name.toLowerCase()
