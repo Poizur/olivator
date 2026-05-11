@@ -340,7 +340,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         <ProductGallery
           productName={product.name}
           fallbackImageUrl={product.imageUrl}
-          galleryImages={gallery.map(g => ({
+          galleryImages={gallery.slice(0, 5).map(g => ({
             id: g.id,
             url: g.url,
             altText: g.altText,
@@ -701,7 +701,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 O tomto oleji
               </h2>
               {(() => {
-                const editorialPhotos = gallery.filter((g) => !g.isPrimary).slice(0, 3)
+                // Fotky v galerii hero = slice(0,5). Zde bereme ZBYTEK aby se neopakovaly.
+                const editorialPhotos = gallery.slice(5, 8)
                 const paras = product.descriptionLong!.split(/\n\n+/)
                 const firstPara = paras[0]
                 const rest = paras.slice(1).join('\n\n')
