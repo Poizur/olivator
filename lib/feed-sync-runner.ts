@@ -18,8 +18,8 @@ import { runRescrape } from './product-rescrape'
 import { linkAndRecomputeForProduct } from './entity-aggregator'
 
 // Kolik pending draftů zpracovat per cron run. Každý rescrape ~30-90s.
-// 10 × 60s = 10 min — bezpečně v 15 min cron timeoutu i s feed sync samotným.
-const MAX_PENDING_RESCRAPES_PER_RUN = 10
+// 40 × 60s = 40 min — feed sync sám trvá ~5 min, celkem ~45 min < 60 min Railway timeout.
+const MAX_PENDING_RESCRAPES_PER_RUN = 40
 
 export interface FeedSyncRunResult {
   retailersChecked: number

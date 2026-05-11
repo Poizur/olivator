@@ -639,9 +639,39 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-3xl font-normal text-text mb-5 leading-tight">
                 O tomto oleji
               </h2>
-              <div className="text-[15px] text-text2 leading-relaxed whitespace-pre-line">
-                {product.descriptionLong}
-              </div>
+              {(() => {
+                const editorialPhotos = gallery.filter((g) => !g.isPrimary).slice(0, 3)
+                const paras = product.descriptionLong!.split(/\n\n+/)
+                const firstPara = paras[0]
+                const rest = paras.slice(1).join('\n\n')
+                return (
+                  <>
+                    <div className="text-[15px] text-text2 leading-relaxed whitespace-pre-line mb-6">
+                      {firstPara}
+                    </div>
+                    {editorialPhotos.length >= 2 && (
+                      <div className={`grid gap-2 mb-7 rounded-[var(--radius-card)] overflow-hidden ${editorialPhotos.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+                        {editorialPhotos.map((img) => (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <div key={img.id} className="aspect-[4/3] bg-off overflow-hidden">
+                            <img
+                              src={img.url}
+                              alt={img.altText ?? product.name}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {rest && (
+                      <div className="text-[15px] text-text2 leading-relaxed whitespace-pre-line">
+                        {rest}
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
             </div>
 
             {/* Sticky aside — Rychlé fakty + Souvislosti pod sebou */}
