@@ -68,8 +68,8 @@ export function PriceTable({ offers, volumeMl, productSlug, productName }: Price
             )}
           </div>
           <div className="text-right">
-            <div className="text-base font-semibold text-text">{formatPrice(offer.price)}</div>
-            <div className="text-[11px] text-text3">{formatPricePer100ml(offer.price, volumeMl)}</div>
+            <div className="text-base font-semibold text-text tabular-nums">{formatPrice(offer.price)}</div>
+            <div className="text-[11px] text-text3 tabular-nums whitespace-nowrap">{formatPricePer100ml(offer.price, volumeMl)}</div>
           </div>
         </AffiliateLink>
       ))}

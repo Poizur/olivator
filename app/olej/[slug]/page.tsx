@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { getProducts, getProductBySlug, getOffersForProduct, getProductGallery, getProductCustomFAQs, getActiveGeneralFAQs, getVariantProducts, getProductEntityLinks, getRetailerPhotosLite } from '@/lib/data'
 import { extractBrandSlug, extractRegionSlug } from '@/lib/entity-extractor'
-import { countryName, countryFlag, typeLabel, certLabel, formatPrice, formatPricePer100ml } from '@/lib/utils'
+import { countryName, countryFlag, typeLabel, certLabel, formatPrice, formatPricePer100ml, regionGenitive } from '@/lib/utils'
 import { productSchema, breadcrumbSchema, faqSchema } from '@/lib/schema'
 import { generateProductFAQ } from '@/lib/product-faq'
 import { selectGeneralFAQs } from '@/lib/general-faq'
@@ -17,6 +17,7 @@ import { PriceSparkline } from '@/components/price-sparkline'
 import { PriceAlertButton } from '@/components/price-alert-button'
 import { ProductActions } from './product-actions'
 import { ScoreBadge } from '@/components/score-badge'
+import { StickyBuyBar } from '@/components/sticky-buy-bar'
 
 export async function generateStaticParams() {
   // Prerender JEN top 30 produktů (podle score). Zbytek = ISR on-demand —
@@ -133,9 +134,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   ])
   const cheapest = offers[0]
   const hasScore = product.type !== 'flavored' && product.olivatorScore != null && product.olivatorScore > 0
+  // Aliasy z VariantGroups — page kód níže dlouho používal `variants` array.
+  // Po splitu Fáze UI (2026-05): sameOil = identický olej v jiných objemech,
+  // related = sibling oleje od stejné značky v stejném regionu.
+  const sameOilVariants = variants.sameOil
+  const relatedFromBrand = variants.related
+  const hasAnyVariants = sameOilVariants.length > 0 || relatedFromBrand.length > 0
 
   // Recepty napojené na produkt přes region nebo cultivar (recipe_entity_links).
-  // Hybrid sekce "Pokračujte" je sloučí s variants do jednoho gridu.
   const relatedRecipes = await (async () => {
     const { loadEntityRecipes } = await import('@/lib/entity-page-data')
     const lists = await Promise.all([
@@ -478,7 +484,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       </div>
 
       {/* ── DETAILY: Score + Chuť + Ceník + Specs + Sparkline ──────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-14">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
         {/* Levý sloupec: Score + FlavorWheel */}
         <div>
           <ScoreSection product={product} />
@@ -523,39 +529,27 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       </div>
 
       {/* Vývoj ceny — full šířka */}
-      <div className="mb-14">
+      <div className="mb-10">
         <PriceSparkline
           data={priceHistory}
           currentPrice={cheapest?.price ?? null}
         />
       </div>
 
-      {/* Pokračujte — hybrid sekce: variants + recepty + CTA Najít olej.
-          Sjednocuje 3 typy karet do jednoho gridu, kompaktní karty 6 v řadě.
-          Pokud nemá ani variants ani recepty, ukáže se jen CTA karta sólo. */}
-      {(variants.length > 0 || relatedRecipes.length > 0) && (
-        <section className="mt-10 max-w-[1040px]">
-          <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
-            — Pokračujte
-          </div>
+      {/* Sekce 1 — Stejný olej v jiných objemech (jen pokud opravdu existuje
+          jiný balík STEJNÉ receptury — stejná značka + varieta + BIO flag).
+          Detekce v getVariantProducts (lib/data.ts) — heuristika kombinuje
+          variety + cert + normalizovaný name match. */}
+      {sameOilVariants.length > 0 && (
+        <section className="mt-8">
           <h2 className="font-[family-name:var(--font-display)] text-xl font-normal text-text mb-1">
-            {variants.length > 0 && relatedRecipes.length > 0
-              ? 'Jiná balení a co s olejem uvařit'
-              : variants.length > 0
-                ? 'Stejný olej v jiných objemech'
-                : 'Co s tímhle olejem uvařit'}
+            Stejný olej v jiných objemech
           </h2>
           <p className="text-[12px] text-text3 mb-4">
-            {variants.length > 0 &&
-              (product.nameShort
-                ? `${product.nameShort}${product.originRegion ? ` z regionu ${product.originRegion}` : ''}`
-                : 'Stejný producent v jiných balíccích')}
-            {variants.length > 0 && relatedRecipes.length > 0 && ' · '}
-            {relatedRecipes.length > 0 && 'recepty z regionu nebo s touto odrůdou'}
+            Identická receptura, jiné balení.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
-            {/* Variants */}
-            {variants.map((v) => (
+            {sameOilVariants.map((v) => (
               <Link
                 key={v.id}
                 href={`/olej/${v.slug}`}
@@ -603,7 +597,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   <div className="mt-auto">
                     {v.cheapestPrice ? (
                       <div className="text-[13px] font-bold text-text tabular-nums">
-                        {Math.round(v.cheapestPrice)} Kč
+                        {formatPrice(v.cheapestPrice)}
                       </div>
                     ) : (
                       <div className="text-[11px] text-text3 italic">—</div>
@@ -612,8 +606,90 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 </div>
               </Link>
             ))}
+          </div>
+        </section>
+      )}
 
-            {/* Recepty */}
+      {/* Sekce 2 — Další oleje od stejné značky v stejném regionu.
+          Pokud chybí region label, fallback "Další oleje [brand]". */}
+      {relatedFromBrand.length > 0 && (
+        <section className="mt-8">
+          <h2 className="font-[family-name:var(--font-display)] text-xl font-normal text-text mb-1">
+            {variants.brandLabel && variants.regionLabel
+              ? `Další oleje ${variants.brandLabel} z ${regionGenitive(variants.regionLabel)}`
+              : variants.brandLabel
+                ? `Další oleje ${variants.brandLabel}`
+                : 'Příbuzné oleje'}
+          </h2>
+          <p className="text-[12px] text-text3 mb-4">
+            Stejná značka, jiné odrůdy nebo certifikace.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {relatedFromBrand.map((v) => (
+              <Link
+                key={v.id}
+                href={`/olej/${v.slug}`}
+                className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:border-olive-light"
+              >
+                <div className="relative aspect-[4/5] bg-white overflow-hidden">
+                  <span className="absolute top-1.5 right-1.5 z-10">
+                    <ScoreBadge score={v.olivatorScore} type={v.type} size="small" />
+                  </span>
+                  <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
+                    {v.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={v.imageUrl}
+                        alt={v.name}
+                        className="w-full h-full object-contain"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="font-[family-name:var(--font-display)] text-[56px] italic text-text3/30 leading-none select-none">
+                          {v.name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="p-2.5 flex-1 flex flex-col">
+                  <div className="text-[12px] font-semibold text-text mb-1 leading-tight line-clamp-2 min-h-[2.4em]">
+                    {v.name.replace(/CORINTO\s+/i, '').replace(/Peloponés\s+/i, '').slice(0, 50)}
+                  </div>
+                  <div className="mt-auto flex items-center justify-between text-[11px]">
+                    <span className="text-text3">
+                      {v.volumeMl
+                        ? v.volumeMl >= 1000
+                          ? `${v.volumeMl / 1000} l`
+                          : `${v.volumeMl} ml`
+                        : '—'}
+                    </span>
+                    {v.cheapestPrice ? (
+                      <span className="font-bold text-text tabular-nums">
+                        {formatPrice(v.cheapestPrice)}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Sekce 3 — Recepty + Quiz CTA (jen pokud máme recepty) */}
+      {(relatedRecipes.length > 0 || (!hasAnyVariants && relatedRecipes.length === 0)) && (
+        <section className="mt-8">
+          <h2 className="font-[family-name:var(--font-display)] text-xl font-normal text-text mb-1">
+            {relatedRecipes.length > 0 ? 'Co s tímhle olejem uvařit' : 'Najděte si svůj olej'}
+          </h2>
+          <p className="text-[12px] text-text3 mb-4">
+            {relatedRecipes.length > 0
+              ? 'Recepty z regionu nebo s touto odrůdou.'
+              : '5 otázek, 3 doporučení šitá na míru.'}
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
             {relatedRecipes.map((r) => {
               const initial = r.title.charAt(0).toUpperCase()
               return (
@@ -642,21 +718,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               )
             })}
 
-            {/* CTA: Najít olej — sytě olivová karta s dekorativní olivovou
-                ratolestí (SVG). Stejný vizuální jazyk jako Olej týdne / Top 3
-                v hero. Plně barevná (ne pastelová) = výraznější "promo" tón. */}
             <Link
               href="/quiz"
               className="group bg-olive-dark text-white rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_12px_32px_rgba(45,106,79,0.25)] hover:-translate-y-0.5 relative"
             >
-              {/* Decorative olive branch SVG na pozadí */}
               <div className="absolute inset-0 opacity-15 pointer-events-none">
-                <svg
-                  viewBox="0 0 100 125"
-                  className="absolute -right-4 -top-2 w-32 h-40 text-white"
-                  fill="currentColor"
-                >
-                  {/* Olivová ratolest — stylizovaná */}
+                <svg viewBox="0 0 100 125" className="absolute -right-4 -top-2 w-32 h-40 text-white" fill="currentColor">
                   <path d="M50 10 Q 60 25, 55 40 Q 50 55, 60 70 Q 70 85, 65 100" stroke="currentColor" strokeWidth="2" fill="none" />
                   <ellipse cx="55" cy="22" rx="6" ry="3" transform="rotate(-30 55 22)" />
                   <ellipse cx="62" cy="35" rx="6" ry="3" transform="rotate(20 62 35)" />
@@ -666,17 +733,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   <ellipse cx="68" cy="92" rx="6" ry="3" transform="rotate(25 68 92)" />
                 </svg>
               </div>
-
               <div className="relative aspect-[4/5] flex flex-col items-start justify-end p-4">
-                <div className="text-[9px] font-bold tracking-widest uppercase text-white/70 mb-2">
-                  Pomocník
-                </div>
-                <div className="font-[family-name:var(--font-display)] text-2xl text-white leading-tight mb-1">
-                  Najít olej
-                </div>
-                <div className="text-[11px] text-white/80 leading-snug">
-                  5 otázek, 3 doporučení
-                </div>
+                <div className="text-[9px] font-bold tracking-widest uppercase text-white/70 mb-2">Pomocník</div>
+                <div className="font-[family-name:var(--font-display)] text-2xl text-white leading-tight mb-1">Najít olej</div>
+                <div className="text-[11px] text-white/80 leading-snug">5 otázek, 3 doporučení</div>
               </div>
               <div className="relative p-2.5 bg-olive2 group-hover:bg-olive transition-colors">
                 <div className="text-[12px] font-semibold text-white flex items-center justify-between">
@@ -691,7 +751,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
       {/* Long description — bohatší 2-col layout: text vlevo + key facts vpravo */}
       {product.descriptionLong && (
-        <section className="mt-14 max-w-[1040px]">
+        <section className="mt-10 max-w-[1040px]">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-10 items-start">
             <div>
               <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
@@ -922,7 +982,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
       {/* Podobné oleje — menší karty 6 v řadě s "Proč podobné" badge */}
       {similarProducts.length >= 2 && (
-        <section className="mt-12 max-w-[1040px]">
+        <section className="mt-10 max-w-[1040px]">
           <div className="flex items-end justify-between mb-5 flex-wrap gap-4">
             <div>
               <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
@@ -990,7 +1050,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
       {/* FAQ — full width (1280px) 50/50 split, větší nadpisy + otázky */}
       {(productFAQs.length > 0 || generalFAQs.length > 0) && (
-        <section className="mt-14 max-w-[1280px] mb-12">
+        <section className="mt-10 max-w-[1280px] mb-12">
           <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
             — FAQ
           </div>
@@ -1057,6 +1117,19 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </section>
       )}
       </div>
+
+      {/* Floating buy bar — desktop only, viditelné po scroll past hero.
+          Fix 4 z UI cleanup: persistentní CTA s cenou + score, Apple-styled. */}
+      {cheapest && (
+        <StickyBuyBar
+          productSlug={product.slug}
+          productName={product.name}
+          retailerSlug={cheapest.retailer.slug}
+          retailerName={cheapest.retailer.name}
+          price={cheapest.price}
+          scoreBadge={{ value: product.olivatorScore ?? null, type: product.type ?? null }}
+        />
+      )}
     </div>
   )
 }

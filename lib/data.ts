@@ -641,72 +641,151 @@ export interface VariantProduct {
   type: string | null
 }
 
-/** Find sibling products of given product (same brand + region + base name).
- *  Used on product detail page to show "available in other sizes". */
-export async function getVariantProducts(productId: string): Promise<VariantProduct[]> {
+/** Strip volume markers + brand prefix z product name aby šly porovnat
+ *  varianty stejného oleje. "CORINTO Manaki 0,3% 5 l" → "manaki 0,3"
+ *  "CORINTO BIO Manaki 1 l" → "bio manaki". */
+function normalizeOilName(name: string, brand: string | null): string {
+  let n = name.toLowerCase()
+  if (brand) {
+    const brandLower = brand.toLowerCase()
+    n = n.replace(new RegExp(`\\b${brandLower}\\b`, 'g'), '')
+  }
+  return n
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\d+\s*[.,]?\d*\s*(?:ml|l|kg|g)\b/gi, '')   // strip volumes "0,3% 5 l"
+    .replace(/\b\d+[.,]?\d*\s*%/g, '')                    // strip "% acidity"
+    .replace(/\b(?:extra panensky|extra panenský|olivovy|olivový|olej|panenský|panensky)\b/gi, '')
+    .replace(/\(|\)/g, ' ')
+    .replace(/[^a-z0-9 ]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+export interface VariantGroups {
+  /** Identický olej v jiných balíčcích (stejná receptura, jen jiný objem). */
+  sameOil: VariantProduct[]
+  /** Sibling oleje od stejné značky v stejném regionu, ale jiný produkt. */
+  related: VariantProduct[]
+  /** Pro UI nadpis — značka (např. "CORINTO") a region ("Peloponés"). */
+  brandLabel: string | null
+  regionLabel: string | null
+}
+
+/** Find sibling products of given product. Vrátí dvě skupiny:
+ *  1. sameOil — stejný brand + variety + BIO flag, různý objem
+ *  2. related — stejný brand + region, ale jiný produkt
+ *  Used on product detail page to show "available in other sizes" + "more from this brand". */
+export async function getVariantProducts(productId: string): Promise<VariantGroups> {
+  const empty: VariantGroups = { sameOil: [], related: [], brandLabel: null, regionLabel: null }
+
   const { data: current } = await supabaseAdmin
     .from('products')
-    .select('id, name_short, origin_country, origin_region, name')
+    .select('id, name_short, brand_slug, origin_country, origin_region, name, variety, certifications')
     .eq('id', productId)
     .maybeSingle()
-  if (!current) return []
+  if (!current) return empty
 
-  const brand = current.name_short as string | null
+  const brandSlug = current.brand_slug as string | null
+  const brandLabel = (current.name_short as string | null) ?? null
   const region = current.origin_region as string | null
+  const variety = current.variety as string | null
+  const certs = (current.certifications as string[]) ?? []
+  const hasBioCert = certs.some(c => c === 'bio' || c === 'organic')
+  const currentNameKey = normalizeOilName(current.name as string, brandLabel)
 
-  // Need at least brand or country+region to match meaningfully
-  if (!brand && !region) return []
+  // Need at least brand_slug or brand label to match
+  if (!brandSlug && !brandLabel) return empty
 
-  // Match products with same brand. If no brand, fall back to same region.
+  // Match: same brand_slug PREFERRED (it's canonical), fallback name_short
   let query = supabaseAdmin
     .from('products')
-    .select('id, slug, name, volume_ml, packaging, olivator_score, name_short, origin_region, image_url, type')
+    .select('id, slug, name, name_short, brand_slug, volume_ml, packaging, olivator_score, origin_region, image_url, type, variety, certifications')
     .eq('status', 'active')
     .neq('id', productId)
-  if (brand) {
-    query = query.eq('name_short', brand)
-  } else {
-    query = query.eq('origin_region', region as string)
+  if (brandSlug) {
+    query = query.eq('brand_slug', brandSlug)
+  } else if (brandLabel) {
+    query = query.eq('name_short', brandLabel)
   }
   const { data: candidates } = await query
-  if (!candidates || candidates.length === 0) return []
+  if (!candidates || candidates.length === 0) {
+    return { ...empty, brandLabel, regionLabel: region }
+  }
 
-  // Stricter match: same region too (if brand only) — avoid false positives
-  // when brand is generic ("Olivar Selection")
-  const filtered = candidates.filter(c => {
-    if (!brand) return true // already filtered by region
+  // Stricter: filtruj na stejný region (jinak by Cretamart shop měl 30 oilů)
+  const sameRegion = (candidates as Array<Record<string, unknown>>).filter(c => {
+    if (!region) return true
     return c.origin_region === region
   })
 
   // Get cheapest offer per candidate
-  const ids = filtered.map(c => c.id as string)
-  if (ids.length === 0) return []
-  const { data: offers } = await supabaseAdmin
-    .from('product_offers')
-    .select('product_id, price')
-    .in('product_id', ids)
-    .order('price', { ascending: true })
+  const ids = sameRegion.map(c => c.id as string)
   const cheapestByProduct = new Map<string, number>()
-  for (const o of offers ?? []) {
-    const pid = o.product_id as string
-    if (!cheapestByProduct.has(pid)) {
-      cheapestByProduct.set(pid, Number(o.price))
+  if (ids.length > 0) {
+    const { data: offers } = await supabaseAdmin
+      .from('product_offers')
+      .select('product_id, price')
+      .in('product_id', ids)
+      .order('price', { ascending: true })
+    for (const o of offers ?? []) {
+      const pid = o.product_id as string
+      if (!cheapestByProduct.has(pid)) {
+        cheapestByProduct.set(pid, Number(o.price))
+      }
     }
   }
 
-  return filtered
-    .map(c => ({
+  // Klasifikace: same oil vs related
+  const sameOil: VariantProduct[] = []
+  const related: VariantProduct[] = []
+
+  for (const c of sameRegion) {
+    const cVariety = c.variety as string | null
+    const cCerts = (c.certifications as string[]) ?? []
+    const cHasBio = cCerts.some(x => x === 'bio' || x === 'organic')
+    const cName = c.name as string
+    const cNameKey = normalizeOilName(cName, brandLabel)
+
+    // Same oil pokud:
+    // - stejná varieta (nebo obě null)
+    // - stejný BIO status
+    // - normalized name match (zachytí varianty s podobným popisem napříč objemy)
+    const varietyMatch = (variety ?? '') === (cVariety ?? '')
+    const bioMatch = hasBioCert === cHasBio
+    const nameMatch = currentNameKey.length > 0 && cNameKey.length > 0 && (
+      currentNameKey === cNameKey ||
+      currentNameKey.includes(cNameKey) ||
+      cNameKey.includes(currentNameKey)
+    )
+
+    const variant: VariantProduct = {
       id: c.id as string,
       slug: c.slug as string,
-      name: c.name as string,
+      name: cName,
       volumeMl: c.volume_ml as number | null,
       packaging: c.packaging as string | null,
       cheapestPrice: cheapestByProduct.get(c.id as string) ?? null,
       olivatorScore: c.olivator_score as number | null,
       imageUrl: c.image_url as string | null,
       type: c.type as string | null,
-    }))
-    .sort((a, b) => (a.volumeMl ?? 0) - (b.volumeMl ?? 0))
+    }
+
+    if (varietyMatch && bioMatch && nameMatch) {
+      sameOil.push(variant)
+    } else {
+      related.push(variant)
+    }
+  }
+
+  sameOil.sort((a, b) => (a.volumeMl ?? 0) - (b.volumeMl ?? 0))
+  related.sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
+
+  return {
+    sameOil,
+    related,
+    brandLabel,
+    regionLabel: region,
+  }
 }
 
 // ── Editable FAQs ─────────────────────────────────────────────────────

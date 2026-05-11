@@ -1,10 +1,57 @@
+// Pevná mezera (NBSP, U+00A0) jako oddělovač tisíců — drží číslo + jednotku
+// pohromadě v textu, neporušuje řádkování (ČSN 01 6910 typografie).
 export function formatPrice(price: number): string {
-  return `${Math.round(price)} Kč`
+  return `${Math.round(price).toLocaleString('cs-CZ').replace(/\s/g, ' ')} Kč`
 }
 
 export function formatPricePer100ml(price: number, volumeMl: number): string {
   const per100 = (price / volumeMl) * 100
-  return `${Math.round(per100)} Kč / 100 ml`
+  return `${Math.round(per100).toLocaleString('cs-CZ').replace(/\s/g, ' ')} Kč / 100 ml`
+}
+
+// České skloňování regionů do genitivu pro nadpisy ("Další oleje X z Y").
+// Pokrývá nejčastější olive regiony — fallback vrací jméno beze změny
+// (lepší než hrubý suffix-add, který by mohl zkomolit edge cases).
+const REGION_GENITIVE: Record<string, string> = {
+  'Peloponés': 'Peloponésu',
+  'Kréta': 'Kréty',
+  'Sitia': 'Sitie',
+  'Sitia Lassithi': 'Sitie Lassithi',
+  'Lesbos': 'Lesbu',
+  'Kalamata': 'Kalamaty',
+  'Kalamatá': 'Kalamaty',
+  'Korfu': 'Korfu',
+  'Mesinia': 'Mesinie',
+  'Chania': 'Chanie',
+  'Toskánsko': 'Toskánska',
+  'Sicílie': 'Sicílie',
+  'Apulie': 'Apulie',
+  'Umbrie': 'Umbrie',
+  'Kalábrie': 'Kalábrie',
+  'Garda': 'Gardy',
+  'Liguria': 'Ligurie',
+  'Lazio': 'Lazia',
+  'Sardinie': 'Sardinie',
+  'Kampánie': 'Kampánie',
+  'Andalusie': 'Andalusie',
+  'Jaén': 'Jaénu',
+  'Jaen': 'Jaenu',
+  'Katalánsko': 'Katalánska',
+  'Aragon': 'Aragonu',
+  'Extremadura': 'Extremadury',
+  'Mallorca': 'Mallorky',
+  'Cordoba': 'Cordoby',
+  'Granada': 'Granady',
+  'Istrie': 'Istrie',
+  'Dalmácie': 'Dalmácie',
+  'Brač': 'Brače',
+  'Hvar': 'Hvaru',
+  'Alentejo': 'Alenteja',
+  'Douro': 'Doura',
+}
+
+export function regionGenitive(region: string): string {
+  return REGION_GENITIVE[region] ?? region
 }
 
 export function slugify(text: string): string {

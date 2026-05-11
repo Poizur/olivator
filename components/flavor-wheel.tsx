@@ -10,6 +10,21 @@ const LABELS: Record<keyof FlavorProfile, string> = {
   buttery: 'Máslový',
 }
 
+// Barevné kódování per kategorii (CLAUDE.md design systém,
+// mapováno na Tailwind 4 tokens v globals.css):
+//   teplé = olivový brand (ovocnost, byliny, jemnost, máslový)
+//   akcentní terra = intenzitní osy (hořkost, pálivost)
+//   neutrální = oříšky (jiný profil, ne tone)
+const AXIS_COLORS: Record<keyof FlavorProfile, { bar: string; track: string }> = {
+  fruity:  { bar: 'bg-olive-light',  track: 'bg-olive-bg' },
+  herbal:  { bar: 'bg-olive-light',  track: 'bg-olive-bg' },
+  mild:    { bar: 'bg-olive-light',  track: 'bg-olive-bg' },
+  buttery: { bar: 'bg-olive-light',  track: 'bg-olive-bg' },
+  bitter:  { bar: 'bg-terra',        track: 'bg-terra-bg' },
+  spicy:   { bar: 'bg-terra',        track: 'bg-terra-bg' },
+  nutty:   { bar: 'bg-text3',        track: 'bg-off2' },
+}
+
 // Vysvětlivky pro hover tooltipy.
 // User pozn.: pálivost a jemnost jsou OPAČNÉ osy — vysoká pálivost znamená
 // nízkou jemnost a naopak. Tooltipy to musí zpřesnit.
@@ -63,14 +78,14 @@ export function FlavorWheel({ profile }: { profile: FlavorProfile }) {
                 </span>
               </span>
             </div>
-            <div className="flex-1 h-1.5 bg-off2 rounded-full overflow-hidden">
+            <div className={`flex-1 h-2 rounded-full overflow-hidden ${AXIS_COLORS[key].track}`}>
               <div
-                className="h-full rounded-full bg-olive-light"
+                className={`h-full rounded-full transition-[width] duration-500 ${AXIS_COLORS[key].bar}`}
                 style={{ width: `${profile[key]}%` }}
               />
             </div>
-            <span className="text-[11px] text-text3 w-6 text-right tabular-nums">
-              {profile[key]}
+            <span className="text-[11px] font-semibold text-text2 w-8 text-right tabular-nums">
+              {profile[key]}%
             </span>
           </div>
         ))}
