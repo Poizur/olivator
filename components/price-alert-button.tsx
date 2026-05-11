@@ -69,12 +69,12 @@ export function PriceAlertButton({ productId, productName, currentPrice }: Props
             {status === 'success' ? (
               <div className="text-center py-4">
                 <div className="w-14 h-14 rounded-full bg-olive-bg mx-auto mb-3 flex items-center justify-center text-2xl">
-                  ✓
+                  🎉
                 </div>
-                <h2 className="text-[18px] font-semibold text-text mb-1">Alert nastaven</h2>
+                <h2 className="text-[18px] font-semibold text-text mb-1">Hlídáme to za tebe</h2>
                 <p className="text-[13px] text-text2 leading-relaxed mb-5">
-                  Pošleme ti email až cena <strong>{productName}</strong> klesne pod{' '}
-                  <strong>{threshold || defaultThreshold} Kč</strong>. Sledujeme ceny každý den.
+                  Kontrolujeme ceny každý den. Jakmile <strong>{productName}</strong> klesne pod{' '}
+                  <strong>{threshold || defaultThreshold} Kč</strong>, napíšeme ti.
                 </p>
                 <button
                   onClick={() => {
@@ -91,14 +91,14 @@ export function PriceAlertButton({ productId, productName, currentPrice }: Props
             ) : (
               <form onSubmit={submit}>
                 <h2 className="text-[18px] font-semibold text-text mb-1">
-                  Sledovat cenu olejé
+                  Hlídej cenu oleje
                 </h2>
                 <p className="text-[13px] text-text2 leading-snug mb-4">
-                  Pošleme ti email jakmile <strong>{productName}</strong> klesne na tvoji cenu.
-                  Aktuálně {currentPrice} Kč.
+                  Napíšeme ti, až <strong>{productName}</strong> zlevní.
+                  Teď stojí <strong>{currentPrice} Kč</strong>.
                 </p>
 
-                <label className="block text-[12px] font-medium text-text2 mb-1">Email</label>
+                <label className="block text-[12px] font-medium text-text2 mb-1">Tvůj email</label>
                 <input
                   type="email"
                   required
@@ -109,17 +109,17 @@ export function PriceAlertButton({ productId, productName, currentPrice }: Props
                 />
 
                 <label className="block text-[12px] font-medium text-text2 mb-1">
-                  Trigger cena (Kč) — nepovinné
+                  Chci vědět, až klesne pod: <span className="font-normal text-text3">(nepovinné)</span>
                 </label>
                 <input
                   type="number"
                   value={threshold}
                   onChange={(e) => setThreshold(e.target.value)}
-                  placeholder={`Default: ${defaultThreshold} Kč (-10 %)`}
-                  className="w-full px-3 py-2 border border-off2 rounded-lg text-[14px] mb-3 focus:outline-none focus:border-olive"
+                  placeholder={`${defaultThreshold} Kč`}
+                  className="w-full px-3 py-2 border border-off2 rounded-lg text-[14px] mb-1.5 focus:outline-none focus:border-olive"
                 />
                 <p className="text-[11px] text-text3 leading-snug mb-4">
-                  Pokud necháš prázdné, alert se spustí při poklesu o 10 % nebo víc.
+                  Necháš-li prázdné, napíšeme automaticky při prvním zlevnění o 10 % nebo víc.
                 </p>
 
                 {status === 'error' && (
@@ -132,7 +132,7 @@ export function PriceAlertButton({ productId, productName, currentPrice }: Props
                     disabled={status === 'sending'}
                     className="flex-1 bg-olive text-white rounded-full px-5 py-2.5 text-[13px] font-medium hover:bg-olive-dark disabled:opacity-40"
                   >
-                    {status === 'sending' ? 'Nastavuji…' : 'Sledovat'}
+                    {status === 'sending' ? 'Nastavuji…' : 'Sledovat cenu'}
                   </button>
                   <button
                     type="button"
@@ -144,7 +144,7 @@ export function PriceAlertButton({ productId, productName, currentPrice }: Props
                 </div>
 
                 <p className="text-[10px] text-text3 mt-3 text-center leading-snug">
-                  Email použijeme pouze pro tento alert. Žádný spam.
+                  Email použijeme jen pro toto upozornění. Žádný spam.
                 </p>
               </form>
             )}
