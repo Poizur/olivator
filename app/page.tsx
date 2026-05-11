@@ -5,7 +5,8 @@ import {
   getRegionTiles,
   getBrandTiles,
 } from '@/lib/data'
-import { getArticles } from '@/lib/static-content'
+import { getActiveArticles } from '@/lib/articles-db'
+import { getActiveRecipes } from '@/lib/recipes-db'
 import { pickOilOfDay, pickScoreFeature } from '@/lib/home-picks'
 import { NewsletterSignup } from '@/components/newsletter-signup'
 import { ProductImage } from '@/components/product-image'
@@ -35,8 +36,10 @@ export default async function Home() {
 
   const oilOfDay = pickOilOfDay(allProducts)
   const scoreFeature = pickScoreFeature(allProducts)
-  const guides = getArticles().filter(a => a.category !== 'recept')
-  const recipes = getArticles('recept')
+  const [guides, recipes] = await Promise.all([
+    getActiveArticles(),
+    getActiveRecipes(),
+  ])
 
   // Top 3 by Score for hero sidebar
   const topPicks = [...allProducts]
@@ -440,18 +443,23 @@ export default async function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {guides.slice(0, 4).map((a) => {
                 const label = a.category === 'zebricek' ? 'Žebříček' : a.category === 'srovnani' ? 'Srovnání' : a.category === 'vzdelavani' ? 'Vzdělávání' : 'Průvodce'
+                const href = a.category === 'zebricek' ? `/zebricek/${a.slug}` : `/pruvodce/${a.slug}`
                 const initial = a.title.charAt(0).toUpperCase()
                 return (
                   <Link
                     key={a.slug}
-                    href={`/pruvodce/${a.slug}`}
+                    href={href}
                     className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:border-olive-light hover:shadow-md hover:-translate-y-0.5"
                   >
                     <div className="aspect-[16/10] bg-olive-dark flex items-center justify-center relative overflow-hidden">
-                      <div className="font-[family-name:var(--font-display)] text-[120px] font-normal italic text-white/15 leading-none select-none">
-                        {initial}
-                      </div>
-                      <div className="absolute top-3 left-3 text-[9px] font-bold tracking-widest uppercase text-white/70">
+                      {a.heroImageUrl ? (
+                        <img src={a.heroImageUrl} alt={a.title} className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                        <div className="font-[family-name:var(--font-display)] text-[120px] font-normal italic text-white/15 leading-none select-none">
+                          {initial}
+                        </div>
+                      )}
+                      <div className="absolute top-3 left-3 text-[9px] font-bold tracking-widest uppercase text-white/70 bg-black/20 rounded px-1.5 py-0.5 backdrop-blur-sm">
                         {label}
                       </div>
                     </div>
@@ -500,10 +508,14 @@ export default async function Home() {
                     className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:border-terra/30 hover:shadow-md hover:-translate-y-0.5"
                   >
                     <div className="aspect-[16/9] bg-[#7a3b1e] flex items-center justify-center relative overflow-hidden">
-                      <div className="font-[family-name:var(--font-display)] text-[120px] font-normal italic text-white/15 leading-none select-none">
-                        {initial}
-                      </div>
-                      <div className="absolute top-3 left-3 text-[9px] font-bold tracking-widest uppercase text-white/70">
+                      {a.heroImageUrl ? (
+                        <img src={a.heroImageUrl} alt={a.title} className="absolute inset-0 w-full h-full object-cover" />
+                      ) : (
+                        <div className="font-[family-name:var(--font-display)] text-[120px] font-normal italic text-white/15 leading-none select-none">
+                          {initial}
+                        </div>
+                      )}
+                      <div className="absolute top-3 left-3 text-[9px] font-bold tracking-widest uppercase text-white/70 bg-black/20 rounded px-1.5 py-0.5 backdrop-blur-sm">
                         Recept
                       </div>
                     </div>
