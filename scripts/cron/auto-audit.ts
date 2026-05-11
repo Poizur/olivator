@@ -22,6 +22,8 @@
  */
 import { supabaseAdmin } from '@/lib/supabase'
 import { logActivity, takeMetricSnapshot } from '@/lib/seo-activity'
+import { runJunkBrandCleanup } from '@/lib/junk-brand-detector'
+import { createCostTracker } from '@/lib/cost-tracker'
 
 interface StepResult {
   name: string
@@ -31,83 +33,30 @@ interface StepResult {
   detail?: string
 }
 
-// ── Step 1: Junk brand detection + auto-rename ──────────────────────────────
+// ── Step 1: Junk brand detection + Claude-driven re-extract ─────────────────
+//
+// Fáze 2 master-foundation plánu (2026-05): nahrazeno naivní substring check
+// pravdivým detektorem + Claude Haiku re-extract producenta ze source_url.
+// Detektor: lib/junk-brand-detector.ts (40+ blocked words, ALL-CAPS, encoding
+// artifacts). Re-extract používá raw_description už uložený v products.
+// Hard cost limit $0.50 per den (denní cron — větší cleanup beží přes
+// scripts/cleanup-junk-brands.ts s vyšším limitem).
 async function fixJunkBrands(): Promise<StepResult> {
-  const SUSPICIOUS = ['extra', 'panensky', 'panenský', 'olivovy', 'oil', 'olive', 'premium', 'bio', 'eko']
-  const { data: brands } = await supabaseAdmin.from('brands').select('id, slug, name')
+  const costTracker = createCostTracker({ hardLimitUsd: 0.5, name: 'auto-audit:junk-brands' })
+  const summary = await runJunkBrandCleanup({ costTracker })
 
-  let attempted = 0
-  let fixed = 0
-  let errors = 0
-
-  for (const b of (brands ?? []) as Array<{ id: string; slug: string; name: string }>) {
-    const lname = b.name.toLowerCase().trim()
-    if (!SUSPICIOUS.includes(lname)) continue
-    attempted++
-
-    // Najdi produkty tohoto brandu — zkus odvodit správný brand z jejich názvu
-    const { data: products } = await supabaseAdmin
-      .from('products')
-      .select('id, slug, name')
-      .eq('brand_slug', b.slug)
-
-    const ps = (products ?? []) as Array<{ id: string; slug: string; name: string }>
-    if (ps.length === 0) {
-      // Prázdný junk brand — smazat
-      await supabaseAdmin.from('brands').delete().eq('slug', b.slug)
-      fixed++
-      continue
-    }
-
-    // Zkus najít common substring v product names co není SUSPICIOUS
-    // Obvykle je správný brand poslední slovo nebo slovo po "olej" (např. "...olivový olej Vafis")
-    const candidates = new Map<string, number>()
-    for (const p of ps) {
-      // Extrahuj poslední slovo (ignore size unit + number)
-      const cleanName = p.name.replace(/\d+\s*(ml|l|g)/gi, '').trim()
-      const words = cleanName.split(/\s+/)
-      // Take last 1-3 words that aren't generic
-      for (let i = words.length - 1; i >= Math.max(0, words.length - 3); i--) {
-        const w = words[i].replace(/[^\p{L}]/gu, '')
-        if (w.length < 3) continue
-        if (SUSPICIOUS.includes(w.toLowerCase())) continue
-        candidates.set(w, (candidates.get(w) ?? 0) + 1)
-      }
-    }
-    // Pick most frequent candidate (musí být majoritní — jinak unsafe)
-    const sorted = [...candidates.entries()].sort((a, b) => b[1] - a[1])
-    if (sorted.length === 0 || sorted[0][1] < ps.length / 2) {
-      // Nelze automaticky odvodit — set brand_slug=null
-      await supabaseAdmin.from('products').update({ brand_slug: null }).eq('brand_slug', b.slug)
-      await supabaseAdmin.from('brands').delete().eq('slug', b.slug)
-      fixed++
-      continue
-    }
-    const newName = sorted[0][0]
-    const newSlug = newName.toLowerCase()
-      .normalize('NFD').replace(/[̀-ͯ]/g, '')  // diakritika
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-
-    // Existuje už cílový brand?
-    const { data: existing } = await supabaseAdmin.from('brands').select('id').eq('slug', newSlug).maybeSingle()
-    if (existing) {
-      // Re-link na existing
-      await supabaseAdmin.from('products').update({ brand_slug: newSlug }).eq('brand_slug', b.slug)
-      await supabaseAdmin.from('brands').delete().eq('slug', b.slug)
-    } else {
-      // Rename junk brand na nový (zachová ID + foto + případně content)
-      const { error } = await supabaseAdmin
-        .from('brands')
-        .update({ slug: newSlug, name: newName, updated_at: new Date().toISOString() })
-        .eq('id', b.id)
-      if (error) { errors++; continue }
-      await supabaseAdmin.from('products').update({ brand_slug: newSlug }).eq('brand_slug', b.slug)
-    }
-    fixed++
+  return {
+    name: 'junk-brands',
+    attempted: summary.junkDetected,
+    fixed: summary.deletedEmpty + summary.deletedAfterReassign,
+    errors: summary.flaggedNoExtraction,
+    detail:
+      `deleted=${summary.deletedEmpty + summary.deletedAfterReassign}, ` +
+      `flagged=${summary.flaggedPartial + summary.flaggedNoExtraction}, ` +
+      `keptNotJunk=${summary.keptNotJunk}, ` +
+      `reassigned=${summary.totalReassigned}, ` +
+      `cost=$${costTracker.totalUsd().toFixed(4)}`,
   }
-
-  return { name: 'junk-brands', attempted, fixed, errors }
 }
 
 // ── Step 2: Orphan brand_slug → vytvořit stub nebo unlink ────────────────────

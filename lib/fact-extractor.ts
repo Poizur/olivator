@@ -3,6 +3,7 @@
 // Used later by content-agent to guarantee specifics appear in AI rewrite.
 
 import { callClaude, extractText } from './anthropic'
+import { getInjectionBlock } from './learning-injector'
 
 // Haiku is 5x cheaper than Sonnet, plenty for structured extraction.
 const MODEL = 'claude-haiku-4-5'
@@ -129,10 +130,11 @@ export async function extractFactsFromText(
   if (!rawText || rawText.trim().length < 30) return []
 
   try {
+    const learningsBlock = await getInjectionBlock('fact_extractor')
     const res = await callClaude({
       model: MODEL,
       max_tokens: 1024,
-      system: EXTRACTION_SYSTEM,
+      system: `${learningsBlock}${EXTRACTION_SYSTEM}`,
       messages: [
         {
           role: 'user',

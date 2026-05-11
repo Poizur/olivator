@@ -12,6 +12,7 @@
 
 import { load } from 'cheerio'
 import { callClaude, extractText } from './anthropic'
+import { getInjectionBlock } from './learning-injector'
 
 export interface BrandResearchResult {
   descriptionShort: string | null
@@ -262,10 +263,11 @@ interface LlmExtract {
 }
 
 async function llmExtract(combinedText: string): Promise<LlmExtract> {
+  const learningsBlock = await getInjectionBlock('brand_research')
   const response = await callClaude({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 3000,
-    system: SYSTEM_PROMPT,
+    system: `${learningsBlock}${SYSTEM_PROMPT}`,
     messages: [{ role: 'user', content: combinedText }],
   })
   const raw = extractText(response).trim().replace(/^```(?:json)?\s*|\s*```$/g, '')

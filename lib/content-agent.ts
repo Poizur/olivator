@@ -4,6 +4,7 @@
 
 import { callClaude as callClaudeShared, extractText } from './anthropic'
 import { applyCzechTypographyFixes } from './czech-style'
+import { getInjectionBlock } from './learning-injector'
 
 const MODEL = 'claude-sonnet-4-20250514'
 const MIN_LONG_WORDS = 250 // below this we auto-retry once with feedback
@@ -212,10 +213,13 @@ async function callClaude(
   retryFeedback?: string
 ): Promise<ContentOutput> {
   // 529 retry je v callClaudeShared (lib/anthropic.ts)
+  // Learning injection: lekce z project_learnings se přidají jako prefix
+  // system promptu — viz lib/learning-injector.ts. Cached 5 min, ~0 overhead.
+  const learningsBlock = await getInjectionBlock('content_agent')
   const res = await callClaudeShared({
     model: MODEL,
     max_tokens: 2048,
-    system: SYSTEM_PROMPT,
+    system: `${learningsBlock}${SYSTEM_PROMPT}`,
     messages: [{ role: 'user', content: buildUserPrompt(input, retryFeedback) }],
   })
   const text = extractText(res)
@@ -315,10 +319,11 @@ export async function generateMetaDescription(input: MetaDescriptionInput): Prom
   if (input.certifications.length > 0) lines.push(`Certifikace: ${input.certifications.join(', ').toUpperCase()}`)
   if (input.olivatorScore != null) lines.push(`Olivator Score: ${input.olivatorScore}/100`)
 
+  const learningsBlock = await getInjectionBlock('content_agent')
   const res = await callClaudeShared({
     model: 'claude-haiku-4-5',
     max_tokens: 250,
-    system: META_SYSTEM_PROMPT,
+    system: `${learningsBlock}${META_SYSTEM_PROMPT}`,
     messages: [{ role: 'user', content: lines.join('\n') }],
   })
   const text = extractText(res)
@@ -377,10 +382,11 @@ export async function generateMetaTitle(input: MetaTitleInput): Promise<string> 
   if (input.certifications.length > 0) lines.push(`Certifikace: ${input.certifications.join(', ').toUpperCase()}`)
   if (input.volumeMl) lines.push(`Objem: ${input.volumeMl} ml`)
 
+  const learningsBlock = await getInjectionBlock('content_agent')
   const res = await callClaudeShared({
     model: 'claude-haiku-4-5',
     max_tokens: 100,
-    system: META_TITLE_SYSTEM_PROMPT,
+    system: `${learningsBlock}${META_TITLE_SYSTEM_PROMPT}`,
     messages: [{ role: 'user', content: lines.join('\n') }],
   })
   const text = extractText(res)

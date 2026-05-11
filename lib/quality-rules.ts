@@ -4,6 +4,12 @@
 //
 // Rules are run after every product write (publish, rescrape, AI rewrite)
 // and on-demand via /admin/quality dashboard.
+//
+// Brand-level audit (junk_brand_name): viz lib/junk-brand-detector.ts.
+// Není v rules[] poli protože by porušil product-centric ProductSnapshot
+// kontrakt — místo toho je exportováno jako runJunkBrandCleanup() a volá
+// se ze scripts/cron/auto-audit.ts (denně) a scripts/cleanup-junk-brands.ts
+// (jednorázový catchup).
 
 import { supabaseAdmin } from './supabase'
 import { generateProductDescriptions, generateMetaDescription } from './content-agent'

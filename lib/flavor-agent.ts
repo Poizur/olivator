@@ -3,6 +3,7 @@
 // Uses Haiku (cheap, fast). Deterministic low-temperature output.
 
 import { callClaude, extractText } from './anthropic'
+import { getInjectionBlock } from './learning-injector'
 
 const MODEL = 'claude-haiku-4-5'
 
@@ -112,11 +113,12 @@ export async function estimateFlavorProfile(input: FlavorInput): Promise<FlavorP
   const userContent = lines.join('\n')
 
   // Retry pro 529 Overloaded je v callClaude wrapperu (lib/anthropic.ts).
+  const learningsBlock = await getInjectionBlock('flavor_agent')
   const res = await callClaude({
     model: MODEL,
     max_tokens: 512,
     temperature: 0.2, // lower temp = more consistent estimates
-    system: SYSTEM_PROMPT,
+    system: `${learningsBlock}${SYSTEM_PROMPT}`,
     messages: [{ role: 'user', content: userContent }],
   })
   const text = extractText(res)
