@@ -27,6 +27,7 @@ export interface RecipeFull {
   emoji: string | null
   readTime: string | null
   heroImageUrl: string | null
+  hasManualPhoto?: boolean
 
   prepTimeMin: number | null
   cookTimeMin: number | null
@@ -176,7 +177,35 @@ export async function getAllRecipes(): Promise<RecipeFull[]> {
       if (error.code === '42P01' || error.code === 'PGRST205') return []
       throw error
     }
-    return (data ?? []).map((r) => rowToFull(r as Row))
+    const recipes = (data ?? []).map((r) => rowToFull(r as Row))
+
+    // Batch-fetch manual entity_images — pro zobrazení ikonky v adminu
+    if (recipes.length > 0) {
+      const ids = recipes.map((r) => r.id)
+      const { data: manualPhotos } = await supabaseAdmin
+        .from('entity_images')
+        .select('entity_id, url, is_primary')
+        .eq('entity_type', 'recipe')
+        .in('source', ['manual_upload', 'manual'])
+        .eq('status', 'active')
+        .in('entity_id', ids)
+
+      if (manualPhotos && manualPhotos.length > 0) {
+        const manualSet = new Set(manualPhotos.map((p) => p.entity_id as string))
+        const primaryMap = new Map<string, string>()
+        for (const p of manualPhotos) {
+          if (p.is_primary) primaryMap.set(p.entity_id as string, p.url as string)
+        }
+        for (const recipe of recipes) {
+          if (manualSet.has(recipe.id)) {
+            recipe.hasManualPhoto = true
+            if (primaryMap.has(recipe.id)) recipe.heroImageUrl = primaryMap.get(recipe.id)!
+          }
+        }
+      }
+    }
+
+    return recipes
   } catch {
     return []
   }

@@ -79,7 +79,7 @@ export default async function AdminRecipesPage() {
                 className="bg-white border border-off2 rounded-xl px-5 py-4 hover:border-olive transition-colors"
               >
                 <div className="flex items-start gap-4">
-                  <div className="text-3xl w-12 h-12 bg-olive-bg/40 rounded-lg flex items-center justify-center shrink-0">
+                  <div className="relative text-3xl w-12 h-12 bg-olive-bg/40 rounded-lg flex items-center justify-center shrink-0">
                     {r.heroImageUrl ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
@@ -89,6 +89,14 @@ export default async function AdminRecipesPage() {
                       />
                     ) : (
                       r.emoji
+                    )}
+                    {r.hasManualPhoto && (
+                      <span
+                        title="Vlastní fotka (manual upload)"
+                        className="absolute -bottom-1 -right-1 bg-white border border-off2 rounded-full w-5 h-5 flex items-center justify-center text-[10px] leading-none shadow-sm"
+                      >
+                        📷
+                      </span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">

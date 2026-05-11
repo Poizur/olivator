@@ -316,13 +316,32 @@ async function processOne(brief: RecipeBrief): Promise<{ ok: boolean; reason?: s
   const metaTitle = meta.title.length > 70 ? meta.title.slice(0, 67) + '…' : meta.title
   const metaDesc = meta.description.length > 160 ? meta.description.slice(0, 157) + '…' : meta.description
 
-  const { error } = await supabaseAdmin.from('recipes').upsert({
+  // Ochrana manual fotek: pokud recept už má vlastní upload, hero_image_url nepřepíšeme.
+  const { data: existingRecipe } = await supabaseAdmin
+    .from('recipes')
+    .select('id')
+    .eq('slug', brief.slug)
+    .maybeSingle()
+  let protectedHeroUrl: string | null | undefined = hero?.url ?? null
+  if (existingRecipe?.id) {
+    const { data: manualPhoto } = await supabaseAdmin
+      .from('entity_images')
+      .select('id')
+      .eq('entity_id', existingRecipe.id as string)
+      .eq('entity_type', 'recipe')
+      .in('source', ['manual_upload', 'manual'])
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle()
+    if (manualPhoto) protectedHeroUrl = undefined // vynechat z upsert — manual foto nesmí přepsat
+  }
+
+  const upsertPayload: Record<string, unknown> = {
     slug: brief.slug,
     title: brief.title,
     excerpt: brief.excerpt,
     emoji: brief.emoji,
     read_time: `${content.prep_time_min + content.cook_time_min} min`,
-    hero_image_url: hero?.url ?? null,
     prep_time_min: content.prep_time_min,
     cook_time_min: content.cook_time_min,
     servings: content.servings,
@@ -338,7 +357,10 @@ async function processOne(brief: RecipeBrief): Promise<{ ok: boolean; reason?: s
     meta_description: metaDesc,
     status: 'draft',
     source: 'ai_generated',
-  }, { onConflict: 'slug' })
+  }
+  if (protectedHeroUrl !== undefined) upsertPayload.hero_image_url = protectedHeroUrl
+
+  const { error } = await supabaseAdmin.from('recipes').upsert(upsertPayload, { onConflict: 'slug' })
 
   if (error) return { ok: false, reason: error.message }
   return { ok: true }
