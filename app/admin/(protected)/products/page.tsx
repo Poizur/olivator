@@ -4,7 +4,6 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { calculateCompleteness } from '@/lib/completeness'
 import { BulkRescrapeButton } from './bulk-rescrape-button'
 import { BackfillDraftsButton } from './backfill-drafts-button'
-import { BackfillOriginButton } from './backfill-origin-button'
 import { ProductsBulkTable } from './products-bulk-table'
 import { StatusFilters } from '@/components/admin/status-filters'
 import { BulkFillSpecsButton } from '@/components/admin/bulk-fill-specs-button'
@@ -36,8 +35,6 @@ export default async function AdminProductsPage({
   const brandNameBySlug = new Map<string, string>(
     (brandsResult.data ?? []).map((b) => [b.slug as string, b.name as string])
   )
-
-  const missingOriginCount = allProducts.filter(p => !p.originCountry).length
 
   // Pre-compute completeness for each product (used in badge + sort)
   const withCompleteness = allProducts.map((p) => ({
@@ -112,8 +109,6 @@ export default async function AdminProductsPage({
           </Link>
         </div>
       </div>
-
-      <BackfillOriginButton missingCount={missingOriginCount} />
 
       {showBulkRescrape && (
         <>
