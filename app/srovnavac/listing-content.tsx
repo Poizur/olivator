@@ -5,6 +5,7 @@ import { useMemo, useState, useEffect } from 'react'
 import { ListCard } from '@/components/list-card'
 import { FilterPanel, type FilterCounts } from '@/components/filter-panel'
 import { countryName, certLabel, formatPrice } from '@/lib/utils'
+import { classifyIntensity, INTENSITY_LABELS, type Intensity } from '@/lib/intensity-classifier'
 import type { Product, ProductOffer } from '@/lib/types'
 
 type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
@@ -38,6 +39,7 @@ export function ListingContent({
   const activeOrigins = searchParams.get('origin')?.split(',').filter(Boolean) || []
   const activeCerts = searchParams.get('cert')?.split(',').filter(Boolean) || []
   const activeQuality = searchParams.get('quality')?.split(',').filter(Boolean) || []
+  const activeIntensity = searchParams.get('intensity') as Intensity | null
   const sort = searchParams.get('sort') || 'score'
   const maxPrice = searchParams.get('maxPrice')
   const search = searchParams.get('q') || ''
@@ -107,6 +109,9 @@ export function ListingContent({
     if (activeQuality.includes('high_oleocanthal')) {
       list = list.filter((p) => p.oleocanthal != null && p.oleocanthal >= 100)
     }
+    if (activeIntensity) {
+      list = list.filter((p) => classifyIntensity(p) === activeIntensity)
+    }
     if (maxPrice) {
       const max = Number(maxPrice)
       if (!isNaN(max)) {
@@ -132,13 +137,14 @@ export function ListingContent({
     }
 
     return list
-  }, [products, search, activeTypes, activeOrigins, activeCerts, activeQuality, sort, maxPrice])
+  }, [products, search, activeTypes, activeOrigins, activeCerts, activeQuality, activeIntensity, sort, maxPrice])
 
   const hasActiveFilters =
     activeTypes.length > 0 ||
     activeOrigins.length > 0 ||
     activeCerts.length > 0 ||
     activeQuality.length > 0 ||
+    !!activeIntensity ||
     !!maxPrice ||
     !!search.trim()
 
@@ -263,6 +269,12 @@ export function ListingContent({
                   <FilterChip
                     label="Oleokantal ≥100"
                     onRemove={() => clearFilter('quality', 'high_oleocanthal')}
+                  />
+                )}
+                {activeIntensity && (
+                  <FilterChip
+                    label={`Intenzita: ${INTENSITY_LABELS[activeIntensity]}`}
+                    onRemove={() => clearFilter('intensity')}
                   />
                 )}
                 {maxPrice && (

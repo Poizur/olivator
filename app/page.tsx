@@ -17,6 +17,7 @@ import { BrandStrip } from '@/components/brand-strip'
 import { ComparatorTeaser, type Duel } from '@/components/comparator-teaser'
 import { countryName, countryFlag, formatPrice, formatPricePer100ml } from '@/lib/utils'
 import { computeBadges, pickByCategory, type ProductBadge } from '@/lib/product-badges'
+import { classifyIntensity, INTENSITY_LABELS, INTENSITY_DESCRIPTIONS, type Intensity } from '@/lib/intensity-classifier'
 import type { Product, ProductOffer } from '@/lib/types'
 import { ScoreBadge } from '@/components/score-badge'
 
@@ -62,6 +63,21 @@ export default async function Home() {
   const tipVyrazny = pickByCategory(allProducts, 'vyrazny')
   const tipJemny = pickByCategory(allProducts, 'jemny')
   const tipZdravy = pickByCategory(allProducts, 'zdravy')
+
+  // Intensity sekce — skupiny jemný / střední / pikantní
+  const scoredWithOffer = allProducts.filter(
+    (p) => p.cheapestOffer != null && p.type !== 'flavored'
+  )
+  const intensityGroups: Record<Intensity, ProductWithOffer[]> = { jemny: [], stredni: [], pikantni: [] }
+  for (const p of scoredWithOffer) {
+    intensityGroups[classifyIntensity(p)].push(p)
+  }
+  // Top 3 per skupiny dle Score
+  const intensityTop: Record<Intensity, ProductWithOffer[]> = {
+    jemny: [...intensityGroups.jemny].sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0)).slice(0, 3),
+    stredni: [...intensityGroups.stredni].sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0)).slice(0, 3),
+    pikantni: [...intensityGroups.pikantni].sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0)).slice(0, 3),
+  }
 
   // Comparator teaser — 3 prefab duely
   const withOffer = allProducts.filter((p) => p.cheapestOffer != null)
@@ -195,6 +211,33 @@ export default async function Home() {
             {tipVyrazny && <FeaturedTip category="vyrazny" product={tipVyrazny} />}
             {tipJemny && <FeaturedTip category="jemny" product={tipJemny} />}
             {tipZdravy && <FeaturedTip category="zdravy" product={tipZdravy} />}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── INTENZITA CHUTI ─────────────────────────────────────── */}
+      <section className="px-6 md:px-10 py-16">
+        <div className="max-w-[1280px] mx-auto">
+          <div className="text-center mb-10">
+            <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
+              — Podle intenzity chuti
+            </div>
+            <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text leading-tight">
+              Jemné, střední nebo pikantní?
+            </h2>
+            <p className="text-[15px] text-text2 font-light mt-3 max-w-lg mx-auto">
+              Každý palec je jiný. Najdi styl, který ti sedí.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {(['jemny', 'stredni', 'pikantni'] as Intensity[]).map((key) => (
+              <IntensityCard
+                key={key}
+                intensity={key}
+                products={intensityTop[key]}
+                count={intensityGroups[key].length}
+              />
+            ))}
           </div>
         </div>
       </section>
@@ -718,6 +761,77 @@ function FeaturedTip({
           )}
         </div>
       </div>
+    </Link>
+  )
+}
+
+function IntensityCard({
+  intensity,
+  products,
+  count,
+}: {
+  intensity: Intensity
+  products: ProductWithOffer[]
+  count: number
+}) {
+  const config: Record<Intensity, { emoji: string; bg: string; tag: string; border: string }> = {
+    jemny: {
+      emoji: '🫒',
+      bg: 'bg-olive-bg',
+      tag: 'bg-olive text-white',
+      border: 'border-olive-border hover:border-olive',
+    },
+    stredni: {
+      emoji: '⚖️',
+      bg: 'bg-off',
+      tag: 'bg-text text-white',
+      border: 'border-off2 hover:border-text2',
+    },
+    pikantni: {
+      emoji: '🔥',
+      bg: 'bg-amber-50',
+      tag: 'bg-terra text-white',
+      border: 'border-amber-200 hover:border-terra',
+    },
+  }
+  const c = config[intensity]
+
+  return (
+    <Link
+      href={`/srovnavac?intensity=${intensity}`}
+      className={`block ${c.bg} border ${c.border} rounded-[var(--radius-card)] p-5 transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(0,0,0,0.06)]`}
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-[22px]">{c.emoji}</span>
+        <span className={`text-[11px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${c.tag}`}>
+          {INTENSITY_LABELS[intensity]}
+        </span>
+        <span className="ml-auto text-[11px] text-text3">{count} olejů</span>
+      </div>
+      <p className="text-[13px] text-text2 leading-snug mb-4">
+        {INTENSITY_DESCRIPTIONS[intensity]}
+      </p>
+      {products.length > 0 && (
+        <div className="flex -space-x-3 mb-4">
+          {products.slice(0, 3).map((p) => (
+            <div
+              key={p.id}
+              className="w-10 h-10 rounded-full border-2 border-white bg-off overflow-hidden flex-shrink-0"
+              title={p.name}
+            >
+              {p.imageUrl ? (
+                <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
+              ) : (
+                <span className="flex items-center justify-center w-full h-full text-[18px]">🫒</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      <span className="inline-flex items-center gap-1 text-[13px] font-medium text-olive">
+        Zobrazit {INTENSITY_LABELS[intensity].toLowerCase()} oleje
+        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+      </span>
     </Link>
   )
 }
