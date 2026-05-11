@@ -75,7 +75,7 @@ export function ProductGallery({
 
   return (
     <>
-      <div className="md:sticky md:top-[100px]">
+      <div>
         {/* Hero image — klikem se otevře v lightboxu */}
         <button
           type="button"

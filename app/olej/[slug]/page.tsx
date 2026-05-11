@@ -333,8 +333,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         {product.name}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-10 lg:gap-14 items-start mb-14">
-        {/* Left — gallery */}
+      {/* ── HERO: obrázek + základní info ──────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-10 lg:gap-14 items-start mb-10">
+        {/* Left — gallery (scrolluje s celou stránkou) */}
         <ProductGallery
           productName={product.name}
           fallbackImageUrl={product.imageUrl}
@@ -364,12 +365,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           }
         />
 
-        {/* Right — info */}
-        <div>
+        {/* Right — klíčové info + CTA */}
+        <div className="flex flex-col">
           <div className="text-[11px] text-text3 mb-2 uppercase tracking-widest font-medium">
             {product.originRegion ? `${product.originRegion} · ` : ''}{countryName(product.originCountry)} · {typeLabel(product.type)} · {product.volumeMl} ml
           </div>
-          <h1 className="font-[family-name:var(--font-display)] text-[34px] font-normal text-text leading-[1.15] mb-2 tracking-tight">
+          <h1 className="font-[family-name:var(--font-display)] text-[34px] font-normal text-text leading-[1.15] mb-3 tracking-tight">
             {product.name}
           </h1>
           <p className="text-[15px] text-text2 leading-relaxed font-light mb-5">
@@ -399,21 +400,22 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             )}
           </div>
 
-          <ScoreSection product={product} />
-          <FlavorWheel profile={product.flavorProfile} />
-          <PriceTable
-            offers={offers}
-            volumeMl={product.volumeMl}
-            productSlug={product.slug}
-            productName={product.name}
-          />
-          <PriceSparkline
-            data={priceHistory}
-            currentPrice={cheapest?.price ?? null}
-          />
-
+          {/* Cena + CTA — viditelné hned bez scrollu */}
           {cheapest && (
-            <>
+            <div className="mb-4">
+              <div className="flex items-baseline gap-2 mb-1">
+                <span className="text-[32px] font-bold text-text tabular-nums leading-none">
+                  {formatPrice(cheapest.price)}
+                </span>
+                {product.volumeMl && (
+                  <span className="text-[13px] text-text3">
+                    {formatPricePer100ml(cheapest.price, product.volumeMl)}
+                  </span>
+                )}
+              </div>
+              <div className="text-[12px] text-text3 mb-4">
+                Nejnižší cena · u {cheapest.retailer.name}
+              </div>
               <AffiliateLink
                 data={{
                   productSlug: product.slug,
@@ -425,21 +427,33 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 }}
                 className="block w-full bg-olive text-white border-none rounded-xl py-3.5 text-[15px] font-medium cursor-pointer text-center transition-colors hover:bg-olive-dark mb-2.5"
               >
-                Koupit u {cheapest.retailer.name} — {formatPrice(cheapest.price)}
+                Koupit u {cheapest.retailer.name} →
               </AffiliateLink>
-              <div className="text-center mb-2.5">
+              <div className="text-center mb-2">
                 <PriceAlertButton
                   productId={product.id}
                   productName={product.name}
                   currentPrice={cheapest.price}
                 />
               </div>
-            </>
+            </div>
           )}
 
           <ProductActions product={product} />
+        </div>
+      </div>
 
-          <div className="mt-6">
+      {/* ── DETAILY: Score + Chuť + Ceník + Specs + Sparkline ──────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-14">
+        {/* Levý sloupec: Score + FlavorWheel */}
+        <div>
+          <ScoreSection product={product} />
+          <FlavorWheel profile={product.flavorProfile} />
+        </div>
+
+        {/* Pravý sloupec: Specifikace + Ceník */}
+        <div>
+          <div className="mb-6">
             <h2 className="text-[13px] font-semibold text-text mb-3 tracking-wide">
               Specifikace
             </h2>
@@ -465,7 +479,21 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               </div>
             ))}
           </div>
+          <PriceTable
+            offers={offers}
+            volumeMl={product.volumeMl}
+            productSlug={product.slug}
+            productName={product.name}
+          />
         </div>
+      </div>
+
+      {/* Vývoj ceny — full šířka */}
+      <div className="mb-14">
+        <PriceSparkline
+          data={priceHistory}
+          currentPrice={cheapest?.price ?? null}
+        />
       </div>
 
       {/* Pokračujte — hybrid sekce: variants + recepty + CTA Najít olej.
