@@ -6,6 +6,7 @@ import { BulkRescrapeButton } from './bulk-rescrape-button'
 import { BackfillDraftsButton } from './backfill-drafts-button'
 import { ProductsBulkTable } from './products-bulk-table'
 import { StatusFilters } from '@/components/admin/status-filters'
+import { BulkFillSpecsButton } from '@/components/admin/bulk-fill-specs-button'
 
 // Sentinel pro produkty bez brand_slug (zatím nezařazené do žádné značky)
 const NO_BRAND = '__none__'
@@ -98,7 +99,8 @@ export default async function AdminProductsPage({
           <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">— Katalog</div>
           <h1 className="font-[family-name:var(--font-display)] text-3xl text-text">Produkty</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <BulkFillSpecsButton />
           <Link
             href="/admin/products/import"
             className="bg-olive text-white rounded-full px-4 py-2 text-[13px] font-medium hover:bg-olive2 transition-colors"

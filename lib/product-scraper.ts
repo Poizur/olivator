@@ -51,6 +51,9 @@ export interface ScrapedProduct {
   deltaK: number | null
   waxMaxMgPerKg: number | null  // Vosk (≤ X mg/kg)
   oleicAcidPct: number | null   // some shops list it as parameter
+  oleocanthal: number | null    // mg/kg — often in parameter tables
+  harvestYear: number | null    // year of harvest
+  processing: string | null     // cold_pressed | filtered | unfiltered | early_harvest
 
   // Content
   descriptionShort: string | null
@@ -234,6 +237,44 @@ export function extractAcidity(text: string | null): number | null {
 
 // Words inside the polyphenol match that signal it's a regulatory/typical/EU
 // threshold reference, not a fact about THIS product. Reject those matches.
+export function extractHarvestYear(text: string | null): number | null {
+  if (!text) return null
+  const patterns = [
+    /sklize[nň][ěe]?\s*:?\s*(20\d{2})/i,
+    /ro[čc]n[íi]k\s*:?\s*(20\d{2})/i,
+    /harvest\s+(?:year\s*:?\s*)?(20\d{2})/i,
+    /\b(20\d{2})\s*\/\s*\d{2}\b/,           // "2024/25"
+    /\b(20\d{2})\s*sklize[nň]/i,
+  ]
+  for (const re of patterns) {
+    const m = text.match(re)
+    if (m) return parseInt(m[1])
+  }
+  return null
+}
+
+export function extractProcessing(text: string | null): string | null {
+  if (!text) return null
+  const t = text.toLowerCase()
+  if (/za\s+studena\s+lis|cold.?press/.test(t)) return 'cold_pressed'
+  if (/nefiltr/.test(t)) return 'unfiltered'
+  if (/filtr[ao]/.test(t)) return 'filtered'
+  if (/early\s+harvest|rann[áa]\s+sklize/.test(t)) return 'early_harvest'
+  return null
+}
+
+export function extractOleocanthal(text: string | null): number | null {
+  if (!text) return null
+  const m =
+    text.match(/(\d{1,4})\s*\+?\s*mg\s*\/\s*kg\s*oleokantal/i) ||
+    text.match(/(\d{1,4})\s*\+?\s*oleokantal/i) ||
+    text.match(/oleokantal[^\s\d:]*[:\s]*(\d{1,4})/i) ||
+    text.match(/oleocanthal[^\s\d:]*[:\s]*(\d{1,4})/i)
+  if (!m) return null
+  const v = parseFloat(m[1])
+  return v > 0 && v < 2000 ? v : null
+}
+
 const POLYPHENOL_THRESHOLD_MARKERS = [
   'minimáln', 'alespoň', 'musí mí', 'musí být', 'vyžaduje', 'norma',
   'typicky', 'obvykl', 'běžn', 'standardn', 'kategori',
@@ -347,6 +388,9 @@ function mapParameterTableToFields(table: Record<string, string>): {
   peroxideFromTable: number | null
   packagingFromTable: string | null
   bitternessFromTable: number | null
+  oleocanthalFromTable: number | null
+  harvestYearFromTable: number | null
+  processingFromTable: string | null
 } {
   // Helper: find first table key that includes any of `needles` (lowercase, normalized)
   const findKey = (...needles: string[]): string | null => {
@@ -389,6 +433,27 @@ function mapParameterTableToFields(table: Record<string, string>): {
   // Bitterness — 'Hořkost' label v Shoptet shopech
   const bitternessFromTable = mapBitterness(valueOf('hořkost', 'horkost'))
 
+  // Oleocanthal (mg/kg)
+  const oleocanthalFromTable = parseValueWithPrefix(
+    valueOf('oleokantal', 'oleocanthal', 'oleokanthal') ?? ''
+  )
+
+  // Harvest year — "Rok sklizně", "Sklizeň", "Ročník", "Vintage"
+  const harvestYearRaw = valueOf('rok sklizně', 'sklizeň', 'harvest year', 'vintage', 'ročník', 'harvest')
+  let harvestYearFromTable: number | null = null
+  if (harvestYearRaw) {
+    const m = harvestYearRaw.match(/\b(20\d{2})\b/)
+    if (m) harvestYearFromTable = parseInt(m[1])
+  }
+
+  // Processing — "Způsob výroby", "Zpracování", "Processing", "Lisování"
+  const processingRaw = (valueOf('způsob výroby', 'zpracování', 'processing', 'výroba', 'lisování') ?? '').toLowerCase()
+  let processingFromTable: string | null = null
+  if (/studena|cold.?press/.test(processingRaw)) processingFromTable = 'cold_pressed'
+  else if (/nefiltr/.test(processingRaw)) processingFromTable = 'unfiltered'
+  else if (/filtr/.test(processingRaw)) processingFromTable = 'filtered'
+  else if (/early|rann/.test(processingRaw)) processingFromTable = 'early_harvest'
+
   return {
     k232,
     k270,
@@ -399,6 +464,9 @@ function mapParameterTableToFields(table: Record<string, string>): {
     peroxideFromTable,
     packagingFromTable,
     bitternessFromTable,
+    oleocanthalFromTable,
+    harvestYearFromTable,
+    processingFromTable,
   }
 }
 
@@ -703,6 +771,9 @@ export async function scrapeProductPage(url: string): Promise<ScrapedProduct> {
   const inferredPackaging = inferPackaging(allText)
   const acidity = extractAcidity(rawDescription) ?? extractAcidity(shortDesc) ?? extractAcidity(paramsText)
   const polyphenols = extractPolyphenols(rawDescription) ?? extractPolyphenols(shortDesc) ?? extractPolyphenols(paramsText)
+  const oleocanthal = extractOleocanthal(rawDescription) ?? extractOleocanthal(shortDesc) ?? extractOleocanthal(paramsText)
+  const harvestYear = extractHarvestYear(rawDescription) ?? extractHarvestYear(shortDesc) ?? extractHarvestYear(name)
+  const processing = extractProcessing(rawDescription) ?? extractProcessing(shortDesc)
   const peroxideText = extractPeroxide(rawDescription) ?? extractPeroxide(paramsText)
   const slug = name ? slugify(name) : null
 
@@ -724,9 +795,11 @@ export async function scrapeProductPage(url: string): Promise<ScrapedProduct> {
     originRegion: origin.region,
     volumeMl,
     packaging: tableFields.packagingFromTable ?? inferredPackaging,
-    // Prefer text-derived values (more accurate than table ranges) but fall back to table.
     acidity: acidity ?? tableFields.acidityFromTable,
     polyphenols,
+    oleocanthal: oleocanthal ?? tableFields.oleocanthalFromTable,
+    harvestYear: harvestYear ?? tableFields.harvestYearFromTable,
+    processing: processing ?? tableFields.processingFromTable,
     peroxideValue: peroxideText ?? tableFields.peroxideFromTable,
     k232: tableFields.k232,
     k270: tableFields.k270,
