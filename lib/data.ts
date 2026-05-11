@@ -175,11 +175,9 @@ const RETAILER_PUBLIC_COLUMNS =
  */
 async function enrichWithGalleryImages(products: Product[]): Promise<void> {
   if (products.length === 0) return
-  const ids = products.map((p) => p.id)
   const { data } = await supabaseAdmin
     .from('product_images')
     .select('product_id, url')
-    .in('product_id', ids)
     .eq('is_primary', true)
     .neq('source', 'scraper_candidate') // jen approved/manual
 
@@ -257,13 +255,14 @@ export const getProductsWithOffers = cache(async (): Promise<Array<Product & { c
   const { data, error } = await supabaseAdmin
     .from('product_offers')
     .select(`id, product_id, retailer_id, price, currency, in_stock, product_url, affiliate_url, commission_pct, retailer:retailers(${RETAILER_PUBLIC_COLUMNS})`)
-    .in('product_id', ids)
     .order('price', { ascending: true })
   if (error) throw error
 
+  const productIdSet = new Set(ids)
   const offersByProduct = new Map<string, ProductOffer>()
   for (const row of (data ?? []) as Record<string, unknown>[]) {
     const pid = row.product_id as string
+    if (!productIdSet.has(pid)) continue // skip offers for non-active products
     if (offersByProduct.has(pid)) continue // already have cheapest
     offersByProduct.set(pid, {
       id: row.id as string,
