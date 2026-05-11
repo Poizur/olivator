@@ -132,6 +132,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     })(),
   ])
   const cheapest = offers[0]
+  const hasScore = product.type !== 'flavored' && product.olivatorScore != null && product.olivatorScore > 0
 
   // Recepty napojené na produkt přes region nebo cultivar (recipe_entity_links).
   // Hybrid sekce "Pokračujte" je sloučí s variants do jednoho gridu.
@@ -399,6 +400,39 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               </span>
             )}
           </div>
+
+          {/* Klíčové metriky — přehled na první pohled */}
+          {(hasScore || product.acidity != null || product.polyphenols != null) && (
+            <div className="flex rounded-xl border border-off2 overflow-hidden divide-x divide-off2 mb-6">
+              {hasScore && (
+                <div className="flex-1 flex flex-col items-center py-3 px-2">
+                  <span className="text-[22px] font-bold text-terra tabular-nums leading-tight">
+                    {product.olivatorScore}
+                    <span className="text-[11px] font-normal text-text3 ml-0.5">/100</span>
+                  </span>
+                  <span className="text-[10px] text-text3 mt-0.5">Score</span>
+                </div>
+              )}
+              {product.acidity != null && (
+                <div className="flex-1 flex flex-col items-center py-3 px-2">
+                  <span className="text-[22px] font-bold text-text tabular-nums leading-tight">
+                    {product.acidity.toFixed(2)}
+                    <span className="text-[11px] font-normal text-text3 ml-0.5">%</span>
+                  </span>
+                  <span className="text-[10px] text-text3 mt-0.5">Kyselost</span>
+                </div>
+              )}
+              {product.polyphenols != null && (
+                <div className="flex-1 flex flex-col items-center py-3 px-2">
+                  <span className="text-[22px] font-bold text-text tabular-nums leading-tight">
+                    {product.polyphenols}
+                    <span className="text-[11px] font-normal text-text3 ml-0.5">mg/kg</span>
+                  </span>
+                  <span className="text-[10px] text-text3 mt-0.5">Polyfenoly</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Cena + CTA — viditelné hned bez scrollu */}
           {cheapest && (
