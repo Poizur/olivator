@@ -16,6 +16,7 @@ import { syncRetailerFeed, type FeedSyncResult } from './feed-sync'
 import { researchRetailer } from './retailer-research'
 import { runRescrape } from './product-rescrape'
 import { linkAndRecomputeForProduct } from './entity-aggregator'
+import { inferOriginFromText } from './utils'
 
 // Kolik pending draftů zpracovat per cron run. Každý rescrape ~30-90s.
 // 40 × 60s = 40 min — feed sync sám trvá ~5 min, celkem ~45 min < 60 min Railway timeout.
@@ -33,6 +34,7 @@ export interface FeedSyncRunResult {
   pendingDraftsRescraped: number
   pendingDraftsFailed: number
   brandLinksBackfilled: number
+  originBackfilled: number
   perRetailer: Array<{
     slug: string
     name: string
@@ -68,6 +70,7 @@ export async function runFeedSyncForAllRetailers(): Promise<FeedSyncRunResult> {
     pendingDraftsRescraped: 0,
     pendingDraftsFailed: 0,
     brandLinksBackfilled: 0,
+    originBackfilled: 0,
     perRetailer: [],
     startedAt,
     finishedAt: '',
@@ -145,6 +148,19 @@ export async function runFeedSyncForAllRetailers(): Promise<FeedSyncRunResult> {
     }
   } catch (err) {
     console.warn('[feed-sync] brand backfill stage failed:', err)
+  }
+
+  // ── PASS 5: Origin country backfill ─────────────────────────────────────
+  // Doplní origin_country pro produkty kde je NULL — inferuje ze jména + popisu.
+  // Cap 200 per run, idempotentní. Nové produkty by měly mít origin z feed-sync,
+  // tato pass je záchranná síť pro starší záznamy a edge cases.
+  try {
+    result.originBackfilled = await backfillOriginCountry(200)
+    if (result.originBackfilled > 0) {
+      console.log(`[feed-sync] origin backfilled: ${result.originBackfilled}`)
+    }
+  } catch (err) {
+    console.warn('[feed-sync] origin backfill stage failed:', err)
   }
 
   result.finishedAt = new Date().toISOString()
@@ -263,4 +279,29 @@ async function rescrapePendingDrafts(limit: number): Promise<{ succeeded: number
     }
   }
   return { succeeded, failed }
+}
+
+/** Doplní origin_country pro produkty kde je NULL — inferuje ze jména + popisu.
+ *  Idempotentní, bezpečné opakovat každou noc. */
+async function backfillOriginCountry(limit: number): Promise<number> {
+  const { data, error } = await supabaseAdmin
+    .from('products')
+    .select('id, name, description_short, description_long')
+    .in('status', ['active', 'draft'])
+    .is('origin_country', null)
+    .limit(limit)
+  if (error || !data?.length) return 0
+
+  let done = 0
+  for (const p of data) {
+    const text = [p.name, p.description_short, p.description_long].filter(Boolean).join(' ')
+    const { country } = inferOriginFromText(text as string)
+    if (!country) continue
+    const { error: e } = await supabaseAdmin
+      .from('products')
+      .update({ origin_country: country })
+      .eq('id', p.id)
+    if (!e) done++
+  }
+  return done
 }
