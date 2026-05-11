@@ -98,7 +98,7 @@ export default async function AdminArticlesPage() {
                       href={`/admin/articles/${a.slug}`}
                       className="text-[12px] text-olive font-medium"
                     >
-                      Otevřít →
+                      Upravit článek →
                     </Link>
                     {a.status === 'active' && (
                       <a

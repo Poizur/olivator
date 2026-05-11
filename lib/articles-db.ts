@@ -134,7 +134,20 @@ export async function getArticleBySlug(slug: string): Promise<ArticleFull | null
       .eq('slug', slug)
       .maybeSingle()
     if (!data) return null
-    return rowToFull(data as Row)
+    const article = rowToFull(data as Row)
+
+    // Primární fotka z entity_images přebije hero_image_url (stejný pattern jako recipes).
+    const { data: primaryPhoto } = await supabaseAdmin
+      .from('entity_images')
+      .select('url')
+      .eq('entity_id', data.id as string)
+      .eq('entity_type', 'article')
+      .eq('is_primary', true)
+      .eq('status', 'active')
+      .maybeSingle()
+    if (primaryPhoto?.url) article.heroImageUrl = primaryPhoto.url as string
+
+    return article
   } catch {
     return null
   }

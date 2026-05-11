@@ -1,5 +1,6 @@
 // PATCH /api/admin/articles/[slug] — update; DELETE — hard delete
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 
@@ -44,6 +45,8 @@ export async function PATCH(
     }
     const { error } = await supabaseAdmin.from('articles').update(payload).eq('slug', slug)
     if (error) throw error
+    revalidatePath(`/pruvodce/${slug}`)
+    revalidatePath('/pruvodce')
     return NextResponse.json({ ok: true })
   } catch (err) {
     return NextResponse.json(

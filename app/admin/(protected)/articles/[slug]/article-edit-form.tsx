@@ -62,6 +62,19 @@ export function ArticleEditForm({ article }: { article: ArticleFull }) {
     }
   }
 
+  async function revalidate() {
+    try {
+      await fetch('/api/admin/revalidate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: `/pruvodce/${article.slug}` }),
+      })
+      notify(true, '✅ Cache obnovena — stránka je live')
+    } catch {
+      notify(false, 'Cache revalidace selhala')
+    }
+  }
+
   async function deleteArticle() {
     if (!confirm('Smazat článek? Nelze vrátit.')) return
     try {
@@ -97,6 +110,12 @@ export function ArticleEditForm({ article }: { article: ArticleFull }) {
         >
           🔗 Náhled
         </a>
+        <button
+          onClick={revalidate}
+          className="px-3 py-1.5 bg-white border border-off2 text-text2 rounded-lg text-[12px] hover:border-olive hover:text-olive"
+        >
+          🔄 Obnovit cache
+        </button>
         <button
           onClick={deleteArticle}
           className="px-3 py-1.5 bg-white border border-off2 text-text3 rounded-lg text-[12px] hover:border-red-300 hover:text-red-700"

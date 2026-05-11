@@ -133,7 +133,7 @@ export default async function AdminRecipesPage() {
                       href={`/admin/recipes/${r.slug}`}
                       className="text-[12px] text-olive font-medium"
                     >
-                      Otevřít →
+                      Upravit recept →
                     </Link>
                     {r.status === 'active' && (
                       <a
