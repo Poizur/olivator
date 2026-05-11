@@ -56,6 +56,102 @@ export function countryName(code: string): string {
   return names[code] || code
 }
 
+/** Infers ISO-2 origin country from free text (product name, description, params).
+ *  Used by both the Playwright scraper and the Heureka feed sync so the logic
+ *  is consistent and maintained in one place.
+ *  Returns null when nothing matches — caller should fall back to retailer default or admin. */
+export function inferOriginFromText(text: string): { country: string | null; region: string | null } {
+  const t = text.toLowerCase()
+  const patterns: Array<{ re: RegExp; country: string; region?: string }> = [
+    // --- GREECE ---
+    { re: /\bkorfu\b|\bcorfu\b/, country: 'GR', region: 'Korfu' },
+    { re: /\bkr[eé]ta\b|\bcret[ea]\b|\bkrétsk/, country: 'GR', region: 'Kréta' },
+    { re: /\bsitia\b/, country: 'GR', region: 'Kréta' },
+    { re: /\blesbos\b|\blesvos\b|\bmytilini\b/, country: 'GR', region: 'Lesbos' },
+    { re: /\bpelopon\w*/, country: 'GR', region: 'Peloponés' },
+    { re: /\bkalamat\w*/, country: 'GR', region: 'Kalamata' },
+    { re: /\blasithi\b|\blaconi\b|\bsparta\b|\bspartansk/, country: 'GR', region: 'Peloponés' },
+    { re: /\bmessin\w*|\bkalamata\b/, country: 'GR', region: 'Messinia' },
+    { re: /\bthessaly\b|\bthessali/, country: 'GR', region: 'Thessálie' },
+    { re: /\brhodes\b|\brodos\b|\brh[oó]dos\b/, country: 'GR', region: 'Rhodos' },
+    { re: /\br[eé]ck[oyá]|\bgreek\b|\bgreece\b|\b[řr][eé]cko\b/, country: 'GR' },
+    // Greek brand/producer names (high-confidence)
+    { re: /\bliophos\b|\bstamatakos\b|\bgaea\b|\bminoan\b|\belaion\b|\bkallisti\b|\bproteas\b/, country: 'GR' },
+    { re: /\biliada\b|\bcolymvari\b|\bkoronea\b|\bpelion\b|\bnixe\b/, country: 'GR' },
+
+    // --- ITALY ---
+    { re: /\btoskán\w*|\btuscan\w*/, country: 'IT', region: 'Toskánsko' },
+    { re: /\bsic[íi]li\w*|\bsicil\w*/, country: 'IT', region: 'Sicílie' },
+    { re: /\bapulie\b|\bapulia\b|\bpuglia\b/, country: 'IT', region: 'Apulie' },
+    { re: /\bkalabrisk\w*|\bcalabrisk\w*|\bcalabia/, country: 'IT', region: 'Kalábrie' },
+    { re: /\bligurie\b|\bliguria\b|\briviera\b/, country: 'IT', region: 'Ligurie' },
+    { re: /\bumbrie\b|\bumbria\b/, country: 'IT', region: 'Umbrie' },
+    { re: /\bkampáni\w*|\bcampania\b/, country: 'IT', region: 'Kampánie' },
+    { re: /\bital\w*|\bitaly\b|\bitalian\b/, country: 'IT' },
+    // Italian brand/producer names
+    { re: /\bfrantoi\b|\bcutrera\b|\bmonini\b|\bfilippo berio\b|\bcarapelli\b|\bbertoli\b/, country: 'IT' },
+    { re: /\bcasas de hualdo\b|\bbertoli\b|\bsabatino\b|\bfumo\b|\bbartolini\b/, country: 'IT' },
+
+    // --- SPAIN ---
+    { re: /\bandalus\w*/, country: 'ES', region: 'Andalusie' },
+    { re: /\bc[oó]rdob\w*/, country: 'ES', region: 'Córdoba' },
+    { re: /\bjaén\b|\bjaen\b/, country: 'ES', region: 'Jaén' },
+    { re: /\bkataláns\w*|\bcataloñ\w*|\bcatalan\b/, country: 'ES', region: 'Katalánsko' },
+    { re: /\bšpan[eě]l\w*|\bspain\b|\bspanish\b|\bespañ\w*/, country: 'ES' },
+    // Spanish brand/producer names
+    { re: /\bborges\b|\bla espa[nñ]ola\b|\bcortijo\b|\bcastillo\b|\bdeseo\b/, country: 'ES' },
+
+    // --- CROATIA ---
+    { re: /\bistri\w*/, country: 'HR', region: 'Istrie' },
+    { re: /\bdalmáci\w*|\bdalmaci\w*/, country: 'HR', region: 'Dalmácie' },
+    { re: /\bchorvat\w*|\bcroati\w*|\bcroatian\b/, country: 'HR' },
+
+    // --- PORTUGAL ---
+    { re: /\bportug\w*/, country: 'PT' },
+    { re: /\balentek\w*|\balentejo\b/, country: 'PT', region: 'Alentejo' },
+
+    // --- TURKEY ---
+    { re: /\btureck\w*|\bturkish\b|\bturkiye\b|\bturkey\b/, country: 'TR' },
+
+    // --- MOROCCO ---
+    { re: /\bmaroc\w*|\bmorocc\w*/, country: 'MA' },
+
+    // --- TUNISIA ---
+    { re: /\btunis\w*/, country: 'TN' },
+
+    // --- ISRAEL ---
+    { re: /\bisrael\b|\bisraeli\b|\bisra[eé]l/, country: 'IL' },
+  ]
+  for (const p of patterns) {
+    if (p.re.test(t)) return { country: p.country, region: p.region ?? null }
+  }
+  return { country: null, region: null }
+}
+
+/** Extracts ISO-2 country from Heureka PARAM map (e.g. "Země původu" → "Řecko" → "GR"). */
+export function extractOriginFromParams(params: Record<string, string>): string | null {
+  const COUNTRY_MAP: Record<string, string> = {
+    'řecko': 'GR', 'greece': 'GR', 'greek': 'GR',
+    'itálie': 'IT', 'italy': 'IT', 'italian': 'IT', 'italie': 'IT',
+    'španělsko': 'ES', 'spain': 'ES', 'spanish': 'ES',
+    'chorvatsko': 'HR', 'croatia': 'HR',
+    'portugalsko': 'PT', 'portugal': 'PT',
+    'turecko': 'TR', 'turkey': 'TR', 'türkiye': 'TR',
+    'maroko': 'MA', 'morocco': 'MA',
+    'tunisko': 'TN', 'tunisia': 'TN',
+    'izrael': 'IL', 'israel': 'IL',
+  }
+  const PARAM_KEYS = ['Země původu', 'Původ', 'Country of Origin', 'Stát původu', 'Origine', 'Původ zboží', 'Stát']
+  for (const key of PARAM_KEYS) {
+    const val = params[key]
+    if (val) {
+      const iso = COUNTRY_MAP[val.toLowerCase().trim()]
+      if (iso) return iso
+    }
+  }
+  return null
+}
+
 export function typeLabel(type: string): string {
   const labels: Record<string, string> = {
     evoo: 'Extra panenský',

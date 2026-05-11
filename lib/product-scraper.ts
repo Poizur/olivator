@@ -7,7 +7,7 @@
 // Returns a best-effort ScrapedProduct. Missing fields are null/undefined.
 
 import * as cheerio from 'cheerio'
-import { extractBrand } from './utils'
+import { extractBrand, inferOriginFromText } from './utils'
 
 export interface ScrapedImage {
   url: string
@@ -87,34 +87,7 @@ function inferType(text: string): ScrapedProduct['type'] {
   return null
 }
 
-function inferOrigin(text: string): { country: string | null; region: string | null } {
-  const t = text.toLowerCase()
-  const patterns: Array<{ re: RegExp; country: string; region?: string }> = [
-    { re: /\bkorfu\b|\bcorfu\b/, country: 'GR', region: 'Korfu' },
-    { re: /\bkr[eé]ta\b|\bcret[ea]\b/, country: 'GR', region: 'Kréta' },
-    { re: /\blesbos\b/, country: 'GR', region: 'Lesbos' },
-    { re: /\bpelopon\w*/, country: 'GR', region: 'Peloponés' },
-    { re: /\bkalamat\w*/, country: 'GR', region: 'Kalamata' },
-    { re: /\br[eé]ck[oyá]/, country: 'GR' },
-    { re: /\btoskán\w*|\btuscan\w*/, country: 'IT', region: 'Toskánsko' },
-    { re: /\bsic[íi]li\w*|\bsicil\w*/, country: 'IT', region: 'Sicílie' },
-    { re: /\bapulie|\bpuglia/, country: 'IT', region: 'Apulie' },
-    { re: /\bital\w*/, country: 'IT' },
-    { re: /\bandalus\w*/, country: 'ES', region: 'Andalusie' },
-    { re: /\bc[oó]rdob\w*/, country: 'ES', region: 'Córdoba' },
-    { re: /\bšpan[eě]l\w*|\bspan\w*/, country: 'ES' },
-    { re: /\bistri\w*/, country: 'HR', region: 'Istrie' },
-    { re: /\bchorvat\w*|\bcroatian/, country: 'HR' },
-    { re: /\bportug\w*/, country: 'PT' },
-    { re: /\btureck\w*|\bturkish/, country: 'TR' },
-    { re: /\bmaroc\w*|\bmorocc\w*/, country: 'MA' },
-    { re: /\btunis\w*/, country: 'TN' },
-  ]
-  for (const p of patterns) {
-    if (p.re.test(t)) return { country: p.country, region: p.region ?? null }
-  }
-  return { country: null, region: null }
-}
+const inferOrigin = inferOriginFromText
 
 function inferVolumeMl(text: string): number | null {
   // matches "500 ml", "500ml", "1 l", "1l", "0,75 l", "0.75l"
