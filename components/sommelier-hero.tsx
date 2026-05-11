@@ -224,7 +224,7 @@ export function SommelierHero({
             </h1>
 
             <p className="text-[16px] text-text2 font-light leading-relaxed mb-7 max-w-[560px]">
-              AI Sommelier prochází celý katalog. Napiš co hledáš — chuť, cenu, příležitost — a dostaneš tři konkrétní oleje s cenou a důvodem proč.
+              Olík prochází celý katalog. Napiš co hledáš — chuť, cenu, příležitost — a dostaneš tři konkrétní oleje s cenou a důvodem proč.
             </p>
 
             {/* Search input — placeholder krátký, příklady jsou v pills níže.
@@ -352,7 +352,7 @@ export function SommelierHero({
             <div className="px-5 py-4 border-b border-off2 flex items-center justify-between sticky top-0 bg-white z-10 rounded-t-[var(--radius-card)]">
               <div>
                 <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-0.5">
-                  — AI Sommelier
+                  — Olík
                 </div>
                 <h3 className="text-[15px] font-semibold text-text">
                   Náš katalog na míru tvé otázce

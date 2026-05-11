@@ -6,8 +6,12 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
+import { render } from '@react-email/render'
+import React from 'react'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getSetting } from '@/lib/settings'
+import { sendTestEmail } from '@/lib/newsletter-sender'
+import { PriceAlertConfirmEmail } from '@/emails/price-alert-confirm'
 
 export const dynamic = 'force-dynamic'
 
@@ -122,6 +126,29 @@ export async function POST(request: NextRequest) {
       console.error('[price-alerts]', error)
       return NextResponse.json({ error: 'Nepodařilo se vytvořit alert' }, { status: 500 })
     }
+
+    // Pošli potvrzovací email (best-effort)
+    const unsubUrl = `https://olivator.cz/api/newsletter/unsubscribe?token=${alertToken}`
+    const html = await render(React.createElement(PriceAlertConfirmEmail, {
+      unsubscribeUrl: unsubUrl,
+      productName: product.name as string,
+      productUrl: `/olej/${product.slug as string}`,
+      thresholdPrice,
+      currentPrice: referencePrice,
+    }))
+    const text = await render(React.createElement(PriceAlertConfirmEmail, {
+      unsubscribeUrl: unsubUrl,
+      productName: product.name as string,
+      productUrl: `/olej/${product.slug as string}`,
+      thresholdPrice,
+      currentPrice: referencePrice,
+    }), { plainText: true })
+    await sendTestEmail({
+      to: email,
+      subject: `🔔 Hlídáme cenu — ${product.name as string}`,
+      html,
+      text,
+    }).catch(() => null)
 
     return NextResponse.json({
       ok: true,

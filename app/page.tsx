@@ -550,7 +550,6 @@ export default async function Home() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 { Icon: BarChart3, title: 'Vlastní Score', body: '4 kritéria, 100 bodů' },
-                { Icon: Bot, title: 'AI Sommelier', body: 'Olej za 5 sekund' },
                 { Icon: Ban, title: 'Žádná reklama', body: 'Žádné sponsored' },
                 { Icon: Globe2, title: `${stats.activeRetailers} prodejců`, body: 'Cena denně' },
               ].map((d) => (
@@ -560,6 +559,11 @@ export default async function Home() {
                   <div className="text-[11px] text-white/60">{d.body}</div>
                 </div>
               ))}
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                <img src="/olik.png" alt="Olík" className="w-6 h-6 object-contain mb-3" />
+                <div className="text-[13px] font-semibold mb-0.5">Olík</div>
+                <div className="text-[11px] text-white/60">Olej za 5 sekund</div>
+              </div>
             </div>
           </div>
         </div>

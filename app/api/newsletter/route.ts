@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { render } from '@react-email/render'
+import React from 'react'
 import { supabaseAdmin } from '@/lib/supabase'
+import { sendTestEmail } from '@/lib/newsletter-sender'
+import { WelcomeEmail } from '@/emails/welcome'
 import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
@@ -128,6 +132,20 @@ export async function POST(request: NextRequest) {
         .update({ resend_contact_id: resendId })
         .eq('email', email)
         .then(() => null, () => null)
+    }
+
+    // Pošli welcome email (best-effort — neblokuje response)
+    if (stored) {
+      const unsubToken = (await supabaseAdmin
+        .from('newsletter_signups')
+        .select('unsubscribe_token')
+        .eq('email', email)
+        .maybeSingle()
+        .then(r => r.data?.unsubscribe_token as string | null)) ?? ''
+      const unsubUrl = `https://olivator.cz/api/newsletter/unsubscribe?token=${unsubToken}`
+      const html = await render(React.createElement(WelcomeEmail, { unsubscribeUrl: unsubUrl }))
+      const text = await render(React.createElement(WelcomeEmail, { unsubscribeUrl: unsubUrl }), { plainText: true })
+      await sendTestEmail({ to: email, subject: 'Vítej v Olivatoru 🫒', html, text }).catch(() => null)
     }
 
     return NextResponse.json({ ok: true })

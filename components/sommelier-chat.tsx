@@ -50,7 +50,7 @@ export function SommelierChat() {
         {
           role: 'assistant',
           content:
-            'Ahoj! Jsem AI Sommelier Olivatoru. Poradím ti s výběrem olivového oleje — ať hledáš na saláty, vaření, dárek nebo chceš max polyfenoly. Na co se chceš zeptat?',
+            'Ahoj! Jsem Olík, průvodce Olivatoru. Poradím ti s výběrem olivového oleje — ať hledáš na saláty, vaření, dárek nebo chceš max polyfenoly. Na co se chceš zeptat?',
         },
       ])
     }
@@ -104,14 +104,14 @@ export function SommelierChat() {
       {/* Floating button */}
       <button
         onClick={() => setOpen((o) => !o)}
-        aria-label="AI Sommelier"
+        aria-label="Olík — průvodce výběrem oleje"
         className="fixed bottom-6 right-6 z-[50] w-14 h-14 rounded-full bg-olive text-white shadow-lg hover:bg-olive2 transition-all flex items-center justify-center"
         style={{ boxShadow: '0 4px 20px rgba(45,106,79,0.35)' }}
       >
         {open ? (
           <span className="text-xl leading-none">✕</span>
         ) : (
-          <span className="font-[family-name:var(--font-display)] text-base italic font-normal leading-none">AI</span>
+          <img src="/olik.png" alt="Olík" className="w-10 h-10 object-contain" />
         )}
       </button>
 
@@ -123,10 +123,12 @@ export function SommelierChat() {
         >
           {/* Header */}
           <div className="px-4 py-3 bg-olive text-white flex items-center gap-2.5 shrink-0">
-            <div className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center font-[family-name:var(--font-display)] text-sm italic">AI</div>
+            <div className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center overflow-hidden">
+              <img src="/olik.png" alt="Olík" className="w-7 h-7 object-contain" />
+            </div>
             <div>
-              <div className="text-sm font-semibold">Sommelier</div>
-              <div className="text-[10px] opacity-70">Poradím s výběrem oleje</div>
+              <div className="text-sm font-semibold">Olík</div>
+              <div className="text-[10px] opacity-70">Průvodce výběrem oleje</div>
             </div>
           </div>
 

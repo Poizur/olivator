@@ -1,9 +1,5 @@
 'use client'
 
-// Miniaturní graf vývoje ceny — SVG, bez knihoven.
-// Zobrazuje nejnižší dostupnou cenu ze všech prodejců za každý den.
-// Server fetchne max 365 dní; klient přepíná zobrazení 30/90/Vše.
-
 import { useMemo, useState } from 'react'
 
 interface PricePoint {
@@ -17,17 +13,15 @@ interface Props {
   currency?: string
 }
 
-type RangeOption = 30 | 90 | 0  // 0 = vše dostupné
+type RangeOption = 30 | 90 | 0  // 0 = vše
 
 function formatCzk(n: number) {
   return n.toLocaleString('cs-CZ', { style: 'currency', currency: 'CZK', maximumFractionDigits: 0 })
 }
 
-export function PriceSparkline({ data, currentPrice: _currentPrice, currency: _currency = 'CZK' }: Props) {
-  // Default: pokud máme < 30 dní dat, ukážeme vše. Jinak 30 dní.
+export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK' }: Props) {
   const [range, setRange] = useState<RangeOption>(() => (data.length < 30 ? 0 : 30))
 
-  // Filter podle range — kompletně lokálně, server posílá 365 dní jednou
   const filtered = useMemo(() => {
     if (range === 0) return data
     return data.slice(-range)
@@ -35,24 +29,19 @@ export function PriceSparkline({ data, currentPrice: _currentPrice, currency: _c
 
   if (data.length < 2) {
     return (
-      <div className="mt-4 border-t border-off pt-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[12px] font-semibold text-text2 tracking-wide">Vývoj ceny</span>
-        </div>
-        <div className="h-14 flex items-center justify-center border border-dashed border-off2 rounded-xl">
-          <p className="text-[11px] text-text3 italic text-center px-4">
-            {data.length === 0
-              ? 'Sledování ceny začalo dnes — graf bude dostupný za několik dní.'
-              : 'Sbíráme data, graf brzy.'}
-          </p>
-        </div>
+      <div className="mt-4 pt-4 border-t border-off">
+        <p className="text-[11px] text-text3 italic text-center py-3">
+          {data.length === 0
+            ? 'Sledování ceny začalo dnes — za pár dní ukážeme vývoj.'
+            : 'Sbíráme data, graf brzy.'}
+        </p>
       </div>
     )
   }
 
   const W = 320
-  const H = 56
-  const PAD = { top: 6, right: 4, bottom: 4, left: 4 }
+  const H = 72
+  const PAD = { top: 8, right: 4, bottom: 6, left: 4 }
 
   const prices = filtered.map((d) => d.price)
   const minP = Math.min(...prices)
@@ -63,41 +52,58 @@ export function PriceSparkline({ data, currentPrice: _currentPrice, currency: _c
     PAD.left + (filtered.length === 1 ? 0 : (i / (filtered.length - 1)) * (W - PAD.left - PAD.right))
   )
   const ys = filtered.map((d) => PAD.top + ((maxP - d.price) / priceRange) * (H - PAD.top - PAD.bottom))
-
   const polyline = xs.map((x, i) => `${x},${ys[i]}`).join(' ')
-
   const fillPts = [
-    `${xs[0]},${H - PAD.bottom}`,
+    `${xs[0]},${H}`,
     ...xs.map((x, i) => `${x},${ys[i]}`),
-    `${xs[xs.length - 1]},${H - PAD.bottom}`,
+    `${xs[xs.length - 1]},${H}`,
   ].join(' ')
 
-  const lastY = ys[ys.length - 1]
   const lastX = xs[xs.length - 1]
+  const lastY = ys[ys.length - 1]
 
   const firstPrice = filtered[0].price
   const lastPrice = filtered[filtered.length - 1].price
-  const trend = lastPrice < firstPrice ? 'down' : lastPrice > firstPrice ? 'up' : 'flat'
-  const trendColor = trend === 'down' ? '#2d6a4f' : trend === 'up' ? '#c4711a' : '#aeaeb2'
-  const trendLabel = trend === 'down' ? '↓ Cena klesla' : trend === 'up' ? '↑ Cena vzrostla' : '→ Stabilní'
+  const diff = lastPrice - firstPrice
+  const trend = diff < -0.5 ? 'down' : diff > 0.5 ? 'up' : 'flat'
 
-  const days = filtered.length
-  const startDate = new Date(filtered[0].date).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' })
-  const endDate = new Date(filtered[filtered.length - 1].date).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'short' })
+  const isAtMin = currentPrice !== null && currentPrice <= minP + 0.5
+  const isAtMax = currentPrice !== null && currentPrice >= maxP - 0.5
 
-  // Range buttons — disable pokud na to nemáme data (např. 90 dní pokud máme jen 8 dní)
+  const lineColor = trend === 'up' ? '#c4711a' : '#2d6a4f'
+
   const totalDays = data.length
   const rangeOptions: { value: RangeOption; label: string; available: boolean }[] = [
-    { value: 30, label: '30 dní', available: totalDays >= 2 },
-    { value: 90, label: '90 dní', available: totalDays > 30 },
-    { value: 0, label: `Vše (${totalDays})`, available: true },
+    { value: 30, label: '30 d', available: totalDays >= 2 },
+    { value: 90, label: '90 d', available: totalDays > 30 },
+    { value: 0, label: 'Vše', available: true },
   ]
 
+  const heroText = trend === 'down'
+    ? `Klesla o ${formatCzk(Math.abs(diff))}`
+    : trend === 'up'
+    ? `Vzrostla o ${formatCzk(Math.abs(diff))}`
+    : 'Cena je stabilní'
+
+  const heroArrow = trend === 'down' ? '↓' : trend === 'up' ? '↑' : '→'
+  const heroColorClass = trend === 'down' ? 'text-olive' : trend === 'up' ? 'text-terra' : 'text-text3'
+
+  const rangeLabel = range === 0
+    ? `za ${totalDays} dní sledování`
+    : `za posledních ${range} dní`
+
   return (
-    <div className="mt-4 border-t border-off pt-4">
-      <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
-        <span className="text-[12px] font-semibold text-text2 tracking-wide">Vývoj ceny</span>
-        <div className="flex gap-1">
+    <div className="mt-4 pt-4 border-t border-off">
+      {/* Trend headline + range toggles */}
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div>
+          <div className={`flex items-baseline gap-1.5 ${heroColorClass}`}>
+            <span className="text-[20px] font-bold leading-none">{heroArrow}</span>
+            <span className="text-[16px] font-bold leading-tight">{heroText}</span>
+          </div>
+          <div className="text-[11px] text-text3 mt-0.5">{rangeLabel}</div>
+        </div>
+        <div className="flex gap-1 shrink-0">
           {rangeOptions.map((opt) => (
             <button
               key={opt.value}
@@ -105,11 +111,8 @@ export function PriceSparkline({ data, currentPrice: _currentPrice, currency: _c
               onClick={() => opt.available && setRange(opt.value)}
               disabled={!opt.available}
               className={`text-[10px] px-2 py-0.5 rounded-full transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
-                range === opt.value
-                  ? 'bg-olive text-white'
-                  : 'bg-off text-text2 hover:bg-off2'
+                range === opt.value ? 'bg-olive text-white' : 'bg-off text-text2 hover:bg-off2'
               }`}
-              title={!opt.available ? `Zatím nemáme dostatek dat (potřeba ${opt.value}+ dní)` : undefined}
             >
               {opt.label}
             </button>
@@ -117,33 +120,47 @@ export function PriceSparkline({ data, currentPrice: _currentPrice, currency: _c
         </div>
       </div>
 
-      <div className="relative">
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          className="w-full"
-          style={{ height: H }}
-          aria-label="Graf vývoje ceny"
-        >
-          <polygon points={fillPts} fill="#2d6a4f" opacity="0.07" />
-          <polyline
-            points={polyline}
-            fill="none"
-            stroke="#2d6a4f"
-            strokeWidth="1.5"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
-          <circle cx={lastX} cy={lastY} r="3" fill="#2d6a4f" />
-        </svg>
-
-        <div className="flex justify-between mt-1 gap-2 text-[10px]">
-          <span className="text-text3">Min {formatCzk(minP)}</span>
-          <span className="text-text3 hidden sm:inline">
-            {startDate} – {endDate} ({days} {days === 1 ? 'den' : days < 5 ? 'dny' : 'dní'})
-          </span>
-          <span style={{ color: trendColor }}>{trendLabel}</span>
-          <span className="text-text3">Max {formatCzk(maxP)}</span>
+      {/* Contextual buy-signal badges */}
+      {isAtMin && (
+        <div className="inline-flex items-center gap-1 text-[11px] font-medium text-olive-dark bg-olive-bg border border-olive-border rounded-full px-3 py-1 mb-3">
+          ✓ Teď nejlevněji v tomto období
         </div>
+      )}
+      {!isAtMin && isAtMax && (
+        <div className="inline-flex items-center gap-1 text-[11px] font-medium text-terra bg-terra-bg border border-terra/20 rounded-full px-3 py-1 mb-3">
+          ↑ Aktuálně na maximu
+        </div>
+      )}
+
+      {/* Chart */}
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full"
+        style={{ height: H }}
+        aria-label="Graf vývoje ceny"
+      >
+        <defs>
+          <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={lineColor} stopOpacity="0.18" />
+            <stop offset="100%" stopColor={lineColor} stopOpacity="0.01" />
+          </linearGradient>
+        </defs>
+        <polygon points={fillPts} fill="url(#sparkGrad)" />
+        <polyline
+          points={polyline}
+          fill="none"
+          stroke={lineColor}
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+        <circle cx={lastX} cy={lastY} r="3.5" fill={lineColor} />
+      </svg>
+
+      {/* Min / Max labels */}
+      <div className="flex justify-between mt-1.5 text-[10px] text-text3">
+        <span>Min {formatCzk(minP)}</span>
+        <span>Max {formatCzk(maxP)}</span>
       </div>
     </div>
   )
