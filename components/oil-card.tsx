@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import type { Product, ProductOffer } from '@/lib/types'
-import { countryName, formatPrice, formatPricePer100ml, certLabel } from '@/lib/utils'
+import { countryName, countryFlag, formatPrice, formatPricePer100ml, certLabel } from '@/lib/utils'
 import { useCompare } from '@/lib/compare-context'
 import { ProductImage } from './product-image'
 
@@ -49,7 +49,7 @@ export function OilCard({ product, offer, isTop }: OilCardProps) {
         </div>
         <div className="px-4 pb-4 pt-3">
           <div className="text-[10px] text-text3 mb-1 uppercase tracking-widest font-medium">
-            {product.originRegion ? `${product.originRegion} · ` : ''}{countryName(product.originCountry)} · {product.volumeMl} ml
+            {product.originCountry ? `${countryFlag(product.originCountry)} ` : ''}{product.originRegion ? `${product.originRegion} · ` : ''}{countryName(product.originCountry)} · {product.volumeMl} ml
           </div>
           <div className="text-[15px] font-medium text-text leading-tight mb-2.5 tracking-tight">
             {product.name}

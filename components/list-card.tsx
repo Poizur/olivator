@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { Product, ProductOffer } from '@/lib/types'
-import { countryName, formatPrice, formatPricePer100ml, certLabel } from '@/lib/utils'
+import { countryName, countryFlag, formatPrice, formatPricePer100ml, certLabel } from '@/lib/utils'
 import { ProductImage } from './product-image'
 import { WishlistButton } from './wishlist-button'
 import { ScoreBadge } from './score-badge'
@@ -44,7 +44,7 @@ export function ListCard({ product, offer, rank, compact = false }: ListCardProp
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-[10px] text-text3 mb-0.5 uppercase tracking-widest font-medium truncate">
-                {product.originRegion ? `${product.originRegion} · ` : ''}{countryName(product.originCountry)}
+                {product.originCountry ? `${countryFlag(product.originCountry)} ` : ''}{product.originRegion ? `${product.originRegion} · ` : ''}{countryName(product.originCountry)}
               </div>
               <div className="text-[14px] font-medium text-text leading-snug line-clamp-2 mb-1.5">
                 {product.name}
@@ -128,7 +128,7 @@ export function ListCard({ product, offer, rank, compact = false }: ListCardProp
 
           <div className="flex-1 min-w-0">
             <div className="text-[10px] text-text3 mb-0.5 uppercase tracking-widest font-medium">
-              {product.originRegion ? `${product.originRegion} · ` : ''}{countryName(product.originCountry)}
+              {product.originCountry ? `${countryFlag(product.originCountry)} ` : ''}{product.originRegion ? `${product.originRegion} · ` : ''}{countryName(product.originCountry)}
             </div>
             <div className="text-[15px] font-medium text-text mb-1.5 tracking-tight">
               {product.name}
@@ -242,7 +242,7 @@ function CompactCard({ product, offer, rank }: { product: Product; offer?: Produ
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-[10px] text-text3 mb-0.5 uppercase tracking-widest font-medium truncate">
-            {product.originRegion ? `${product.originRegion} · ` : ''}{countryName(product.originCountry)}
+            {product.originCountry ? `${countryFlag(product.originCountry)} ` : ''}{product.originRegion ? `${product.originRegion} · ` : ''}{countryName(product.originCountry)}
           </div>
           <div className="text-[13px] font-medium text-text leading-tight line-clamp-2">
             {product.name}

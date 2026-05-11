@@ -3,7 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { getProducts, getProductBySlug, getOffersForProduct, getProductGallery, getProductCustomFAQs, getActiveGeneralFAQs, getVariantProducts, getProductEntityLinks, getRetailerPhotosLite } from '@/lib/data'
 import { extractBrandSlug, extractRegionSlug } from '@/lib/entity-extractor'
-import { countryName, typeLabel, certLabel, formatPrice, formatPricePer100ml } from '@/lib/utils'
+import { countryName, countryFlag, typeLabel, certLabel, formatPrice, formatPricePer100ml } from '@/lib/utils'
 import { productSchema, breadcrumbSchema, faqSchema } from '@/lib/schema'
 import { generateProductFAQ } from '@/lib/product-faq'
 import { selectGeneralFAQs } from '@/lib/general-faq'
@@ -369,7 +369,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         {/* Right — klíčové info + CTA */}
         <div className="flex flex-col">
           <div className="text-[11px] text-text3 mb-2 uppercase tracking-widest font-medium">
-            {product.originRegion ? `${product.originRegion} · ` : ''}{countryName(product.originCountry)} · {typeLabel(product.type)} · {product.volumeMl} ml
+            {product.originCountry ? `${countryFlag(product.originCountry)} ` : ''}{product.originRegion ? `${product.originRegion} · ` : ''}{countryName(product.originCountry)} · {typeLabel(product.type)} · {product.volumeMl} ml
           </div>
           <h1 className="font-[family-name:var(--font-display)] text-[34px] font-normal text-text leading-[1.15] mb-3 tracking-tight">
             {product.name}
