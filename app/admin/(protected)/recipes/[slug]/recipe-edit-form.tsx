@@ -116,6 +116,19 @@ export function RecipeEditForm({ recipe, availableRegions, availableCultivars, i
     }
   }
 
+  async function revalidate() {
+    try {
+      await fetch('/api/admin/revalidate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: `/recept/${recipe.slug}` }),
+      })
+      notify(true, '✅ Cache obnovena — stránka je live')
+    } catch {
+      notify(false, 'Cache revalidace selhala')
+    }
+  }
+
   async function deleteRecipe() {
     if (!confirm('Opravdu smazat tento recept? Nelze vrátit.')) return
     try {
@@ -190,6 +203,12 @@ export function RecipeEditForm({ recipe, availableRegions, availableCultivars, i
         >
           🔗 Náhled
         </a>
+        <button
+          onClick={revalidate}
+          className="px-3 py-1.5 bg-white border border-off2 text-text2 rounded-lg text-[12px] hover:border-olive hover:text-olive"
+        >
+          🔄 Obnovit cache
+        </button>
         <button
           onClick={deleteRecipe}
           className="px-3 py-1.5 bg-white border border-off2 text-text3 rounded-lg text-[12px] hover:border-red-300 hover:text-red-700"
