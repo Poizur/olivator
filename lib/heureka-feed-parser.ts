@@ -204,6 +204,18 @@ export function extractAcidity(item: HeurekaItem): number | null {
   return Number.isFinite(n) && n > 0 && n < 5 ? n : null
 }
 
+export function extractPolyphenols(item: HeurekaItem): number | null {
+  const raw = item.params['Polyfenoly'] || item.params['polyfenoly'] || item.params['Polyphenols'] || ''
+  // Fallback: parse from description text
+  const text = raw || item.description || ''
+  if (!text) return null
+  const match = text.match(/[Pp]olyfenol[yů]?[:\s]+(\d{3,4})\s*mg/)
+    ?? text.match(/(\d{3,4})\s*mg\/kg\s*(?:polyfenol|polyphenol)/i)
+  if (!match) return null
+  const n = parseInt(match[1])
+  return Number.isFinite(n) && n >= 50 && n <= 3000 ? n : null
+}
+
 export function extractPeroxideValue(item: HeurekaItem): number | null {
   const raw = item.params['peroxidové číslo'] || item.params['Peroxidové číslo'] || ''
   if (!raw) return null

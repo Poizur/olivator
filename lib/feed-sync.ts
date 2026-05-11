@@ -15,6 +15,7 @@ import {
   isOliveOil,
   extractVolumeMl,
   extractAcidity,
+  extractPolyphenols,
   extractPeroxideValue,
   detectPackaging,
   detectType,
@@ -306,6 +307,7 @@ async function ensureProduct(
       type: detectType(item),
       origin_country: defaultOriginCountry,  // per retailer; null = admin doplní
       acidity: extractAcidity(item),
+      polyphenols: extractPolyphenols(item),
       peroxide_value: extractPeroxideValue(item),
       volume_ml: extractVolumeMl(item),
       packaging: detectPackaging(item),
