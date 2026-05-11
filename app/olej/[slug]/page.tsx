@@ -237,9 +237,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     },
     {
       key: 'Rok sklizně',
-      value: product.harvestYear ? String(product.harvestYear) : '— nezveřejněno',
-      missing: !product.harvestYear,
-      note: product.harvestYear ? 'dle stránky prodejce' : undefined,
+      value: '— nezveřejněno',
+      missing: true,
     },
     {
       key: 'Zpracování',
@@ -459,11 +458,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                     <span className="text-[10px]">↗</span>
                   </Link>
                 ) : (
-                  <span className={`text-[13px] text-right ${s.missing ? 'text-text3 italic' : 'font-medium text-text'}`}>
+                  <span className={`text-[13px] ${s.missing ? 'text-text3 italic' : 'font-medium text-text'}`}>
                     {s.value}
-                    {'note' in s && s.note && (
-                      <span className="block text-[10px] font-normal text-text3 italic">{s.note}</span>
-                    )}
                   </span>
                 )}
               </div>

@@ -9,7 +9,6 @@ import { supabaseAdmin } from '@/lib/supabase'
 import {
   extractPolyphenols,
   extractOleocanthal,
-  extractHarvestYear,
   extractProcessing,
 } from '@/lib/product-scraper'
 
@@ -30,13 +29,6 @@ function findTableValue(table: Record<string, string>, ...needles: string[]): st
     if (needles.some((n) => norm.includes(n))) return v
   }
   return null
-}
-
-function tableHarvestYear(table: Record<string, string>): number | null {
-  const raw = findTableValue(table, 'rok sklizně', 'sklizeň', 'harvest year', 'vintage', 'ročník', 'harvest')
-  if (!raw) return null
-  const m = raw.match(/\b(20\d{2})\b/)
-  return m ? parseInt(m[1]) : null
 }
 
 function tableProcessing(table: Record<string, string>): string | null {
@@ -66,8 +58,8 @@ export async function POST() {
   // Fetch products where at least one of the target fields is missing
   const { data: products, error } = await supabaseAdmin
     .from('products')
-    .select('id, name, raw_description, extracted_facts, polyphenols, oleocanthal, harvest_year, processing')
-    .or('polyphenols.is.null,oleocanthal.is.null,harvest_year.is.null,processing.is.null')
+    .select('id, name, raw_description, extracted_facts, polyphenols, oleocanthal, processing')
+    .or('polyphenols.is.null,oleocanthal.is.null,processing.is.null')
     .eq('status', 'active')
     .limit(500)
 
@@ -90,10 +82,6 @@ export async function POST() {
     if (p.oleocanthal == null) {
       const v = tableOleocanthal(table) ?? extractOleocanthal(text) ?? null
       if (v != null) patch.oleocanthal = v
-    }
-    if (p.harvest_year == null) {
-      const v = tableHarvestYear(table) ?? extractHarvestYear(text) ?? null
-      if (v != null) patch.harvest_year = v
     }
     if (p.processing == null) {
       const v = tableProcessing(table) ?? extractProcessing(text) ?? null
