@@ -5,9 +5,6 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
   : 'dyaloliwynmfnpjemzrh.supabase.co'
 
 const nextConfig: NextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   images: {
     // Default 60s = boti (Google, Bing, OpenAI/Anthropic crawlers) re-fetchují
     // za minutu → každé kolo znova egress ze Supabase Storage. 30 dní (≈ 2.6M s)
