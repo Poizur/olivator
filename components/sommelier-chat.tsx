@@ -111,7 +111,7 @@ export function SommelierChat() {
         {open ? (
           <span className="text-xl leading-none text-olive font-bold">✕</span>
         ) : (
-          <img src="/olik.png" alt="Olík" className="w-12 h-12 object-contain" />
+          <img src="/olik.png" alt="Olík" className="w-14 h-14 object-contain" />
         )}
       </button>
 
