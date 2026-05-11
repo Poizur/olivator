@@ -2,6 +2,7 @@
 // DELETE /api/admin/entity-images/[id] → soft-delete (status=inactive)
 
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 
@@ -42,6 +43,18 @@ export async function PATCH(
       .update({ is_primary: true })
       .eq('id', id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // Invaliduj ISR cache pro recipe/article stránky
+    if (photo.entity_type === 'recipe') {
+      const { data: rec } = await supabaseAdmin
+        .from('recipes').select('slug').eq('id', photo.entity_id).maybeSingle()
+      if (rec?.slug) { revalidatePath(`/recept/${rec.slug}`); revalidatePath('/recept') }
+    } else if (photo.entity_type === 'article') {
+      const { data: art } = await supabaseAdmin
+        .from('articles').select('slug').eq('id', photo.entity_id).maybeSingle()
+      if (art?.slug) { revalidatePath(`/pruvodce/${art.slug}`) }
+    }
+
     return NextResponse.json({ ok: true })
   }
 

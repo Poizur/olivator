@@ -2,6 +2,7 @@
 // DELETE — smazat recept (hard delete)
 
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 
@@ -69,6 +70,10 @@ export async function PATCH(
       .eq('slug', slug)
 
     if (error) throw error
+
+    revalidatePath(`/recept/${slug}`)
+    revalidatePath('/recept')
+
     return NextResponse.json({ ok: true })
   } catch (err) {
     return NextResponse.json(

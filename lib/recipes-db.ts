@@ -191,7 +191,21 @@ export async function getRecipeBySlug(slug: string): Promise<RecipeFull | null> 
       .eq('slug', slug)
       .maybeSingle()
     if (!data) return null
-    return rowToFull(data as Row)
+    const recipe = rowToFull(data as Row)
+
+    // Primární fotka z entity_images přebije hero_image_url (fallback URL).
+    // EntityPhotosManager ukládá do entity_images, ne přímo do hero_image_url.
+    const { data: primaryPhoto } = await supabaseAdmin
+      .from('entity_images')
+      .select('url')
+      .eq('entity_id', data.id as string)
+      .eq('entity_type', 'recipe')
+      .eq('is_primary', true)
+      .eq('status', 'active')
+      .maybeSingle()
+    if (primaryPhoto?.url) recipe.heroImageUrl = primaryPhoto.url as string
+
+    return recipe
   } catch {
     return null
   }
