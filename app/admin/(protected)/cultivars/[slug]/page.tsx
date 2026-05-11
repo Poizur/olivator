@@ -157,6 +157,7 @@ export default async function EditCultivarPage({ params }: { params: Promise<{ s
           <EntityPhotosManager
             entityId={cultivar.id}
             entityType="cultivar"
+            entityName={cultivar.name}
             initialPhotos={photos as Parameters<typeof EntityPhotosManager>[0]['initialPhotos']}
           />
         </AdminBlock>

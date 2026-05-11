@@ -8,6 +8,28 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { generateImageAltText } from '@/lib/product-image'
 
 const BUCKET = 'entities'
+
+const ENTITY_TABLE: Record<string, { table: string; nameCol: string }> = {
+  recipe:   { table: 'recipes',   nameCol: 'title' },
+  article:  { table: 'articles',  nameCol: 'title' },
+  brand:    { table: 'brands',    nameCol: 'name' },
+  region:   { table: 'regions',   nameCol: 'name' },
+  cultivar: { table: 'cultivars', nameCol: 'name' },
+  retailer: { table: 'retailers', nameCol: 'name' },
+}
+
+async function fetchEntityName(entityId: string | null, entityType: string | null): Promise<string | null> {
+  if (!entityId || !entityType) return null
+  const meta = ENTITY_TABLE[entityType]
+  if (!meta) return null
+  const { data } = await supabaseAdmin
+    .from(meta.table)
+    .select(meta.nameCol)
+    .eq('id', entityId)
+    .maybeSingle()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return data ? ((data as any)[meta.nameCol] as string | null) : null
+}
 const MAX_BYTES = 10 * 1024 * 1024  // 10 MB
 
 async function ensureBucket() {
@@ -33,6 +55,7 @@ export async function POST(req: NextRequest) {
   const entityId = formData.get('entityId') as string | null
   const entityType = formData.get('entityType') as string | null
   const altText = (formData.get('altText') as string | null)?.trim() || null
+  const entityName = (formData.get('entityName') as string | null)?.trim() || null
 
   if (!file || !entityId || !entityType) {
     return NextResponse.json({ error: 'file, entityId, entityType jsou povinné' }, { status: 400 })
@@ -73,12 +96,20 @@ export async function POST(req: NextRequest) {
   const { data: urlData } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(storagePath)
   const publicUrl = urlData.publicUrl
 
-  // AI alt text — pokud nebylo zadáno, nechej Claude popsat obrázek
+  // AI alt text — kontext: název entity + (stripped) název souboru
   let finalAlt = altText
   if (!finalAlt && process.env.ANTHROPIC_API_KEY) {
     try {
-      // Předáme URL — je veřejně dostupná ihned po uploadu
-      finalAlt = await generateImageAltText(publicUrl, entityType)
+      // Priorita: 1) entityName z formu, 2) fetch z DB, 3) fallback na entityType
+      let resolvedName = entityName
+      if (!resolvedName) resolvedName = await fetchEntityName(entityId, entityType)
+      if (!resolvedName) resolvedName = entityType
+
+      // Název souboru jako doplňkový kontext (slug, bez extension a čísel)
+      const rawFileName = file.name.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ').replace(/\d{8,}/g, '').trim()
+      const context = rawFileName ? `${resolvedName} — ${rawFileName}` : resolvedName
+
+      finalAlt = await generateImageAltText(publicUrl, context)
     } catch {
       // Non-blocking — alt zůstane null
     }

@@ -200,6 +200,7 @@ export default async function EditBrandPage({ params }: { params: Promise<{ slug
           <EntityPhotosManager
             entityId={brand.id}
             entityType="brand"
+            entityName={brand.name}
             initialPhotos={photos as Parameters<typeof EntityPhotosManager>[0]['initialPhotos']}
           />
         </AdminBlock>

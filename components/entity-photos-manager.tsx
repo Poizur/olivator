@@ -21,10 +21,11 @@ interface Photo {
 interface Props {
   entityId: string
   entityType: 'region' | 'brand' | 'cultivar' | 'recipe' | 'article' | 'retailer'
+  entityName?: string  // název entity — Claude použije jako kontext pro AI alt text
   initialPhotos: Photo[]
 }
 
-export function EntityPhotosManager({ entityId, entityType, initialPhotos }: Props) {
+export function EntityPhotosManager({ entityId, entityType, entityName, initialPhotos }: Props) {
   const [photos, setPhotos] = useState<Photo[]>(initialPhotos)
   const [addUrl, setAddUrl] = useState('')
   const [addAlt, setAddAlt] = useState('')
@@ -78,6 +79,7 @@ export function EntityPhotosManager({ entityId, entityType, initialPhotos }: Pro
       fd.append('file', uploadFile)
       fd.append('entityId', entityId)
       fd.append('entityType', entityType)
+      if (entityName) fd.append('entityName', entityName)
       if (uploadAlt.trim()) fd.append('altText', uploadAlt.trim())
       const res = await fetch('/api/admin/entity-images/upload', { method: 'POST', body: fd })
       const json = await res.json()

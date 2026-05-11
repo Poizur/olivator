@@ -140,6 +140,7 @@ export default async function EditRegionPage({ params }: { params: Promise<{ slu
           <EntityPhotosManager
             entityId={region.id}
             entityType="region"
+            entityName={region.name}
             initialPhotos={photos as Parameters<typeof EntityPhotosManager>[0]['initialPhotos']}
           />
         </AdminBlock>

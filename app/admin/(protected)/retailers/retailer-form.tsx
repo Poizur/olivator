@@ -490,6 +490,7 @@ export function RetailerForm({ initial, initialPhotos = [] }: { initial?: Retail
           <EntityPhotosManager
             entityId={initial!.id}
             entityType="retailer"
+            entityName={name}
             initialPhotos={initialPhotos}
           />
         </AdminBlock>

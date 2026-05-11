@@ -382,6 +382,7 @@ export function RecipeEditForm({ recipe, availableRegions, availableCultivars, i
         <EntityPhotosManager
           entityId={recipe.id}
           entityType="recipe"
+          entityName={title}
           initialPhotos={initialPhotos}
         />
       </AdminBlock>
