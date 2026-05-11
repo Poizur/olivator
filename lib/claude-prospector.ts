@@ -79,7 +79,7 @@ export async function discoverCandidatesViaClaude(
   try {
     // Sonnet 4 + web_search. Haiku web search nepodporuje.
     const response = await callClaude({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 8192,
       system: SYSTEM_PROMPT,
       tools: [

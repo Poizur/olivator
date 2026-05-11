@@ -242,7 +242,7 @@ async function polishToCzech(args: {
 
   try {
     const response = await callClaude({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4000,
       system: POLISH_SYSTEM,
       tools: [POLISH_TOOL_SCHEMA],

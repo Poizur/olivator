@@ -1,11 +1,11 @@
 // AI content generator for region / brand / cultivar entity pages.
 // Generates Czech editorial text (600–2000 words depending on entity type).
-// Uses claude-sonnet-4-20250514; all calls have retry with exponential backoff.
+// Uses claude-sonnet-4-6; all calls have retry with exponential backoff.
 
 import { callClaude as callClaudeShared, extractText } from './anthropic'
 import { applyCzechTypographyFixes } from './czech-style'
 
-const MODEL = 'claude-sonnet-4-20250514'
+const MODEL = 'claude-sonnet-4-6'
 
 async function callClaude(prompt: string, maxTokens: number): Promise<string> {
   const res = await callClaudeShared({

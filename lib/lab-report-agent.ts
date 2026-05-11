@@ -4,7 +4,7 @@
 
 import { callClaude, extractText } from './anthropic'
 
-const MODEL = 'claude-sonnet-4-20250514' // vision requires Sonnet, not Haiku
+const MODEL = 'claude-sonnet-4-6' // vision requires Sonnet, not Haiku
 
 export interface LabReportData {
   acidity: number | null         // kyselost %
