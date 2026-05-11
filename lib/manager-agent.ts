@@ -12,7 +12,7 @@ import { supabaseAdmin } from './supabase'
 import { calculateCompleteness } from './completeness'
 import type { Product } from './types'
 
-const MODEL = 'claude-sonnet-4-20250514'
+const MODEL = 'claude-sonnet-4-6'
 
 export interface SuggestedAction {
   title: string

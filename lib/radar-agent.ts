@@ -244,7 +244,7 @@ const ALLOWED_BADGES = new Set(['harvest', 'price', 'award', 'science', 'quality
 
 export async function runRadarAgent(opts: { hoursBack?: number; maxItems?: number } = {}): Promise<RadarRunResult> {
   const startedAt = new Date().toISOString()
-  const hoursBack = opts.hoursBack ?? 4
+  const hoursBack = opts.hoursBack ?? 168
   const maxItems = opts.maxItems ?? 5  // strop kolik nových zpráv za run
 
   const result: RadarRunResult = {
