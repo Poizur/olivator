@@ -530,6 +530,38 @@ function isPublicUrl(rawUrl: string): { ok: true } | { ok: false; reason: string
   return { ok: true }
 }
 
+// ── Charset-aware HTML decoder ────────────────────────────────────────────────
+// Node fetch().text() defaults to UTF-8 when the HTTP Content-Type header
+// omits a charset (common on Czech e-shops like zdrave-oleje.cz which serve
+// Windows-1250 without declaring it in headers). Fix: read raw bytes, sniff
+// charset from HTTP header first, then <meta charset> in the HTML, fallback UTF-8.
+
+function extractMimeCharset(text: string): string | null {
+  const m = text.match(/charset\s*=\s*"?([^\s;"'>]+)/i)
+  return m ? m[1].toLowerCase().trim() : null
+}
+
+async function decodeHtmlBuffer(res: Response, contentType: string): Promise<string> {
+  const rawBytes = await res.arrayBuffer()
+
+  // 1. HTTP Content-Type header charset (most authoritative)
+  const headerCharset = extractMimeCharset(contentType)
+  if (headerCharset && headerCharset !== 'utf-8') {
+    try { return new TextDecoder(headerCharset).decode(rawBytes) } catch { /* unsupported */ }
+  }
+
+  // 2. Sniff first 2 KB of the HTML for <meta charset> / <meta http-equiv>
+  // Decode with latin1 (1:1 byte→char) so ASCII meta tags are always readable.
+  const sniff = new TextDecoder('latin1').decode(rawBytes.slice(0, 2048))
+  const metaCharset = extractMimeCharset(sniff)
+  if (metaCharset && metaCharset !== 'utf-8') {
+    try { return new TextDecoder(metaCharset).decode(rawBytes) } catch { /* unsupported */ }
+  }
+
+  // 3. Default to UTF-8
+  return new TextDecoder('utf-8').decode(rawBytes)
+}
+
 /** Main entrypoint. Fetches the URL and extracts as much as possible. */
 export async function scrapeProductPage(url: string): Promise<ScrapedProduct> {
   const guard = isPublicUrl(url)
@@ -554,7 +586,7 @@ export async function scrapeProductPage(url: string): Promise<ScrapedProduct> {
   if (contentLength > 5 * 1024 * 1024) {
     throw new Error(`Response too large: ${contentLength} B`)
   }
-  const html = await res.text()
+  const html = await decodeHtmlBuffer(res, contentType)
   if (html.length > 5 * 1024 * 1024) {
     throw new Error(`Response body too large: ${html.length} B`)
   }

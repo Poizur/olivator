@@ -179,6 +179,12 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
         )
       if (offerErr) throw new Error(`Offer upsert: ${offerErr.message}`)
 
+      // Aktualizuj last_offer_seen_at na produktu — používá no_offers grace period
+      await supabaseAdmin
+        .from('products')
+        .update({ last_offer_seen_at: new Date().toISOString() })
+        .eq('id', productId)
+
       // Price history snapshot — pro Fáze 2 graf
       await supabaseAdmin.from('price_history').insert({
         product_id: productId,
