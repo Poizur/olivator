@@ -10,6 +10,8 @@ import { getProductsWithOffers } from '@/lib/data'
 import { formatPrice } from '@/lib/utils'
 import { ProductImage } from '@/components/product-image'
 import { breadcrumbSchema } from '@/lib/schema'
+import { AuthorByline } from '@/components/article/author-byline'
+import { OlikAuthorBox } from '@/components/article/olik-author-box'
 
 // 60 → 3600 — viz pruvodce/page.tsx, stejný důvod.
 export const revalidate = 3600
@@ -83,6 +85,7 @@ export default async function ArticleDetailPage({
     category: string
     body: string | null
     publishedAt: string | null
+    updatedAt: string | null
     heroImageUrl: string | null
   } | null = null
 
@@ -96,6 +99,7 @@ export default async function ArticleDetailPage({
       category: dbArticle.category,
       body: dbArticle.bodyMarkdown,
       publishedAt: dbArticle.publishedAt,
+      updatedAt: dbArticle.updatedAt,
       heroImageUrl: dbArticle.heroImageUrl,
     }
   } else {
@@ -109,7 +113,8 @@ export default async function ArticleDetailPage({
       readTime: sa.readTime,
       category: sa.category,
       body: sa.body ?? null,
-      publishedAt: null, // static articles nemají datum, fallback na build-time
+      publishedAt: null,
+      updatedAt: null,
       heroImageUrl: sa.imageUrl ?? null,
     }
   }
@@ -169,7 +174,11 @@ export default async function ArticleDetailPage({
           },
         }
       : {}),
-    author: { '@type': 'Organization', name: 'Olivátor', url: 'https://olivator.cz' },
+    author: {
+      '@type': 'Person',
+      name: 'Olík',
+      url: 'https://olivator.cz/autor/olik',
+    },
     publisher: {
       '@type': 'Organization',
       name: 'Olivátor',
@@ -221,22 +230,13 @@ export default async function ArticleDetailPage({
             {article.title}
           </h1>
 
-          <p className="text-[15px] text-text2 leading-relaxed mb-5">{article.excerpt}</p>
+          <p className="text-[15px] text-text2 leading-relaxed mb-4">{article.excerpt}</p>
 
-          <div className="text-xs text-text3 mb-8 flex items-center gap-3 flex-wrap">
-            <span>{article.readTime}</span>
-            {article.publishedAt && (
-              <>
-                <span aria-hidden="true">·</span>
-                <span>
-                  Publikováno{' '}
-                  <time dateTime={article.publishedAt}>
-                    {new Date(article.publishedAt).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'long', year: 'numeric' })}
-                  </time>
-                </span>
-              </>
-            )}
-          </div>
+          <AuthorByline
+            publishedAt={article.publishedAt}
+            updatedAt={article.updatedAt}
+            readTime={article.readTime}
+          />
 
           <div className="bg-olive-bg/40 rounded-[var(--radius-card)] aspect-[16/9] flex items-center justify-center text-6xl md:text-7xl mb-8">
             {article.emoji}
@@ -252,6 +252,8 @@ export default async function ArticleDetailPage({
               </p>
             </div>
           )}
+
+          <OlikAuthorBox />
 
           {/* Inline CTA — důvěryhodnost */}
           <div className="bg-off/60 border border-off2 rounded-[var(--radius-card)] p-5 mt-10">
