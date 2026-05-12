@@ -1,12 +1,5 @@
-// Sdílený badge pro Olivator Score na produktových kartách.
-// Tři stavy:
-//   1) flavored type → "Aroma" badge (terra, čitelně označené že nedostává score)
-//   2) score == null nebo 0 → "—" badge (data se připravují)
-//   3) score 0-100 → klasický terra badge s číslem
-//
-// Důvod: scoring čistého EVOO škálou nemá smysl pro aromatizované oleje
-// (přidaná aromata diluují parametry). UI by mělo dát uživateli jasně vědět
-// že "Bartolini s lanýžem 10/100" není férové hodnocení.
+// Score brackets dle SCORE_EXPLANATION_STRATEGY.md:
+// 🏆 90-100  🥇 80-89  🥈 70-79  🥉 60-69  ⚪ 50-59  🔴 <50
 
 interface ScoreBadgeProps {
   score: number | null
@@ -16,6 +9,15 @@ interface ScoreBadgeProps {
   className?: string
 }
 
+function bracketStyle(score: number): { background: string } {
+  if (score >= 90) return { background: '#b5860d' } // 🏆 gold
+  if (score >= 80) return { background: '#2d6a4f' } // 🥇 olive
+  if (score >= 70) return { background: '#c4711a' } // 🥈 terra
+  if (score >= 60) return { background: '#6e6e73' } // 🥉 gray
+  if (score >= 50) return { background: '#9ca3af' } // ⚪ light gray
+  return { background: '#dc2626' }                  // 🔴 red
+}
+
 export function ScoreBadge({ score, type, size = 'small', className = '' }: ScoreBadgeProps) {
   const sizeClasses = {
     small: 'text-[10px] w-7 h-7',
@@ -23,10 +25,9 @@ export function ScoreBadge({ score, type, size = 'small', className = '' }: Scor
     large: 'text-[14px] w-12 h-12',
   }[size]
 
-  const baseClasses = `font-bold bg-terra text-white rounded-full flex items-center justify-center tabular-nums ${sizeClasses} ${className}`
+  const baseClasses = `font-bold text-white rounded-full flex items-center justify-center tabular-nums ${sizeClasses} ${className}`
 
   if (type === 'flavored') {
-    // Aroma štítek — nahrazuje skóre, sděluje "tento olej se nehodnotí EVOO škálou"
     return (
       <span
         className={`text-[9px] font-bold bg-terra text-white rounded-full px-2 py-0.5 uppercase tracking-wider ${className}`}
@@ -40,7 +41,7 @@ export function ScoreBadge({ score, type, size = 'small', className = '' }: Scor
   if (score == null || score === 0) {
     return (
       <span
-        className={baseClasses}
+        className={`font-bold bg-terra text-white rounded-full flex items-center justify-center tabular-nums ${sizeClasses} ${className}`}
         title="Hodnocení připravujeme — chybí lab data"
       >
         —
@@ -48,5 +49,19 @@ export function ScoreBadge({ score, type, size = 'small', className = '' }: Scor
     )
   }
 
-  return <span className={baseClasses}>{score}</span>
+  return (
+    <span
+      className={baseClasses}
+      style={bracketStyle(score)}
+      title={
+        score >= 90 ? 'Top tier (90+)' :
+        score >= 80 ? 'Vynikající (80–89)' :
+        score >= 70 ? 'Velmi dobré (70–79)' :
+        score >= 60 ? 'Dobré (60–69)' :
+        score >= 50 ? 'Průměrné (50–59)' : 'Slabší (<50)'
+      }
+    >
+      {score}
+    </span>
+  )
 }
