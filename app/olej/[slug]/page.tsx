@@ -624,7 +624,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           <p className="text-[12px] text-text3 mb-4">
             Stejná značka, jiné odrůdy nebo certifikace.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
             {relatedFromBrand.map((v) => (
               <Link
                 key={v.id}
