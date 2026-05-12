@@ -39,6 +39,16 @@ export function PriceAlertButton({ productId, productName, currentPrice }: Props
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error ?? 'Nepodařilo se nastavit')
       setStatus('success')
+      // Best-effort: zároveň přihlásit k newsletteru s preferencí alerts
+      fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          source: 'price_alert',
+          preferences: { weekly: false, deals: false, harvest: false, alerts: true },
+        }),
+      }).catch(() => null)
     } catch (err) {
       setStatus('error')
       setError(err instanceof Error ? err.message : 'Chyba')

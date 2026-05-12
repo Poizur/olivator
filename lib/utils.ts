@@ -87,8 +87,10 @@ export function countryFlag(code: string): string {
     TN: '\u{1F1F9}\u{1F1F3}',
     IL: '\u{1F1EE}\u{1F1F1}',
     US: '\u{1F1FA}\u{1F1F8}',
+    CZ: '\u{1F1E8}\u{1F1FF}',
+    EU: '\u{1F1EA}\u{1F1FA}',
   }
-  return flags[code] || code
+  return flags[code] || ''
 }
 
 export function countryName(code: string): string {

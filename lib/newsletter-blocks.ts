@@ -106,6 +106,7 @@ export async function pickOilOfTheWeek(
     .from('products')
     .select('id, slug, name, name_short, image_url, olivator_score, brand_slug')
     .eq('status', 'active')
+    .not('olivator_score', 'is', null)
     .order('olivator_score', { ascending: false })
     .limit(30)
 
@@ -465,6 +466,7 @@ export async function pickRecipe(): Promise<RecipeData | null> {
         'id, slug, name, name_short, image_url, olivator_score, brand_slug, region_slug'
       )
       .eq('status', 'active')
+      .not('olivator_score', 'is', null)
       .order('olivator_score', { ascending: false })
       .limit(50)
 

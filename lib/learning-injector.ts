@@ -28,6 +28,7 @@ export type AgentName =
   | 'lab_report_agent'     // vision scan lab reportů
   | 'quality_auto_fix'     // auto-fix v quality-rules
   | 'radar_agent'          // RSS překlad
+  | 'scraper_agent'        // product scraper + discovery validace
 
 type LearningCategory =
   | 'content_quality'
@@ -52,6 +53,7 @@ const AGENT_CATEGORIES: Record<AgentName, LearningCategory[]> = {
   lab_report_agent: ['scraper', 'content_quality', 'agent_behavior'],
   quality_auto_fix: ['bug_fix', 'pipeline', 'content_quality'],
   radar_agent:      ['pipeline', 'agent_behavior', 'content_quality'],
+  scraper_agent:    ['scraper', 'pipeline', 'bug_fix'],
 }
 
 const IMPACT_RANK: Record<string, number> = {

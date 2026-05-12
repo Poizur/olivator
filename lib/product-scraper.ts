@@ -248,6 +248,13 @@ export function extractOleocanthal(text: string | null): number | null {
   return v > 0 && v < 2000 ? v : null
 }
 
+const NON_OLIVE_KEYWORDS = /ostropestř|milk\s+thistle|silymarin|lněn|kokos|konopn|dýňov|slunečnic|řepkov|kondicionér|šampon|vlasov/iu
+
+/** Vrátí true pokud je produkt olivový olej — rejectne milk thistle, kokosový olej atd. */
+export function validateOliveOilProduct(name: string): boolean {
+  return !NON_OLIVE_KEYWORDS.test(name)
+}
+
 const POLYPHENOL_THRESHOLD_MARKERS = [
   'minimáln', 'alespoň', 'musí mí', 'musí být', 'vyžaduje', 'norma',
   'typicky', 'obvykl', 'běžn', 'standardn', 'kategori',

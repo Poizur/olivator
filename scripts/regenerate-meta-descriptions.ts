@@ -88,11 +88,18 @@ async function main() {
         }),
       ])
 
+      const safeDescription = newDescription.length > 160
+        ? newDescription.slice(0, 157) + '...'
+        : newDescription
+      const safeTitle = newTitle.length > 70
+        ? newTitle.slice(0, 67) + '...'
+        : newTitle
+
       const { error: updateErr } = await supabaseAdmin
         .from('products')
         .update({
-          meta_description: newDescription,
-          meta_title: newTitle,
+          meta_description: safeDescription,
+          meta_title: safeTitle,
           updated_at: new Date().toISOString(),
         })
         .eq('id', p.id)
@@ -110,7 +117,9 @@ async function main() {
       }
 
     } catch (err) {
-      const msg = err instanceof Error ? err.message.slice(0, 80) : String(err)
+      const msg = err instanceof Error
+        ? err.message.slice(0, 80)
+        : ((err as { message?: string })?.message ?? JSON.stringify(err)).slice(0, 100)
       process.stdout.write(`✗ ${msg}\n`)
       failed++
     }

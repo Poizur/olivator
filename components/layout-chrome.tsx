@@ -7,6 +7,7 @@ import { Footer } from './footer'
 import { CompareBar } from './compare-bar'
 import { SommelierChat } from './sommelier-chat'
 import { AdminBar } from './admin-bar'
+import { ExitIntentPopup } from './exit-intent-popup'
 
 /**
  * Klientský přepínač chrome (Nav, Footer, CompareBar, SommelierChat, AdminBar)
@@ -59,6 +60,7 @@ export function LayoutChrome({
       {!isAdminPage ? <Footer /> : null}
       {!isAdminPage ? <CompareBar /> : null}
       {!isAdminPage ? <SommelierChat /> : null}
+      {!isAdminPage ? <ExitIntentPopup /> : null}
       {/* GA zachovat na všech stránkách kromě adminu (privacy compliance) */}
       {hasGa && !isAdminPage ? null : null}
     </>
