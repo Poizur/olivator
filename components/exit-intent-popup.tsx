@@ -12,7 +12,15 @@ const STORAGE_KEY = 'exit_intent_shown'
 const COOLDOWN_DAYS = 30
 
 function shouldTrigger(pathname: string): boolean {
-  return pathname.startsWith('/olej/') || pathname.startsWith('/zebricek/')
+  return (
+    pathname.startsWith('/olej/') ||
+    pathname.startsWith('/zebricek/') ||
+    pathname === '/srovnavac' ||
+    pathname.startsWith('/pruvodce/') ||
+    pathname.startsWith('/recept/') ||
+    pathname.startsWith('/regiony/') ||
+    pathname.startsWith('/odrudy/')
+  )
 }
 
 function isOnCooldown(): boolean {

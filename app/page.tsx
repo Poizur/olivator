@@ -156,6 +156,21 @@ export default async function Home() {
         productLookup={productLookup}
       />
 
+      {/* ─── HERO NEWSLETTER STRIP ─────────────────────────────────── */}
+      <div className="bg-olive-dark px-6 md:px-10 py-5">
+        <div className="max-w-[1280px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-center sm:text-left">
+            <div className="text-white font-semibold text-[15px] leading-snug">
+              Buď první kdo se dozví o slevách na kvalitní olivový olej
+            </div>
+            <div className="text-white/55 text-[12px] mt-0.5">1× týdně · bez spamu · odhlásit jedním klikem</div>
+          </div>
+          <div className="w-full sm:w-auto sm:min-w-[300px] shrink-0">
+            <NewsletterSignup source="homepage" variant="dark" />
+          </div>
+        </div>
+      </div>
+
       {/* ─── COMPARATOR TEASER ─ 3 prefab duely + trust counter ─── */}
       <ComparatorTeaser
         duels={duels}
