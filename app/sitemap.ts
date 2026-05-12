@@ -62,15 +62,35 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }))
 
-  // Static articles z lib/static-content.ts nemají published_at v DB →
-  // použij buildTime. Až budeme mít plný DB-driven content systém s
-  // articles + recipes tabulkami, vyměníme za reálné published_at.
-  const articlePages: MetadataRoute.Sitemap = getArticles().map(a => ({
-    url: `${baseUrl}/${a.category === 'recept' ? 'recept' : 'pruvodce'}/${a.slug}`,
-    lastModified: buildTime,
-    changeFrequency: 'monthly' as const,
-    priority: 0.6,
-  }))
+  // DB articles — primární zdroj. Static articles jako fallback pro slugy
+  // které v DB nejsou (legacy static-content.ts).
+  const dbArticlesRes = await supabaseAdmin
+    .from('articles')
+    .select('slug, category, updated_at')
+    .eq('status', 'active')
+
+  const dbArticleSlugs = new Set((dbArticlesRes.data ?? []).map((a: { slug: string }) => a.slug))
+
+  const dbArticlePages: MetadataRoute.Sitemap = (dbArticlesRes.data ?? []).map(
+    (a: { slug: string; category: string; updated_at: string | null }) => ({
+      url: `${baseUrl}/${a.category === 'recept' ? 'recept' : 'pruvodce'}/${a.slug}`,
+      lastModified: dt(a.updated_at),
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    })
+  )
+
+  // Static articles — pouze ty které nejsou v DB (deduplicate by slug)
+  const staticArticlePages: MetadataRoute.Sitemap = getArticles()
+    .filter(a => !dbArticleSlugs.has(a.slug))
+    .map(a => ({
+      url: `${baseUrl}/${a.category === 'recept' ? 'recept' : 'pruvodce'}/${a.slug}`,
+      lastModified: buildTime,
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    }))
+
+  const articlePages = [...dbArticlePages, ...staticArticlePages]
 
   const regionPages: MetadataRoute.Sitemap = (regions.data ?? []).map((r: { slug: string; updated_at: string | null }) => ({
     url: `${baseUrl}/oblast/${r.slug}`,
