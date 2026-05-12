@@ -1,24 +1,53 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
+import { ScoreCalculator } from '@/components/score-calculator'
+import { MetodikaToc } from '@/components/metodika-toc'
 
-export const metadata = {
-  title: 'Metodika — Jak počítáme Olivator Score',
-  description: 'Transparentní metodika hodnocení olivových olejů. 4 komponenty, váhy a výpočet Olivator Score.',
+export const metadata: Metadata = {
+  title: 'Olivator Score — Jak hodnotíme olivový olej | Olivator',
+  description: 'Transparentní metodika Olivator Score. Vážený průměr 4 měřitelných složek: kyselost, certifikace, polyfenoly, hodnota. Data z EU databází, lab reportů a reálných cen.',
   alternates: { canonical: 'https://olivator.cz/metodika' },
+  openGraph: {
+    type: 'article',
+    url: 'https://olivator.cz/metodika',
+    title: 'Olivator Score — Jak hodnotíme olivový olej',
+    description: 'Vážený průměr 4 měřitelných složek. Žádné dojmy — pouze data z certifikací, lab reportů a reálných cen.',
+    images: [{ url: 'https://images.unsplash.com/photo-1751440033950-71236e893284?crop=entropy&cs=tinysrgb&w=1200', width: 1200, height: 630 }],
+  },
 }
 
-// Texty Level 1/2/3 převzaty doslova z SCORE_EXPLANATION_STRATEGY.md
+// Přesné texty z SCORE_EXPLANATION_STRATEGY.md
 const COMPONENTS = [
   {
+    id: 'kyselost',
     name: 'Kyselost',
     weight: '35 %',
     max: 35,
+    img: 'https://images.unsplash.com/photo-1574785289548-b6604d39125d?crop=entropy&cs=tinysrgb&w=800&q=80',
+    imgAlt: 'Olivový olej se lije z lahve — čistota a čerstvost oleje se pozná kyselostí',
     level1: 'Kyselost ukazuje jak je olej čerstvý. Čím nižší, tím lepší.',
     level2: 'Kyselost měří kolik volných mastných kyselin olej obsahuje. Vzniká když se olivy špatně zpracují nebo když olej dlouho stojí ve špatných podmínkách. Extra panenský olej musí mít kyselost pod 0,8 %. Ty nejlepší mají pod 0,2 % — to je důkaz čerstvosti a precizní výroby.',
-    level3: [
-      'Co jsou volné mastné kyseliny (FFA — Free Fatty Acids): produkty hydrolýzy triglyceridů. Vznikají enzymatickou aktivitou při poškození buněk oliv nebo špatným skladováním.',
-      'Jak se měří: titrace (chemická analýza) v certifikovaných laboratořích dle IOC normy COI/T.20/Doc. No 26.',
-      'Proč nízká kyselost = lepší: méně FFA = méně oxidace = delší trvanlivost a čistší chuť.',
-      'Mezinárodní normy IOC: EVOO max 0,8 %, Virgin max 2,0 %, Lampante (technický) nad 2,0 %.',
+    level3Sections: [
+      {
+        heading: 'Co se děje na chemické úrovni',
+        body: 'Olivový olej tvoří převážně triglyceridy — molekuly kyseliny olejové vázané na glycerolu. Když se olivy poškodí, kvasí nebo se olej oxiduje, enzym lipáza začne triglyceridy rozkládat. Volné mastné kyseliny (Free Fatty Acids — FFA) jsou produktem tohoto rozpadu. Měříme je jako % volné kyseliny olejové dle IOC normy COI/T.20/Doc. No 26.',
+      },
+      {
+        heading: 'Co způsobuje vyšší kyselost',
+        body: '1. Pozdní sklizeň — přezrálé olivy mají větší enzymovou aktivitu.\n2. Poškozené olivy — zlomené, nahnilé, napadené olivovou muškou.\n3. Pomalé zpracování — více než 24 hodin od sklizně do lisu.\n4. Vysoká teplota při lisování — nad 27 °C aktivuje enzymy.\n5. Špatné skladování — kyslík, teplo, světlo.',
+      },
+      {
+        heading: 'EU standardy (Nařízení EHS č. 2568/91 + IOC Trade Standards)',
+        body: 'Extra panenský (EVOO): max 0,8 % | Panenský: max 2,0 % | Lampante (na rafinaci): nad 2,0 %',
+        table: [
+          ['Kyselost', 'Body'],
+          ['Pod 0,2 %', '35/35 (maximum)'],
+          ['0,2–0,3 %', '30–34'],
+          ['0,3–0,5 %', '22–29'],
+          ['0,5–0,8 %', '15–21'],
+          ['Nad 0,8 %', '0 — není EVOO'],
+        ],
+      },
     ],
     scales: [
       { label: 'Pod 0,2 %', desc: 'Vynikající', color: 'green' },
@@ -29,35 +58,72 @@ const COMPONENTS = [
     ],
   },
   {
+    id: 'certifikace',
     name: 'Certifikace',
     weight: '25 %',
     max: 25,
+    img: 'https://images.unsplash.com/photo-1775813716943-856cc25d1edd?crop=entropy&cs=tinysrgb&w=800&q=80',
+    imgAlt: 'Certifikační razítko na produktu — nezávislé ověření kvality třetí stranou',
     level1: 'Certifikáty = razítka která potvrzují kvalitu nezávislí kontroloři.',
     level2: 'Certifikáty dávají třetí strany, ne výrobce. Nejdůležitější jsou DOP (Chráněné označení původu — olej z přesné oblasti dle tradičních metod), BIO (bez pesticidů), a NYIOOC (vítězství na světové soutěži v New Yorku). Čím víc certifikátů, tím spolehlivější kvalita.',
-    level3: [
-      'DOP (Denominazione di Origine Protetta) / PDO: olej musí pocházet z přesné oblasti, odrůdy oliv jsou pevně dané, metody výroby dle tradice, kontroluje státem akreditovaný úřad. Příklady: Sitia PDO (Kréta), Toscano IGP (Toskánsko).',
-      'BIO / Organic: bez syntetických pesticidů a hnojiv, půda a olivovníky kontrolované 3 roky, kontroluje certifikační orgán (např. ABCERT, KEZ).',
-      'NYIOOC (New York International Olive Oil Competition): největší světová slepá soutěž, hodnoceno mistrovskými degustátory, Gold/Silver/Bronze — Gold = top 5 % světové produkce.',
-      'PGI (Protected Geographical Indication): méně přísné než DOP, aspoň jedna fáze výroby v dané oblasti.',
+    level3Sections: [
+      {
+        heading: 'Proč certifikace váží 25 % v Score',
+        body: 'Certifikace je nezávislá ověřitelná informace. Výrobce může tvrdit cokoli — "premium", "z nejlepších oliv", "ručně vyráběný". Certifikaci musí získat od regulátora po fyzické kontrole. DOP/PGP kontrolují akreditované úřady (ICEA v Itálii, ELOG v Řecku). BIO kontroluje certifikační orgán každý rok (ABCERT, KEZ, Soil Association). NYIOOC je slepá soutěž s 600+ panelisty.',
+      },
+      {
+        heading: 'Kde certifikace ověřit',
+        body: 'DOP/PGP: EU eAmbrosia Register (ec.europa.eu) | BIO: certifikační orgán na etiketě (CZ-BIO-001, IT-BIO-008 atd.) | NYIOOC: bestoliveoils.com',
+        table: [
+          ['Kombinace', 'Body'],
+          ['DOP + BIO + NYIOOC Gold', '25/25'],
+          ['DOP + BIO', '23–24'],
+          ['DOP nebo BIO + ocenění', '18–22'],
+          ['Jen DOP nebo BIO', '15–18'],
+          ['NYIOOC Gold/Silver', '12–16'],
+          ['Žádné certifikace', '0'],
+        ],
+      },
     ],
     scales: [
-      { label: 'DOP + BIO', desc: '25 bodů (maximum)', color: 'green' },
-      { label: 'DOP nebo BIO', desc: '18–22 bodů', color: 'green' },
-      { label: 'NYIOOC / PGI', desc: '15–20 bodů', color: 'yellow' },
+      { label: 'DOP + BIO + NYIOOC', desc: '25 bodů (maximum)', color: 'green' },
+      { label: 'DOP + BIO', desc: '23–24 bodů', color: 'green' },
+      { label: 'DOP nebo BIO', desc: '15–22 bodů', color: 'yellow' },
+      { label: 'NYIOOC / PGI', desc: '10–16 bodů', color: 'yellow' },
       { label: 'Bez certifikace', desc: '0 bodů', color: 'red' },
     ],
   },
   {
+    id: 'polyfenoly',
     name: 'Polyfenoly',
     weight: '25 %',
     max: 25,
+    img: 'https://images.unsplash.com/photo-1634736482829-e2d431eda121?crop=entropy&cs=tinysrgb&w=800&q=80',
+    imgAlt: 'Zelené olivy zblízka — čím zelenější, tím více polyfenolů v oleji',
     level1: 'Polyfenoly jsou přírodní antioxidanty které dělají olej zdravým. Čím víc, tím lepší.',
     level2: 'Polyfenoly jsou skupina rostlinných látek které dělají olej zároveň zdravým, chuťově bohatým a trvanlivým. Když cítíš v krku to pálení po doušku kvalitního EVOO — to jsou polyfenoly. EU schválila zdravotní tvrzení: olej s 250+ mg/kg polyfenolů chrání tělo před oxidačním stresem. Top oleje mají 400–800 mg/kg.',
-    level3: [
-      'Hlavní polyfenoly: oleokantal, oleocein, hydroxytyrosol, tyrosol. Vznikají v olivách jako obrana proti škůdcům, přenášejí se do oleje při lisování.',
-      'Zdravotní benefity: antioxidanty (chrání buňky), protizánětlivé (oleokantal = "tekutý ibuprofen"), snižují kardiovaskulární riziko.',
-      'EU Health Claim 432/2012: olej s 250+ mg/kg polyfenolů může nést tvrzení o ochraně před oxidačním stresem.',
-      'Vliv na chuť a trvanlivost: více polyfenolů = více pálivosti a hořkosti, pomalejší žluknutí. Early harvest oleje mají typicky nejvyšší hodnoty.',
+    level3Sections: [
+      {
+        heading: 'Tři klíčové polyfenoly',
+        body: 'Oleokantal — zodpovědný za pálivost a "kop v krku". Strukturálně podobný ibuprofenu. 50 g EVOO s vysokým obsahem oleokantalu = ~10 % protizánětlivého efektu ibuprofenu (Beauchamp et al., Nature, 2005).\n\nOleocein — nejsilnější antioxidant v EVOO. Inhibuje oxidaci LDL cholesterolu.\n\nHydroxytyrosol — mocnější antioxidant než vitamin E. EFSA schválila zdravotní tvrzení 432/2012: "Hydroxytyrosol a jeho deriváty chrání LDL cholesterol před oxidací." Minimum pro tvrzení: 250 mg/kg polyfenolů.',
+      },
+      {
+        heading: 'Co ovlivňuje obsah polyfenolů',
+        body: 'Odrůda: Coratina, Picual = vysoký obsah. Arbequina = nižší.\nDoba sklizně: Early harvest (zelené olivy) má 2–3× více než pozdní.\nZpracování: Cold pressed do 30 minut zachová maximum.\nSkladování: Polyfenoly klesají ~20 % za rok — tmavá lahev, pod 18 °C.',
+        table: [
+          ['Polyfenoly', 'Body'],
+          ['Nad 500 mg/kg', '22–25'],
+          ['400–500 mg/kg', '18–22'],
+          ['300–400 mg/kg', '14–18'],
+          ['250–300 mg/kg', '10–14'],
+          ['150–250 mg/kg', '5–10'],
+          ['Pod 150 mg/kg', '0–4'],
+        ],
+      },
+      {
+        heading: 'Senzorické rozpoznání bez lab rozboru',
+        body: 'Hořkost na jazyku (Coratina, Picual) | Pálivost v krku po několika sekundách | Zelenkavá barva (chlorofyl koreluje s polyfenoly) | Vůně po čerstvě sečené trávě (early harvest).\n\nMírný olej (Arbequina) má méně polyfenolů, ale ne nutně nižší kvalitu — záleží na použití.',
+      },
     ],
     scales: [
       { label: 'Nad 500 mg/kg', desc: 'Vynikající', color: 'green' },
@@ -68,23 +134,39 @@ const COMPONENTS = [
     ],
   },
   {
+    id: 'hodnota',
     name: 'Cena / kvalita',
     weight: '15 %',
     max: 15,
+    img: 'https://images.unsplash.com/photo-1612819052787-618023ea329f?crop=entropy&cs=tinysrgb&w=800&q=80',
+    imgAlt: 'Srovnání produktů — měříme hodnotu, ne cenu samotnou',
     level1: 'Měříme jestli platíš za chuť a kvalitu, ne za marketing a krásnou láhev.',
     level2: 'Některé oleje mají skvělé Score a stojí 200 Kč. Jiné stejně dobré stojí 800 Kč — rozdíl je v značce, balení a marketingu. Naše hodnota počítá kolik kvality dostaneš za sto korun. Pomáhá ti najít olej s nejlepším poměrem cena/kvalita pro tvůj rozpočet.',
-    level3: [
-      'Vzorec: Cena/kvalita = (Kyselost_score + Certifikace_score + Polyfenoly_score) / cena_za_100ml.',
-      'Příklad vysoké hodnoty: olej za 199 Kč/250ml se Score 75 → výborný poměr.',
-      'Příklad nízké hodnoty: olej za 599 Kč/250ml se Score 80 → jen 5 bodů navíc za 400 Kč = platíš za značku.',
-      'Co neměříme: subjektivní hodnota (krásná láhev, dárkové balení), brand premium, marketing claims bez certifikace.',
+    level3Sections: [
+      {
+        heading: 'Vzorec',
+        body: 'Hodnota = (Kyselost_body + Certifikace_body + Polyfenoly_body) / cena_za_100ml\n\nVýsledek se normalizuje na škálu 0–15.\n\nPříklad vysoké hodnoty: Picual BIO 500 ml za 249 Kč (Score 82) → cena 49,80 Kč/100ml → poměr 1,43 → 13/15 bodů.\n\nPříklad slabší hodnoty: Premium značka 250 ml za 599 Kč → 239 Kč/100ml → stejná kvalita, 6× dražší → 3/15 bodů.',
+      },
+      {
+        heading: 'Co neměříme do hodnoty',
+        body: 'Estetiku obalu — krásná lahev neznamená lepší olej.\nBrand premium — značka sama o sobě.\nDárkové balení — okolnosti prodeje.\nMarketing claims bez certifikace.\n\nCílem hodnoty NENÍ "nejlevnější vyhrává". Olej za 100 Kč s polyfenoly 150 mg/kg má nižší skóre než olej za 300 Kč s 500 mg/kg. Hodnota pomáhá rozlišit dva podobné oleje.',
+        table: [
+          ['Poměr Score/100 Kč', 'Body'],
+          ['> 1,5', '15/15 (maximum)'],
+          ['1,2–1,5', '13'],
+          ['1,0–1,2', '11'],
+          ['0,7–1,0', '8'],
+          ['0,5–0,7', '5'],
+          ['< 0,5', '0–4'],
+        ],
+      },
     ],
     scales: [
-      { label: 'Score/100 Kč > 25', desc: 'Vynikající hodnota', color: 'green' },
-      { label: '20–25', desc: 'Výborná hodnota', color: 'green' },
-      { label: '15–20', desc: 'Standardní hodnota', color: 'yellow' },
-      { label: '10–15', desc: 'Slabší hodnota', color: 'yellow' },
-      { label: 'Pod 10', desc: 'Platíš hlavně za značku', color: 'red' },
+      { label: 'Poměr > 1,5', desc: 'Vynikající hodnota', color: 'green' },
+      { label: '1,2–1,5', desc: 'Výborná hodnota', color: 'green' },
+      { label: '1,0–1,2', desc: 'Standardní hodnota', color: 'yellow' },
+      { label: '0,5–1,0', desc: 'Slabší hodnota', color: 'yellow' },
+      { label: '< 0,5', desc: 'Platíš hlavně za značku', color: 'red' },
     ],
   },
 ]
@@ -95,242 +177,453 @@ const COLOR_DOT: Record<string, string> = {
   red: 'bg-red-500',
 }
 
+const TOP_PRODUCTS = [
+  { slug: 'picual-5-l-extra-panensky-nefiltrovany-olivovy-olej-bag-in-box', name: 'Picual 5 l Bag-In-Box', score: 95 },
+  { slug: 'olivovy-olej-extra-panensky-callejas-coupage-5l', name: 'CALLEJAS coupage 5L', score: 94 },
+  { slug: 'bio-extra-panensky-olivovy-olej-elixir-500-ml', name: 'BIO Elixír 500 ml', score: 92 },
+  { slug: 'picual-2-l-extra-panensky-nefiltrovany-olivovy-olej', name: 'Picual 2 l', score: 91 },
+  { slug: 'extra-panensky-olivovy-olej-sitia-pdo-0-2-critida-4-l-design', name: 'SITIA PDO 4 l', score: 89 },
+]
+
+const SCORE_BRACKETS = [
+  { range: '90–100', label: 'Top tier', emoji: '🏆', note: 'Top 5 % katalogu', bg: '#fef3c7', border: '#fde68a', text: '#92400e' },
+  { range: '80–89', label: 'Vynikající', emoji: '🥇', note: 'Skvělá volba', bg: '#d8f3dc', border: '#b7e4c7', text: '#1b4332' },
+  { range: '70–79', label: 'Velmi dobré', emoji: '🥈', note: 'Nad průměrem', bg: '#fff7ed', border: '#fed7aa', text: '#7c2d12' },
+  { range: '60–69', label: 'Dobré', emoji: '🥉', note: 'Standardní kvalita', bg: '#f5f5f7', border: '#e8e8ed', text: '#6e6e73' },
+  { range: '50–59', label: 'Průměrné', emoji: '⚪', note: 'Chybí část dat', bg: '#f5f5f7', border: '#e8e8ed', text: '#9ca3af' },
+  { range: 'Pod 50', label: 'Slabší', emoji: '🔴', note: 'Nízká kvalita nebo chybí data', bg: '#fef2f2', border: '#fecaca', text: '#dc2626' },
+]
+
+const schemaOrg = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: 'Olivator Score — Jak hodnotíme olivový olej',
+  description: 'Transparentní metodika Olivator Score. Vážený průměr 4 měřitelných složek: kyselost, certifikace, polyfenoly, hodnota.',
+  author: { '@type': 'Organization', name: 'Olivator', url: 'https://olivator.cz' },
+  publisher: { '@type': 'Organization', name: 'Olivator', url: 'https://olivator.cz' },
+  datePublished: '2026-05-01',
+  dateModified: '2026-05-12',
+  url: 'https://olivator.cz/metodika',
+  image: 'https://images.unsplash.com/photo-1751440033950-71236e893284?crop=entropy&cs=tinysrgb&w=1200',
+}
+
 export default function MetodikaPage() {
   return (
-    <div className="max-w-[800px] mx-auto px-6 md:px-10 py-10">
-      <div className="text-xs text-text3 mb-7">
-        <Link href="/" className="text-olive">Olivator</Link>
-        {' › '}Metodika
-      </div>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrg) }}
+      />
 
-      <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-text mb-3 leading-tight">
-        Jak počítáme Olivator Score
-      </h1>
-      <p className="text-[15px] text-text2 font-light leading-relaxed mb-6">
-        Olivator Score je objektivní metrika od 0 do 100, kombinující 4 měřitelné složky.
-        Žádné subjektivní hodnocení — pouze data, certifikace a chemické parametry.
-      </p>
-
-      <div className="flex flex-wrap gap-2 mb-10">
-        {['✓ Nezávislé hodnocení', '✓ Reálná data', '✓ Žádná reklama'].map(t => (
-          <span key={t} className="text-xs text-olive bg-olive-bg px-3 py-1.5 rounded-full font-medium">
-            {t}
-          </span>
-        ))}
-      </div>
-
-      {/* Score bar vizuál */}
-      <div className="bg-off rounded-[var(--radius-card)] p-6 mb-10">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium text-text">Příklad: 84 / 100</span>
-          <span className="text-2xl font-bold" style={{ color: '#2d6a4f' }}>84</span>
-        </div>
-        <div className="h-3 bg-off2 rounded-full overflow-hidden mb-4">
-          <div className="h-full rounded-full" style={{ width: '84%', background: '#2d6a4f' }} />
-        </div>
-        <div className="grid grid-cols-4 gap-2">
-          {[
-            { label: 'Kyselost', score: 33, max: 35 },
-            { label: 'Certifikace', score: 19, max: 25 },
-            { label: 'Polyfenoly', score: 21, max: 25 },
-            { label: 'Hodnota', score: 11, max: 15 },
-          ].map(c => (
-            <div key={c.label} className="bg-white rounded-lg p-3 text-center">
-              <div className="text-[10px] text-text3 uppercase tracking-wider mb-1">{c.label}</div>
-              <div className="text-lg font-bold text-terra">{c.score}</div>
-              <div className="text-[10px] text-text3">z {c.max}</div>
-            </div>
-          ))}
-        </div>
-        <p className="text-[11px] text-text3 mt-3 text-center">
-          Olivator Score = (Kyselost × 0,35) + (Certifikace × 0,25) + (Polyfenoly × 0,25) + (Hodnota × 0,15)
-        </p>
-      </div>
-
-      {/* Score brackets */}
-      <div className="mb-10">
-        <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-4">
-          Co číslo znamená
-        </h2>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {[
-            { range: '90–100', label: 'Top tier', emoji: '🏆', note: 'Top 5 % katalogu', bg: '#fef3c7', border: '#fde68a', text: '#92400e' },
-            { range: '80–89', label: 'Vynikající', emoji: '🥇', note: 'Skvělá volba', bg: '#d8f3dc', border: '#b7e4c7', text: '#1b4332' },
-            { range: '70–79', label: 'Velmi dobré', emoji: '🥈', note: 'Nad průměrem', bg: '#fff7ed', border: '#fed7aa', text: '#7c2d12' },
-            { range: '60–69', label: 'Dobré', emoji: '🥉', note: 'Standardní kvalita', bg: '#f5f5f7', border: '#e8e8ed', text: '#6e6e73' },
-            { range: '50–59', label: 'Průměrné', emoji: '⚪', note: 'Chybí část dat', bg: '#f5f5f7', border: '#e8e8ed', text: '#9ca3af' },
-            { range: 'Pod 50', label: 'Slabší', emoji: '🔴', note: 'Nízká kvalita nebo chybí data', bg: '#fef2f2', border: '#fecaca', text: '#dc2626' },
-          ].map(b => (
-            <div key={b.range} className="flex items-center gap-3 rounded-xl p-3" style={{ background: b.bg, border: `1px solid ${b.border}` }}>
-              <span className="text-2xl">{b.emoji}</span>
-              <div>
-                <div className="text-[15px] font-bold" style={{ color: b.text }}>{b.range}</div>
-                <div className="text-[12px]" style={{ color: b.text }}>{b.label} — {b.note}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 4 komponenty — accordion Level 1/2/3 */}
-      <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-6">
-        4 složky Score
-      </h2>
-
-      <div className="space-y-4 mb-12">
-        {COMPONENTS.map((comp, i) => (
-          <div key={comp.name} className="border border-off2 rounded-[var(--radius-card)] overflow-hidden">
-            {/* Vždy viditelné: Level 1 */}
-            <div className="p-5">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="w-8 h-8 rounded-full bg-terra text-white flex items-center justify-center text-sm font-bold shrink-0">
-                  {i + 1}
+      {/* Hero */}
+      <div className="relative overflow-hidden mb-0" style={{ minHeight: 320 }}>
+        <img
+          src="https://images.unsplash.com/photo-1751440033950-71236e893284?crop=entropy&cs=tinysrgb&w=1400&q=80"
+          alt="Kapky olivového oleje v detailu — vědecká analýza kvality"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(27,67,50,0.88) 0%, rgba(27,67,50,0.65) 100%)' }} />
+        <div className="relative max-w-[1100px] mx-auto px-6 md:px-10 py-16 md:py-20">
+          <div className="text-xs text-white/50 mb-5">
+            <Link href="/" className="text-white/70 hover:text-white transition-colors">Olivator</Link>
+            {' › '}Metodika
+          </div>
+          <div className="max-w-[620px]">
+            <h1 className="font-[family-name:var(--font-display)] text-4xl md:text-5xl font-normal text-white mb-4 leading-tight">
+              Jak počítáme<br />
+              <em className="not-italic text-white/80">Olivator Score</em>
+            </h1>
+            <p className="text-[16px] text-white/75 leading-relaxed mb-6 font-light">
+              Číslo 0–100. Vážený průměr 4 měřitelných složek. Žádné dojmy, žádný marketing —
+              jenom data z EU databází, lab reportů a reálných cen.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {['✓ Nezávislé hodnocení', '✓ Reálná data', '✓ Žádná reklama'].map(t => (
+                <span key={t} className="text-xs text-white bg-white/15 px-3 py-1.5 rounded-full font-medium backdrop-blur-sm">
+                  {t}
                 </span>
-                <div>
-                  <div className="text-base font-semibold text-text">{comp.name}</div>
-                  <div className="text-xs text-terra font-semibold">{comp.weight}</div>
-                </div>
-              </div>
-              <p className="text-[14px] font-medium text-olive-dark leading-snug mb-0">
-                {comp.level1}
-              </p>
+              ))}
             </div>
+          </div>
+        </div>
+      </div>
 
-            {/* Accordion Level 2 */}
-            <details className="group border-t border-off2">
-              <summary className="flex items-center justify-between px-5 py-3 cursor-pointer list-none text-[12px] text-olive font-medium hover:bg-olive-bg/30 transition-colors">
-                Přečíst více
-                <span className="text-text3 group-open:rotate-180 transition-transform duration-200">▾</span>
-              </summary>
-              <div className="px-5 pb-5">
-                <p className="text-[13px] text-text2 leading-relaxed mb-4">{comp.level2}</p>
+      {/* Hlavní obsah se sticky TOC */}
+      <div className="max-w-[1100px] mx-auto px-6 md:px-10 py-12">
+        <div className="lg:grid lg:grid-cols-[200px_1fr] lg:gap-14">
 
-                {/* Stupnice */}
-                <div className="space-y-1.5 mb-4">
-                  {comp.scales.map(s => (
-                    <div key={s.label} className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${COLOR_DOT[s.color]}`} />
-                      <span className="text-[12px] font-medium text-text w-28 shrink-0">{s.label}</span>
-                      <span className="text-[12px] text-text2">{s.desc}</span>
+          {/* Sticky TOC — desktop only */}
+          <aside className="hidden lg:block">
+            <MetodikaToc />
+          </aside>
+
+          {/* Hlavní obsah */}
+          <main className="min-w-0">
+
+            {/* ── SEKCE 1: Co je Score ─────────────────────────── */}
+            <section id="score" className="scroll-mt-20 mb-14">
+              <h2 className="font-[family-name:var(--font-display)] text-3xl font-normal text-text mb-4 leading-tight">
+                Score 0–100, vážený průměr 4 složek
+              </h2>
+              <p className="text-[15px] text-text2 leading-relaxed mb-6 font-light">
+                Olivator Score říká jak kvalitní olej je. Každá složka má svou váhu —
+                protože ne všechny mají stejný vliv na kvalitu. Score se přepočítává
+                automaticky při každé změně ceny nebo lab dat.
+              </p>
+
+              {/* Score vizuál */}
+              <div className="bg-off rounded-2xl p-6 mb-6">
+                <div className="text-[11px] text-text3 uppercase tracking-wider mb-4">
+                  Příklad: olej se Score 84
+                </div>
+                <div className="flex items-end gap-4 mb-4">
+                  <div className="text-5xl font-bold" style={{ color: '#2d6a4f' }}>84</div>
+                  <div className="text-[13px] text-text2 leading-snug pb-1">
+                    🥇 Vynikající<br />
+                    <span className="text-text3">z 100 bodů</span>
+                  </div>
+                </div>
+                <div className="h-2.5 bg-off2 rounded-full overflow-hidden mb-5">
+                  <div className="h-full rounded-full" style={{ width: '84%', background: '#2d6a4f' }} />
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { label: 'Kyselost', score: 33, max: 35, note: '0,15 %' },
+                    { label: 'Certifikace', score: 19, max: 25, note: 'DOP + BIO' },
+                    { label: 'Polyfenoly', score: 21, max: 25, note: '420 mg/kg' },
+                    { label: 'Hodnota', score: 11, max: 15, note: '68 Kč/100ml' },
+                  ].map(c => (
+                    <div key={c.label} className="bg-white rounded-xl p-3 text-center">
+                      <div className="text-[10px] text-text3 uppercase tracking-wider mb-1">{c.label}</div>
+                      <div className="text-xl font-bold text-terra">{c.score}</div>
+                      <div className="text-[10px] text-text3">z {c.max}</div>
+                      <div className="text-[10px] text-olive mt-1">{c.note}</div>
                     </div>
                   ))}
                 </div>
-
-                {/* Accordion Level 3 */}
-                <details className="group/inner">
-                  <summary className="flex items-center justify-between cursor-pointer list-none text-[11px] text-text3 hover:text-text2 font-medium transition-colors">
-                    Vědecké vysvětlení
-                    <span className="group-open/inner:rotate-180 transition-transform duration-200">▾</span>
-                  </summary>
-                  <div className="mt-3 space-y-2">
-                    {comp.level3.map((item, j) => (
-                      <p key={j} className="text-[12px] text-text2 leading-relaxed pl-3 border-l-2 border-off2">
-                        {item}
-                      </p>
-                    ))}
-                  </div>
-                </details>
+                <p className="text-[11px] text-text3 mt-4 text-center">
+                  Score = (Kyselost × 0,35) + (Certifikace × 0,25) + (Polyfenoly × 0,25) + (Hodnota × 0,15)
+                </p>
               </div>
-            </details>
-          </div>
-        ))}
-      </div>
 
-      {/* Certifikace glossary */}
-      <div id="certifikace" className="mb-12">
-        <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-2">
-          Co znamenají certifikace
-        </h2>
-        <p className="text-[14px] text-text2 leading-relaxed mb-6 font-light">
-          Certifikace tvoří <strong>25 % Olivator Score</strong>. Nejsou rovnocenné — některé
-          garantují chuť a původ (DOP), jiné způsob produkce (BIO), další jsou soutěžní ocenění (NYIOOC).
-        </p>
-        <div className="space-y-4">
-          <div className="border border-off2 rounded-[var(--radius-card)] p-5">
-            <div className="text-[11px] font-semibold tracking-wider uppercase text-olive mb-3">EU regulační značky</div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <CertCard code="DOP / CHOP" fullName="Chráněné označení původu" summary="Nejpřísnější EU značka. Celá produkce v regionu, místní odrůdy, dlouhá tradice." examples="DOP Kalamata (Řecko), DOP Terra di Bari (Itálie)" tier="Zlatý standard" />
-              <CertCard code="PGP / CHZO / IGP" fullName="Chráněné zeměpisné označení" summary="Mírnější než DOP. Alespoň jedna fáze produkce v regionu." examples="IGP Toscano, IGP Sicilia" tier="Premium regional" />
+              {/* Top produkty */}
+              <div className="bg-olive-bg rounded-2xl p-5">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-olive mb-3">
+                  Oleje s nejvyšším Score v katalogu
+                </div>
+                <div className="space-y-2">
+                  {TOP_PRODUCTS.map(p => (
+                    <Link
+                      key={p.slug}
+                      href={`/olej/${p.slug}`}
+                      className="flex items-center justify-between py-1.5 group"
+                    >
+                      <span className="text-[13px] text-text2 group-hover:text-olive transition-colors">{p.name}</span>
+                      <span
+                        className="text-[13px] font-bold rounded-full px-2 py-0.5 text-white ml-3 shrink-0"
+                        style={{ background: p.score >= 90 ? '#b5860d' : '#2d6a4f' }}
+                      >
+                        {p.score}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+                <Link href="/srovnavac" className="inline-block mt-3 text-[12px] text-olive underline decoration-dotted">
+                  Prohlédnout celý katalog →
+                </Link>
+              </div>
+            </section>
+
+            {/* ── SEKCE 2: Brackets ───────────────────────────── */}
+            <section id="brackets" className="scroll-mt-20 mb-14">
+              <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-2">
+                Co číslo znamená
+              </h2>
+              <p className="text-[14px] text-text2 font-light mb-5">
+                Oleje rozdělujeme do šesti kategorií podle Score. Barva badge na produktové kartě odpovídá kategorii.
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {SCORE_BRACKETS.map(b => (
+                  <div key={b.range} className="flex items-center gap-3 rounded-xl p-3.5" style={{ background: b.bg, border: `1px solid ${b.border}` }}>
+                    <span className="text-2xl">{b.emoji}</span>
+                    <div>
+                      <div className="text-[16px] font-bold leading-none mb-0.5" style={{ color: b.text }}>{b.range}</div>
+                      <div className="text-[12px]" style={{ color: b.text }}>{b.label} — {b.note}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* ── SEKCE 3: 4 složky ──────────────────────────── */}
+            <section id="slozky" className="scroll-mt-20 mb-14">
+              <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-2">
+                4 složky Score
+              </h2>
+              <p className="text-[14px] text-text2 font-light mb-6">
+                Každá složka vychází z ověřitelných dat. Žádná nevzniká z dojmů nebo hodnocení editora.
+              </p>
+
+              <div className="space-y-5">
+                {COMPONENTS.map((comp, i) => (
+                  <div key={comp.id} className="border border-off2 rounded-2xl overflow-hidden">
+                    {/* Obrázek sekce */}
+                    <div className="relative h-40 overflow-hidden">
+                      <img
+                        src={comp.img}
+                        alt={comp.imgAlt}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(27,67,50,0.75) 0%, rgba(27,67,50,0.3) 60%, transparent 100%)' }} />
+                      <div className="absolute inset-0 flex items-center px-6">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="w-7 h-7 rounded-full bg-white/20 backdrop-blur-sm text-white flex items-center justify-center text-xs font-bold">
+                              {i + 1}
+                            </span>
+                            <span className="text-[11px] font-semibold text-white/70 uppercase tracking-wider">{comp.weight} váha</span>
+                          </div>
+                          <div className="text-[22px] font-semibold text-white leading-none">{comp.name}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Level 1 — vždy viditelné */}
+                    <div className="px-5 pt-4 pb-2">
+                      <p className="text-[15px] font-medium text-olive-dark leading-snug">
+                        {comp.level1}
+                      </p>
+                    </div>
+
+                    {/* Accordion Level 2 + stupnice */}
+                    <details className="group border-t border-off2">
+                      <summary className="flex items-center justify-between px-5 py-3 cursor-pointer list-none text-[12px] text-olive font-medium hover:bg-olive-bg/30 transition-colors">
+                        Přečíst více
+                        <span className="text-text3 group-open:rotate-180 transition-transform duration-200">▾</span>
+                      </summary>
+                      <div className="px-5 pb-5">
+                        <p className="text-[14px] text-text2 leading-relaxed mb-4">{comp.level2}</p>
+
+                        {/* Stupnice */}
+                        <div className="space-y-1.5 mb-5">
+                          {comp.scales.map(s => (
+                            <div key={s.label} className="flex items-center gap-2">
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${COLOR_DOT[s.color]}`} />
+                              <span className="text-[12px] font-medium text-text w-32 shrink-0">{s.label}</span>
+                              <span className="text-[12px] text-text2">{s.desc}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Accordion Level 3 — vědecké vysvětlení */}
+                        <details className="group/inner">
+                          <summary className="flex items-center gap-2 cursor-pointer list-none text-[11px] text-text3 hover:text-text2 font-medium transition-colors">
+                            <span className="group-open/inner:rotate-90 transition-transform duration-200 text-[10px]">▶</span>
+                            Vědecké vysvětlení
+                          </summary>
+                          <div className="mt-4 space-y-5">
+                            {comp.level3Sections.map((sec, j) => (
+                              <div key={j}>
+                                <h4 className="text-[12px] font-semibold text-text uppercase tracking-wider mb-2">{sec.heading}</h4>
+                                <p className="text-[13px] text-text2 leading-relaxed whitespace-pre-line">{sec.body}</p>
+                                {sec.table && (
+                                  <div className="mt-3 overflow-x-auto">
+                                    <table className="w-full text-[12px]">
+                                      <tbody>
+                                        {sec.table.map((row, ri) => (
+                                          <tr key={ri} className={ri === 0 ? 'bg-off2 font-semibold' : ri % 2 === 0 ? 'bg-off/50' : ''}>
+                                            {row.map((cell, ci) => (
+                                              <td key={ci} className="px-3 py-1.5 text-text2">{cell}</td>
+                                            ))}
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      </div>
+                    </details>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* ── SEKCE 4: Kalkulačka ─────────────────────────── */}
+            <section id="kalkulator" className="scroll-mt-20 mb-14">
+              <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-2">
+                Spočítej si Score sám
+              </h2>
+              <p className="text-[14px] text-text2 font-light mb-5">
+                Zadej parametry libovolného oleje a uvidíš orientační Score v reálném čase.
+              </p>
+              <ScoreCalculator />
+            </section>
+
+            {/* ── SEKCE 5: Odkud bereme data ──────────────────── */}
+            <section id="data" className="scroll-mt-20 mb-14">
+              <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-2">
+                Odkud bereme data
+              </h2>
+              <p className="text-[14px] text-text2 font-light mb-5">
+                Žádné odhady. Když data chybí — Score je nižší nebo skryté.
+              </p>
+              <div className="grid gap-3 md:grid-cols-2">
+                {[
+                  { title: 'Etiketa produktu', body: 'Kyselost, harvest year, BIO/DOP značky — primární zdroj. Foto ze stránky výrobce nebo prodejce.', freq: 'Dle dostupnosti' },
+                  { title: 'Lab reporty výrobce', body: 'Polyfenoly, peroxidové číslo, oleic acid — z dokumentů výrobce nebo NYIOOC databáze.', freq: 'Při novém produktu' },
+                  { title: 'EU databáze', body: 'DOP/CHOP a CHZO ověřujeme přes EU eAmbrosia Register. BIO přes certifikační orgán na etiketě.', freq: 'Audit 1× měsíčně' },
+                  { title: 'Ceny u prodejců', body: 'Scraper 18+ prodejců v ČR. Cena za 100 ml jako srovnávací benchmark.', freq: 'Každých 24 h' },
+                ].map(d => (
+                  <div key={d.title} className="bg-off rounded-xl p-4">
+                    <div className="flex items-baseline justify-between gap-2 mb-1.5">
+                      <div className="text-[12px] font-semibold uppercase tracking-wider text-olive">{d.title}</div>
+                      <div className="text-[10px] text-text3 shrink-0">{d.freq}</div>
+                    </div>
+                    <p className="text-[13px] text-text2 leading-relaxed">{d.body}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* ── SEKCE 6: Vědecké základy ────────────────────── */}
+            <section id="veda" className="scroll-mt-20 mb-14">
+              <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-2">
+                Vědecké základy
+              </h2>
+              <p className="text-[14px] text-text2 font-light mb-5">
+                Olivator Score nevznikl v marketingovém oddělení. Vychází z regulačního rámce EU a recenzovaných studií.
+              </p>
+
+              <div className="grid gap-4 md:grid-cols-2 mb-6">
+                <div className="border border-off2 rounded-xl p-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-olive mb-3">Regulační rámec</div>
+                  <ul className="space-y-1.5 text-[13px] text-text2">
+                    <li>• IOC Trade Standards (International Olive Council)</li>
+                    <li>• EU Regulation 432/2012 — Health Claims</li>
+                    <li>• EU Regulation 2568/91 — EVOO kategorizace</li>
+                    <li>• ISO 660:2009 — stanovení kyselosti</li>
+                  </ul>
+                </div>
+                <div className="border border-off2 rounded-xl p-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-olive mb-3">Klíčové studie</div>
+                  <ul className="space-y-2 text-[13px] text-text2">
+                    <li>
+                      <strong className="text-text">Beauchamp et al. (Nature, 2005)</strong><br />
+                      Objev oleokantalu jako protizánětlivého agentu s ibuprofen-like aktivitou.
+                    </li>
+                    <li>
+                      <strong className="text-text">Estruch et al. PREDIMED (NEJM, 2013)</strong><br />
+                      Středomořská dieta s EVOO snižuje kardiovaskulární riziko o 30 %.
+                    </li>
+                    <li>
+                      <strong className="text-text">EFSA Panel 432/2012</strong><br />
+                      Schválení zdravotního tvrzení: 250+ mg/kg polyfenolů = ochrana LDL před oxidací.
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="relative h-44 rounded-2xl overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1761106082516-61d4c6883f59?crop=entropy&cs=tinysrgb&w=900&q=80"
+                  alt="Vědecké vybavení laboratoře — analýza olivového oleje"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0" style={{ background: 'rgba(27,67,50,0.6)' }} />
+                <div className="absolute inset-0 flex items-center px-6">
+                  <p className="text-white text-[14px] max-w-md font-light leading-relaxed">
+                    "Výrobci nám neplatí za lepší umístění. Nemáme sponzorované pozice.
+                    Score je nezávislé — proto ho dostaneš rovnou bez příkras."
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            {/* ── SEKCE 7: Co Score neměří ────────────────────── */}
+            <section id="nezmeri" className="scroll-mt-20 mb-14">
+              <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-2">
+                Co Score nezahrnuje
+              </h2>
+              <p className="text-[14px] text-text2 font-light mb-5">
+                Olivator Score je objektivní, ale není všezahrnující. Transparentně říkáme, co neměříme.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  { title: 'Subjektivní chuť', body: 'Někomu sedí jemný Arbequina, jiný preferuje pálivou Coratinu. To je preference, ne kvalita. Chuťový profil měříme samostatně.' },
+                  { title: 'Sezónní degradace', body: 'Score odráží aktuální data. Olivový olej je živý produkt — otevřená lahev ztrácí polyfenoly každý měsíc.' },
+                  { title: 'Dostupnost', body: 'Skvělý DOP olej z malé farmy ve 300 lahvích/rok dostane vysoké Score, ale málokdo ho sežene. Hodnotíme produkt, ne dostupnost.' },
+                  { title: 'Etika producenta', body: 'Fairtrade, životní prostředí, podmínky zaměstnanců — měříme je certifikací Fairtrade nebo Demeter, ne samostatně.' },
+                  { title: 'Ochucené oleje', body: 'Lanýž, chilli, česnek, citron — ochucené oleje hodnotíme jinou metrikou. Nejsou EVOO ve standardním slova smyslu.' },
+                  { title: 'Estetika obalu', body: 'Krásná keramická lahev nebo dárkové balení nemá vliv na Score. Měříme co je uvnitř.' },
+                ].map(item => (
+                  <div key={item.title} className="bg-off rounded-xl p-4">
+                    <div className="text-[13px] font-semibold text-text mb-1.5">{item.title}</div>
+                    <p className="text-[13px] text-text2 leading-relaxed">{item.body}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* ── SEKCE 8: FAQ ────────────────────────────────── */}
+            <section id="faq" className="scroll-mt-20 mb-14">
+              <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-5">
+                Časté otázky
+              </h2>
+              <div className="space-y-2">
+                {[
+                  {
+                    q: 'Proč nemají polyfenoly 100 % váhu, když jsou nejzdravější?',
+                    a: 'Polyfenoly jsou klíčové, ale nejsou jediné. Olej s 800 mg/kg polyfenolů ale kyselostí 0,7 % a bez certifikací je objektivně horší než olej s 400 mg/kg, kyselostí 0,15 % a DOP+BIO certifikací. Score měří celkovou kvalitu, ne jeden parametr.',
+                  },
+                  {
+                    q: 'Co když výrobce neuvádí polyfenoly na etiketě?',
+                    a: 'Hledáme lab report na webu výrobce nebo v NYIOOC databázi. Pokud data nenajdeme, složka Polyfenoly nese 0 bodů — Score takového oleje proto nemůže přesáhnout ~75/100. Aktivně oslovujeme výrobce a prosíme je o data.',
+                  },
+                  {
+                    q: 'Jak často se Score mění?',
+                    a: 'Cena a výpočet hodnoty se aktualizují každých 24 h (scraper). Kyselost a polyfenoly zůstávají stejné dokud nepřijde nový lab report. Certifikace kontrolujeme 1× měsíčně přes EU registry.',
+                  },
+                  {
+                    q: 'Mohu Score získat 100/100?',
+                    a: 'Teoreticky ano. V praxi to znamená: kyselost pod 0,2 %, DOP+BIO+NYIOOC Gold certifikace, polyfenoly nad 500 mg/kg a zároveň cena pod 50 Kč/100 ml. Takový olej zatím v ČR trhu neexistuje — nejlepší naše oleje dosahují 90–95.',
+                  },
+                  {
+                    q: 'Co dělat když najdu chybu v datech?',
+                    a: 'Napiš na info@olivator.cz s odkazem na produkt a chybný údaj. Chybu opravíme do 24 hodin a poděkujeme ti v changelog.',
+                  },
+                  {
+                    q: 'Funguje Score i pro ochucené oleje s lanýžem nebo chilli?',
+                    a: 'Ne. Ochucené oleje (aromatizované) hodnotíme jinou metrikou — EVOO škála by nebyla férová. Na produktové kartě jsou označeny jako "Aromatizovaný".',
+                  },
+                ].map((item, i) => (
+                  <details key={i} className="group border border-off2 rounded-xl overflow-hidden">
+                    <summary className="flex items-center justify-between px-5 py-4 cursor-pointer list-none">
+                      <span className="text-[14px] font-medium text-text pr-4">{item.q}</span>
+                      <span className="text-text3 group-open:rotate-180 transition-transform duration-200 shrink-0">▾</span>
+                    </summary>
+                    <div className="px-5 pb-4">
+                      <p className="text-[13px] text-text2 leading-relaxed">{item.a}</p>
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </section>
+
+            {/* Footer links */}
+            <div className="pt-6 border-t border-off2 text-[13px] text-text2 leading-relaxed">
+              Více o Olivatoru:{' '}
+              <Link href="/o-projektu" className="text-olive underline decoration-dotted">O projektu</Link>
+              {' · '}<Link href="/pruvodce/jak-vybrat-olivovy-olej" className="text-olive underline decoration-dotted">Jak vybrat olivový olej</Link>
+              {' · '}<Link href="/srovnavac" className="text-olive underline decoration-dotted">Celý katalog</Link>
             </div>
-          </div>
-          <div className="border border-off2 rounded-[var(--radius-card)] p-5">
-            <div className="text-[11px] font-semibold tracking-wider uppercase text-olive mb-3">Bio a organické</div>
-            <div className="grid gap-4 md:grid-cols-3">
-              <CertCard code="BIO" fullName="EU bio certifikace" summary="Zelený lístek na etiketě. Bez syntetických pesticidů, umělých hnojiv, GMO. Roční kontrola certifikační autoritou." tier="EU standard" />
-              <CertCard code="Organické" fullName="Non-EU bio ekvivalent" summary="Stejné principy jako BIO, ale ze zemí mimo EU (USDA Organic, JAS)." tier="Ekvivalent k BIO" />
-              <CertCard code="Demeter" fullName="Biodynamické pěstování" summary="Přísnější než BIO. Zohledňuje lunární cykly, rostlinné preparáty místo chemie." tier="Nad BIO" />
-            </div>
-          </div>
-          <div className="border border-off2 rounded-[var(--radius-card)] p-5">
-            <div className="text-[11px] font-semibold tracking-wider uppercase text-olive mb-3">Mezinárodní ocenění kvality</div>
-            <CertCard code="NYIOOC" fullName="New York International Olive Oil Competition" summary="Nejprestižnější světová soutěž. Slepé hodnocení panelem expertů. Gold = top 5 % světové produkce." tier="Soutěžní ocenění" />
-          </div>
-        </div>
-        <div className="mt-6 bg-off rounded-lg p-4 text-[13px] text-text2 leading-relaxed">
-          <strong className="text-text">Pro tip:</strong> Kombinace <strong>DOP + BIO</strong> dává maximum 25 bodů z 25 ve složce Certifikace. Pokud má olej k tomu ještě NYIOOC Gold, je v top kategorii světové produkce.
+
+          </main>
         </div>
       </div>
-
-      {/* Odkud bereme data */}
-      <div className="mb-12">
-        <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-3">
-          Odkud bereme data
-        </h2>
-        <div className="grid gap-3 md:grid-cols-2">
-          <div className="bg-off/40 rounded-lg p-4">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-olive mb-1">Etiketa produktu</div>
-            <p className="text-[13px] text-text2">Kyselost, harvest year, BIO/DOP značky — primární zdroj. Foto ze stránky výrobce nebo prodejce.</p>
-          </div>
-          <div className="bg-off/40 rounded-lg p-4">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-olive mb-1">Lab reporty</div>
-            <p className="text-[13px] text-text2">Polyfenoly, peroxidové číslo, oleic acid — z dokumentů výrobce nebo NYIOOC databáze.</p>
-          </div>
-          <div className="bg-off/40 rounded-lg p-4">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-olive mb-1">EU databáze</div>
-            <p className="text-[13px] text-text2">DOP/CHOP a CHZO ověřujeme přes EU eAmbrosia Register.</p>
-          </div>
-          <div className="bg-off/40 rounded-lg p-4">
-            <div className="text-[11px] font-semibold uppercase tracking-wider text-olive mb-1">Ceny u prodejců</div>
-            <p className="text-[13px] text-text2">Aktualizované 1× za 24 h scraperem. 18+ prodejců v ČR. Cena za 100 ml jako benchmark.</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Trust */}
-      <div className="bg-olive-bg rounded-[var(--radius-card)] p-6 mb-10">
-        <h2 className="font-[family-name:var(--font-display)] text-xl font-normal text-text mb-3">
-          Proč věřit Olivator Score?
-        </h2>
-        <ul className="space-y-2 text-[13px] text-text2 leading-relaxed">
-          <li>• <strong>Nezávislost:</strong> Žádný výrobce ani prodejce nemůže ovlivnit Score</li>
-          <li>• <strong>Transparentnost:</strong> Každá složka Score je viditelná na produktové kartě</li>
-          <li>• <strong>Data-driven:</strong> Vycházíme z certifikací, chemických analýz a reálných cen</li>
-          <li>• <strong>Aktualizace:</strong> Score se přepočítává při každé změně ceny nebo certifikace</li>
-        </ul>
-      </div>
-
-      <div className="pt-6 border-t border-off2 text-[13px] text-text2 leading-relaxed">
-        Více o tom, jak fungujeme:{' '}
-        <Link href="/editorial-policy" className="text-olive underline decoration-dotted">Redakční zásady</Link>
-        {' · '}<Link href="/o-projektu" className="text-olive underline decoration-dotted">O projektu</Link>
-        {' · '}<Link href="/pro-novinare" className="text-olive underline decoration-dotted">Pro novináře (mediakit)</Link>
-      </div>
-    </div>
-  )
-}
-
-function CertCard({ code, fullName, summary, examples, tier }: {
-  code: string; fullName: string; summary: string; examples?: string; tier?: string
-}) {
-  return (
-    <div className="bg-off rounded-lg p-4">
-      <div className="flex items-baseline justify-between gap-2 mb-1">
-        <span className="text-[15px] font-semibold text-olive-dark">{code}</span>
-        {tier && <span className="text-[10px] text-text3 uppercase tracking-wider">{tier}</span>}
-      </div>
-      <div className="text-xs text-text3 mb-2">{fullName}</div>
-      <p className="text-[13px] text-text2 leading-relaxed">{summary}</p>
-      {examples && <div className="text-[11px] text-text3 mt-2 italic">Př.: {examples}</div>}
-    </div>
+    </>
   )
 }
