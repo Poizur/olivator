@@ -10,7 +10,7 @@ import React from 'react'
 import { Welcome2MethodologyEmail } from '@/emails/welcome-2-methodology'
 import crypto from 'crypto'
 
-const TEST_EMAIL = 'test-welcome@olivator.cz'
+const TEST_EMAIL = 'italienasbavi@gmail.com'
 
 async function cleanup() {
   const { data: sub } = await supabaseAdmin
@@ -94,7 +94,7 @@ async function main() {
   await cleanup()
 
   console.log('\n✓ E2E test hotov')
-  console.log('  Zkontroluj schránku test-welcome@olivator.cz na 3 emaily.')
+  console.log(`  Zkontroluj schránku ${TEST_EMAIL} na 3 emaily.`)
 }
 
 main().catch(err => { console.error('FATAL:', err); process.exit(1) })
