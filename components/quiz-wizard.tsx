@@ -6,6 +6,7 @@ import { QUIZ_QUESTIONS, findRecommendations, type QuizAnswers } from '@/lib/qui
 import { formatPrice, formatPricePer100ml } from '@/lib/utils'
 import type { Product, ProductOffer } from '@/lib/types'
 import { ScoreBadge } from './score-badge'
+import { NewsletterSignup } from './newsletter-signup'
 
 type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
 
@@ -276,6 +277,20 @@ function QuizResults({
             </div>
           )
         })}
+      </div>
+
+      {/* Subscribe box after results */}
+      <div className="bg-olive-bg border border-olive-border rounded-2xl p-5 mb-6">
+        <div className="text-[10px] font-semibold tracking-widest uppercase text-olive mb-1">
+          Personalizovaný výběr
+        </div>
+        <p className="text-[14px] text-text font-semibold mb-1">
+          Pošleme ti oleje pro tvůj profil
+        </p>
+        <p className="text-[12px] text-text2 mb-3">
+          Doporučení podle kvízu + aktuální slevy. Jednou týdně.
+        </p>
+        <NewsletterSignup source="quiz_result" variant="inline" />
       </div>
 
       {/* Footer actions */}

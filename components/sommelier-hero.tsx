@@ -256,7 +256,9 @@ export function SommelierHero({
                   {loading ? '…' : (
                     <>
                       <span className="hidden sm:inline">Zeptat se Olíka</span>
-                      <img src="/olik.png" alt="" className="w-7 h-7 object-contain" />
+                      <span className="bg-white rounded-full w-8 h-8 flex items-center justify-center shrink-0">
+                        <img src="/olik.png" alt="" className="w-6 h-6 object-contain" />
+                      </span>
                     </>
                   )}
                 </button>

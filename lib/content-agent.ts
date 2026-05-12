@@ -6,7 +6,7 @@ import { callClaude as callClaudeShared, extractText } from './anthropic'
 import { applyCzechTypographyFixes } from './czech-style'
 import { getInjectionBlock } from './learning-injector'
 
-const MODEL = 'claude-sonnet-4-20250514'
+const MODEL = 'claude-sonnet-4-6'
 const MIN_LONG_WORDS = 250 // below this we auto-retry once with feedback
 
 const SYSTEM_PROMPT = `Jsi hlavní editor Olivator.cz — největšího srovnávače olivových olejů v ČR.

@@ -15,7 +15,7 @@
 //   6. Generate AI content for new products that should be published
 
 import { supabaseAdmin } from './supabase'
-import { scrapeProductPage, type ScrapedProduct } from './product-scraper'
+import { scrapeProductPage, validateOliveOilProduct, type ScrapedProduct } from './product-scraper'
 import { crawlShops, getKnownShopSlugs } from './shop-crawlers'
 import { getRetailerSlugsWithXmlFeed } from './feed-sync-runner'
 import { getSetting } from './settings'
@@ -254,6 +254,9 @@ export async function publishCandidate(
   retailerDomain: string
 ): Promise<string> {
   if (!scraped.name || !scraped.slug) throw new Error('Missing name/slug')
+  if (!validateOliveOilProduct(scraped.name)) {
+    throw new Error(`Non-olive product rejected: "${scraped.name.slice(0, 60)}"`)
+  }
 
   // Auto-detect certifications from raw + name (HIGH-confidence only — admin
   // can review LOW/MEDIUM later in cert detector panel).

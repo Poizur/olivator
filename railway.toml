@@ -5,6 +5,12 @@ builder = "NIXPACKS"
 # `npm start` for the web service, and cron services override per-service
 # via dashboard (Settings → Deploy → Custom Start Command). Setting it here
 # would lock the field for all services.
+#
+# CRON SERVICES (welcome-dispatcher, seasonal-dispatcher, discovery, etc.):
+# MUSÍ být v Railway dashboardu nastaven jako typ "Cron Job" (ne Web Service).
+# Web Service = Railway očekává HTTP server + healthcheck.
+# Cron Job = spustí, doběhne, exit — healthcheckPath se ignoruje.
+# Příznaky špatné konfigurace: "Healthcheck failed", "service unavailable".
 
 [deploy]
 healthcheckPath = "/api/health"

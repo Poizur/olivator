@@ -4,6 +4,7 @@ import React from 'react'
 import { supabaseAdmin } from '@/lib/supabase'
 import { sendTestEmail } from '@/lib/newsletter-sender'
 import { WelcomeEmail } from '@/emails/welcome'
+import { enqueueWelcomeSeries } from '@/lib/welcome-series'
 import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
@@ -134,18 +135,21 @@ export async function POST(request: NextRequest) {
         .then(() => null, () => null)
     }
 
-    // Pošli welcome email (best-effort — neblokuje response)
+    // Pošli welcome email + zařaď do welcome série (best-effort)
     if (stored) {
-      const unsubToken = (await supabaseAdmin
+      const { data: sub } = await supabaseAdmin
         .from('newsletter_signups')
-        .select('unsubscribe_token')
+        .select('id, unsubscribe_token')
         .eq('email', email)
         .maybeSingle()
-        .then(r => r.data?.unsubscribe_token as string | null)) ?? ''
+      const unsubToken = (sub?.unsubscribe_token as string | null) ?? ''
       const unsubUrl = `https://olivator.cz/api/newsletter/unsubscribe?token=${unsubToken}`
       const html = await render(React.createElement(WelcomeEmail, { unsubscribeUrl: unsubUrl }))
       const text = await render(React.createElement(WelcomeEmail, { unsubscribeUrl: unsubUrl }), { plainText: true })
       await sendTestEmail({ to: email, subject: 'Vítej v Olivatoru 🫒', html, text }).catch(() => null)
+      if (sub?.id) {
+        await enqueueWelcomeSeries(sub.id as string).catch(() => null)
+      }
     }
 
     return NextResponse.json({ ok: true })

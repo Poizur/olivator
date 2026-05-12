@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getArticleBySlug as getArticleFromDb, getActiveArticles } from '@/lib/articles-db'
 import { getArticles, getArticleBySlug as getStaticArticle } from '@/lib/static-content'
+import { supabaseAdmin } from '@/lib/supabase'
 import { ArticleBody } from '@/components/article-body'
 import { resolveTemplateVars } from '@/lib/template-vars'
 import { getProductsWithOffers } from '@/lib/data'
@@ -13,8 +14,20 @@ import { breadcrumbSchema } from '@/lib/schema'
 // 60 → 3600 — viz pruvodce/page.tsx, stejný důvod.
 export const revalidate = 3600
 
-export function generateStaticParams() {
-  return getArticles().filter((a) => a.category !== 'recept').map((a) => ({ slug: a.slug }))
+export async function generateStaticParams() {
+  // DB articles — primární zdroj (pre-build všech aktivních DB článků)
+  const { data: dbArticles } = await supabaseAdmin
+    .from('articles')
+    .select('slug')
+    .eq('status', 'active')
+
+  const dbSlugs = new Set((dbArticles ?? []).map((a: { slug: string }) => a.slug))
+
+  const staticSlugs = getArticles()
+    .filter((a) => a.category !== 'recept' && !dbSlugs.has(a.slug))
+    .map((a) => ({ slug: a.slug }))
+
+  return [...(dbArticles ?? []).map((a: { slug: string }) => ({ slug: a.slug })), ...staticSlugs]
 }
 
 export async function generateMetadata({

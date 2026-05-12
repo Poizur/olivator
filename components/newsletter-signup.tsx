@@ -3,7 +3,7 @@
 import { useState } from 'react'
 
 interface Props {
-  source?: 'footer' | 'homepage' | 'product_page' | 'quiz_result'
+  source?: 'footer' | 'homepage' | 'product_page' | 'quiz_result' | 'exit_intent' | 'price_alert'
   variant?: 'inline' | 'hero' | 'dark'
 }
 

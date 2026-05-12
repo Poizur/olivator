@@ -1,4 +1,4 @@
-// Subscribers — current list s preference filtrem.
+// Subscribers — current list s preference filtrem + source filtrem.
 
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
@@ -16,17 +16,32 @@ interface SignupRow {
   last_emailed_at: string | null
 }
 
-async function getSignups(): Promise<SignupRow[]> {
+async function getSignups(sourceFilter?: string): Promise<SignupRow[]> {
   try {
-    const { data } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('newsletter_signups')
       .select('id, email, source, created_at, confirmed, unsubscribed, preferences, last_emailed_at')
       .order('created_at', { ascending: false })
       .limit(500)
+
+    if (sourceFilter) {
+      query = query.eq('source', sourceFilter)
+    }
+
+    const { data } = await query
     return (data ?? []) as SignupRow[]
   } catch {
     return []
   }
+}
+
+const SOURCE_LABELS: Record<string, string> = {
+  footer: 'Footer',
+  homepage: 'Homepage',
+  product_page: 'Produkt',
+  quiz_result: 'Quiz',
+  exit_intent: 'Exit-intent',
+  price_alert: 'Cenový alert',
 }
 
 const PREF_LABELS: Record<string, string> = {
@@ -36,8 +51,13 @@ const PREF_LABELS: Record<string, string> = {
   alerts: 'Alerty',
 }
 
-export default async function SubscribersPage() {
-  const signups = await getSignups()
+export default async function SubscribersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ source?: string }>
+}) {
+  const { source: sourceFilter } = await searchParams
+  const signups = await getSignups(sourceFilter)
   const active = signups.filter((s) => !s.unsubscribed && s.confirmed)
   const unsubbed = signups.filter((s) => s.unsubscribed)
 
@@ -62,7 +82,27 @@ export default async function SubscribersPage() {
         </h1>
         <p className="text-[13px] text-text3 mt-1">
           {active.length} aktivních · {unsubbed.length} odhlášených
+          {sourceFilter && ` · filtr: ${SOURCE_LABELS[sourceFilter] ?? sourceFilter}`}
         </p>
+      </div>
+
+      {/* Source filter */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        <Link
+          href="/admin/newsletter/subscribers"
+          className={`text-[11px] px-3 py-1.5 rounded-full border transition-colors ${!sourceFilter ? 'bg-olive text-white border-olive' : 'bg-white text-text2 border-off2 hover:border-olive-border'}`}
+        >
+          Vše
+        </Link>
+        {Object.entries(SOURCE_LABELS).map(([key, label]) => (
+          <Link
+            key={key}
+            href={`/admin/newsletter/subscribers?source=${key}`}
+            className={`text-[11px] px-3 py-1.5 rounded-full border transition-colors ${sourceFilter === key ? 'bg-olive text-white border-olive' : 'bg-white text-text2 border-off2 hover:border-olive-border'}`}
+          >
+            {label}
+          </Link>
+        ))}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">

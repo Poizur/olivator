@@ -17,11 +17,11 @@ const ITEM_LIMIT_PER_FEED = 20
 
 /** Olive oil press — adaptováno z AIkompass _AI_NEWS_FEEDS pro doménu. */
 export const OLIVE_NEWS_FEEDS: ReadonlyArray<{ source: string; url: string }> = [
-  { source: 'oliveoiltimes',    url: 'https://www.oliveoiltimes.com/feed' },
-  { source: 'ioc',              url: 'https://www.internationaloliveoil.org/feed/' },
-  { source: 'evooworld',        url: 'https://www.evooworld.com/feed/' },
-  { source: 'googlenews_olive', url: 'https://news.google.com/rss/search?q=olive+oil+harvest+production+EVOO&hl=en&gl=US&ceid=US:en' },
-  { source: 'googlenews_cz',    url: 'https://news.google.com/rss/search?q=olivov%C3%BD+olej+cena+sklize%C5%88&hl=cs&gl=CZ&ceid=CZ:cs' },
+  { source: 'ioc',                url: 'https://www.internationaloliveoil.org/feed/' },
+  { source: 'googlenews_olive',   url: 'https://news.google.com/rss/search?q=olive+oil+harvest+production+EVOO&hl=en&gl=US&ceid=US:en' },
+  { source: 'googlenews_awards',  url: 'https://news.google.com/rss/search?q=olive+oil+award+NYIOOC+competition&hl=en&gl=US&ceid=US:en' },
+  { source: 'googlenews_health',  url: 'https://news.google.com/rss/search?q=olive+oil+health+study+Mediterranean+diet&hl=en&gl=US&ceid=US:en' },
+  { source: 'googlenews_cz',      url: 'https://news.google.com/rss/search?q=olivov%C3%BD+olej+cena+sklize%C5%88&hl=cs&gl=CZ&ceid=CZ:cs' },
 ]
 
 function parsePubDate(text: string): Date | null {
