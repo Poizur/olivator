@@ -6,6 +6,7 @@
 import Link from 'next/link'
 import { ArrowDown, ArrowUp } from 'lucide-react'
 import { supabaseAdmin } from '@/lib/supabase'
+import { getDisplayName } from '@/lib/product-display'
 
 export const dynamic = 'force-dynamic'
 
@@ -161,7 +162,7 @@ async function getClickAnalytics(rangeDays: number): Promise<{
     for (const p of products ?? []) {
       productMap.set(p.id as string, {
         slug: p.slug as string,
-        name: ((p.name_short as string | null) ?? (p.name as string)) || '?',
+        name: getDisplayName(p as { name_short: string | null; name: string }) || '?',
         image_url: p.image_url as string | null,
         olivator_score: p.olivator_score as number | null,
       })
@@ -256,7 +257,7 @@ async function getClickAnalytics(rangeDays: number): Promise<{
         .in('id', pids)
       for (const p of ps ?? []) {
         productNamesById.set(p.id as string, {
-          name: ((p.name_short as string | null) ?? (p.name as string)) || '?',
+          name: getDisplayName(p as { name_short: string | null; name: string }) || '?',
           slug: p.slug as string,
         })
       }

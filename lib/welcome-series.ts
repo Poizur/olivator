@@ -5,6 +5,7 @@ import { sendTransactionalEmail } from './newsletter-sender'
 import { Welcome2MethodologyEmail } from '@/emails/welcome-2-methodology'
 import { Welcome3TopPicksEmail, type TopPickProduct } from '@/emails/welcome-3-top-picks'
 import { type WelcomeDeal } from '@/emails/welcome-d0-deals'
+import { getDisplayName } from './product-display'
 
 const SITE = 'https://olivator.cz'
 
@@ -113,7 +114,7 @@ export async function getWelcomeDeals(): Promise<{
 
     const brandSlug = product.brand_slug as string | null
     const brandName = brandSlug ? (brandNameMap.get(brandSlug) ?? null) : null
-    const rawName = (product.name_short as string | null) ?? (product.name as string)
+    const rawName = getDisplayName(product as { name_short: string | null; name: string })
 
     candidates.push({
       productId,
@@ -271,7 +272,7 @@ async function buildFallback(): Promise<{ deals: WelcomeDeal[]; topPickIndex: nu
     const o = offers[0] as unknown as { price: number; retailer_id: string; retailers: { slug: string; name: string } }
 
     usedBrands.add(brandKey)
-    const rawName = (p.name_short as string | null) ?? (p.name as string)
+    const rawName = getDisplayName(p as { name_short: string | null; name: string })
     deals.push({
       name: truncateName(rawName),
       brandName: brandSlug ? (brandNameMap.get(brandSlug) ?? null) : null,
@@ -388,7 +389,7 @@ export async function getSlevyDeals(limit = 20): Promise<SlevyPageData> {
     if (dropPct < 15) continue
 
     const brandSlug = product.brand_slug as string | null
-    const rawName = (product.name_short as string | null) ?? (product.name as string)
+    const rawName = getDisplayName(product as { name_short: string | null; name: string })
     const score = product.olivator_score as number
 
     deals.push({

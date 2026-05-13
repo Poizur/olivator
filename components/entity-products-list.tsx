@@ -4,6 +4,7 @@
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
 import { formatPrice } from '@/lib/utils'
+import { getDisplayName } from '@/lib/product-display'
 
 interface Props {
   entityType: 'region' | 'brand' | 'cultivar'
@@ -125,7 +126,7 @@ export async function EntityProductsList({ entityType, entitySlug }: Props) {
                 >
                   <td className="px-3 py-2">
                     <div className="font-medium text-text leading-tight line-clamp-1">
-                      {p.name_short ?? p.name}
+                      {getDisplayName(p)}
                     </div>
                     <div className="text-[11px] text-text3">{p.origin_country?.toUpperCase()}</div>
                   </td>
