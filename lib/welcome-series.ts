@@ -138,29 +138,45 @@ export async function getWelcomeDeals(): Promise<{
     .filter(c => c.dropPct !== null)
     .sort((a, b) => b.rankScore - a.rankScore)
 
-  const selected: Candidate[] = []
-  const usedBrands = new Set<string>()
-
-  for (const c of withDeals) {
-    if (selected.length >= 3) break
-    const brandKey = c.brandSlug ?? c.name
-    if (usedBrands.has(brandKey)) continue
-    usedBrands.add(brandKey)
-    selected.push(c)
+  // Volume filter — 3 passes: retail (250-1000ml) → wide (≤2000ml) → any
+  function selectWithVolumeFilter(
+    pool: Candidate[],
+    volFilter: ((v: number | null) => boolean) | null,
+    existing: Candidate[],
+    existingBrands: Set<string>,
+  ): Candidate[] {
+    const result = [...existing]
+    const brands = new Set(existingBrands)
+    const filtered = volFilter ? pool.filter(c => volFilter(c.volumeMl)) : pool
+    for (const c of filtered) {
+      if (result.length >= 3) break
+      const brandKey = c.brandSlug ?? c.name
+      if (brands.has(brandKey)) continue
+      brands.add(brandKey)
+      result.push(c)
+    }
+    return result
   }
 
+  let selected: Candidate[] = []
+  const usedBrands = new Set<string>()
+
+  // Pass 1: deals, retail size 250-1000ml
+  selected = selectWithVolumeFilter(withDeals, v => v !== null && v >= 250 && v <= 1000, [], usedBrands)
+  // Pass 2: deals, wider ≤2000ml
+  if (selected.length < 3) selected = selectWithVolumeFilter(withDeals, v => v !== null && v <= 2000, selected, new Set(selected.map(c => c.brandSlug ?? c.name)))
+  // Pass 3: deals, any size
+  if (selected.length < 3) selected = selectWithVolumeFilter(withDeals, null, selected, new Set(selected.map(c => c.brandSlug ?? c.name)))
+
+  // Same 3-pass fallback with top-score (no deals)
   if (selected.length < 3) {
     const topScore = candidates
-      .filter(c => !selected.find(s => s.productId === c.productId))
+      .filter(c => c.dropPct === null && !selected.find(s => s.productId === c.productId))
       .sort((a, b) => b.score - a.score)
-
-    for (const c of topScore) {
-      if (selected.length >= 3) break
-      const brandKey = c.brandSlug ?? c.name
-      if (usedBrands.has(brandKey)) continue
-      usedBrands.add(brandKey)
-      selected.push(c)
-    }
+    const selectedBrands = new Set(selected.map(c => c.brandSlug ?? c.name))
+    selected = selectWithVolumeFilter(topScore, v => v !== null && v >= 250 && v <= 1000, selected, selectedBrands)
+    if (selected.length < 3) selected = selectWithVolumeFilter(topScore, v => v !== null && v <= 2000, selected, new Set(selected.map(c => c.brandSlug ?? c.name)))
+    if (selected.length < 3) selected = selectWithVolumeFilter(topScore, null, selected, new Set(selected.map(c => c.brandSlug ?? c.name)))
   }
 
   if (selected.length === 0) return buildFallback()
@@ -188,7 +204,34 @@ export async function getWelcomeDeals(): Promise<{
     ? `Score ${topPick.score} a teď ${topPick.dropPct} % pod měsíčním maximem — nejlepší kombinace kvality a ceny v katalogu právě teď.`
     : `Score ${topPick.score} — jeden z nejlépe hodnocených olejů v celém katalogu. Aktuálně za ${topPick.currentPrice} Kč.`
 
+  flagGenericNames(selected.map(c => ({ id: c.productId, name_short: c.brandSlug ? null : c.name }))).catch(() => null)
+
   return { deals, topPickIndex: 0, topPickReason, mode }
+}
+
+async function flagGenericNames(items: { id: string; name_short: string | null }[]): Promise<void> {
+  const GENERIC = /^(olivov[ýáé]|olej|extra|panenský|bio|organic)(\s+\S+){0,1}\s*$/i
+  const toFlag = items.filter(i => i.name_short && GENERIC.test(i.name_short.trim()))
+  if (toFlag.length === 0) return
+  const { data: existing } = await supabaseAdmin
+    .from('quality_issues')
+    .select('product_id')
+    .in('product_id', toFlag.map(i => i.id))
+    .eq('rule_id', 'name_short_too_generic')
+    .eq('status', 'open')
+  const alreadyFlagged = new Set((existing ?? []).map(r => r.product_id as string))
+  const toInsert = toFlag.filter(i => !alreadyFlagged.has(i.id))
+  if (toInsert.length === 0) return
+  await supabaseAdmin.from('quality_issues').insert(
+    toInsert.map(i => ({
+      product_id: i.id,
+      rule_id: 'name_short_too_generic',
+      severity: 'warning',
+      message: `name_short "${i.name_short}" je příliš generické — přidej název značky nebo odrůdy`,
+      details: { name_short: i.name_short },
+      status: 'open',
+    }))
+  )
 }
 
 async function buildFallback(): Promise<{ deals: WelcomeDeal[]; topPickIndex: number; topPickReason: string; mode: 'deals' | 'tips' }> {
