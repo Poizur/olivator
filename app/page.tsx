@@ -161,9 +161,9 @@ export default async function Home() {
         <div className="max-w-[1280px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-center sm:text-left">
             <div className="text-white font-semibold text-[15px] leading-snug">
-              Buď první kdo se dozví o slevách na kvalitní olivový olej
+              Slevy + tipy na olivový olej — Olíkův týdenní digest
             </div>
-            <div className="text-white/55 text-[12px] mt-0.5">1× týdně · bez spamu · odhlásit jedním klikem</div>
+            <div className="text-white/55 text-[12px] mt-0.5">Hned po přihlášení dostaneš aktuální slevy. Pak každý čtvrtek v 8:00.</div>
           </div>
           <div className="w-full sm:w-auto sm:min-w-[300px] shrink-0">
             <NewsletterSignup source="homepage" variant="dark" />

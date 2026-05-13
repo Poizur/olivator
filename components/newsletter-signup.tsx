@@ -98,8 +98,8 @@ export function NewsletterSignup({ source = 'footer', variant = 'inline' }: Prop
     if (variant === 'dark') {
       return (
         <div className="text-[14px] text-olive4">
-          <div className="font-semibold mb-0.5">✓ Hotovo, jsi přihlášený</div>
-          <div className="text-[12px] text-white/60">První email ti přijde příští čtvrtek.</div>
+          <div className="font-semibold mb-0.5">✓ Hotovo!</div>
+          <div className="text-[12px] text-white/60">Olík ti právě poslal email s aktuálními slevami. Mrkni do pošty.</div>
         </div>
       )
     }
@@ -114,11 +114,11 @@ export function NewsletterSignup({ source = 'footer', variant = 'inline' }: Prop
         <span aria-hidden="true">✓</span>
         {variant === 'hero' ? (
           <>
-            <div className="text-base font-semibold text-olive-dark mt-2">Hotovo, jsi přihlášený</div>
-            <div className="text-[13px] text-text2 mt-1">První email ti přijde příští čtvrtek.</div>
+            <div className="text-base font-semibold text-olive-dark mt-2">Hotovo!</div>
+            <div className="text-[13px] text-text2 mt-1">Olík ti právě poslal email s aktuálními slevami. Mrkni do pošty.</div>
           </>
         ) : (
-          <span className="ml-1">Hotovo, jsi přihlášený. První email přijde příští čtvrtek.</span>
+          <span className="ml-1">Hotovo! Olík ti právě poslal email s aktuálními slevami. Mrkni do pošty.</span>
         )}
       </div>
     )
@@ -220,7 +220,7 @@ export function NewsletterSignup({ source = 'footer', variant = 'inline' }: Prop
         </div>
         {status === 'error' && <div className="text-[11px] text-red-300">⚠ {errorMsg}</div>}
         <div className="text-[10px] text-white/50">
-          Týdenní souhrn + slevy. Bez spamu, odhlásit jedním klikem.
+          Hned po přihlášení dostaneš aktuální slevy. Pak každý čtvrtek v 8:00.
         </div>
       </form>
     )
@@ -231,7 +231,7 @@ export function NewsletterSignup({ source = 'footer', variant = 'inline' }: Prop
     <form onSubmit={onSubmit} className="flex flex-col gap-2 max-w-[280px]">
       <div className="text-[12px] font-semibold text-text">Olivový týden</div>
       <div className="text-[11px] text-text3 leading-snug -mt-1">
-        Týdně 1 email: olej týdne, slevy, recepty
+        Slevy ihned + každý čtvrtek digest
       </div>
       <div className="flex gap-1.5 mt-1">
         <input
