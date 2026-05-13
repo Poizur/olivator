@@ -29,7 +29,10 @@ export interface ScoreResult {
     certifications: number
     quality: number
     value: number
+    functionalBonus?: number
   }
+  /** Score před přičtením funkčního bonusu (jen když bonus > 0). */
+  baseScore?: number
   /** True když nemáme dost dat pro férové score. UI by mělo zobrazit "připravujeme". */
   insufficientData?: boolean
   /** Které komponenty se podařilo spočítat (pro UI breakdown). */
@@ -168,7 +171,19 @@ export function calculateScore(input: ScoreInput): ScoreResult {
 
   const sumPoints = acidityPts + certPts + qualityPts + valuePts
   // Normalizujeme na 100 — když máme 60% váhu a 30 b., výsledek je 50/100
-  const total = Math.max(0, Math.min(100, Math.round((sumPoints / availableWeight) * 100)))
+  const baseTotal = Math.max(0, Math.min(100, Math.round((sumPoints / availableWeight) * 100)))
 
-  return { total, breakdown, hasData }
+  // Functional bonus: +1 per 200 mg/kg above 1500 mg/kg, max +10, capped at 100
+  const poly = input.polyphenols ?? 0
+  const functionalBonus = hasPoly && poly > 1500
+    ? Math.min(10, Math.floor((poly - 1500) / 200))
+    : 0
+  const total = Math.min(100, baseTotal + functionalBonus)
+
+  return {
+    total,
+    breakdown: { ...breakdown, ...(functionalBonus > 0 ? { functionalBonus } : {}) },
+    hasData,
+    ...(functionalBonus > 0 ? { baseScore: baseTotal } : {}),
+  }
 }

@@ -60,6 +60,7 @@ export interface ScoreBreakdown {
   certifications: number
   quality: number
   value: number
+  functionalBonus?: number
 }
 
 export interface Retailer {

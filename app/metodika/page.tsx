@@ -452,6 +452,63 @@ export default function MetodikaPage() {
               </div>
             </section>
 
+            {/* ── SEKCE 3b: Bonus pro funkční oleje ──────────── */}
+            <section id="bonus" className="scroll-mt-20 mb-14">
+              <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-2">
+                Bonus pro funkční oleje
+              </h2>
+              <p className="text-[14px] text-text2 font-light mb-5">
+                Oleje s extrémním obsahem polyfenolů (nad 1 500 mg/kg) překračují standardní škálu
+                naší polyfenolové složky — dostávají aditivní bonus přičtený ke Score.
+              </p>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-5">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-amber-700 mb-3">
+                  Jak se bonus počítá
+                </div>
+                <p className="text-[13px] text-amber-900 leading-relaxed mb-4">
+                  Za každých 200 mg/kg polyfenolů nad hranici 1 500 mg/kg dostane olej +1 bod.
+                  Bonus je omezen na +10 bodů a výsledné Score nepřekročí 100.
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[12px]">
+                    <tbody>
+                      {[
+                        ['Polyfenoly', 'Bonus', 'Příklad'],
+                        ['Pod 1 500 mg/kg', '+0', 'Standardní výpočet'],
+                        ['1 500–1 700 mg/kg', '+1', '—'],
+                        ['1 700–1 900 mg/kg', '+2', '—'],
+                        ['1 900–2 100 mg/kg', '+3', '—'],
+                        ['2 100–2 300 mg/kg', '+4', '—'],
+                        ['2 300–2 500 mg/kg', '+5', '—'],
+                        ['2 500–2 700 mg/kg', '+6', 'EVOLIA 2 500 mg/kg'],
+                        ['2 700–2 900 mg/kg', '+6 (zaokr.)', 'EVOLIA 2 777 mg/kg → +6'],
+                        ['Nad 3 500 mg/kg', '+10 (max)', 'Strop'],
+                      ].map((row, ri) => (
+                        <tr key={ri} className={ri === 0 ? 'bg-amber-100 font-semibold' : ri % 2 === 0 ? 'bg-amber-50/50' : ''}>
+                          {row.map((cell, ci) => (
+                            <td key={ci} className="px-3 py-1.5 text-amber-900">{cell}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="bg-off rounded-xl p-4">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-text3 mb-2">
+                  Proč bonus a ne vyšší základ?
+                </div>
+                <p className="text-[13px] text-text2 leading-relaxed">
+                  Standardní polyfenolová složka je kalibrována na reálný rozsah trhu (0–500 mg/kg)
+                  a je součástí váženého průměru. Hodnoty nad 1 500 mg/kg jsou výjimečné —
+                  bonus je spravedlivější než přepočítávání celé škály, které by zkreslilo
+                  hodnocení ostatních produktů.
+                </p>
+              </div>
+            </section>
+
             {/* ── SEKCE 4: Kalkulačka ─────────────────────────── */}
             <section id="kalkulator" className="scroll-mt-20 mb-14">
               <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-2">

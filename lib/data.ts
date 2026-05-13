@@ -82,6 +82,7 @@ function mapProduct(row: ProductRow): Product {
       certifications: row.score_breakdown?.certifications ?? 0,
       quality: row.score_breakdown?.quality ?? 0,
       value: row.score_breakdown?.value ?? 0,
+      functionalBonus: row.score_breakdown?.functionalBonus ?? undefined,
     },
     descriptionShort: row.description_short ?? '',
     descriptionLong: row.description_long ?? '',
