@@ -6,6 +6,7 @@ const SECTIONS = [
   { id: 'score', label: 'Co je Score' },
   { id: 'brackets', label: 'Co číslo znamená' },
   { id: 'slozky', label: '4 složky' },
+  { id: 'bonus', label: 'Bonus pro funkční oleje' },
   { id: 'kalkulator', label: 'Kalkulačka' },
   { id: 'data', label: 'Odkud bereme data' },
   { id: 'veda', label: 'Vědecké základy' },

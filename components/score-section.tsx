@@ -167,6 +167,18 @@ export function ScoreSection({ product }: { product: Product }) {
             </div>
           ))}
 
+          {scoreBreakdown.functionalBonus != null && scoreBreakdown.functionalBonus > 0 && (
+            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <span className="text-[11px] text-amber-700 uppercase tracking-wider w-[72px] shrink-0">Bonus</span>
+              <span className="text-[13px] font-medium flex-1 text-amber-800">
+                {product.polyphenols} mg/kg — funkční olej
+              </span>
+              <span className="text-[13px] font-bold text-amber-700 tabular-nums shrink-0">
+                +{scoreBreakdown.functionalBonus}
+              </span>
+            </div>
+          )}
+
           <div className="flex items-center gap-2 bg-olive-bg border border-olive-border rounded-lg px-3 py-2">
             <span className="text-[11px] font-semibold text-olive uppercase tracking-wider flex-1">
               Olivator Score
