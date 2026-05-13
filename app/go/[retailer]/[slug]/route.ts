@@ -121,6 +121,13 @@ export async function GET(
   const ipHash = createHash('sha256').update(ip).digest('hex')
   const userAgent = request.headers.get('user-agent') ?? ''
   const referrer = request.headers.get('referer') ?? ''
+  const reqUrl = request.nextUrl
+  const utm = {
+    utm_source:   reqUrl.searchParams.get('utm_source')   ?? undefined,
+    utm_medium:   reqUrl.searchParams.get('utm_medium')   ?? undefined,
+    utm_campaign: reqUrl.searchParams.get('utm_campaign') ?? undefined,
+    utm_content:  reqUrl.searchParams.get('utm_content')  ?? undefined,
+  }
 
   const { error: clickErr } = await supabaseAdmin.from('affiliate_clicks').insert({
     product_id: product.id,
@@ -129,6 +136,7 @@ export async function GET(
     user_agent: userAgent,
     referrer,
     market: 'CZ',
+    ...utm,
   })
   if (clickErr) console.error('[affiliate] Log failed:', clickErr.message)
 
