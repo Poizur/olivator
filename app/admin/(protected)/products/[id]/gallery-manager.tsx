@@ -25,6 +25,8 @@ export function GalleryManager({ productId }: { productId: string }) {
   const [scanningId, setScanningId] = useState<string | null>(null)
   const [scanResult, setScanResult] = useState<{ filled: string[]; message: string; newScore: number | null; confidence: string } | null>(null)
   const [refreshingGallery, setRefreshingGallery] = useState(false)
+  const [generatingAlts, setGeneratingAlts] = useState(false)
+  const [altStatus, setAltStatus] = useState<string | null>(null)
 
   useEffect(() => {
     void loadImages()
@@ -107,6 +109,27 @@ export function GalleryManager({ productId }: { productId: string }) {
       setError(err instanceof Error ? err.message : 'Chyba')
     } finally {
       setScanningId(null)
+    }
+  }
+
+  async function onGenerateAltTexts(force = false) {
+    setGeneratingAlts(true)
+    setAltStatus(null)
+    setError(null)
+    try {
+      const url = `/api/admin/products/${productId}/generate-alt-texts${force ? '?force=1' : ''}`
+      const res = await fetch(url, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Alt text generování selhalo')
+      setAltStatus(
+        data.total === 0
+          ? 'Všechny fotky už mají alt text (use ?force=1 to regenerate)'
+          : `✓ ${data.succeeded}/${data.total} alt textů vygenerováno (Haiku vision)`
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Chyba')
+    } finally {
+      setGeneratingAlts(false)
     }
   }
 
@@ -217,6 +240,15 @@ export function GalleryManager({ productId }: { productId: string }) {
         <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
           <button
             type="button"
+            onClick={() => onGenerateAltTexts(false)}
+            disabled={generatingAlts}
+            className="text-[11px] bg-white border border-off2 text-text2 rounded-full px-3 py-1 hover:border-olive hover:text-olive disabled:opacity-40 transition-colors"
+            title="Vygeneruje AI alt text (Claude Haiku vision) pro fotky bez popisku"
+          >
+            {generatingAlts ? '🤖 Generuji…' : '🤖 Alt texty'}
+          </button>
+          <button
+            type="button"
             onClick={onRefreshGallery}
             disabled={refreshingGallery}
             className="text-[11px] bg-olive text-white rounded-full px-3 py-1 hover:bg-olive-dark disabled:opacity-40 transition-colors"
@@ -318,6 +350,11 @@ export function GalleryManager({ productId }: { productId: string }) {
         {status && (
           <span className="text-olive-dark bg-olive-bg border border-olive-border rounded px-2 py-1">
             {status}
+          </span>
+        )}
+        {altStatus && (
+          <span className="text-olive-dark bg-olive-bg border border-olive-border rounded px-2 py-1">
+            {altStatus}
           </span>
         )}
         {error && (
