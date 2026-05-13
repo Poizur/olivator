@@ -12,12 +12,19 @@ function buildAffiliateUrl(retailerSlug: string, productSlug: string): string {
   return `${SITE}/go/${retailerSlug}/${productSlug}`
 }
 
+function truncateName(name: string, max = 50): string {
+  if (name.length <= max) return name
+  const cut = name.slice(0, max)
+  const lastSpace = cut.lastIndexOf(' ')
+  return (lastSpace > 20 ? cut.slice(0, lastSpace) : cut) + '…'
+}
+
 export async function getWelcomeDeals(): Promise<{
   deals: WelcomeDeal[]
   topPickIndex: number
   topPickReason: string
+  mode: 'deals' | 'tips'
 }> {
-  // Načti všechny aktuální in_stock nabídky
   const { data: offers } = await supabaseAdmin
     .from('product_offers')
     .select('product_id, price, retailer_id')
@@ -27,15 +34,16 @@ export async function getWelcomeDeals(): Promise<{
 
   const productIds = Array.from(new Set(offers.map(o => o.product_id as string)))
 
-  const [productsResult, retailersResult] = await Promise.all([
+  const [productsResult, retailersResult, brandsResult] = await Promise.all([
     supabaseAdmin
       .from('products')
-      .select('id, slug, name, name_short, olivator_score, brand_slug')
+      .select('id, slug, name, name_short, olivator_score, brand_slug, image_url, volume_ml, origin_region')
       .in('id', productIds)
       .eq('status', 'active')
       .gte('olivator_score', 70)
       .not('olivator_score', 'is', null),
     supabaseAdmin.from('retailers').select('id, slug, name'),
+    supabaseAdmin.from('brands').select('slug, name'),
   ])
 
   const productMap = new Map(
@@ -44,8 +52,10 @@ export async function getWelcomeDeals(): Promise<{
   const retailerMap = new Map(
     (retailersResult.data ?? []).map(r => [r.id as string, { slug: r.slug as string, name: r.name as string }])
   )
+  const brandNameMap = new Map(
+    (brandsResult.data ?? []).map(b => [b.slug as string, b.name as string])
+  )
 
-  // Nejlevnější nabídka per produkt (jen score >= 70, active)
   const cheapestByProduct = new Map<string, { price: number; retailerId: string }>()
   for (const o of offers) {
     const pid = o.product_id as string
@@ -56,12 +66,15 @@ export async function getWelcomeDeals(): Promise<{
     }
   }
 
-  // Pro každý produkt zjisti 30d max cenu
   interface Candidate {
     productId: string
     slug: string
     name: string
     brandSlug: string | null
+    brandName: string | null
+    variantInfo: string | null
+    volumeMl: number | null
+    imageUrl: string | null
     score: number
     currentPrice: number
     oldPrice: number | null
@@ -98,32 +111,33 @@ export async function getWelcomeDeals(): Promise<{
       else dropPct = null
     }
 
-    // Rank: deals prioritised, then pure score
-    const rankScore = dropPct
-      ? dropPct * 0.4 + score * 0.6
-      : score * 0.6
+    const brandSlug = product.brand_slug as string | null
+    const brandName = brandSlug ? (brandNameMap.get(brandSlug) ?? null) : null
+    const rawName = (product.name_short as string | null) ?? (product.name as string)
 
     candidates.push({
       productId,
       slug: product.slug as string,
-      name: (product.name_short as string | null) ?? (product.name as string),
-      brandSlug: product.brand_slug as string | null,
+      name: truncateName(rawName),
+      brandSlug,
+      brandName,
+      variantInfo: (product.origin_region as string | null),
+      volumeMl: (product.volume_ml as number | null),
+      imageUrl: (product.image_url as string | null),
       score,
       currentPrice: Math.round(offer.price),
       oldPrice,
       dropPct,
       retailerSlug: retailer.slug,
       retailerName: retailer.name,
-      rankScore,
+      rankScore: dropPct ? dropPct * 0.4 + score * 0.6 : score * 0.6,
     })
   }
 
-  // Seřadit — slevy >= 15% první (rankScore vyšší), pak fallback score
   const withDeals = candidates
     .filter(c => c.dropPct !== null)
     .sort((a, b) => b.rankScore - a.rankScore)
 
-  // Max 1 per brand, limit 3
   const selected: Candidate[] = []
   const usedBrands = new Set<string>()
 
@@ -135,7 +149,6 @@ export async function getWelcomeDeals(): Promise<{
     selected.push(c)
   }
 
-  // Fallback: doplnit top-score produkty pokud méně než 3 slevy
   if (selected.length < 3) {
     const topScore = candidates
       .filter(c => !selected.find(s => s.productId === c.productId))
@@ -152,8 +165,15 @@ export async function getWelcomeDeals(): Promise<{
 
   if (selected.length === 0) return buildFallback()
 
+  const hasTrueDeals = selected.some(c => c.dropPct !== null)
+  const mode: 'deals' | 'tips' = hasTrueDeals ? 'deals' : 'tips'
+
   const deals: WelcomeDeal[] = selected.map(c => ({
     name: c.name,
+    brandName: c.brandName,
+    variantInfo: c.variantInfo,
+    volumeMl: c.volumeMl,
+    imageUrl: c.imageUrl,
     score: c.score,
     currentPrice: c.currentPrice,
     oldPrice: c.oldPrice,
@@ -163,35 +183,37 @@ export async function getWelcomeDeals(): Promise<{
     isFallback: c.dropPct === null,
   }))
 
-  // Top pick = nejvyšší rankScore (první s dealem, nebo nejlepší score)
-  const topPickIndex = 0
   const topPick = selected[0]
-  let topPickReason: string
+  const topPickReason = topPick.dropPct
+    ? `Score ${topPick.score} a teď ${topPick.dropPct} % pod měsíčním maximem — nejlepší kombinace kvality a ceny v katalogu právě teď.`
+    : `Score ${topPick.score} — jeden z nejlépe hodnocených olejů v celém katalogu. Aktuálně za ${topPick.currentPrice} Kč.`
 
-  if (topPick.dropPct) {
-    topPickReason = `Score ${topPick.score} a teď ${topPick.dropPct} % pod měsíčním maximem — nejlepší kombinace kvality a ceny v katalogu právě teď.`
-  } else {
-    topPickReason = `Score ${topPick.score} — jeden z nejlépe hodnocených olejů v celém katalogu. Aktuálně za ${topPick.currentPrice} Kč.`
-  }
-
-  return { deals, topPickIndex, topPickReason }
+  return { deals, topPickIndex: 0, topPickReason, mode }
 }
 
-async function buildFallback(): Promise<{ deals: WelcomeDeal[]; topPickIndex: number; topPickReason: string }> {
-  const { data: products } = await supabaseAdmin
-    .from('products')
-    .select('id, slug, name, name_short, olivator_score, brand_slug')
-    .eq('status', 'active')
-    .not('olivator_score', 'is', null)
-    .order('olivator_score', { ascending: false })
-    .limit(30)
+async function buildFallback(): Promise<{ deals: WelcomeDeal[]; topPickIndex: number; topPickReason: string; mode: 'deals' | 'tips' }> {
+  const [productsResult, brandsResult] = await Promise.all([
+    supabaseAdmin
+      .from('products')
+      .select('id, slug, name, name_short, olivator_score, brand_slug, image_url, volume_ml, origin_region')
+      .eq('status', 'active')
+      .not('olivator_score', 'is', null)
+      .order('olivator_score', { ascending: false })
+      .limit(30),
+    supabaseAdmin.from('brands').select('slug, name'),
+  ])
+
+  const brandNameMap = new Map(
+    (brandsResult.data ?? []).map(b => [b.slug as string, b.name as string])
+  )
 
   const deals: WelcomeDeal[] = []
   const usedBrands = new Set<string>()
 
-  for (const p of products ?? []) {
+  for (const p of productsResult.data ?? []) {
     if (deals.length >= 3) break
-    const brandKey = (p.brand_slug as string | null) ?? (p.name_short as string | null) ?? (p.name as string)
+    const brandSlug = p.brand_slug as string | null
+    const brandKey = brandSlug ?? (p.name_short as string | null) ?? (p.name as string)
     if (usedBrands.has(brandKey)) continue
 
     const { data: offers } = await supabaseAdmin
@@ -205,8 +227,13 @@ async function buildFallback(): Promise<{ deals: WelcomeDeal[]; topPickIndex: nu
     const o = offers[0] as unknown as { price: number; retailer_id: string; retailers: { slug: string; name: string } }
 
     usedBrands.add(brandKey)
+    const rawName = (p.name_short as string | null) ?? (p.name as string)
     deals.push({
-      name: (p.name_short as string | null) ?? (p.name as string),
+      name: truncateName(rawName),
+      brandName: brandSlug ? (brandNameMap.get(brandSlug) ?? null) : null,
+      variantInfo: p.origin_region as string | null,
+      volumeMl: p.volume_ml as number | null,
+      imageUrl: p.image_url as string | null,
       score: p.olivator_score as number,
       currentPrice: Math.round(o.price),
       oldPrice: null,
@@ -224,6 +251,7 @@ async function buildFallback(): Promise<{ deals: WelcomeDeal[]; topPickIndex: nu
     topPickReason: top
       ? `Score ${top.score} — jeden z nejlépe hodnocených olejů v katalogu. Aktuálně za ${top.currentPrice} Kč.`
       : 'Nejlépe hodnocený olej v katalogu právě teď.',
+    mode: 'tips',
   }
 }
 
