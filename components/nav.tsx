@@ -8,6 +8,7 @@ import { useCompare } from '@/lib/compare-context'
 
 const links = [
   { href: '/srovnavac', label: 'Katalog' },
+  { href: '/slevy', label: 'Slevy 🏷' },
   { href: '/zebricek', label: 'Žebříčky' },
   { href: '/novinky', label: 'Novinky' },
   { href: '/pruvodce', label: 'Průvodce' },
