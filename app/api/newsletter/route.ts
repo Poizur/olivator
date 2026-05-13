@@ -144,16 +144,14 @@ export async function POST(request: NextRequest) {
         .maybeSingle()
       const unsubToken = (sub?.unsubscribe_token as string | null) ?? ''
       const unsubUrl = `https://olivator.cz/api/newsletter/unsubscribe?token=${unsubToken}`
-      const { deals, topPickIndex, topPickReason } = await getWelcomeDeals().catch(() => ({ deals: [], topPickIndex: 0, topPickReason: '' }))
-      const d0Props = { unsubscribeUrl: unsubUrl, deals, topPickIndex, topPickReason }
+      const { deals, topPickIndex, topPickReason, mode } = await getWelcomeDeals().catch(() => ({ deals: [], topPickIndex: 0, topPickReason: '', mode: 'tips' as const }))
+      const d0Props = { unsubscribeUrl: unsubUrl, deals, topPickIndex, topPickReason, mode }
       const html = await render(React.createElement(WelcomeD0DealsEmail, d0Props))
       const text = await render(React.createElement(WelcomeD0DealsEmail, d0Props), { plainText: true })
-      await sendTransactionalEmail({
-        to: email,
-        subject: 'Olíkův první pozdrav — a co se zrovna slevuje',
-        html,
-        text,
-      }).catch(() => null)
+      const subject = mode === 'deals'
+        ? 'Olíkův první pozdrav — a co se zrovna slevuje'
+        : 'Olíkův první pozdrav — tři tipy z katalogu'
+      await sendTransactionalEmail({ to: email, subject, html, text }).catch(() => null)
       if (sub?.id) {
         await enqueueWelcomeSeries(sub.id as string).catch(() => null)
       }

@@ -1,4 +1,4 @@
-import { Button, Link, Section, Text } from '@react-email/components'
+import { Img, Link, Section, Text } from '@react-email/components'
 import { NewsletterLayout } from './_layout'
 
 const SITE = 'https://olivator.cz'
@@ -6,6 +6,10 @@ const UTM = 'utm_source=newsletter&utm_medium=email&utm_campaign=welcome_d0'
 
 export interface WelcomeDeal {
   name: string
+  brandName: string | null
+  variantInfo: string | null
+  volumeMl: number | null
+  imageUrl: string | null
   score: number
   currentPrice: number
   oldPrice: number | null
@@ -20,6 +24,7 @@ interface Props {
   deals: WelcomeDeal[]
   topPickIndex: number
   topPickReason: string
+  mode: 'deals' | 'tips'
 }
 
 export function WelcomeD0DealsEmail({
@@ -27,12 +32,18 @@ export function WelcomeD0DealsEmail({
   deals,
   topPickIndex,
   topPickReason,
+  mode,
 }: Props) {
   const topPick = deals[topPickIndex] ?? deals[0]
+  const isDealMode = mode === 'deals'
 
   return (
     <NewsletterLayout
-      preheader="Tady jsou aktuální slevy přímo z 18 prodejců"
+      preheader={
+        isDealMode
+          ? 'Tady jsou aktuální slevy přímo z 18 prodejců'
+          : 'Tři tipy na olivový olej, které stojí za pozornost'
+      }
       unsubscribeUrl={unsubscribeUrl}
     >
       {/* Pozdrav */}
@@ -41,20 +52,34 @@ export function WelcomeD0DealsEmail({
           Vítej v Olivátoru
         </Text>
         <Text className="text-[14px] text-text2 mt-3 m-0 leading-relaxed">
-          Olík tady. Měli jsme dohodu — <em>buď první kdo se dozví o slevách</em>.
-          Tady jsou.
+          {isDealMode ? (
+            <>
+              Olík tady. Měli jsme dohodu —{' '}
+              <em>buď první kdo se dozví o slevách</em>. Tady jsou.
+            </>
+          ) : (
+            <>
+              Olík tady. Aktuálně nemáme slevy nad 15 % — čekáme na příští sezónu
+              akcí. Mezitím tady jsou tři tipy, které stojí za tvou pozornost.
+            </>
+          )}
         </Text>
       </Section>
 
-      {/* Sekce slev */}
+      {/* Sekce nadpis */}
       <Section className="mb-2">
         <Text className="text-[11px] font-bold tracking-widest uppercase text-olive m-0">
-          🏷 {deals.some(d => !d.isFallback) ? '3 nejlepší slevy právě teď' : 'Olíkovy top tipy právě teď'}
+          {isDealMode ? '🏷 3 nejlepší slevy právě teď' : '🫒 3 tipy z katalogu'}
         </Text>
       </Section>
 
+      {/* Deal cards */}
       {deals.map((deal, i) => (
-        <Section key={i} className="my-1">
+        <Section
+          key={i}
+          className="my-3"
+          style={{ borderTop: '1px solid #e8e8ed', paddingTop: '12px' }}
+        >
           <table
             width="100%"
             cellPadding={0}
@@ -64,56 +89,124 @@ export function WelcomeD0DealsEmail({
           >
             <tbody>
               <tr>
-                <td
-                  valign="top"
-                  style={{ padding: '12px 0', borderTop: '1px solid #e8e8ed' }}
-                >
-                  <Text className="text-[14px] font-medium text-text m-0 leading-tight">
-                    {deal.name}
-                    {deal.score >= 80 && (
-                      <span style={{ color: '#2d6a4f', fontSize: '11px', marginLeft: '6px' }}>
-                        Score {deal.score}
-                      </span>
-                    )}
-                  </Text>
-                  {!deal.isFallback && deal.dropPct && (
-                    <Text className="text-[11px] text-text3 m-0 mt-0.5">
-                      Sleva oproti měsíčnímu maximu
-                    </Text>
-                  )}
-                  {deal.isFallback && (
-                    <Text className="text-[11px] text-text3 m-0 mt-0.5">
-                      Score {deal.score} · Olíkův tip
-                    </Text>
+                {/* Foto */}
+                <td valign="top" style={{ width: '80px', paddingRight: '14px' }}>
+                  {deal.imageUrl ? (
+                    <Img
+                      src={deal.imageUrl}
+                      alt={deal.name}
+                      width={80}
+                      height={80}
+                      style={{
+                        width: '80px',
+                        height: '80px',
+                        objectFit: 'cover',
+                        borderRadius: '10px',
+                        display: 'block',
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '80px',
+                        height: '80px',
+                        background: '#d8f3dc',
+                        borderRadius: '10px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '28px',
+                        textAlign: 'center',
+                        lineHeight: '80px',
+                      }}
+                    >
+                      🫒
+                    </div>
                   )}
                 </td>
-                <td
-                  valign="top"
-                  align="right"
-                  style={{
-                    padding: '12px 0',
-                    borderTop: '1px solid #e8e8ed',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {deal.oldPrice && !deal.isFallback && (
-                    <Text className="text-[11px] text-text3 m-0 leading-tight" style={{ textDecoration: 'line-through' }}>
-                      {deal.oldPrice} Kč
+
+                {/* Info */}
+                <td valign="top">
+                  {deal.brandName && (
+                    <Text
+                      className="text-[11px] font-bold tracking-wider uppercase m-0 leading-tight"
+                      style={{ color: '#2d6a4f' }}
+                    >
+                      {deal.brandName}
                     </Text>
                   )}
-                  <Text className="text-[15px] font-bold text-text m-0 leading-tight">
-                    {deal.currentPrice} Kč
+                  <Text className="text-[14px] font-semibold text-text m-0 mt-0.5 leading-snug">
+                    {deal.name}
                   </Text>
-                  {deal.dropPct && !deal.isFallback && (
-                    <Text className="text-[10px] font-semibold m-0 mt-0.5" style={{ color: '#c4711a' }}>
-                      -{deal.dropPct}%
+                  {(deal.variantInfo || deal.volumeMl) && (
+                    <Text className="text-[11px] text-text3 m-0 mt-0.5">
+                      {[deal.variantInfo, deal.volumeMl ? `${deal.volumeMl} ml` : null]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </Text>
                   )}
-                  <Link
-                    href={`${deal.ctaUrl}&${UTM}&utm_content=deal_${i + 1}`}
-                    className="text-[11px] text-olive font-medium"
+                  <Text
+                    className="text-[11px] font-semibold m-0 mt-1"
+                    style={{ color: '#c4711a' }}
                   >
-                    {deal.retailerName} →
+                    Score {deal.score}
+                  </Text>
+
+                  {/* Cena */}
+                  <table
+                    cellPadding={0}
+                    cellSpacing={0}
+                    role="presentation"
+                    style={{ marginTop: '6px' }}
+                  >
+                    <tbody>
+                      <tr>
+                        {deal.oldPrice && !deal.isFallback && (
+                          <td style={{ paddingRight: '8px' }}>
+                            <Text
+                              className="text-[11px] text-text3 m-0"
+                              style={{ textDecoration: 'line-through' }}
+                            >
+                              {deal.oldPrice} Kč
+                            </Text>
+                          </td>
+                        )}
+                        <td style={{ paddingRight: '8px' }}>
+                          <Text className="text-[15px] font-bold text-text m-0">
+                            {deal.currentPrice} Kč
+                          </Text>
+                        </td>
+                        {deal.dropPct && !deal.isFallback && (
+                          <td>
+                            <Text
+                              className="text-[11px] font-semibold m-0"
+                              style={{
+                                color: '#fff',
+                                background: '#c4711a',
+                                padding: '2px 6px',
+                                borderRadius: '10px',
+                              }}
+                            >
+                              -{deal.dropPct}%
+                            </Text>
+                          </td>
+                        )}
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <Link
+                    href={`${deal.ctaUrl}?${UTM}&utm_content=deal_${i + 1}`}
+                    style={{
+                      display: 'inline-block',
+                      marginTop: '8px',
+                      color: '#2d6a4f',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Koupit u {deal.retailerName} →
                   </Link>
                 </td>
               </tr>
@@ -123,36 +216,38 @@ export function WelcomeD0DealsEmail({
       ))}
 
       {/* Olíkův výběr */}
-      <Section
-        className="my-5 rounded-xl px-5 py-4"
-        style={{ background: '#d8f3dc', border: '1px solid #b7e4c7' }}
-      >
-        <Text className="text-[11px] font-bold tracking-widest uppercase text-olive m-0">
-          🫒 Olíkův výběr
-        </Text>
-        <Text className="text-[14px] font-semibold text-text m-0 mt-2 leading-snug">
-          {topPick.name}
-        </Text>
-        <Text className="text-[13px] text-text2 m-0 mt-1 leading-relaxed">
-          {topPickReason}
-        </Text>
-        <Link
-          href={`${topPick.ctaUrl}&${UTM}&utm_content=top_pick`}
-          style={{
-            display: 'inline-block',
-            marginTop: '12px',
-            background: '#2d6a4f',
-            color: '#fff',
-            padding: '8px 20px',
-            borderRadius: '20px',
-            fontSize: '13px',
-            fontWeight: '600',
-            textDecoration: 'none',
-          }}
+      {topPick && (
+        <Section
+          className="my-5 rounded-xl px-5 py-4"
+          style={{ background: '#d8f3dc', border: '1px solid #b7e4c7' }}
         >
-          Koupit u {topPick.retailerName}
-        </Link>
-      </Section>
+          <Text className="text-[11px] font-bold tracking-widest uppercase text-olive m-0">
+            🫒 Olíkův výběr
+          </Text>
+          <Text className="text-[14px] font-semibold text-text m-0 mt-2 leading-snug">
+            {topPick.brandName ? `${topPick.brandName} — ` : ''}{topPick.name}
+          </Text>
+          <Text className="text-[13px] text-text2 m-0 mt-1 leading-relaxed">
+            {topPickReason}
+          </Text>
+          <Link
+            href={`${topPick.ctaUrl}?${UTM}&utm_content=top_pick`}
+            style={{
+              display: 'inline-block',
+              marginTop: '12px',
+              background: '#2d6a4f',
+              color: '#fff',
+              padding: '8px 20px',
+              borderRadius: '20px',
+              fontSize: '13px',
+              fontWeight: '600',
+              textDecoration: 'none',
+            }}
+          >
+            Koupit u {topPick.retailerName}
+          </Link>
+        </Section>
+      )}
 
       {/* Co dále */}
       <Section className="mt-6 mb-2">
@@ -160,9 +255,7 @@ export function WelcomeD0DealsEmail({
           Tento čtvrtek v 8:00 ti přijde plný týdenní digest — všechny slevy,
           olej týdne, recept od Olíka.
         </Text>
-        <Text className="text-[13px] text-text2 mt-3 m-0 leading-relaxed">
-          Mezitím:
-        </Text>
+        <Text className="text-[13px] text-text2 mt-3 m-0">Mezitím:</Text>
       </Section>
 
       <Section className="mb-6">
@@ -171,10 +264,10 @@ export function WelcomeD0DealsEmail({
             <tr>
               <td style={{ padding: '4px 0' }}>
                 <Link
-                  href={`${SITE}/slevy?${UTM}&utm_content=all_deals`}
+                  href={`${SITE}/${isDealMode ? 'slevy' : 'zebricek/nejlepsi'}?${UTM}&utm_content=${isDealMode ? 'all_deals' : 'zebricek'}`}
                   className="text-[13px] text-olive font-medium"
                 >
-                  → Všechny aktuální slevy
+                  {isDealMode ? '→ Všechny aktuální slevy' : '→ Žebříček nejlepších olejů'}
                 </Link>
               </td>
             </tr>
