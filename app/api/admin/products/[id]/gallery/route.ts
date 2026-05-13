@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
-import { downloadGalleryImage, detectImageRole, ensureProductsBucket } from '@/lib/product-image'
+import { downloadGalleryImage, detectImageRole, ensureProductsBucket, generateImageAltText } from '@/lib/product-image'
 import { revalidateProduct } from '@/lib/revalidate'
 
-export const maxDuration = 90 // up to 25 images × ~3s each
+export const maxDuration = 120 // up to 25 images × ~5s each (download + vision)
 
 /** GET — list all product_images for this product (scraper candidates + approved). */
 export async function GET(
@@ -44,15 +44,16 @@ export async function PUT(
     const keep: string[] = Array.isArray(body.keep) ? body.keep : []
     const primaryId: string | null = typeof body.primary === 'string' ? body.primary : null
 
-    // Get product slug for filename generation
+    // Get product slug + name for filename generation and alt text
     const { data: product, error: productErr } = await supabaseAdmin
       .from('products')
-      .select('slug')
+      .select('slug, name')
       .eq('id', id)
       .maybeSingle()
     if (productErr) throw productErr
     if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 404 })
     const slug = product.slug as string
+    const productName = product.name as string
 
     // Read all current rows
     const { data: allRows, error: readErr } = await supabaseAdmin
@@ -84,14 +85,13 @@ export async function PUT(
 
       // Skip download if already in our storage
       if (currentUrl.includes(STORAGE_PREFIX)) {
-        await supabaseAdmin
-          .from('product_images')
-          .update({
-            source: 'scraper',
-            is_primary: isPrimary,
-            sort_order: i,
-          })
-          .eq('id', row.id)
+        // Still generate alt text if missing
+        const existingAlt = row.alt_text as string | null
+        const altUpdate: Record<string, unknown> = { source: 'scraper', is_primary: isPrimary, sort_order: i }
+        if (!existingAlt) {
+          altUpdate.alt_text = await generateImageAltText(currentUrl, productName)
+        }
+        await supabaseAdmin.from('product_images').update(altUpdate).eq('id', row.id)
         downloadResults.push({ rowId: row.id as string, ok: true })
         continue
       }
@@ -103,16 +103,20 @@ export async function PUT(
       const result = await downloadGalleryImage(currentUrl, slug, role, sortOrder)
 
       if (!result.ok) {
-        // Keep original URL; mark row but log failure
+        // Keep original URL; mark row but log failure — still generate alt text
+        const altText = await generateImageAltText(currentUrl, productName)
         downloadResults.push({ rowId: row.id as string, ok: false, reason: result.reason })
         await supabaseAdmin
           .from('product_images')
-          .update({ source: 'scraper', is_primary: isPrimary, sort_order: i })
+          .update({ source: 'scraper', is_primary: isPrimary, sort_order: i, alt_text: altText })
           .eq('id', row.id)
         continue
       }
 
-      // Update row with new storage URL
+      // Generate alt text for the newly stored image
+      const altText = await generateImageAltText(result.storageUrl, productName)
+
+      // Update row with new storage URL + alt text
       await supabaseAdmin
         .from('product_images')
         .update({
@@ -120,6 +124,7 @@ export async function PUT(
           source: 'scraper',
           is_primary: isPrimary,
           sort_order: i,
+          alt_text: altText,
         })
         .eq('id', row.id)
       downloadResults.push({ rowId: row.id as string, ok: true, filename: result.filename })
