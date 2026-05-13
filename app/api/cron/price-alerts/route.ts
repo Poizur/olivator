@@ -6,6 +6,7 @@ import { render } from '@react-email/render'
 import React from 'react'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getSetting } from '@/lib/settings'
+import { getDisplayName } from '@/lib/product-display'
 import { sendTransactionalEmail } from '@/lib/newsletter-sender'
 import { PriceAlertEmail } from '@/emails/price-alert'
 
@@ -83,7 +84,7 @@ async function getProductWithCheapestOffer(productId: string): Promise<ProductRo
 
   return {
     id: product.id as string,
-    name: (product.name_short as string | null) ?? (product.name as string),
+    name: getDisplayName(product as { name_short: string | null; name: string }),
     name_short: product.name_short as string | null,
     image_url: product.image_url as string | null,
     olivator_score: product.olivator_score as number,

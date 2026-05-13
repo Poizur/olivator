@@ -4,6 +4,7 @@
 // Princip: každý generator vrátí typed data — ne HTML. Render jde v emails/*.tsx.
 
 import { supabaseAdmin } from './supabase'
+import { getDisplayName } from './product-display'
 
 const SITE_URL = 'https://olivator.cz'
 
@@ -153,7 +154,7 @@ export async function pickOilOfTheWeek(
     const hasDrop = oldPrice && oldPrice > cheapest.price && (oldPrice - cheapest.price) / oldPrice > 0.05
 
     const brand = p.brand_slug ? brandMap.get(p.brand_slug as string) ?? null : null
-    const productName = (p.name_short as string | null) ?? (p.name as string)
+    const productName = getDisplayName(p as { name_short: string | null; name: string })
 
     const reasoning = hasDrop
       ? `Score ${p.olivator_score} a aktuálně sleva ${Math.round(((oldPrice! - cheapest.price) / oldPrice!) * 100)} % oproti měsíčnímu maximu — silný moment k vyzkoušení.`
@@ -293,7 +294,7 @@ export async function pickDeals(
     const minPrice = (minHistory?.[0]?.price as number) ?? offer.price
     const isAtMin = offer.price <= minPrice * 1.02
 
-    const productName = offer.product.name_short ?? offer.product.name
+    const productName = getDisplayName(offer.product as { name_short: string | null; name: string })
 
     candidates.push({
       productId: offer.product_id,
@@ -361,7 +362,7 @@ export async function pickNewArrival(): Promise<OilCardData | null> {
     return {
       productId: p.id as string,
       slug: p.slug as string,
-      name: (p.name_short as string | null) ?? (p.name as string),
+      name: getDisplayName(p as { name_short: string | null; name: string }),
       brandName: brand?.name ?? null,
       imageUrl: p.image_url as string | null,
       score: p.olivator_score as number,
@@ -517,7 +518,7 @@ export async function pickRecipe(): Promise<RecipeData | null> {
             pairedOil = {
               productId: winner.id as string,
               slug: winner.slug as string,
-              name: (winner.name_short as string | null) ?? (winner.name as string),
+              name: getDisplayName(winner as { name_short: string | null; name: string }),
               brandName: brand?.name ?? null,
               imageUrl: winner.image_url as string | null,
               score: winner.olivator_score as number,
