@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { render } from '@react-email/render'
 import React from 'react'
 import { supabaseAdmin } from '@/lib/supabase'
-import { sendTestEmail } from '@/lib/newsletter-sender'
+import { sendTransactionalEmail } from '@/lib/newsletter-sender'
 import { WelcomeEmail } from '@/emails/welcome'
 import { enqueueWelcomeSeries } from '@/lib/welcome-series'
 import crypto from 'crypto'
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
       const unsubUrl = `https://olivator.cz/api/newsletter/unsubscribe?token=${unsubToken}`
       const html = await render(React.createElement(WelcomeEmail, { unsubscribeUrl: unsubUrl }))
       const text = await render(React.createElement(WelcomeEmail, { unsubscribeUrl: unsubUrl }), { plainText: true })
-      await sendTestEmail({ to: email, subject: 'Vítej v Olivatoru 🫒', html, text }).catch(() => null)
+      await sendTransactionalEmail({ to: email, subject: 'Vítej v Olivatoru 🫒', html, text }).catch(() => null)
       if (sub?.id) {
         await enqueueWelcomeSeries(sub.id as string).catch(() => null)
       }

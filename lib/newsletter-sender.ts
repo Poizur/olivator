@@ -234,7 +234,7 @@ export async function sendDraft(draftId: string): Promise<SendResult> {
  * Pošli single test email — bez tracking, bez DB záznamu.
  * Pro admin "preview" tlačítko.
  */
-export async function sendTestEmail(opts: {
+async function sendEmailViaResend(opts: {
   to: string
   subject: string
   html: string
@@ -254,11 +254,8 @@ export async function sendTestEmail(opts: {
       body: JSON.stringify({
         from: RESEND_FROM,
         to: [opts.to],
-        subject: `[TEST] ${opts.subject}`,
-        html: opts.html.replace(
-          /\{\{UNSUBSCRIBE_URL\}\}/g,
-          `${SITE_URL}/api/newsletter/unsubscribe?token=test`
-        ),
+        subject: opts.subject,
+        html: opts.html,
         text: opts.text,
       }),
     })
@@ -270,4 +267,29 @@ export async function sendTestEmail(opts: {
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : 'fetch error' }
   }
+}
+
+export async function sendTransactionalEmail(opts: {
+  to: string
+  subject: string
+  html: string
+  text?: string
+}): Promise<{ ok: boolean; messageId?: string; error?: string }> {
+  return sendEmailViaResend(opts)
+}
+
+export async function sendTestEmail(opts: {
+  to: string
+  subject: string
+  html: string
+  text?: string
+}): Promise<{ ok: boolean; messageId?: string; error?: string }> {
+  return sendEmailViaResend({
+    ...opts,
+    subject: `[TEST] ${opts.subject}`,
+    html: opts.html.replace(
+      /\{\{UNSUBSCRIBE_URL\}\}/g,
+      `${SITE_URL}/api/newsletter/unsubscribe?token=test`
+    ),
+  })
 }

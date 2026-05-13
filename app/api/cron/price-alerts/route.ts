@@ -6,7 +6,7 @@ import { render } from '@react-email/render'
 import React from 'react'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getSetting } from '@/lib/settings'
-import { sendTestEmail } from '@/lib/newsletter-sender'
+import { sendTransactionalEmail } from '@/lib/newsletter-sender'
 import { PriceAlertEmail } from '@/emails/price-alert'
 
 export const dynamic = 'force-dynamic'
@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
       const html = await render(element)
       const text = await render(element, { plainText: true })
 
-      const sendResult = await sendTestEmail({
+      const sendResult = await sendTransactionalEmail({
         to: alert.email,
         subject: `🔔 ${product.name} klesl na ${currentPrice} Kč`,
         html,
