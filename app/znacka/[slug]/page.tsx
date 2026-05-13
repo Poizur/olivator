@@ -3,6 +3,17 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
 import { countryName } from '@/lib/utils'
+
+// Fallback landscape foto per country_code — zobrazí se když brand nemá entity_image.
+// Fotky: Unsplash CC0, attribution viz public/brand-fallbacks/ATTRIBUTION.txt
+const BRAND_HERO_FALLBACK: Record<string, string> = {
+  IT: '/brand-fallbacks/it.jpg',
+  GR: '/brand-fallbacks/gr.jpg',
+  ES: '/brand-fallbacks/es.jpg',
+  PT: '/brand-fallbacks/pt.jpg',
+  HR: '/brand-fallbacks/hr.jpg',
+}
+const DEFAULT_BRAND_FALLBACK = '/brand-fallbacks/default.jpg'
 import {
   loadEntityProducts,
   computeProductKpis,
@@ -299,44 +310,42 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
                   </p>
                 </div>
               </div>
-            ) : logoPhoto ? (
-              <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 md:p-10 flex flex-col md:flex-row items-center gap-6 md:gap-10">
-                <div className="shrink-0 bg-off rounded-lg p-4 flex items-center justify-center w-32 h-32 md:w-40 md:h-40">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={logoPhoto.url}
-                    alt={`${brand.name} logo`}
-                    className="max-w-full max-h-full object-contain"
-                  />
-                </div>
-                <div className="flex-1 min-w-0 text-center md:text-left">
-                  <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
-                    — {country}
+            ) : (
+              // Fallback hero: country-specific olive grove landscape.
+              // Pokrývá případ: jen logo, nebo vůbec žádné foto.
+              // Logo (pokud existuje) se zobrazí jako badge top-left.
+              <div className="relative rounded-[var(--radius-card)] overflow-hidden h-64 md:h-80">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={BRAND_HERO_FALLBACK[brand.country_code?.toUpperCase()] ?? DEFAULT_BRAND_FALLBACK}
+                  alt={`Olivové háje — ${country}`}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/10" />
+                {logoPhoto && (
+                  <div className="absolute top-4 left-4 md:top-6 md:left-6 bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 shadow-md">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={logoPhoto.url}
+                      alt={`${brand.name} logo`}
+                      className="h-8 md:h-10 w-auto object-contain"
+                    />
                   </div>
-                  <h1 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl font-normal text-text mb-2">
+                )}
+                <div className="absolute bottom-0 left-0 p-6">
+                  <h1 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl font-normal text-white mb-1">
                     {brand.name}
                   </h1>
-                  <p className="text-sm text-text2">
+                  <p className="text-sm text-white/85">
                     {[
-                      brand.headquarters,
+                      brand.headquarters ?? country,
                       brand.founded_year ? `od ${brand.founded_year}` : null,
                       brand.generation ? `${brand.generation}. generace` : null,
-                      `${kpis.count} olejů v katalogu`,
                     ]
                       .filter(Boolean)
                       .join(' · ')}
                   </p>
                 </div>
-              </div>
-            ) : (
-              <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-6 md:p-8">
-                <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
-                  — {country}
-                </div>
-                <h1 className="font-[family-name:var(--font-display)] text-3xl md:text-4xl font-normal text-text mb-2">
-                  {brand.name}
-                </h1>
-                <p className="text-sm text-text3">{kpis.count} olejů v katalogu</p>
               </div>
             )}
           </div>
