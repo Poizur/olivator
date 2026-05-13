@@ -109,6 +109,14 @@ export async function AdminSidebar() {
       ],
     },
     {
+      group: 'Strategie',
+      items: [
+        { href: '/admin/content-strategy', label: 'Obsahová strategie' },
+        { href: '/admin/content-calendar', label: 'Editoriální kalendář' },
+        { href: '/admin/keyword-mapping', label: 'Keyword Mapping' },
+      ],
+    },
+    {
       group: 'Analytika',
       items: [
         { href: '/admin/analytics', label: 'Affiliate clicks' },

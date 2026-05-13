@@ -9,18 +9,24 @@ import { typeLabel, extractBrand } from '@/lib/utils'
 import { completenessColor } from '@/lib/completeness'
 import { StatusBadge as SharedStatusBadge } from '@/components/admin/status-badge'
 
-type ProductWithCompleteness = Product & { _completeness: CompletenessResult }
+type ProductWithCompleteness = Product & {
+  _completeness: CompletenessResult
+  brandSlug: string | null
+}
 
 interface Props {
   products: ProductWithCompleteness[]
   sort?: string
+  order?: string
+  currentParamsString: string
 }
 
 function CompletenessBadge({ result }: { result: CompletenessResult }) {
   const { bg, text } = completenessColor(result.weightedPercent)
-  const tooltip = result.missing.length > 0
-    ? `Chybí: ${result.missing.map((m) => m.label).join(', ')}`
-    : 'Vše vyplněno'
+  const tooltip =
+    result.missing.length > 0
+      ? `Chybí: ${result.missing.map((m) => m.label).join(', ')}`
+      : 'Vše vyplněno'
   return (
     <span
       className={`text-[11px] ${bg} ${text} px-2 py-0.5 rounded-full font-medium whitespace-nowrap inline-block`}
@@ -31,7 +37,52 @@ function CompletenessBadge({ result }: { result: CompletenessResult }) {
   )
 }
 
-export function ProductsBulkTable({ products, sort }: Props) {
+// Builds a sort URL toggling direction if already on this column
+function sortHref(col: string, currentParamsString: string): string {
+  const params = new URLSearchParams(currentParamsString)
+  const curSort = params.get('sort') ?? 'recent'
+  const curOrder = params.get('order') ?? (curSort === 'name' ? 'asc' : 'desc')
+  if (curSort === col) {
+    params.set('order', curOrder === 'asc' ? 'desc' : 'asc')
+  } else {
+    params.set('sort', col)
+    params.delete('order') // reset to column default
+  }
+  params.delete('page') // reset page on sort change
+  return `/admin/products?${params.toString()}`
+}
+
+function SortTh({
+  col,
+  label,
+  sort,
+  order,
+  currentParamsString,
+  className = '',
+}: {
+  col: string
+  label: string
+  sort: string
+  order: string
+  currentParamsString: string
+  className?: string
+}) {
+  const isActive = sort === col
+  const icon = isActive ? (order === 'asc' ? '↑' : '↓') : '↕'
+  return (
+    <th className={`px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3 ${className}`}>
+      <Link
+        href={sortHref(col, currentParamsString)}
+        className={`hover:text-olive transition-colors inline-flex items-center gap-0.5 ${isActive ? 'text-olive' : ''}`}
+        title={`Seřadit podle: ${label}`}
+      >
+        {label} <span className="opacity-60 text-[10px]">{icon}</span>
+      </Link>
+    </th>
+  )
+}
+
+export function ProductsBulkTable({ products, sort = 'recent', order = 'desc', currentParamsString }: Props) {
   const router = useRouter()
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [busy, startTransition] = useTransition()
@@ -41,11 +92,8 @@ export function ProductsBulkTable({ products, sort }: Props) {
   const someSelected = selected.size > 0 && !allSelected
 
   function toggleAll() {
-    if (allSelected || someSelected) {
-      setSelected(new Set())
-    } else {
-      setSelected(new Set(products.map((p) => p.id)))
-    }
+    if (allSelected || someSelected) setSelected(new Set())
+    else setSelected(new Set(products.map((p) => p.id)))
   }
 
   function toggleOne(id: string) {
@@ -61,21 +109,17 @@ export function ProductsBulkTable({ products, sort }: Props) {
     if (selected.size === 0) return
     if (
       !confirm(
-        `${label} ${selected.size} produkt${selected.size === 1 ? '' : selected.size < 5 ? 'y' : 'ů'}? Akci lze vrátit změnou statusu jednotlivě.`
+        `${label} ${selected.size} produkt${selected.size === 1 ? '' : selected.size < 5 ? 'y' : 'ů'}? Akci lze vrátit změnou statusu jednotlivě.`,
       )
-    ) {
+    )
       return
-    }
     setError(null)
     startTransition(async () => {
       try {
         const res = await fetch('/api/admin/products/bulk-status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ids: Array.from(selected),
-            status,
-          }),
+          body: JSON.stringify({ ids: Array.from(selected), status }),
         })
         const data = await res.json()
         if (!res.ok || !data.ok) throw new Error(data.error ?? 'Akce selhala')
@@ -105,24 +149,16 @@ export function ProductsBulkTable({ products, sort }: Props) {
                   className="w-4 h-4 accent-olive cursor-pointer"
                 />
               </th>
-              <th className="px-3 py-3 w-[56px]"></th>
-              <th className="text-left px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Produkt</th>
+              <th className="px-3 py-3 w-[56px]" />
+              <SortTh col="name" label="Produkt" sort={sort} order={order} currentParamsString={currentParamsString} className="text-left" />
               <th className="text-left px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Výrobce</th>
               <th className="text-left px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3 whitespace-nowrap">EAN</th>
               <th className="text-left px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Typ</th>
-              <th className="text-right px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Score</th>
-              <th className="text-right px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3 whitespace-nowrap">Kyselost</th>
-              <th className="text-center px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">
-                <Link
-                  href={sort === 'completeness' ? '/admin/products' : '/admin/products?sort=completeness'}
-                  className={`hover:text-olive transition-colors ${sort === 'completeness' ? 'text-olive' : ''}`}
-                  title="Kliknutím seřadit od nejvíce neúplných"
-                >
-                  Komplet {sort === 'completeness' ? '↑' : '↕'}
-                </Link>
-              </th>
+              <SortTh col="score" label="Score" sort={sort} order={order} currentParamsString={currentParamsString} className="text-right" />
+              <SortTh col="acidity" label="Kyselost" sort={sort} order={order} currentParamsString={currentParamsString} className="text-right whitespace-nowrap" />
+              <SortTh col="completeness" label="Komplet" sort={sort} order={order} currentParamsString={currentParamsString} className="text-center" />
               <th className="text-center px-3 py-3 text-[11px] font-semibold tracking-wider uppercase text-text3">Stav</th>
-              <th className="px-3 py-3"></th>
+              <th className="px-3 py-3" />
             </tr>
           </thead>
           <tbody>
@@ -152,10 +188,18 @@ export function ProductsBulkTable({ products, sort }: Props) {
                     />
                   </td>
                   <td className="px-3 py-2">
-                    <Link href={`/admin/products/${p.id}`} className="block w-10 h-10 bg-off rounded overflow-hidden border border-off2">
+                    <Link
+                      href={`/admin/products/${p.id}`}
+                      className="block w-10 h-10 bg-off rounded overflow-hidden border border-off2"
+                    >
                       {p.imageUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={p.imageUrl} alt={p.name} className="w-full h-full object-contain" loading="lazy" />
+                        <img
+                          src={p.imageUrl}
+                          alt={p.name}
+                          className="w-full h-full object-contain"
+                          loading="lazy"
+                        />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center font-[family-name:var(--font-display)] text-base italic text-text3/40">
                           {p.name.charAt(0)}
@@ -184,27 +228,33 @@ export function ProductsBulkTable({ products, sort }: Props) {
                       )}
                     </div>
                     <div className="text-xs text-text3">
-                      {p.originRegion}{p.volumeMl ? ` · ${p.volumeMl} ml` : ''}
+                      {p.originRegion}
+                      {p.volumeMl ? ` · ${p.volumeMl} ml` : ''}
                     </div>
-                    {(p.status === 'inactive' || p.status === 'excluded') && (p.statusReasonCode || p.statusReasonNote) && (
-                      <div className={`mt-1 inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded ${p.status === 'excluded' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-800'}`}>
-                        <span>{p.statusChangedBy === 'auto' ? '🤖' : '👤'}</span>
-                        <span>
-                          {p.statusReasonCode === 'url_404' && 'URL nedostupné'}
-                          {p.statusReasonCode === 'out_of_stock' && 'Vyprodáno'}
-                          {p.statusReasonCode === 'duplicate' && 'Duplikát'}
-                          {p.statusReasonCode === 'low_quality' && 'Málo dat'}
-                          {p.statusReasonCode === 'wrong_category' && 'Špatná kategorie'}
-                          {p.statusReasonCode === 'price_anomaly' && 'Cenová anomálie'}
-                          {p.statusReasonCode === 'not_interesting' && 'Mimo fokus'}
-                          {p.statusReasonCode === 'custom' && (p.statusReasonNote ?? 'Vlastní')}
-                          {!p.statusReasonCode && p.statusReasonNote}
-                        </span>
-                        {p.statusReasonNote && p.statusReasonCode && p.statusReasonCode !== 'custom' && (
-                          <span className="opacity-70">· {p.statusReasonNote}</span>
-                        )}
-                      </div>
-                    )}
+                    {(p.status === 'inactive' || p.status === 'excluded') &&
+                      (p.statusReasonCode || p.statusReasonNote) && (
+                        <div
+                          className={`mt-1 inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded ${
+                            p.status === 'excluded' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-800'
+                          }`}
+                        >
+                          <span>{p.statusChangedBy === 'auto' ? '🤖' : '👤'}</span>
+                          <span>
+                            {p.statusReasonCode === 'url_404' && 'URL nedostupné'}
+                            {p.statusReasonCode === 'out_of_stock' && 'Vyprodáno'}
+                            {p.statusReasonCode === 'duplicate' && 'Duplikát'}
+                            {p.statusReasonCode === 'low_quality' && 'Málo dat'}
+                            {p.statusReasonCode === 'wrong_category' && 'Špatná kategorie'}
+                            {p.statusReasonCode === 'price_anomaly' && 'Cenová anomálie'}
+                            {p.statusReasonCode === 'not_interesting' && 'Mimo fokus'}
+                            {p.statusReasonCode === 'custom' && (p.statusReasonNote ?? 'Vlastní')}
+                            {!p.statusReasonCode && p.statusReasonNote}
+                          </span>
+                          {p.statusReasonNote && p.statusReasonCode && p.statusReasonCode !== 'custom' && (
+                            <span className="opacity-70">· {p.statusReasonNote}</span>
+                          )}
+                        </div>
+                      )}
                   </td>
                   <td className="px-3 py-3 text-xs text-text2">{extractBrand(p.name)}</td>
                   <td className="px-3 py-3 text-xs text-text2 font-mono whitespace-nowrap">
@@ -212,7 +262,9 @@ export function ProductsBulkTable({ products, sort }: Props) {
                   </td>
                   <td className="px-3 py-3 text-xs text-text2">{typeLabel(p.type)}</td>
                   <td className="px-3 py-3 text-right">
-                    <span className="text-sm font-semibold text-amber-700 tabular-nums">{p.olivatorScore || '—'}</span>
+                    <span className="text-sm font-semibold text-amber-700 tabular-nums">
+                      {p.olivatorScore || '—'}
+                    </span>
                   </td>
                   <td className="px-3 py-3 text-right text-sm text-text tabular-nums whitespace-nowrap">
                     {p.acidity ? `${p.acidity}%` : '—'}
@@ -238,7 +290,7 @@ export function ProductsBulkTable({ products, sort }: Props) {
         </table>
       </div>
 
-      {/* Floating bulk action bar — sticky bottom, viditelný jen když 1+ vybráno */}
+      {/* Floating bulk action bar */}
       {selected.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-text text-white rounded-full pl-5 pr-2 py-2 shadow-lg flex items-center gap-3 max-w-[calc(100%-3rem)]">
           <div className="text-[13px] font-medium whitespace-nowrap">
@@ -271,7 +323,7 @@ export function ProductsBulkTable({ products, sort }: Props) {
           </button>
           <button
             type="button"
-            onClick={() => bulkSetStatus('excluded', 'Vyřadit (odpad)')}
+            onClick={() => bulkSetStatus('excluded', 'Vyřadit')}
             disabled={busy}
             className="text-[12px] bg-red-600 text-white rounded-full px-3 py-1.5 hover:bg-red-700 disabled:opacity-50 transition-colors whitespace-nowrap"
           >

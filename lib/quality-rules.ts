@@ -36,6 +36,8 @@ export interface ProductSnapshot {
   origin_country: string | null
   origin_region: string | null
   olivator_score: number | null
+  created_at: string
+  last_offer_seen_at: string | null
 }
 
 export interface RuleViolation {
@@ -315,10 +317,18 @@ const rules: QualityRule[] = [
     },
   },
 
-  // No offers — user can't buy
+  // No offers — user can't buy.
+  // Grace period 14 dní: nový produkt nebo produkt s nedávnou nabídkou
+  // (last_offer_seen_at < 14 dní) se nedeaktivuje. Chrání před false-positive
+  // deaktivací produktů jejichž scraper selhal při prvním průchodu.
   {
     ruleId: 'no_offers',
     check: async (p) => {
+      const GRACE_MS = 14 * 24 * 60 * 60 * 1000
+      const now = Date.now()
+      if (now - new Date(p.created_at).getTime() < GRACE_MS) return null
+      if (p.last_offer_seen_at && now - new Date(p.last_offer_seen_at).getTime() < GRACE_MS) return null
+
       const { count } = await supabaseAdmin
         .from('product_offers')
         .select('*', { count: 'exact', head: true })
@@ -357,7 +367,7 @@ export async function auditProduct(
 ): Promise<RuleViolation[]> {
   const { data: row, error } = await supabaseAdmin
     .from('products')
-    .select('id, name, slug, status, type, acidity, polyphenols, peroxide_value, certifications, description_short, description_long, raw_description, image_url, image_source, source_url, volume_ml, origin_country, origin_region, olivator_score')
+    .select('id, name, slug, status, type, acidity, polyphenols, peroxide_value, certifications, description_short, description_long, raw_description, image_url, image_source, source_url, volume_ml, origin_country, origin_region, olivator_score, created_at, last_offer_seen_at')
     .eq('id', productId)
     .maybeSingle()
   if (error || !row) return []
@@ -521,7 +531,7 @@ export async function attemptAutoFix(issueId: string): Promise<{ ok: boolean; me
 
   const { data: product } = await supabaseAdmin
     .from('products')
-    .select('id, name, slug, status, type, acidity, polyphenols, peroxide_value, certifications, description_short, description_long, raw_description, image_url, image_source, source_url, volume_ml, origin_country, origin_region, olivator_score')
+    .select('id, name, slug, status, type, acidity, polyphenols, peroxide_value, certifications, description_short, description_long, raw_description, image_url, image_source, source_url, volume_ml, origin_country, origin_region, olivator_score, created_at, last_offer_seen_at')
     .eq('id', issue.product_id)
     .maybeSingle()
   if (!product) return { ok: false, message: 'Product not found' }
