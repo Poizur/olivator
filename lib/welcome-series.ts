@@ -298,6 +298,131 @@ async function buildFallback(): Promise<{ deals: WelcomeDeal[]; topPickIndex: nu
   }
 }
 
+export interface SlevyDeal {
+  productId: string
+  slug: string
+  name: string
+  brandName: string | null
+  originCountry: string | null
+  imageUrl: string | null
+  score: number
+  currentPrice: number
+  oldPrice: number
+  dropPct: number
+  volumeMl: number | null
+  retailerSlug: string
+  retailerName: string
+  ctaUrl: string
+  rankScore: number
+}
+
+export interface SlevyPageData {
+  deals: SlevyDeal[]
+  stats: {
+    totalDeals: number
+    avgDropPct: number
+    retailerCount: number
+  }
+}
+
+export async function getSlevyDeals(limit = 20): Promise<SlevyPageData> {
+  const { data: offers } = await supabaseAdmin
+    .from('product_offers')
+    .select('product_id, price, retailer_id')
+    .eq('in_stock', true)
+
+  if (!offers || offers.length === 0) return { deals: [], stats: { totalDeals: 0, avgDropPct: 0, retailerCount: 0 } }
+
+  const productIds = Array.from(new Set(offers.map(o => o.product_id as string)))
+
+  const [productsResult, retailersResult, brandsResult, historyResult] = await Promise.all([
+    supabaseAdmin
+      .from('products')
+      .select('id, slug, name, name_short, olivator_score, brand_slug, image_url, volume_ml, origin_country')
+      .in('id', productIds)
+      .eq('status', 'active')
+      .gte('olivator_score', 70)
+      .not('olivator_score', 'is', null),
+    supabaseAdmin.from('retailers').select('id, slug, name'),
+    supabaseAdmin.from('brands').select('slug, name'),
+    supabaseAdmin
+      .from('price_history')
+      .select('product_id, price')
+      .in('product_id', productIds)
+      .gte('recorded_at', new Date(Date.now() - 30 * 86400_000).toISOString()),
+  ])
+
+  const productMap = new Map((productsResult.data ?? []).map(p => [p.id as string, p]))
+  const retailerMap = new Map((retailersResult.data ?? []).map(r => [r.id as string, { slug: r.slug as string, name: r.name as string }]))
+  const brandNameMap = new Map((brandsResult.data ?? []).map(b => [b.slug as string, b.name as string]))
+
+  const maxPriceByProduct = new Map<string, number>()
+  for (const h of historyResult.data ?? []) {
+    const pid = h.product_id as string
+    const price = h.price as number
+    const existing = maxPriceByProduct.get(pid)
+    if (!existing || price > existing) maxPriceByProduct.set(pid, price)
+  }
+
+  const cheapestByProduct = new Map<string, { price: number; retailerId: string }>()
+  for (const o of offers) {
+    const pid = o.product_id as string
+    if (!productMap.has(pid)) continue
+    const existing = cheapestByProduct.get(pid)
+    if (!existing || (o.price as number) < existing.price) {
+      cheapestByProduct.set(pid, { price: o.price as number, retailerId: o.retailer_id as string })
+    }
+  }
+
+  const deals: SlevyDeal[] = []
+  for (const [productId, offer] of cheapestByProduct.entries()) {
+    const product = productMap.get(productId)
+    if (!product) continue
+    const retailer = retailerMap.get(offer.retailerId)
+    if (!retailer) continue
+
+    const maxPrice = maxPriceByProduct.get(productId) ?? null
+    if (!maxPrice || maxPrice <= offer.price) continue
+    const dropPct = Math.round(((maxPrice - offer.price) / maxPrice) * 100)
+    if (dropPct < 15) continue
+
+    const brandSlug = product.brand_slug as string | null
+    const rawName = (product.name_short as string | null) ?? (product.name as string)
+    const score = product.olivator_score as number
+
+    deals.push({
+      productId,
+      slug: product.slug as string,
+      name: truncateName(rawName),
+      brandName: brandSlug ? (brandNameMap.get(brandSlug) ?? null) : null,
+      originCountry: product.origin_country as string | null,
+      imageUrl: product.image_url as string | null,
+      score,
+      currentPrice: Math.round(offer.price),
+      oldPrice: Math.round(maxPrice),
+      dropPct,
+      volumeMl: product.volume_ml as number | null,
+      retailerSlug: retailer.slug,
+      retailerName: retailer.name,
+      ctaUrl: buildAffiliateUrl(retailer.slug, product.slug as string),
+      rankScore: dropPct * 0.4 + score * 0.6,
+    })
+  }
+
+  deals.sort((a, b) => b.rankScore - a.rankScore)
+  const topDeals = deals.slice(0, limit)
+
+  const retailerCount = new Set(topDeals.map(d => d.retailerSlug)).size
+  const avgDropPct = topDeals.length > 0
+    ? Math.round(topDeals.reduce((s, d) => s + d.dropPct, 0) / topDeals.length)
+    : 0
+
+  return {
+    deals: topDeals,
+    stats: { totalDeals: deals.length, avgDropPct, retailerCount },
+  }
+}
+
 export async function enqueueWelcomeSeries(subscriberId: string): Promise<void> {
   const now = new Date()
   await supabaseAdmin.from('welcome_series_queue').insert([
