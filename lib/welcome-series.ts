@@ -1,7 +1,7 @@
 import { render } from '@react-email/render'
 import React from 'react'
 import { supabaseAdmin } from './supabase'
-import { sendTestEmail } from './newsletter-sender'
+import { sendTransactionalEmail } from './newsletter-sender'
 import { Welcome2MethodologyEmail } from '@/emails/welcome-2-methodology'
 import { Welcome3TopPicksEmail, type TopPickProduct } from '@/emails/welcome-3-top-picks'
 
@@ -109,7 +109,7 @@ export async function dispatchWelcomeQueue(): Promise<{ sent: number; failed: nu
         text = await render(React.createElement(Welcome3TopPicksEmail, { unsubscribeUrl: unsubUrl, products }), { plainText: true })
       }
 
-      const result = await sendTestEmail({ to: signup.email, subject, html, text })
+      const result = await sendTransactionalEmail({ to: signup.email, subject, html, text })
       if (!result.ok) throw new Error(result.error ?? 'send failed')
 
       await supabaseAdmin
