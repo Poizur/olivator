@@ -1,7 +1,7 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { getProducts, getProductBySlug, getOffersForProduct, getProductGallery, getProductCustomFAQs, getActiveGeneralFAQs, getVariantProducts, getProductEntityLinks, getRetailerPhotosLite } from '@/lib/data'
+import { getProducts, getProductBySlug, getProductByOldSlug, getOffersForProduct, getProductGallery, getProductCustomFAQs, getActiveGeneralFAQs, getVariantProducts, getProductEntityLinks, getRetailerPhotosLite } from '@/lib/data'
 import { extractBrandSlug, extractRegionSlug } from '@/lib/entity-extractor'
 import { countryName, countryFlag, typeLabel, certLabel, formatPrice, formatPricePer100ml, regionGenitive } from '@/lib/utils'
 import { productSchema, breadcrumbSchema, faqSchema } from '@/lib/schema'
@@ -95,7 +95,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const product = await getProductBySlug(slug)
-  if (!product) notFound()
+  if (!product) {
+    const newSlug = await getProductByOldSlug(slug)
+    if (newSlug) redirect(`/olej/${newSlug}`)
+    notFound()
+  }
 
   const brandSlug = extractBrandSlug(product.name)
   const regionSlug = extractRegionSlug(product.originCountry, product.originRegion)

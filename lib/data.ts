@@ -220,6 +220,15 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   return data ? mapProduct(data as unknown as ProductRow) : null
 }
 
+export async function getProductByOldSlug(oldSlug: string): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from('products')
+    .select('slug')
+    .contains('old_slugs', [oldSlug])
+    .maybeSingle()
+  return (data as { slug: string } | null)?.slug ?? null
+}
+
 export async function getProductsByIds(ids: string[]): Promise<Product[]> {
   if (ids.length === 0) return []
   const { data, error } = await supabaseAdmin
