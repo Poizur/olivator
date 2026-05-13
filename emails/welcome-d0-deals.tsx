@@ -314,10 +314,10 @@ export function WelcomeD0DealsEmail({
             <tr>
               <td style={{ padding: '4px 0' }}>
                 <Link
-                  href={`${SITE}/${isDealMode ? 'slevy' : 'zebricek/nejlepsi'}?${UTM}&utm_content=${isDealMode ? 'all_deals' : 'zebricek'}`}
+                  href={`${SITE}/slevy?${UTM}&utm_content=all_deals`}
                   className="text-[13px] text-olive font-medium"
                 >
-                  {isDealMode ? '→ Všechny aktuální slevy' : '→ Žebříček nejlepších olejů'}
+                  → Všechny aktuální slevy
                 </Link>
               </td>
             </tr>
@@ -346,14 +346,30 @@ export function WelcomeD0DealsEmail({
       </Section>
 
       {/* Podpis */}
-      <Section className="mt-4 mb-2">
-        <Text className="text-[14px] text-text m-0 leading-relaxed">
-          Olík
-          <br />
-          <span style={{ color: '#6e6e73', fontSize: '12px', fontStyle: 'italic' }}>
-            Hlavní degustátor Olivátoru
-          </span>
-        </Text>
+      <Section className="mt-6 mb-2">
+        <table cellPadding={0} cellSpacing={0} role="presentation">
+          <tbody>
+            <tr>
+              <td valign="middle">
+                <Img
+                  src={`${SITE}/olik.png`}
+                  alt="Olík — hlavní degustátor"
+                  width={48}
+                  height={48}
+                  style={{ width: '48px', height: '48px', borderRadius: '50%', display: 'block' }}
+                />
+              </td>
+              <td valign="middle" style={{ paddingLeft: '12px' }}>
+                <Text style={{ fontSize: '14px', fontWeight: '600', color: '#1c1917', margin: '0', lineHeight: '1.4' }}>
+                  Olík
+                </Text>
+                <Text style={{ fontSize: '13px', color: '#57534e', margin: '0', lineHeight: '1.4' }}>
+                  Hlavní degustátor Olivátoru
+                </Text>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </Section>
     </NewsletterLayout>
   )

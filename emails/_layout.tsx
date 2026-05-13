@@ -81,18 +81,46 @@ export function NewsletterLayout({
       >
         <Body className="bg-off font-sans m-0 p-0">
           <Container className="bg-white max-w-[600px] mx-auto my-6 rounded-2xl overflow-hidden shadow-sm">
-            {/* Header — logo + tagline */}
+            {/* Header — logo vlevo, Olík vpravo */}
             <Section className="px-8 pt-8 pb-2">
-              <Img
-                src={`${baseUrl}/logo-wordmark.png`}
-                alt="olivátor"
-                width={140}
-                height={36}
-                style={{ width: '140px', height: 'auto' }}
-              />
-              <Text className="text-text3 text-[12px] m-0 mt-1 leading-tight">
-                Největší srovnávač olivových olejů v ČR
-              </Text>
+              <table width="100%" cellPadding={0} cellSpacing={0} role="presentation" style={{ borderCollapse: 'collapse' }}>
+                <tbody>
+                  <tr>
+                    <td valign="top">
+                      <Img
+                        src={`${baseUrl}/logo-wordmark.png`}
+                        alt="olivátor"
+                        width={140}
+                        height={36}
+                        style={{ width: '140px', height: 'auto', display: 'block' }}
+                      />
+                      <Text className="text-text3 text-[12px] m-0 mt-1 leading-tight">
+                        Největší srovnávač olivových olejů v ČR
+                      </Text>
+                    </td>
+                    <td valign="top" align="right" style={{ whiteSpace: 'nowrap' }}>
+                      <table cellPadding={0} cellSpacing={0} role="presentation" style={{ marginLeft: 'auto' }}>
+                        <tbody>
+                          <tr>
+                            <td>
+                              <Img
+                                src={`${baseUrl}/olik.png`}
+                                alt="Olík — hlavní degustátor"
+                                width={32}
+                                height={32}
+                                style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'block' }}
+                              />
+                            </td>
+                            <td style={{ paddingLeft: '8px', fontSize: '12px', color: '#78716c', verticalAlign: 'middle' }}>
+                              S Olíkem
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </Section>
 
             {/* Body content (děti) */}
