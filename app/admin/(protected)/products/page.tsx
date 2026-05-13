@@ -7,6 +7,7 @@ import { BackfillDraftsButton } from './backfill-drafts-button'
 import { ProductsBulkTable } from './products-bulk-table'
 import { StatusFilters } from '@/components/admin/status-filters'
 import { BulkFillSpecsButton } from '@/components/admin/bulk-fill-specs-button'
+import { BrandFilter } from '@/components/admin/brand-filter'
 
 // Sentinel pro produkty bez brand_slug (zatím nezařazené do žádné značky)
 const NO_BRAND = '__none__'
@@ -149,47 +150,13 @@ export default async function AdminProductsPage({
       />
 
       {/* Brand filter row */}
-      <div className="mb-5">
-        <div className="text-[11px] font-semibold tracking-wider uppercase text-text3 mb-1.5">Výrobce</div>
-        <div className="flex gap-2 flex-wrap">
-          <Link
-            href={brandHref(undefined)}
-            className={`text-[13px] px-3 py-1.5 rounded-full transition-colors ${
-              !brand
-                ? 'bg-olive text-white'
-                : 'bg-white border border-off2 text-text2 hover:border-olive3 hover:text-olive'
-            }`}
-          >
-            Všichni
-          </Link>
-          {brands.map(([slug, count, label]) => (
-            <Link
-              key={slug}
-              href={brandHref(slug)}
-              className={`text-[13px] px-3 py-1.5 rounded-full transition-colors ${
-                brand === slug
-                  ? 'bg-olive text-white'
-                  : 'bg-white border border-off2 text-text2 hover:border-olive3 hover:text-olive'
-              }`}
-            >
-              {label} ({count})
-            </Link>
-          ))}
-          {noBrandCount > 0 && (
-            <Link
-              href={brandHref(NO_BRAND)}
-              className={`text-[13px] px-3 py-1.5 rounded-full transition-colors ${
-                brand === NO_BRAND
-                  ? 'bg-amber-500 text-white'
-                  : 'bg-amber-50 border border-amber-200 text-amber-700 hover:border-amber-400'
-              }`}
-              title="Produkty bez přiřazené značky — admin musí doplnit"
-            >
-              Bez výrobce ({noBrandCount})
-            </Link>
-          )}
-        </div>
-      </div>
+      <BrandFilter
+        brands={brands.map(([slug, count, label]) => ({ slug, count, label, href: brandHref(slug) }))}
+        noBrandCount={noBrandCount}
+        noBrandHref={brandHref(NO_BRAND)}
+        allHref={brandHref(undefined)}
+        currentBrand={brand}
+      />
 
       <ProductsBulkTable products={filtered} sort={sort} />
 
