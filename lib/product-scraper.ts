@@ -260,6 +260,14 @@ const POLYPHENOL_THRESHOLD_MARKERS = [
   'typicky', 'obvykl', 'běžn', 'standardn', 'kategori',
 ]
 
+// Words that signal the number belongs to a different product being compared,
+// not to the product being scraped. Checked in the 200 chars before the match.
+const COMPARATIVE_MARKERS = [
+  'např.', 'například', 'jako třeba', 'jako ', 'srovnání', 've srovnání s',
+  'vs.', ' vs ', 'versus', 'běžný', 'průměrný',
+  'jiné oleje', 'ostatní oleje', 'obsahuje přibližně',
+]
+
 export function extractPolyphenols(text: string | null): number | null {
   if (!text) return null
   // JS regex `\w` doesn't match unicode letters like ů/é — so `polyfenol\w*`
@@ -268,29 +276,51 @@ export function extractPolyphenols(text: string | null): number | null {
   // Czech word order — number BEFORE keyword: "2012 mg/kg polyfenolů", "600+ polyfenolů".
   // English/declined Czech — number AFTER keyword: "polyphenols: 250", "polyfenolů 623 mg/kg",
   // "polyfenolů dosahuje 646 mg/kg" (allow short verb between).
-  const m =
-    text.match(/(\d{2,5})\s*\+?\s*mg\s*\/\s*kg\s*polyfenol/i) ||
-    text.match(/(\d{2,5})\s*\+?\s*polyfenol/i) ||
-    text.match(/polyfenol[^\s\d:]*[:\s]*(\d{2,5})/i) ||
-    text.match(/polyphenol[^\s\d:]*[:\s]*(\d{2,5})/i) ||
-    // Fallback: keyword + a short verb/preposition + number followed by mg.
-    // Sentence boundary protected via [^.!?] — won't bleed across sentences.
-    text.match(/polyfenol[^.!?]{0,30}?(\d{2,5})\s*\+?\s*mg/i) ||
-    text.match(/polyphenol[^.!?]{0,30}?(\d{2,5})\s*\+?\s*mg/i)
-  if (!m) return null
+  //
+  // Loop: if a match is in comparative context (see COMPARATIVE_MARKERS), skip it
+  // and retry from after the match. Fixes "SITIA má 479mg/kg … EVOLIA je výš 2777".
+  let remaining = text
+  while (remaining.length > 0) {
+    // NUM = 2-5 digit number OR "2 777" / "1 200" style (space as thousands sep, incl. NBSP)
+    const NUM = '(\\d{1,2}[\\s\\u00A0]\\d{3}|\\d{2,5})'
+    const m =
+      remaining.match(new RegExp(`${NUM}\\s*\\+?\\s*mg\\s*\\/\\s*kg\\s*polyfenol`, 'i')) ||
+      remaining.match(new RegExp(`${NUM}\\s*\\+?\\s*polyfenol`, 'i')) ||
+      remaining.match(new RegExp(`polyfenol[^\\s\\d:]*[:\\s]*${NUM}`, 'i')) ||
+      remaining.match(new RegExp(`polyphenol[^\\s\\d:]*[:\\s]*${NUM}`, 'i')) ||
+      // Fallback: keyword + a short verb/preposition + number followed by mg.
+      // Sentence boundary protected via [^.!?] — won't bleed across sentences.
+      remaining.match(new RegExp(`polyfenol[^.!?]{0,30}?${NUM}\\s*\\+?\\s*mg`, 'i')) ||
+      remaining.match(new RegExp(`polyphenol[^.!?]{0,30}?${NUM}\\s*\\+?\\s*mg`, 'i'))
+    if (!m) return null
 
-  // Reject matches that contain threshold/reference language between keyword
-  // and number — e.g. "polyfenolů minimálně 250 mg/kg" is the EU norm value,
-  // not the product's actual polyphenol count.
-  const matchedSpan = m[0].toLowerCase()
-  if (POLYPHENOL_THRESHOLD_MARKERS.some((w) => matchedSpan.includes(w))) {
-    return null
+    const matchIdx = remaining.indexOf(m[0])
+    const before = remaining.slice(Math.max(0, matchIdx - 200), matchIdx).toLowerCase()
+
+    // Skip if comparative context detected before the match.
+    if (COMPARATIVE_MARKERS.some((w) => before.includes(w))) {
+      remaining = remaining.slice(matchIdx + m[0].length)
+      continue
+    }
+
+    // Reject matches that contain threshold/reference language between keyword
+    // and number — e.g. "polyfenolů minimálně 250 mg/kg" is the EU norm value,
+    // not the product's actual polyphenol count.
+    const matchedSpan = m[0].toLowerCase()
+    if (POLYPHENOL_THRESHOLD_MARKERS.some((w) => matchedSpan.includes(w))) {
+      remaining = remaining.slice(matchIdx + m[0].length)
+      continue
+    }
+
+    const n = parseInt(m[1].replace(/[\s ]/g, ''), 10)
+    // Sanity: realistic range 50–3000 mg/kg. Below 50 likely a different number.
+    if (n < 50 || n > 3000) {
+      remaining = remaining.slice(matchIdx + m[0].length)
+      continue
+    }
+    return n
   }
-
-  const n = parseInt(m[1], 10)
-  // Sanity: realistic range 50–3000 mg/kg. Below 50 likely a different number.
-  if (n < 50 || n > 3000) return null
-  return n
+  return null
 }
 
 /** Extract peroxide value — "peroxidové číslo: ≤ 20 mEq" / "peroxid 8,5 mEq/kg". */
