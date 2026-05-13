@@ -519,6 +519,113 @@ export async function getAllProductsAdmin(statusFilter?: string): Promise<Produc
   return (data as ProductRow[]).map(mapProduct)
 }
 
+export interface AdminProductsOptions {
+  page?: number
+  perPage?: number
+  search?: string
+  status?: string
+  brandSlug?: string
+  sort?: string    // 'recent' | 'name' | 'score' | 'acidity' | 'completeness'
+  order?: string   // 'asc' | 'desc'
+  type?: string
+  originCountry?: string
+  missing?: string[]   // ['ean','polyphenols','score','acidity','image']
+  hasOffers?: string   // 'yes' | 'no'
+  scoreMin?: number
+  scoreMax?: number
+}
+
+export type ProductAdmin = Product & { brandSlug: string | null }
+
+export async function getProductsAdmin(opts: AdminProductsOptions = {}): Promise<{
+  products: ProductAdmin[]
+  count: number
+}> {
+  const page = Math.max(1, opts.page ?? 1)
+  const perPage = Math.min(250, Math.max(10, opts.perPage ?? 50))
+  const search = opts.search?.trim()
+  const sort = opts.sort ?? 'recent'
+  const orderAsc = opts.order === 'asc'
+  const missing = opts.missing ?? []
+
+  // hasOffers: pre-fetch set of product_ids that have at least one offer
+  let offerProductIds: string[] | undefined
+  if (opts.hasOffers === 'yes' || opts.hasOffers === 'no') {
+    const { data } = await supabaseAdmin.from('product_offers').select('product_id')
+    offerProductIds = [...new Set((data ?? []).map((r) => r.product_id as string))]
+  }
+
+  // Brand-name search: find slugs whose name matches
+  let brandSlugsFromSearch: string[] = []
+  if (search && !/^\d{8,13}$/.test(search)) {
+    const { data } = await supabaseAdmin.from('brands').select('slug').ilike('name', `%${search}%`)
+    brandSlugsFromSearch = (data ?? []).map((b) => b.slug as string)
+  }
+
+  // Early-exit: hasOffers=yes but no products have offers
+  if (opts.hasOffers === 'yes' && offerProductIds?.length === 0) {
+    return { products: [], count: 0 }
+  }
+
+  let query = supabaseAdmin.from('products').select('*', { count: 'exact' })
+
+  // Text search — EAN exact match OR name ilike (+ brand name match)
+  if (search) {
+    if (/^\d{8,13}$/.test(search)) {
+      query = query.eq('ean', search)
+    } else if (brandSlugsFromSearch.length > 0) {
+      query = query.or(`name.ilike.%${search}%,brand_slug.in.(${brandSlugsFromSearch.join(',')})`)
+    } else {
+      query = query.ilike('name', `%${search}%`)
+    }
+  }
+
+  if (opts.status) query = query.eq('status', opts.status)
+  if (opts.brandSlug === '__none__') query = query.is('brand_slug', null)
+  else if (opts.brandSlug) query = query.eq('brand_slug', opts.brandSlug)
+  if (opts.type) query = query.eq('type', opts.type)
+  if (opts.originCountry) query = query.eq('origin_country', opts.originCountry)
+
+  if (missing.includes('ean')) query = query.is('ean', null)
+  if (missing.includes('polyphenols')) query = query.is('polyphenols', null)
+  if (missing.includes('score')) query = query.is('olivator_score', null)
+  if (missing.includes('acidity')) query = query.is('acidity', null)
+  if (missing.includes('image')) query = query.is('image_url', null)
+
+  if (opts.scoreMin !== undefined) query = query.gte('olivator_score', opts.scoreMin)
+  if (opts.scoreMax !== undefined) query = query.lte('olivator_score', opts.scoreMax)
+
+  if (offerProductIds !== undefined && offerProductIds.length > 0) {
+    if (opts.hasOffers === 'yes') query = query.in('id', offerProductIds)
+    else query = query.not('id', 'in', `(${offerProductIds.join(',')})`)
+  }
+
+  // Sort (completeness is computed — page.tsx handles client-side sort for that case)
+  if (sort === 'name') {
+    query = query.order('name', { ascending: orderAsc })
+  } else if (sort === 'score') {
+    query = query.order('olivator_score', { ascending: orderAsc, nullsFirst: false })
+  } else if (sort === 'acidity') {
+    query = query.order('acidity', { ascending: orderAsc, nullsFirst: false })
+  } else {
+    // 'recent' (default) and 'completeness' (client-side sort, use recent for DB)
+    query = query.order('created_at', { ascending: false })
+  }
+
+  const from = (page - 1) * perPage
+  query = query.range(from, from + perPage - 1)
+
+  const { data, error, count } = await query
+  if (error) throw error
+
+  const products = (data as unknown as (ProductRow & { brand_slug: string | null })[]).map((row) => ({
+    ...mapProduct(row),
+    brandSlug: row.brand_slug ?? null,
+  }))
+
+  return { products, count: count ?? 0 }
+}
+
 export interface ProductInput {
   ean: string | null
   name: string
