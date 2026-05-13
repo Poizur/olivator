@@ -32,6 +32,7 @@ export interface ProductSnapshot {
   image_url: string | null
   image_source: string | null
   source_url: string | null
+  name_short: string | null
   volume_ml: number | null
   origin_country: string | null
   origin_region: string | null
@@ -343,6 +344,23 @@ const rules: QualityRule[] = [
         severity: 'info',
         message: 'Bez source_url nelze automaticky rescrape ani Price Agent.',
       }
+    },
+  },
+  {
+    ruleId: 'name_short_too_generic',
+    check: async (p) => {
+      const ns = p.name_short
+      if (!ns) return null
+      const generic = /^(olivov[ýáé]|olej|extra|panenský|bio|organic)\s*$/i
+      if (generic.test(ns.trim())) {
+        return {
+          ruleId: 'name_short_too_generic',
+          severity: 'warning',
+          message: `name_short "${ns}" je příliš generické — v emailu/kartě nezapamatovatelné. Nastav cultivar, brand nebo specifický název.`,
+          details: { name_short: ns },
+        }
+      }
+      return null
     },
   },
 ]

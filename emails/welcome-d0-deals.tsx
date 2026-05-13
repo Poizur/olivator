@@ -74,146 +74,238 @@ export function WelcomeD0DealsEmail({
       </Section>
 
       {/* Deal cards */}
-      {deals.map((deal, i) => (
-        <Section
-          key={i}
-          className="my-3"
-          style={{ borderTop: '1px solid #e8e8ed', paddingTop: '12px' }}
-        >
-          <table
-            width="100%"
-            cellPadding={0}
-            cellSpacing={0}
-            role="presentation"
-            style={{ borderCollapse: 'collapse' }}
+      {deals.map((deal, i) => {
+        const per100ml = deal.volumeMl
+          ? Math.round((deal.currentPrice / deal.volumeMl) * 100)
+          : null
+
+        return (
+          <Section
+            key={i}
+            style={{
+              border: '1px solid #e7e5e4',
+              borderRadius: '8px',
+              padding: '16px',
+              marginBottom: '12px',
+            }}
           >
-            <tbody>
-              <tr>
-                {/* Foto */}
-                <td valign="top" style={{ width: '80px', paddingRight: '14px' }}>
-                  {deal.imageUrl ? (
-                    <Img
-                      src={deal.imageUrl}
-                      alt={deal.name}
-                      width={80}
-                      height={80}
-                      style={{
-                        width: '80px',
-                        height: '80px',
-                        objectFit: 'cover',
-                        borderRadius: '10px',
-                        display: 'block',
-                      }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: '80px',
-                        height: '80px',
-                        background: '#d8f3dc',
-                        borderRadius: '10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '28px',
-                        textAlign: 'center',
-                        lineHeight: '80px',
-                      }}
-                    >
-                      🫒
-                    </div>
-                  )}
-                </td>
+            <table
+              width="100%"
+              cellPadding={0}
+              cellSpacing={0}
+              role="presentation"
+              style={{ borderCollapse: 'collapse' }}
+            >
+              <tbody>
+                <tr>
+                  {/* Foto */}
+                  <td valign="top" style={{ width: '80px', paddingRight: '14px' }}>
+                    {deal.imageUrl ? (
+                      <Img
+                        src={deal.imageUrl}
+                        alt={deal.name}
+                        width={80}
+                        height={80}
+                        style={{
+                          width: '80px',
+                          height: '80px',
+                          objectFit: 'cover',
+                          borderRadius: '6px',
+                          display: 'block',
+                        }}
+                      />
+                    ) : (
+                      <table
+                        cellPadding={0}
+                        cellSpacing={0}
+                        role="presentation"
+                        style={{ width: '80px', height: '80px', background: '#d8f3dc', borderRadius: '6px' }}
+                      >
+                        <tbody>
+                          <tr>
+                            <td align="center" valign="middle" style={{ fontSize: '28px' }}>
+                              🫒
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    )}
+                  </td>
 
-                {/* Info */}
-                <td valign="top">
-                  {deal.brandName && (
+                  {/* Info */}
+                  <td valign="top">
+                    {/* Brand */}
+                    {deal.brandName && (
+                      <Text
+                        style={{
+                          fontSize: '10px',
+                          fontWeight: '700',
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase',
+                          color: '#78716c',
+                          margin: '0',
+                          lineHeight: '1.4',
+                        }}
+                      >
+                        {deal.brandName}
+                      </Text>
+                    )}
+
+                    {/* Name */}
                     <Text
-                      className="text-[11px] font-bold tracking-wider uppercase m-0 leading-tight"
-                      style={{ color: '#2d6a4f' }}
+                      style={{
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: '#1c1917',
+                        margin: '2px 0 0',
+                        lineHeight: '1.4',
+                      }}
                     >
-                      {deal.brandName}
+                      {deal.name}
                     </Text>
-                  )}
-                  <Text className="text-[14px] font-semibold text-text m-0 mt-0.5 leading-snug">
-                    {deal.name}
-                  </Text>
-                  {(deal.variantInfo || deal.volumeMl) && (
-                    <Text className="text-[11px] text-text3 m-0 mt-0.5">
-                      {[deal.variantInfo, deal.volumeMl ? `${deal.volumeMl} ml` : null]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </Text>
-                  )}
-                  <Text
-                    className="text-[11px] font-semibold m-0 mt-1"
-                    style={{ color: '#c4711a' }}
-                  >
-                    Score {deal.score}
-                  </Text>
 
-                  {/* Cena */}
-                  <table
-                    cellPadding={0}
-                    cellSpacing={0}
-                    role="presentation"
-                    style={{ marginTop: '6px' }}
-                  >
-                    <tbody>
-                      <tr>
-                        {deal.oldPrice && !deal.isFallback && (
-                          <td style={{ paddingRight: '8px' }}>
-                            <Text
-                              className="text-[11px] text-text3 m-0"
-                              style={{ textDecoration: 'line-through' }}
-                            >
-                              {deal.oldPrice} Kč
-                            </Text>
+                    {/* Variant + Volume */}
+                    {(deal.variantInfo || deal.volumeMl) && (
+                      <Text
+                        style={{
+                          fontSize: '12px',
+                          color: '#57534e',
+                          margin: '2px 0 0',
+                          lineHeight: '1.4',
+                        }}
+                      >
+                        {[deal.variantInfo, deal.volumeMl ? `${deal.volumeMl} ml` : null]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </Text>
+                    )}
+
+                    {/* Score badge */}
+                    <table
+                      cellPadding={0}
+                      cellSpacing={0}
+                      role="presentation"
+                      style={{ marginTop: '6px' }}
+                    >
+                      <tbody>
+                        <tr>
+                          <td
+                            style={{
+                              background: '#d8f3dc',
+                              borderRadius: '12px',
+                              padding: '2px 8px',
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              color: '#1b4332',
+                            }}
+                          >
+                            Score {deal.score}
                           </td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    {/* Cena */}
+                    <table
+                      cellPadding={0}
+                      cellSpacing={0}
+                      role="presentation"
+                      style={{ marginTop: '8px' }}
+                    >
+                      <tbody>
+                        {deal.oldPrice && !deal.isFallback && (
+                          <tr>
+                            <td style={{ paddingRight: '8px' }}>
+                              <Text
+                                style={{
+                                  fontSize: '11px',
+                                  color: '#a8a29e',
+                                  margin: '0',
+                                  textDecoration: 'line-through',
+                                  lineHeight: '1.3',
+                                }}
+                              >
+                                {deal.oldPrice} Kč
+                              </Text>
+                            </td>
+                            {deal.dropPct && (
+                              <td>
+                                <Text
+                                  style={{
+                                    fontSize: '10px',
+                                    fontWeight: '700',
+                                    color: '#fff',
+                                    background: '#c4711a',
+                                    padding: '1px 6px',
+                                    borderRadius: '10px',
+                                    margin: '0',
+                                    lineHeight: '1.5',
+                                  }}
+                                >
+                                  -{deal.dropPct}%
+                                </Text>
+                              </td>
+                            )}
+                          </tr>
                         )}
-                        <td style={{ paddingRight: '8px' }}>
-                          <Text className="text-[15px] font-bold text-text m-0">
-                            {deal.currentPrice} Kč
-                          </Text>
-                        </td>
-                        {deal.dropPct && !deal.isFallback && (
-                          <td>
+                        <tr>
+                          <td colSpan={2}>
                             <Text
-                              className="text-[11px] font-semibold m-0"
                               style={{
-                                color: '#fff',
-                                background: '#c4711a',
-                                padding: '2px 6px',
-                                borderRadius: '10px',
+                                fontSize: '18px',
+                                fontWeight: '700',
+                                color: '#1c1917',
+                                margin: '0',
+                                lineHeight: '1.3',
                               }}
                             >
-                              -{deal.dropPct}%
+                              {deal.currentPrice} Kč
                             </Text>
                           </td>
+                        </tr>
+                        {per100ml && (
+                          <tr>
+                            <td colSpan={2}>
+                              <Text
+                                style={{
+                                  fontSize: '11px',
+                                  color: '#a8a29e',
+                                  margin: '0',
+                                  lineHeight: '1.3',
+                                }}
+                              >
+                                {per100ml} Kč / 100 ml
+                              </Text>
+                            </td>
+                          </tr>
                         )}
-                      </tr>
-                    </tbody>
-                  </table>
+                      </tbody>
+                    </table>
 
-                  <Link
-                    href={`${deal.ctaUrl}?${UTM}&utm_content=deal_${i + 1}`}
-                    style={{
-                      display: 'inline-block',
-                      marginTop: '8px',
-                      color: '#2d6a4f',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                      textDecoration: 'none',
-                    }}
-                  >
-                    Koupit u {deal.retailerName} →
-                  </Link>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </Section>
-      ))}
+                    {/* CTA */}
+                    <Link
+                      href={`${deal.ctaUrl}?${UTM}&utm_content=deal_${i + 1}`}
+                      style={{
+                        display: 'inline-block',
+                        marginTop: '10px',
+                        background: '#2d6a4f',
+                        color: '#fff',
+                        padding: '6px 16px',
+                        borderRadius: '20px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      Koupit u {deal.retailerName} →
+                    </Link>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </Section>
+        )
+      })}
 
       {/* Olíkův výběr */}
       {topPick && (
