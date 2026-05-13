@@ -65,10 +65,17 @@ export function ProductGallery({
 
   if (!active) {
     return (
-      <div className="bg-white border border-off2 rounded-[var(--radius-card)] aspect-[4/5] flex items-center justify-center relative overflow-hidden">
+      <div className="bg-gradient-to-br from-[#e8f0dc] to-[#c8d9ae] rounded-[var(--radius-card)] aspect-[4/5] flex items-center justify-center relative overflow-hidden">
         {scoreBadge && (
           <div className="absolute top-4 right-4">{scoreBadge}</div>
         )}
+        <svg viewBox="0 0 24 24" fill="none" stroke="#5a7a3a" strokeWidth="1.2"
+          strokeLinecap="round" strokeLinejoin="round"
+          className="opacity-40 w-16 h-16" aria-hidden="true">
+          <path d="M9 3h6" />
+          <path d="M10 3v2.5c0 .5-.8 1.2-1.5 2C7.2 9 7 10 7 11v8a1 1 0 001 1h8a1 1 0 001-1v-8c0-1-.2-2-1.5-3.5C14.8 6.7 14 6 14 5.5V3" />
+          <line x1="7" y1="14" x2="17" y2="14" />
+        </svg>
       </div>
     )
   }
