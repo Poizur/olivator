@@ -26,6 +26,142 @@ const REGION_QUERIES: Record<string, string[]> = {
     'kerkyra corfu mediterranean',
     'corfu greece nature landscape',
   ],
+  // ── Added batch 2026-05-13 ─────────────────────────────────────────
+  alberobello: [
+    'alberobello trulli puglia italy',
+    'puglia countryside trullo stone',
+    'apulia olive trees hills italy',
+  ],
+  alentejo: [
+    'alentejo portugal landscape plains',
+    'alentejo portugal olive trees field',
+    'portugal countryside rolling hills',
+  ],
+  andalusie: [
+    'andalusia spain olive groves aerial',
+    'jaen spain olive trees landscape',
+    'andalucia spain countryside landscape',
+  ],
+  arcadia: [
+    'arcadia peloponnese greece mountains',
+    'greece mountains landscape countryside',
+    'peloponnese greece nature landscape',
+  ],
+  'castilla-la-mancha': [
+    'castilla la mancha spain landscape',
+    'toledo spain countryside plains',
+    'spain olive trees field summer',
+  ],
+  chalkidiki: [
+    'halkidiki greece peninsula sea',
+    'halkidiki greece nature landscape',
+    'greece peninsula coastline olive trees',
+  ],
+  douro: [
+    'douro valley portugal terraces landscape',
+    'douro portugal river valley vineyard',
+    'portugal valley landscape hills',
+  ],
+  festos: [
+    'phaistos crete greece ancient landscape',
+    'messara plain crete greece landscape',
+    'crete greece rural landscape south',
+  ],
+  istrie: [
+    'istria croatia olive groves landscape',
+    'istria croatia countryside rolling hills',
+    'croatia adriatic coast landscape',
+  ],
+  jaen: [
+    'jaen spain olive trees aerial view',
+    'jaen province spain landscape',
+    'spain southern olive groves fields',
+  ],
+  kalamata: [
+    'kalamata greece city port landscape',
+    'messenia greece olive trees',
+    'greece peloponnese southern landscape',
+  ],
+  'kastilie-la-mancha': [
+    'castilla la mancha spain windmills landscape',
+    'spain central plateau countryside',
+    'castile spain rural landscape',
+  ],
+  kolymbari: [
+    'chania crete greece landscape',
+    'western crete greece olive trees',
+    'crete greece countryside northwest',
+  ],
+  kolymvari: [
+    'chania crete greece peninsula',
+    'crete greece sea olive groves',
+    'western crete landscape mediterranean',
+  ],
+  korinthie: [
+    'corinthia greece landscape',
+    'corinth greece countryside',
+    'peloponnese greece northeast landscape',
+  ],
+  lakonia: [
+    'laconia sparta greece landscape mountains',
+    'lakonia greece olive trees countryside',
+    'sparta greece valley mountains landscape',
+  ],
+  lesbos: [
+    'lesbos greece island olive trees',
+    'mytilene lesbos greece landscape',
+    'lesbos island aegean sea greece',
+  ],
+  messara: [
+    'messara plain crete greece landscape',
+    'crete greece central valley agricultural',
+    'heraklion crete landscape rural',
+  ],
+  messinia: [
+    'messinia greece landscape countryside',
+    'kalamata messenia greece landscape',
+    'southwest peloponnese greece olive trees',
+  ],
+  molise: [
+    'molise italy countryside landscape',
+    'molise italy hills rural landscape',
+    'italy southern countryside molise',
+  ],
+  sicilie: [
+    'sicily italy countryside landscape hills',
+    'sicily island italy landscape aerial',
+    'sicilia italy olive groves landscape',
+  ],
+  sitia: [
+    'sitia crete eastern greece landscape',
+    'lasithi crete greece landscape',
+    'eastern crete greece countryside',
+  ],
+  skillountia: [
+    'elis peloponnese greece landscape',
+    'northwest peloponnese greece countryside',
+    'greece ancient landscape rural',
+  ],
+  'terra-alta': [
+    'terra alta tarragona spain landscape',
+    'tarragona catalonia spain countryside',
+    'catalonia spain rural landscape hills',
+  ],
+  toskansko: [
+    'tuscany italy cypress trees landscape',
+    'tuscany italy rolling hills olive groves',
+    'toscana italy countryside landscape',
+  ],
+  umbrie: [
+    'umbria italy countryside landscape',
+    'perugia umbria italy landscape',
+    'umbria italy hills olive groves',
+  ],
+  zakynthos: [
+    'zakynthos greece island landscape',
+    'zante zakynthos greece nature',
+    'zakynthos greece coastline landscape',
+  ],
 }
 
 const BRAND_QUERIES: Record<string, string> = {
@@ -56,6 +192,7 @@ const CULTIVAR_QUERIES: Record<string, string> = {
   'manzanilla-cacerena': 'extremadura spain olive grove landscape',
   cornicabra:            'castilla spain olive grove rolling',
   empeltre:              'aragon spain olive trees landscape',
+  'terra-alta':          'tarragona spain olive grove',
   athinoelia:            'attica greece olive trees',
   athinolia:             'greece olive trees hillside',
   chalkidiki:            'halkidiki greece peninsula landscape',
@@ -68,6 +205,7 @@ const CULTIVAR_QUERIES: Record<string, string> = {
   kalamon:               'peloponnese greece olive grove',
   biancollila:           'sicily italy olive grove landscape',
   cerasuola:             'sicily italy countryside landscape',
+  nocellara:             'trapani sicily italy countryside',
   'nocellara-del-belice': 'trapani sicily valley landscape',
   nociara:               'puglia italy olive grove',
   peranzana:             'foggia puglia italy olive grove',
@@ -78,6 +216,7 @@ const CULTIVAR_QUERIES: Record<string, string> = {
   cordovil:              'alentejo portugal landscape',
   galega:                'alentejo portugal olive grove',
   simone:                'italy countryside olive trees',
+  'le-agogie':           'southern italy olive grove',
 }
 
 interface InsertResult {

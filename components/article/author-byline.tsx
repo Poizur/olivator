@@ -29,8 +29,8 @@ export function AuthorByline({ publishedAt, updatedAt, readTime }: Props) {
         <Image
           src="/olik.png"
           alt="Olík"
-          width={36}
-          height={36}
+          width={48}
+          height={48}
           className="rounded-full"
         />
         <div>
