@@ -73,210 +73,198 @@ export function WelcomeD0DealsEmail({
         </Text>
       </Section>
 
-      {/* Deal cards — compact ~90px */}
+      {/* Deal cards — 3-column: foto | info | cena */}
       {deals.map((deal, i) => {
         const showVolume = deal.volumeMl !== null && deal.volumeMl <= 1000
         const per100ml = showVolume && deal.volumeMl
           ? Math.round((deal.currentPrice / deal.volumeMl) * 100)
           : null
-        const displayName = deal.brandName
-          ? `${deal.brandName} — ${deal.name}`
-          : deal.name
+        const variantParts = [
+          showVolume ? `${deal.volumeMl} ml` : null,
+          deal.variantInfo,
+        ].filter(Boolean)
+        const fmt = (n: number) =>
+          n >= 1000
+            ? `${Math.floor(n / 1000)} ${String(n % 1000).padStart(3, '0')}`
+            : String(n)
 
         return (
-          <Section
+          <table
             key={i}
+            width="100%"
+            cellPadding={0}
+            cellSpacing={0}
+            role="presentation"
             style={{
               border: '1px solid #e7e5e4',
               borderRadius: '8px',
-              marginBottom: '8px',
+              marginBottom: '12px',
             }}
           >
-            <table
-              width="100%"
-              cellPadding={0}
-              cellSpacing={0}
-              role="presentation"
-              style={{ borderCollapse: 'collapse' }}
-            >
-              <tbody>
-                <tr>
-                  {/* ── Foto 60×60 ── */}
-                  <td
-                    valign="middle"
-                    style={{ width: '60px', padding: '10px 0 10px 12px' }}
+            <tbody>
+              <tr>
+                <td style={{ padding: '16px' }}>
+                  <table
+                    width="100%"
+                    cellPadding={0}
+                    cellSpacing={0}
+                    role="presentation"
+                    style={{ borderCollapse: 'collapse' }}
                   >
-                    {deal.imageUrl ? (
-                      <Img
-                        src={deal.imageUrl}
-                        alt={deal.name}
-                        width={60}
-                        height={60}
-                        style={{
-                          width: '60px',
-                          height: '60px',
-                          objectFit: 'cover',
-                          borderRadius: '6px',
-                          display: 'block',
-                          background: '#f5f5f5',
-                        }}
-                      />
-                    ) : (
-                      <table
-                        cellPadding={0}
-                        cellSpacing={0}
-                        role="presentation"
-                        style={{ width: '60px', height: '60px', background: '#d8f3dc', borderRadius: '6px' }}
-                      >
-                        <tbody>
-                          <tr>
-                            <td align="center" valign="middle" style={{ fontSize: '22px' }}>🫒</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    )}
-                  </td>
+                    <tbody>
+                      <tr>
 
-                  {/* ── Obsah ── */}
-                  <td valign="middle" style={{ padding: '10px 12px' }}>
-
-                    {/* Řádek 1: Název + badges */}
-                    <table
-                      width="100%"
-                      cellPadding={0}
-                      cellSpacing={0}
-                      role="presentation"
-                      style={{ borderCollapse: 'collapse' }}
-                    >
-                      <tbody>
-                        <tr>
-                          <td>
-                            <Text
+                        {/* ── Sloupec 1: Foto 80×80 ── */}
+                        <td style={{ width: '96px', verticalAlign: 'top' }}>
+                          {deal.imageUrl ? (
+                            <Img
+                              src={deal.imageUrl}
+                              alt={deal.name}
+                              width={80}
+                              height={80}
                               style={{
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                color: '#1c1917',
-                                margin: '0',
-                                lineHeight: '1.4',
+                                width: '80px',
+                                height: '80px',
+                                objectFit: 'cover',
+                                borderRadius: '6px',
+                                display: 'block',
                               }}
+                            />
+                          ) : (
+                            <table
+                              cellPadding={0}
+                              cellSpacing={0}
+                              role="presentation"
+                              style={{ width: '80px', height: '80px', background: '#d8f3dc', borderRadius: '6px' }}
                             >
-                              {displayName}
-                            </Text>
-                          </td>
-                          <td valign="top" style={{ paddingLeft: '8px', whiteSpace: 'nowrap' }}>
-                            <table cellPadding={0} cellSpacing={0} role="presentation">
                               <tbody>
                                 <tr>
-                                  <td
-                                    style={{
-                                      background: '#d8f3dc',
-                                      borderRadius: '10px',
-                                      padding: '2px 7px',
-                                      fontSize: '10px',
-                                      fontWeight: '600',
-                                      color: '#1b4332',
-                                    }}
-                                  >
-                                    {deal.score}
-                                  </td>
-                                  {deal.dropPct && !deal.isFallback && (
-                                    <>
-                                      <td style={{ width: '4px' }} />
-                                      <td
-                                        style={{
-                                          background: '#c4711a',
-                                          borderRadius: '10px',
-                                          padding: '2px 7px',
-                                          fontSize: '10px',
-                                          fontWeight: '700',
-                                          color: '#fff',
-                                        }}
-                                      >
-                                        -{deal.dropPct}%
-                                      </td>
-                                    </>
-                                  )}
+                                  <td align="center" valign="middle" style={{ fontSize: '24px' }}>🫒</td>
                                 </tr>
                               </tbody>
                             </table>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+                          )}
+                        </td>
 
-                    {/* Řádek 2: Cena + muted + inline CTA */}
-                    <table
-                      cellPadding={0}
-                      cellSpacing={0}
-                      role="presentation"
-                      style={{ marginTop: '4px' }}
-                    >
-                      <tbody>
-                        <tr>
-                          <td valign="baseline" style={{ paddingRight: '6px' }}>
-                            <Text
-                              style={{
-                                fontSize: '15px',
-                                fontWeight: '700',
-                                color: '#1c1917',
-                                margin: '0',
-                                lineHeight: '1.2',
-                              }}
-                            >
-                              {deal.currentPrice} Kč
+                        {/* ── Sloupec 2: Info ── */}
+                        <td style={{ verticalAlign: 'top', paddingRight: '16px' }}>
+                          {deal.brandName && (
+                            <Text style={{
+                              fontSize: '11px',
+                              fontWeight: '500',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                              color: '#78716c',
+                              margin: '0 0 3px',
+                              lineHeight: '1.4',
+                            }}>
+                              {deal.brandName}
                             </Text>
-                          </td>
-                          {deal.oldPrice && !deal.isFallback && (
-                            <td valign="baseline" style={{ paddingRight: '6px' }}>
-                              <Text
-                                style={{
-                                  fontSize: '11px',
-                                  color: '#a8a29e',
-                                  textDecoration: 'line-through',
-                                  margin: '0',
-                                  lineHeight: '1.6',
-                                }}
-                              >
-                                {deal.oldPrice} Kč
-                              </Text>
-                            </td>
                           )}
-                          {per100ml && (
-                            <td valign="baseline" style={{ paddingRight: '10px' }}>
-                              <Text
-                                style={{
-                                  fontSize: '11px',
-                                  color: '#a8a29e',
-                                  margin: '0',
-                                  lineHeight: '1.6',
-                                }}
-                              >
-                                {per100ml} Kč/100 ml
-                              </Text>
-                            </td>
+                          <Text style={{
+                            fontSize: '16px',
+                            fontWeight: '600',
+                            color: '#1c1917',
+                            margin: '0 0 3px',
+                            lineHeight: '1.3',
+                          }}>
+                            {deal.name}
+                          </Text>
+                          {variantParts.length > 0 && (
+                            <Text style={{
+                              fontSize: '13px',
+                              color: '#57534e',
+                              margin: '0 0 8px',
+                              lineHeight: '1.4',
+                            }}>
+                              {variantParts.join(' · ')}
+                            </Text>
                           )}
-                          <td valign="baseline">
-                            <Link
-                              href={`${deal.ctaUrl}?${UTM}&utm_content=deal_${i + 1}`}
-                              style={{
-                                color: '#2d6a4f',
-                                fontSize: '12px',
-                                fontWeight: '600',
-                                textDecoration: 'none',
-                              }}
-                            >
-                              {deal.retailerName}&nbsp;→
-                            </Link>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+                          {/* Score + drop badges */}
+                          <table cellPadding={0} cellSpacing={0} role="presentation">
+                            <tbody>
+                              <tr>
+                                <td style={{
+                                  backgroundColor: '#d1fae5',
+                                  color: '#047857',
+                                  fontSize: '12px',
+                                  fontWeight: '600',
+                                  padding: '2px 8px',
+                                  borderRadius: '4px',
+                                }}>
+                                  Score {deal.score}
+                                </td>
+                                {deal.dropPct && !deal.isFallback && (
+                                  <>
+                                    <td style={{ width: '6px' }} />
+                                    <td style={{
+                                      backgroundColor: '#c4711a',
+                                      color: '#fff',
+                                      fontSize: '12px',
+                                      fontWeight: '700',
+                                      padding: '2px 8px',
+                                      borderRadius: '4px',
+                                    }}>
+                                      -{deal.dropPct}%
+                                    </td>
+                                  </>
+                                )}
+                              </tr>
+                            </tbody>
+                          </table>
+                        </td>
 
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </Section>
+                        {/* ── Sloupec 3: Cena + retailer ── */}
+                        <td style={{ verticalAlign: 'top', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          {deal.oldPrice && !deal.isFallback && (
+                            <Text style={{
+                              fontSize: '11px',
+                              color: '#a8a29e',
+                              textDecoration: 'line-through',
+                              margin: '0 0 1px',
+                              lineHeight: '1.3',
+                            }}>
+                              {fmt(deal.oldPrice)} Kč
+                            </Text>
+                          )}
+                          <Text style={{
+                            fontSize: '18px',
+                            fontWeight: '700',
+                            color: '#1c1917',
+                            margin: '0 0 2px',
+                            lineHeight: '1.2',
+                          }}>
+                            {fmt(deal.currentPrice)} Kč
+                          </Text>
+                          <Text style={{
+                            fontSize: '12px',
+                            color: '#78716c',
+                            margin: `0 0 ${per100ml ? '12px' : '22px'}`,
+                            lineHeight: '1.4',
+                          }}>
+                            {per100ml ? `${per100ml} Kč/100 ml` : ' '}
+                          </Text>
+                          <Link
+                            href={`${deal.ctaUrl}?${UTM}&utm_content=deal_${i + 1}`}
+                            style={{
+                              display: 'block',
+                              fontSize: '13px',
+                              fontWeight: '500',
+                              color: '#059669',
+                              textDecoration: 'none',
+                            }}
+                          >
+                            {deal.retailerName} →
+                          </Link>
+                        </td>
+
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         )
       })}
 
@@ -289,10 +277,7 @@ export function WelcomeD0DealsEmail({
           <Text className="text-[11px] font-bold tracking-widest uppercase text-olive m-0">
             🫒 Olíkův výběr
           </Text>
-          <Text className="text-[14px] font-semibold text-text m-0 mt-2 leading-snug">
-            {topPick.brandName ? `${topPick.brandName} — ` : ''}{topPick.name}
-          </Text>
-          <Text className="text-[13px] text-text2 m-0 mt-1 leading-relaxed">
+          <Text className="text-[14px] text-text m-0 mt-2 leading-relaxed">
             {topPickReason}
           </Text>
           <Link

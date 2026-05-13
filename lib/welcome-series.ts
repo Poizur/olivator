@@ -201,9 +201,10 @@ export async function getWelcomeDeals(): Promise<{
   }))
 
   const topPick = selected[0]
+  const tpRef = `${topPick.name}${topPick.brandName ? ` od ${topPick.brandName}` : ''}`
   const topPickReason = topPick.dropPct
-    ? `Score ${topPick.score} a teď ${topPick.dropPct} % pod měsíčním maximem — nejlepší kombinace kvality a ceny v katalogu právě teď.`
-    : `Score ${topPick.score} — jeden z nejlépe hodnocených olejů v celém katalogu. Aktuálně za ${topPick.currentPrice} Kč.`
+    ? `Z těchto tří bych šel po ${tpRef}. Score ${topPick.score} a aktuálně ${topPick.dropPct} % pod měsíčním maximem — dobrá kombinace.`
+    : `Z těchto tří bych šel po ${tpRef}. Score ${topPick.score} je top v katalogu, cena dobrá.`
 
   flagGenericNames(selected.map(c => ({ id: c.productId, name_short: c.brandSlug ? null : c.name }))).catch(() => null)
 
@@ -293,7 +294,7 @@ async function buildFallback(): Promise<{ deals: WelcomeDeal[]; topPickIndex: nu
     deals,
     topPickIndex: 0,
     topPickReason: top
-      ? `Score ${top.score} — jeden z nejlépe hodnocených olejů v katalogu. Aktuálně za ${top.currentPrice} Kč.`
+      ? `Z těchto tří bych šel po ${top.name}${top.brandName ? ` od ${top.brandName}` : ''}. Score ${top.score} je top v katalogu, cena dobrá.`
       : 'Nejlépe hodnocený olej v katalogu právě teď.',
     mode: 'tips',
   }
