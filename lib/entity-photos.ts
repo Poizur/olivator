@@ -192,7 +192,6 @@ const CULTIVAR_QUERIES: Record<string, string> = {
   'manzanilla-cacerena': 'extremadura spain olive grove landscape',
   cornicabra:            'castilla spain olive grove rolling',
   empeltre:              'aragon spain olive trees landscape',
-  'terra-alta':          'tarragona spain olive grove',
   athinoelia:            'attica greece olive trees',
   athinolia:             'greece olive trees hillside',
   chalkidiki:            'halkidiki greece peninsula landscape',
@@ -205,7 +204,6 @@ const CULTIVAR_QUERIES: Record<string, string> = {
   kalamon:               'peloponnese greece olive grove',
   biancollila:           'sicily italy olive grove landscape',
   cerasuola:             'sicily italy countryside landscape',
-  nocellara:             'trapani sicily italy countryside',
   'nocellara-del-belice': 'trapani sicily valley landscape',
   nociara:               'puglia italy olive grove',
   peranzana:             'foggia puglia italy olive grove',
@@ -216,7 +214,6 @@ const CULTIVAR_QUERIES: Record<string, string> = {
   cordovil:              'alentejo portugal landscape',
   galega:                'alentejo portugal olive grove',
   simone:                'italy countryside olive trees',
-  'le-agogie':           'southern italy olive grove',
 }
 
 interface InsertResult {
@@ -252,7 +249,15 @@ async function importPhotosForEntity(
   let skipped = 0
 
   for (let qi = 0; qi < queries.length && inserted < photoCount; qi++) {
-    const photos = await searchUnsplash(queries[qi], photoCount)
+    let photos: Awaited<ReturnType<typeof searchUnsplash>>
+    try {
+      photos = await searchUnsplash(queries[qi], photoCount)
+    } catch (e) {
+      const msg = (e as Error).message
+      // 403 = rate limit — nezabíjet celý běh, vrátit jako error pro tuto entitu
+      if (msg.includes('403')) return { slug, inserted, skipped, error: 'rate_limit' }
+      return { slug, inserted, skipped, error: msg.slice(0, 100) }
+    }
     for (const photo of photos) {
       if (inserted >= photoCount) break
       if (existingIds.has(photo.sourceId)) { skipped++; continue }
@@ -300,10 +305,13 @@ export async function importRegionPhotos(slugFilter?: string): Promise<EntityPho
   const results: InsertResult[] = []
   const slugs = slugFilter ? [slugFilter] : Object.keys(REGION_QUERIES)
 
-  for (const slug of slugs) {
+  for (let i = 0; i < slugs.length; i++) {
+    const slug = slugs[i]
+    if (i > 0) await new Promise(r => setTimeout(r, IMPORT_DELAY_MS))
     const queries = REGION_QUERIES[slug] ?? [`${slug} olive oil landscape`]
     const r = await importPhotosForEntity('region', slug, queries, 3)
     results.push(r)
+    if (r.error === 'rate_limit') break
   }
 
   return {
@@ -359,14 +367,20 @@ export async function importBrandPhotos(
   }
 }
 
+const IMPORT_DELAY_MS = 1500  // ~40 req/min = bezpečně pod 50/hod limitem
+
 export async function importCultivarPhotos(slugFilter?: string): Promise<EntityPhotosResult> {
   const results: InsertResult[] = []
   const slugs = slugFilter ? [slugFilter] : Object.keys(CULTIVAR_QUERIES)
 
-  for (const slug of slugs) {
+  for (let i = 0; i < slugs.length; i++) {
+    const slug = slugs[i]
+    if (i > 0) await new Promise(r => setTimeout(r, IMPORT_DELAY_MS))
     const query = CULTIVAR_QUERIES[slug] ?? 'olive cultivar harvest'
     const r = await importPhotosForEntity('cultivar', slug, [query], 1)
     results.push(r)
+    // Přeruš při rate limitu — neztrácet čas čekáním na zbylé
+    if (r.error === 'rate_limit') break
   }
 
   return {
