@@ -62,6 +62,17 @@ const CATEGORY_LABEL: Record<string, string> = {
   recept: 'Recept',
 }
 
+const TOPICS: { label: string; href: string; flag?: string }[] = [
+  { label: 'DOP certifikované oleje', href: '/srovnavac?certifikace=DOP' },
+  { label: 'Polyfenoly a zdraví', href: '/pruvodce/polyfenoly-kolik-je-dost' },
+  { label: 'Early harvest sezóna', href: '/pruvodce/sklizen-oliv-early-vs-late-harvest' },
+  { flag: '🇬🇷', label: 'Řecko — Kalamata, Sitia', href: '/srovnavac?origin=GR' },
+  { flag: '🇮🇹', label: 'Itálie — Apulie, Umbrie', href: '/srovnavac?origin=IT' },
+  { flag: '🇪🇸', label: 'Španělsko — Andalusie', href: '/srovnavac?origin=ES' },
+  { label: 'Cena vs. kvalita', href: '/pruvodce/premium-olivovy-olej-ma-smysl' },
+  { label: 'Olivator Score metodika', href: '/metodika' },
+]
+
 const STATS = [
   { value: '847', label: 'olejů ochutnaných' },
   { value: '12', label: 'olivových hájů' },
@@ -120,12 +131,11 @@ export default async function OlikAuthorPage() {
             Hlavní degustátor
           </div>
           <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-text mb-3">
-            🦊 Olík
+            Olík
           </h1>
           <p className="text-[15px] text-text2 leading-relaxed mb-4 max-w-[600px]">
             {author.bioShort}
           </p>
-          <div className="text-[13px] text-olive font-medium">olivator.cz</div>
         </div>
       </div>
 
@@ -165,20 +175,18 @@ export default async function OlikAuthorPage() {
           <h3 className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-3">
             Oblíbená témata
           </h3>
-          <ul className="space-y-2 text-[13px] text-text2">
-            {[
-              '🫒 DOP certifikované oleje',
-              '🔬 Polyfenoly a zdraví',
-              '🌿 Early harvest sezóna',
-              '🇬🇷 Řecko — Kalamata, Sitia',
-              '🇮🇹 Itálie — Apulie, Umbrie',
-              '🇪🇸 Španělsko — Andalusie',
-              '💰 Cena vs. kvalita',
-              '📊 Olivator Score metodika',
-            ].map((topic) => (
-              <li key={topic}>{topic}</li>
+          <nav className="space-y-1.5">
+            {TOPICS.map((topic) => (
+              <Link
+                key={topic.href}
+                href={topic.href}
+                className="flex items-center gap-2 text-[13px] text-text2 hover:text-olive py-0.5 transition-colors"
+              >
+                {topic.flag && <span>{topic.flag}</span>}
+                {topic.label}
+              </Link>
             ))}
-          </ul>
+          </nav>
         </div>
       </div>
 
@@ -195,7 +203,17 @@ export default async function OlikAuthorPage() {
                 href={`/${a.category === 'recept' ? 'recept' : 'pruvodce'}/${a.slug}`}
                 className="bg-white border border-off2 rounded-[var(--radius-card)] p-4 flex gap-3 hover:shadow-[0_4px_16px_rgba(0,0,0,.06)] hover:-translate-y-0.5 transition-all"
               >
-                <span className="text-2xl shrink-0">{a.emoji}</span>
+                <div className="shrink-0 w-14 h-14 rounded-md overflow-hidden bg-[#d8f3dc]">
+                  {a.heroImageUrl && (
+                    <Image
+                      src={a.heroImageUrl}
+                      alt={a.title}
+                      width={56}
+                      height={56}
+                      className="object-cover w-full h-full"
+                    />
+                  )}
+                </div>
                 <div className="min-w-0">
                   <div className="text-[10px] font-semibold tracking-widest uppercase text-olive mb-1">
                     {CATEGORY_LABEL[a.category] ?? 'Článek'}

@@ -35,7 +35,7 @@ export function AuthorByline({ publishedAt, updatedAt, readTime }: Props) {
         />
         <div>
           <div className="text-[13px] font-medium text-text group-hover:text-olive leading-tight">
-            🦊 Olík
+            Olík
           </div>
           <div className="text-[11px] text-text3 leading-tight">Hlavní degustátor</div>
         </div>

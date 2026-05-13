@@ -16,7 +16,7 @@ export function OlikAuthorBox() {
         </Link>
         <div className="min-w-0">
           <h4 className="text-[13px] font-semibold text-text mb-1.5">
-            🦊 Tenhle článek napsal Olík
+            Tenhle článek napsal Olík
           </h4>
           <p className="text-[13px] text-text2 leading-relaxed">
             Olík nesnáší dvě věci: marketingové bláboly a olej s kyselostí nad 0,5 %. Píše
