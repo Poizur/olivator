@@ -3,8 +3,8 @@ import { render } from '@react-email/render'
 import React from 'react'
 import { supabaseAdmin } from '@/lib/supabase'
 import { sendTransactionalEmail } from '@/lib/newsletter-sender'
-import { WelcomeEmail } from '@/emails/welcome'
-import { enqueueWelcomeSeries } from '@/lib/welcome-series'
+import { WelcomeD0DealsEmail } from '@/emails/welcome-d0-deals'
+import { enqueueWelcomeSeries, getWelcomeDeals } from '@/lib/welcome-series'
 import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
@@ -144,9 +144,16 @@ export async function POST(request: NextRequest) {
         .maybeSingle()
       const unsubToken = (sub?.unsubscribe_token as string | null) ?? ''
       const unsubUrl = `https://olivator.cz/api/newsletter/unsubscribe?token=${unsubToken}`
-      const html = await render(React.createElement(WelcomeEmail, { unsubscribeUrl: unsubUrl }))
-      const text = await render(React.createElement(WelcomeEmail, { unsubscribeUrl: unsubUrl }), { plainText: true })
-      await sendTransactionalEmail({ to: email, subject: 'Vítej v Olivatoru 🫒', html, text }).catch(() => null)
+      const { deals, topPickIndex, topPickReason } = await getWelcomeDeals().catch(() => ({ deals: [], topPickIndex: 0, topPickReason: '' }))
+      const d0Props = { unsubscribeUrl: unsubUrl, deals, topPickIndex, topPickReason }
+      const html = await render(React.createElement(WelcomeD0DealsEmail, d0Props))
+      const text = await render(React.createElement(WelcomeD0DealsEmail, d0Props), { plainText: true })
+      await sendTransactionalEmail({
+        to: email,
+        subject: 'Olíkův první pozdrav — a co se zrovna slevuje',
+        html,
+        text,
+      }).catch(() => null)
       if (sub?.id) {
         await enqueueWelcomeSeries(sub.id as string).catch(() => null)
       }
