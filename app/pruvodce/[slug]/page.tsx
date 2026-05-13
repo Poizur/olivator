@@ -238,8 +238,19 @@ export default async function ArticleDetailPage({
             readTime={article.readTime}
           />
 
-          <div className="bg-olive-bg/40 rounded-[var(--radius-card)] aspect-[16/9] flex items-center justify-center text-6xl md:text-7xl mb-8">
-            {article.emoji}
+          <div className="rounded-[var(--radius-card)] aspect-[16/9] overflow-hidden mb-8 relative bg-olive-bg/40">
+            {article.heroImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={article.heroImageUrl}
+                alt={article.title}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-6xl md:text-7xl">
+                {article.emoji}
+              </div>
+            )}
           </div>
 
           {resolvedBody ? (
