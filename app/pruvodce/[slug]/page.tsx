@@ -14,8 +14,9 @@ import { breadcrumbSchema } from '@/lib/schema'
 import { AuthorByline } from '@/components/article/author-byline'
 import { OlikAuthorBox } from '@/components/article/olik-author-box'
 
-// 60 → 3600 — viz pruvodce/page.tsx, stejný důvod.
-export const revalidate = 3600
+// force-dynamic: obsah článků se mění v DB — vždy fetchuj čerstvá data.
+// ISR by mohlo servírovat zastaralý obsah až 1 hodinu po DB editaci.
+export const dynamic = 'force-dynamic'
 
 export async function generateStaticParams() {
   // DB articles — primární zdroj (pre-build všech aktivních DB článků)
