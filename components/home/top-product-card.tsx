@@ -58,9 +58,11 @@ export function TopProductCard({
           <ScoreBadge score={product.olivatorScore} type={product.type} size="medium" />
         </span>
         <span
+          role="img"
           className="absolute bottom-1.5 left-1.5 z-10 text-[16px] leading-none bg-white/90 backdrop-blur-sm rounded px-1 py-0.5 shadow-sm"
           aria-label={countryName(product.originCountry)}
           title={countryName(product.originCountry)}
+          data-nosnippet
         >
           {countryFlag(product.originCountry)}
         </span>

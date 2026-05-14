@@ -53,7 +53,8 @@ export function TopByCountry({ products }: Props) {
             <div key={code}>
               <div className="flex items-baseline justify-between mb-5 flex-wrap gap-2">
                 <h3 className="text-[22px] font-[family-name:var(--font-display)] font-normal text-text">
-                  {countryFlag(code)} Nejlepší {countryAdjectivePlural(code)} oleje
+                  <span role="img" aria-label={countryName(code)} data-nosnippet>{countryFlag(code)}</span>{' '}
+                  Nejlepší {countryAdjectivePlural(code)} oleje
                   <span className="text-[15px] font-normal text-text3 ml-2 font-sans">({total})</span>
                 </h3>
                 <Link
