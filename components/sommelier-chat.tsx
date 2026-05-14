@@ -38,11 +38,29 @@ export function SommelierChat() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [hiddenByStickyBar, setHiddenByStickyBar] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Defense-in-depth: floating chat se na /admin nemá zobrazovat
   if (pathname.startsWith('/admin')) return null
+
+  // Na product pages: schovej Olíka když je sticky buy bar viditelný (scrollY > 600).
+  // StickyBuyBar se zobrazuje na lg: desktop only — stejný breakpoint.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    const isProductPage = pathname.startsWith('/olej/')
+    if (!isProductPage) {
+      setHiddenByStickyBar(false)
+      return
+    }
+    function onScroll() {
+      setHiddenByStickyBar(window.scrollY > 600)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [pathname])
 
   useEffect(() => {
     if (open && messages.length === 0) {
@@ -101,12 +119,14 @@ export function SommelierChat() {
 
   return (
     <>
-      {/* Floating button */}
+      {/* Floating button — skryt na product page když sticky buy bar překrývá */}
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label="Olík — průvodce výběrem oleje"
-        className="fixed bottom-6 right-6 z-[50] w-16 h-16 rounded-full bg-white text-olive shadow-lg hover:scale-105 transition-all flex items-center justify-center border-2 border-olive/20"
-        style={{ boxShadow: '0 4px 24px rgba(45,106,79,0.30)' }}
+        className={`fixed bottom-6 right-6 z-[50] w-16 h-16 rounded-full bg-white text-olive shadow-lg hover:scale-105 transition-all flex items-center justify-center border-2 border-olive/20 lg:transition-[opacity,transform] ${
+          hiddenByStickyBar ? 'lg:opacity-0 lg:pointer-events-none lg:scale-75' : 'opacity-100'
+        }`}
+        style={{ boxShadow: '0 4px 24px rgba(45,106,79,0.30)', transitionDuration: '200ms' }}
       >
         {open ? (
           <span className="text-xl leading-none text-olive font-bold">✕</span>
