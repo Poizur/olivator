@@ -97,7 +97,7 @@ export default async function EditRegionPage({ params }: { params: Promise<{ slu
       </div>
 
       <div className="space-y-6">
-        {/* BLOKY 1, 2, 3, 9 — uvnitř EntityEditForm (TL;DR / Editorial / Specific / SEO) */}
+        {/* BLOKY 1, 2, 3, 9 — uvnitř EntityEditForm (Stručně / Editorial / Specific / SEO) */}
         <EntityEditForm
           entity={{
             entityType: 'region',

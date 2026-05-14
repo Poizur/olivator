@@ -25,7 +25,7 @@ export interface EntityEditData {
   description_long: string | null
   meta_title: string | null
   meta_description: string | null
-  /** TL;DR pro info pásek + Trust blok — všechny typy */
+  /** Stručně pro info pásek + Trust blok — všechny typy */
   tldr?: string | null
   // brand-only
   story?: string | null
@@ -203,7 +203,7 @@ export function EntityEditForm({ entity, publicUrl, entityId }: Props) {
       const result = json.results?.[0]
       if (result?.ok) {
         setGenResult(
-          `✅ Vygenerováno ${result.chars} znaků${result.extras ? ' + extras (TL;DR/FAQ)' : ''}`
+          `✅ Vygenerováno ${result.chars} znaků${result.extras ? ' + extras (Shrnutí/FAQ)' : ''}`
         )
         // Auto-refresh — zruší "obnovte stránku" workflow
         router.refresh()
@@ -310,11 +310,11 @@ export function EntityEditForm({ entity, publicUrl, entityId }: Props) {
         </div>
       )}
 
-      {/* BLOK 1 — TL;DR (Trust row) */}
+      {/* BLOK 1 — Stručně (Trust row) */}
       <AdminBlock
         number={1}
         icon="✨"
-        title="Stručně (TL;DR)"
+        title="Stručně"
         publicLocation='Sekce „Pohled redakce" v Trust řádku'
         description="2-3 věty které dají uživateli rychlou odpověď bez čtení článku."
       >

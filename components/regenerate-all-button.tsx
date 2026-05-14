@@ -11,7 +11,7 @@ interface Props {
   entityType: 'regions' | 'brands' | 'cultivars' | 'all'
   estimatedCount?: number
   label?: string
-  /** Pokud true, zahrne extras (TL;DR, terroir, FAQ) — default true */
+  /** Pokud true, zahrne extras (Shrnutí, terroir, FAQ) — default true */
   includeExtras?: boolean
   /** Pokud true, nastaví status='active' (publish) — default true */
   setActive?: boolean

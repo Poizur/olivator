@@ -55,7 +55,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
   const entityType: string = body.entityType ?? 'all'   // 'regions' | 'brands' | 'cultivars' | 'all'
   const slug: string | null = body.slug ?? null          // konkrétní entita, nebo null = všechny
-  // Default: generuj i extras (TL;DR, terroir, FAQs) — chceme kompletní content
+  // Default: generuj i extras (Stručně, terroir, FAQs) — chceme kompletní content
   const includeExtras: boolean = body.includeExtras !== false
   // Default: po regeneraci nastav status='active' (publish)
   const setActive: boolean = body.setActive !== false
@@ -120,7 +120,7 @@ export async function POST(req: Request) {
           .update({ description_long: description, updated_at: new Date().toISOString() })
           .eq('slug', region.slug)
 
-        // Volitelně: generuj a auto-apply extras (TL;DR, terroir, FAQs)
+        // Volitelně: generuj a auto-apply extras (Stručně, terroir, FAQs)
         let extrasOk = false
         if (includeExtras) {
           try {
@@ -259,7 +259,7 @@ export async function POST(req: Request) {
           .update({ description_long: description, updated_at: new Date().toISOString() })
           .eq('slug', brand.slug)
 
-        // Extras (TL;DR + timeline + FAQs)
+        // Extras (Stručně + timeline + FAQs)
         let extrasOk = false
         if (includeExtras) {
           try {

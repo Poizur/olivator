@@ -31,7 +31,7 @@ ALTER TABLE brands
   ADD COLUMN IF NOT EXISTS tldr VARCHAR(280);
 
 -- ────────────────────────────────────────────────────────────────────────
--- REGIONS — terroir struktura, TL;DR pro info pásek
+-- REGIONS — terroir struktura, stručné shrnutí pro info pásek
 -- ────────────────────────────────────────────────────────────────────────
 ALTER TABLE regions
   ADD COLUMN IF NOT EXISTS terroir JSONB NOT NULL DEFAULT '{}'::jsonb,

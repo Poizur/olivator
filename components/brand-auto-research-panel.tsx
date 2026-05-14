@@ -423,7 +423,7 @@ function AutoReportView({
       {report.polished && (
         <div className="bg-white rounded-lg border border-olive-border p-3 space-y-2">
           <div className="text-[11px] font-medium text-olive-dark uppercase tracking-wider">Návrh draftu (CZ)</div>
-          <DraftPreviewRow label="TL;DR" value={report.polished.tldr} />
+          <DraftPreviewRow label="Stručně" value={report.polished.tldr} />
           <DraftPreviewRow label="Krátký popis" value={report.polished.descriptionShort} />
           <DraftPreviewRow label="Dlouhý popis" value={report.polished.descriptionLong} preview />
           <DraftPreviewRow label="Příběh" value={report.polished.story} preview />

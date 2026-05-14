@@ -1,4 +1,4 @@
-// Admin recipe edit page — bloky stejně jako u entit (TL;DR, ingredients,
+// Admin recipe edit page — bloky stejně jako u entit (Stručně, ingredients,
 // instructions, body, pairing, SEO).
 
 import { notFound } from 'next/navigation'

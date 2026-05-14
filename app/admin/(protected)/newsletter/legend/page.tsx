@@ -21,7 +21,7 @@ export default function NewsletterLegendPage() {
         </p>
       </div>
 
-      {/* TL;DR strip */}
+      {/* Stručně strip */}
       <div className="bg-olive-bg border-l-4 border-olive rounded-r-2xl p-5 mb-8">
         <div className="text-[10px] font-bold tracking-widest uppercase text-olive-dark mb-2">
           Stručně

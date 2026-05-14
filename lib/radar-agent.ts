@@ -131,7 +131,7 @@ const TRANSLATION_PROMPT = (source: string, title: string, description: string, 
   `Výstup POUZE validní JSON, žádné backticks:\n` +
   `{\n` +
   `  "czech_title": "Nadpis česky, max 80 znaků, konkrétní (čísla, místo, dopad)",\n` +
-  `  "czech_summary": "2-3 věty — TL;DR pro listing card",\n` +
+  `  "czech_summary": "2-3 věty — stručné shrnutí pro listing card",\n` +
   `  "czech_article": "Plnohodnotný článek 350-600 slov ve 4-6 odstavcích, oddělené \\n\\n. První odstavec = lead (kdo, co, kdy, kde). Další odstavce = kontext, čísla, citace, pozadí. Poslední odstavec = co to znamená pro českého spotřebitele/trh. Piš česky, plynule, novinářsky — ne jen překlad. Žádné marketingové fráze.",\n` +
   `  "cz_context": "1 věta — konkrétní dopad na české ceny/dostupnost",\n` +
   `  "badge": "harvest|price|award|science|quality|news",\n` +

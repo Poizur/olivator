@@ -304,7 +304,7 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
             filterField="cultivarLabel"
           />
 
-          {/* Blok 5 — Důvěra (TL;DR + metodika) */}
+          {/* Blok 5 — Důvěra (Stručně + metodika) */}
           <EntityTrustRow tldr={tldr} entityKind="oblast" />
 
           {/* Blok 6 — Editorial story (magazine-style: text + foto, alternující) */}
@@ -352,7 +352,7 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
             ]}
           />
 
-          {/* Blok 10 — FAQ (TL;DR už je v trust row, neduplikujeme) */}
+          {/* Blok 10 — FAQ (Stručně shrnutí je v trust row, neduplikujeme) */}
           <EntitySeoAccordion faqs={faqs} />
         </div>
       </div>

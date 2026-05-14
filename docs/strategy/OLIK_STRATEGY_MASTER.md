@@ -2,7 +2,7 @@
 # Source of truth pro Olíkovu strategii a content automation
 # Last updated: 13.05.2026
 ═════════════════════════════════════════════════
-## TL;DR
+## Shrnutí
 Olivator je největší srovnávač olivového oleje v ČR. Olík je 
 oficiální AI persona/autor obsahu — působí jako maskot a hlavní 
 degustátor (podobně jako Alza má svého maskota).

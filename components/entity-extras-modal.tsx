@@ -200,7 +200,7 @@ export function EntityExtrasModal({ entityType, slug, entityId, isOpen, onClose 
           {!extras && !loading && (
             <div className="text-center py-8">
               <p className="text-sm text-text2 mb-4">
-                Claude vygeneruje TL;DR, {entityType === 'region' ? 'terroir' : entityType === 'brand' ? 'časovou osu' : 'pairing + přezdívku'} a 4-6 FAQ.
+                Claude vygeneruje shrnutí, {entityType === 'region' ? 'terroir' : entityType === 'brand' ? 'časovou osu' : 'pairing + přezdívku'} a 4-6 FAQ.
                 <br />
                 Ty pak vybereš co použít a klikneš Aplikovat.
               </p>
@@ -227,10 +227,10 @@ export function EntityExtrasModal({ entityType, slug, entityId, isOpen, onClose 
 
           {extras && (
             <div className="space-y-5">
-              {/* TL;DR */}
+              {/* Stručně */}
               {extras.tldr && (
                 <Section
-                  title="TL;DR"
+                  title="Stručně"
                   selected={useTldr}
                   onToggle={() => setUseTldr(!useTldr)}
                 >

@@ -1,5 +1,5 @@
 // AI generátor "doplňkového" obsahu pro entity stránky.
-// Vrací strukturovaný JSON: TL;DR + (terroir | timeline | pairing) + FAQ.
+// Vrací strukturovaný JSON: Stručně + (terroir | timeline | pairing) + FAQ.
 // Admin vidí návrh v modalu, schvaluje per item.
 //
 // Liší se od entity-content-generator (ten generuje dlouhý markdown popis).

@@ -1,4 +1,4 @@
-// SEO blok — TL;DR info pásek + FAQ.
+// SEO blok — Stručně info pásek + FAQ.
 // Editorial sekce přesunuly do EntityEditorialStory (magazine-style s fotkami).
 // FAQ JSON-LD je v samostatné komponentě (entity-jsonld.tsx).
 

@@ -1,4 +1,4 @@
-// Blok 5: Důvěra — TL;DR + metodika + affiliate disclosure.
+// Blok 5: Důvěra — Stručně + metodika + affiliate disclosure.
 // Recenze byly z MVP vyhozeny — místo nich krátké redakční shrnutí.
 
 import Link from 'next/link'
@@ -14,7 +14,7 @@ export function EntityTrustRow({ tldr, entityKind }: Props) {
   return (
     <section className="px-6 md:px-10">
       <div className="max-w-[1280px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Levý: TL;DR / co o entitě tvrdíme */}
+        {/* Levý: Stručně / co o entitě tvrdíme */}
         <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-5">
           <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
             — Pohled redakce
