@@ -1,4 +1,4 @@
-// Sekce "Top oleje per země" — 3 nejlepší z každé hlavní originu.
+// Sekce "Top oleje per země" — 6 nejlepších z každé hlavní originu.
 // Používá TopProductCard — shodný vzhled s TOP 12 sekcí.
 
 import Link from 'next/link'
@@ -11,11 +11,11 @@ interface Props {
 }
 
 const COUNTRIES: Array<{ code: string; minProducts: number }> = [
-  { code: 'GR', minProducts: 3 },
-  { code: 'ES', minProducts: 3 },
-  { code: 'IT', minProducts: 3 },
-  { code: 'HR', minProducts: 3 },
-  { code: 'PT', minProducts: 3 },
+  { code: 'GR', minProducts: 6 },
+  { code: 'ES', minProducts: 6 },
+  { code: 'IT', minProducts: 6 },
+  { code: 'HR', minProducts: 4 },
+  { code: 'PT', minProducts: 4 },
 ]
 
 function countryAdjectivePlural(code: string): string {
@@ -32,9 +32,9 @@ export function TopByCountry({ products }: Props) {
     )
     if (byCountry.length < minProducts) return null
 
-    const top3 = diverseTopProducts(byCountry, 3, 1)
-    return { code, total: byCountry.length, top3 }
-  }).filter(Boolean) as Array<{ code: string; total: number; top3: ProductWithOffer[] }>
+    const top6 = diverseTopProducts(byCountry, 6, 2)
+    return { code, total: byCountry.length, top6 }
+  }).filter(Boolean) as Array<{ code: string; total: number; top6: ProductWithOffer[] }>
 
   if (sections.length === 0) return null
 
@@ -49,7 +49,7 @@ export function TopByCountry({ products }: Props) {
         </h2>
 
         <div className="space-y-12">
-          {sections.map(({ code, total, top3 }) => (
+          {sections.map(({ code, total, top6 }) => (
             <div key={code}>
               <div className="flex items-baseline justify-between mb-5 flex-wrap gap-2">
                 <h3 className="text-[22px] font-[family-name:var(--font-display)] font-normal text-text flex items-center gap-2 flex-wrap">
@@ -73,9 +73,8 @@ export function TopByCountry({ products }: Props) {
                 </Link>
               </div>
 
-              {/* Stejný grid jako TOP 12 — 2 col mobile → 3 tablet → 6 desktop */}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 md:gap-3">
-                {top3.map((p, i) => (
+                {top6.map((p, i) => (
                   <TopProductCard
                     key={p.id}
                     product={p}
