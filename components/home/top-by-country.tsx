@@ -2,7 +2,7 @@
 // Používá TopProductCard — shodný vzhled s TOP 12 sekcí.
 
 import Link from 'next/link'
-import { countryFlag, countryName } from '@/lib/utils'
+import { countryName } from '@/lib/utils'
 import { TopProductCard, type ProductWithOffer } from '@/components/home/top-product-card'
 import { diverseTopProducts } from '@/lib/product-selection'
 
@@ -52,10 +52,18 @@ export function TopByCountry({ products }: Props) {
           {sections.map(({ code, total, top3 }) => (
             <div key={code}>
               <div className="flex items-baseline justify-between mb-5 flex-wrap gap-2">
-                <h3 className="text-[22px] font-[family-name:var(--font-display)] font-normal text-text">
-                  <span role="img" aria-label={countryName(code)} data-nosnippet>{countryFlag(code)}</span>{' '}
+                <h3 className="text-[22px] font-[family-name:var(--font-display)] font-normal text-text flex items-center gap-2 flex-wrap">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`https://flagcdn.com/w20/${code.toLowerCase()}.png`}
+                    alt={countryName(code)}
+                    title={countryName(code)}
+                    width={20}
+                    height={15}
+                    className="inline-block rounded-sm shadow-sm shrink-0"
+                  />
                   Nejlepší {countryAdjectivePlural(code)} oleje
-                  <span className="text-[15px] font-normal text-text3 ml-2 font-sans">({total})</span>
+                  <span className="text-[15px] font-normal text-text3 font-sans">({total})</span>
                 </h3>
                 <Link
                   href={`/srovnavac?country=${code}`}

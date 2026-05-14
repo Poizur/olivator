@@ -2,7 +2,7 @@
 // Kompaktní portrait karta — shodný vzhled v obou sekcích.
 
 import Link from 'next/link'
-import { countryName, countryFlag, formatPrice, formatPricePer100ml } from '@/lib/utils'
+import { countryName, formatPrice, formatPricePer100ml } from '@/lib/utils'
 import { ScoreBadge } from '@/components/score-badge'
 import { ProductImage } from '@/components/product-image'
 import type { Product, ProductOffer } from '@/lib/types'
@@ -58,13 +58,19 @@ export function TopProductCard({
           <ScoreBadge score={product.olivatorScore} type={product.type} size="medium" />
         </span>
         <span
-          role="img"
-          className="absolute bottom-1.5 left-1.5 z-10 text-[16px] leading-none bg-white/90 backdrop-blur-sm rounded px-1 py-0.5 shadow-sm"
-          aria-label={countryName(product.originCountry)}
+          className="absolute bottom-1.5 left-1.5 z-10 leading-none bg-white/90 backdrop-blur-sm rounded px-1 py-0.5 shadow-sm flex items-center"
           title={countryName(product.originCountry)}
           data-nosnippet
+          aria-hidden="true"
         >
-          {countryFlag(product.originCountry)}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`https://flagcdn.com/w20/${(product.originCountry ?? '').toLowerCase()}.png`}
+            alt=""
+            width={16}
+            height={12}
+            className="rounded-[2px]"
+          />
         </span>
         <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
           <ProductImage
