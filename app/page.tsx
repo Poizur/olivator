@@ -216,6 +216,68 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* ─── 5L FEATURED BOX ────────────────────────────────────────── */}
+      {(() => {
+        const bulk5L = allProducts
+          .filter(p => p.volumeMl >= 4500 && p.volumeMl <= 5500 && p.cheapestOffer != null && p.olivatorScore != null)
+          .sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
+          .slice(0, 3)
+        if (bulk5L.length < 2) return null
+        const minPerLiter = Math.min(...bulk5L.map(p => Math.round(p.cheapestOffer!.price / (p.volumeMl / 1000))))
+        return (
+          <section className="px-6 md:px-10 py-12 border-t border-off2 bg-olive-dark">
+            <div className="max-w-[1280px] mx-auto">
+              <div className="flex items-end justify-between mb-6 flex-wrap gap-3">
+                <div>
+                  <div className="text-[10px] font-bold tracking-widest uppercase text-olive3 mb-1">
+                    — Velká balení
+                  </div>
+                  <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-[32px] font-normal text-white leading-tight">
+                    Olivový olej 5L — ušetřete až 44 %.
+                    <span className="text-[16px] font-normal text-white/50 ml-3">Od {minPerLiter} Kč/litr</span>
+                  </h2>
+                </div>
+                <Link
+                  href="/olivovy-olej-5l"
+                  className="text-[12px] text-olive3 border-b border-olive3/40 hover:text-white whitespace-nowrap"
+                >
+                  Všech {allProducts.filter(p => p.volumeMl >= 4500 && p.volumeMl <= 5500 && p.cheapestOffer != null).length} produktů →
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {bulk5L.map((p, i) => (
+                  <Link
+                    key={p.id}
+                    href={`/olej/${p.slug}`}
+                    className="flex items-center gap-3 bg-white/10 hover:bg-white/15 border border-white/10 rounded-[var(--radius-card)] p-3 transition-colors group"
+                  >
+                    <span className="text-[11px] font-bold text-white/40 w-4 shrink-0">#{i + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[11px] font-semibold text-white leading-tight mb-0.5 line-clamp-2">
+                        {p.nameShort}
+                      </div>
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="text-[13px] font-bold text-white tabular-nums">
+                          {p.cheapestOffer ? `${Math.round(p.cheapestOffer.price)} Kč` : ''}
+                        </span>
+                        <span className="text-[10px] text-white/50 tabular-nums">
+                          {p.cheapestOffer ? `${Math.round(p.cheapestOffer.price / (p.volumeMl / 1000))} Kč/l` : ''}
+                        </span>
+                      </div>
+                    </div>
+                    {p.olivatorScore != null && p.olivatorScore > 0 && (
+                      <span className="text-[11px] font-bold text-terra bg-terra-bg rounded px-1.5 py-0.5 shrink-0 tabular-nums">
+                        {p.olivatorScore}
+                      </span>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        )
+      })()}
+
       {/* ─── TOP PER ZEMĚ ───────────────────────────────────────────── */}
       <TopByCountry products={allProducts} />
 

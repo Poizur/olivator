@@ -1413,5 +1413,15 @@ export async function getBrandTiles(): Promise<BrandTile[]> {
     .sort((a, b) => b.productCount - a.productCount)
 }
 
+// ── 5L bulk products ──────────────────────────────────────────────────
+/** Aktivní produkty 4.5–5.5 L s nejlevnější nabídkou, seřazené dle Score. */
+export async function get5LProducts(limit = 51): Promise<Array<Product & { cheapestOffer: ProductOffer | null }>> {
+  const all = await getProductsWithOffers()
+  return all
+    .filter(p => p.volumeMl >= 4500 && p.volumeMl <= 5500 && p.cheapestOffer != null)
+    .sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
+    .slice(0, limit)
+}
+
 // ── Articles, Rankings — still from static data (no CMS yet) ──────────
 export { ARTICLES, RANKINGS, getArticles, getArticleBySlug, getRankings, getRankingBySlug } from './static-content'
