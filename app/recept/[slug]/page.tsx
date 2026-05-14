@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { getRecipeBySlug, type RecipeFull } from '@/lib/recipes-db'
 import { getArticleBySlug, getArticles } from '@/lib/static-content'
 import { getProductsWithOffers } from '@/lib/data'
+import { diverseTopProducts } from '@/lib/product-selection'
 import type { Product, ProductOffer } from '@/lib/types'
 import { formatPrice } from '@/lib/utils'
 
@@ -91,10 +92,8 @@ function pickPairedProducts(
         (b.product.olivatorScore ?? 0) - (a.product.olivatorScore ?? 0)
     )
 
-  if (scored.length > 0) return scored.slice(0, 3).map((x) => x.product)
-  return allProducts
-    .sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
-    .slice(0, 2)
+  if (scored.length > 0) return diverseTopProducts(scored.map((x) => x.product), 3, 2)
+  return diverseTopProducts(allProducts, 2, 1)
 }
 
 export default async function RecipeDetailPage({

@@ -43,6 +43,7 @@ interface ProductRow {
   extracted_facts: unknown
   source_url: string | null
   raw_description: string | null
+  brand_slug: string | null
 }
 
 function mapProduct(row: ProductRow): Product {
@@ -98,6 +99,7 @@ function mapProduct(row: ProductRow): Product {
     extractedFacts: Array.isArray(row.extracted_facts)
       ? (row.extracted_facts as Product['extractedFacts'])
       : [],
+    brandSlug: row.brand_slug ?? null,
   }
 }
 
@@ -145,7 +147,7 @@ const PRODUCT_PUBLIC_COLUMNS =
   'harvest_year, processing, flavor_profile, certifications, use_cases, ' +
   'volume_ml, packaging, olivator_score, score_breakdown, ' +
   'description_short, description_long, meta_title, meta_description, ' +
-  'status, image_url, image_source, source_url'
+  'status, image_url, image_source, source_url, brand_slug'
 
 // Subset pro listing karty (homepage, srovnavac, sidebar) — bez description_long
 // (zobrazuje se pouze na detail stránce). Ušetří ~10-20 KB / produkt × 71.
@@ -153,7 +155,7 @@ const PRODUCT_LISTING_COLUMNS =
   'id, ean, name, slug, name_short, origin_country, origin_region, type, ' +
   'acidity, polyphenols, oleocanthal, ' +
   'flavor_profile, certifications, use_cases, ' +
-  'volume_ml, olivator_score, image_url'
+  'volume_ml, olivator_score, image_url, brand_slug'
 
 // Retailer subset pro offers join — vyloučeno: story (long text), xml_feed_*
 const RETAILER_PUBLIC_COLUMNS =

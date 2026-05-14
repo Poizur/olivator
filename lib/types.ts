@@ -43,6 +43,7 @@ export interface Product {
   imageUrl?: string | null
   imageSource?: string | null
   extractedFacts?: ExtractedFact[]
+  brandSlug?: string | null
 }
 
 export interface FlavorProfile {

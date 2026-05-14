@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { ArticleBody } from '@/components/article-body'
 import { resolveTemplateVars } from '@/lib/template-vars'
 import { getProductsWithOffers } from '@/lib/data'
+import { diverseTopProducts } from '@/lib/product-selection'
 import { formatPrice } from '@/lib/utils'
 import { ProductImage } from '@/components/product-image'
 import { breadcrumbSchema } from '@/lib/schema'
@@ -129,10 +130,11 @@ export default async function ArticleDetailPage({
     getProductsWithOffers(),
     getActiveArticles(),
   ])
-  const topProducts = allProducts
-    .filter((p) => p.olivatorScore != null)
-    .sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
-    .slice(0, 5)
+  const topProducts = diverseTopProducts(
+    allProducts.filter((p) => p.olivatorScore != null),
+    5,
+    2,
+  )
 
   // Related články: DB-first, fallback static
   const otherArticles =

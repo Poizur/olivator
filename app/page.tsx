@@ -18,6 +18,7 @@ import { BrandStrip } from '@/components/brand-strip'
 import { ComparatorTeaser, type Duel } from '@/components/comparator-teaser'
 import { countryName, countryFlag, formatPrice, formatPricePer100ml } from '@/lib/utils'
 import { computeBadges, pickByCategory, type ProductBadge } from '@/lib/product-badges'
+import { diverseTopProducts } from '@/lib/product-selection'
 import { classifyIntensity, INTENSITY_LABELS, INTENSITY_DESCRIPTIONS, type Intensity } from '@/lib/intensity-classifier'
 import type { Product, ProductOffer } from '@/lib/types'
 import { ScoreBadge } from '@/components/score-badge'
@@ -41,23 +42,23 @@ export default async function Home() {
     getActiveRecipes(),
   ])
 
-  // Top 3 by Score for hero sidebar
-  const topPicks = [...allProducts]
-    .filter((p) => p.cheapestOffer != null && p.olivatorScore != null && p.olivatorScore >= 60)
-    .sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
-    .slice(0, 3)
+  // Top 3 by Score for hero sidebar — max 1 per brand (prevent Lozano ×3)
+  const topPicks = diverseTopProducts(
+    allProducts.filter((p) => p.cheapestOffer != null && p.olivatorScore != null && p.olivatorScore >= 60),
+    3,
+    1,
+  )
 
   // Lookup table for AI sommelier reply → product card
   const productLookup: Record<string, ProductWithOffer> = {}
   for (const p of allProducts) productLookup[p.slug] = p
 
-  // Top 12 olejů této chvíle (catalog teaser — 3×4 grid)
-  // Filter na produkty se score (vyřazujeme flavored/insufficient data — homepage
-  // featuruje jen oleje, kde má smysl Score srovnávat).
-  const topTwelve = [...allProducts]
-    .filter((p) => p.cheapestOffer != null && p.olivatorScore != null && p.olivatorScore > 0)
-    .sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
-    .slice(0, 12)
+  // Top 12 olejů této chvíle (catalog teaser — 3×4 grid) — max 2 per brand
+  const topTwelve = diverseTopProducts(
+    allProducts.filter((p) => p.cheapestOffer != null && p.olivatorScore != null && p.olivatorScore > 0),
+    12,
+    2,
+  )
 
   // Auto-vypočítané badges pro top 12 (Top Score / Nejvíc polyfenolů / …)
   const badgesByProduct = computeBadges(topTwelve)
