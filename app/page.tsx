@@ -22,6 +22,7 @@ import { diverseTopProducts } from '@/lib/product-selection'
 import { classifyIntensity, INTENSITY_LABELS, INTENSITY_DESCRIPTIONS, type Intensity } from '@/lib/intensity-classifier'
 import type { Product, ProductOffer } from '@/lib/types'
 import { ScoreBadge } from '@/components/score-badge'
+import { TopByCountry } from '@/components/home/top-by-country'
 
 export const revalidate = 3600
 
@@ -214,6 +215,9 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {/* ─── TOP PER ZEMĚ ───────────────────────────────────────────── */}
+      <TopByCountry products={allProducts} />
 
       {/* ─── 3 TIPY: VÝRAZNÝ / JEMNÝ / ZDRAVÝ ─────────────────────── */}
       <section className="px-6 md:px-10 py-16 bg-off/40 border-y border-off2">

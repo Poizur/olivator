@@ -101,6 +101,11 @@ export function countryName(code: string): string {
     HR: 'Chorvatsko',
     PT: 'Portugalsko',
     TR: 'Turecko',
+    TN: 'Tunisko',
+    MA: 'Maroko',
+    IL: 'Izrael',
+    EU: 'EU blend',
+    US: 'USA',
   }
   return names[code] || code
 }

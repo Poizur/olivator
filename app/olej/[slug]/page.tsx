@@ -18,6 +18,7 @@ import { PriceAlertButton } from '@/components/price-alert-button'
 import { ProductActions } from './product-actions'
 import { ScoreBadge } from '@/components/score-badge'
 import { StickyBuyBar } from '@/components/sticky-buy-bar'
+import { WhereToBuyPanel } from '@/components/product/where-to-buy-panel'
 
 export async function generateStaticParams() {
   // Prerender JEN top 30 produktů (podle score). Zbytek = ISR on-demand —
@@ -531,6 +532,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           />
         </div>
       </div>
+
+      {/* Multi-retailer panel — full šířka, jen pokud 2+ prodejců */}
+      <WhereToBuyPanel
+        offers={offers}
+        volumeMl={product.volumeMl ?? 0}
+        productSlug={product.slug}
+        productName={product.name}
+      />
 
       {/* Vývoj ceny — full šířka */}
       <div className="mb-10">
