@@ -148,7 +148,7 @@ Tento žebříček je živý dokument — sledujeme {{products.count}} olejů a 
   '🇬🇷',
   '6 min čtení',
   'srovnani',
-  '## TL;DR
+  '## Stručně:
 
 **Pro každodenní použití** doporučujeme řecký olej z Kréty s DOP — dobrý poměr cena/kvalita, jemná chuť, vysoká kyselostní disciplína.
 
