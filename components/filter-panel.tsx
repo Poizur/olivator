@@ -26,6 +26,11 @@ const ORIGIN_LABELS: Record<string, string> = {
   HR: '🇭🇷 Chorvatsko',
   PT: '🇵🇹 Portugalsko',
   TR: '🇹🇷 Turecko',
+  TN: '🇹🇳 Tunisko',
+  MA: '🇲🇦 Maroko',
+  IL: '🇮🇱 Izrael',
+  US: '🇺🇸 USA',
+  EU: '🇪🇺 EU blend',
 }
 
 const CERT_LABELS: Record<string, string> = {
