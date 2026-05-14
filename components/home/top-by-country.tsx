@@ -1,14 +1,10 @@
 // Sekce "Top oleje per země" — 3 nejlepší z každé hlavní originu.
-// Zobrazuje GR, ES, IT (+ HR a PT pokud mají dostatek produktů).
+// Používá TopProductCard — shodný vzhled s TOP 12 sekcí.
 
 import Link from 'next/link'
-import { countryFlag, countryName, formatPrice } from '@/lib/utils'
-import { ScoreBadge } from '@/components/score-badge'
-import { ProductImage } from '@/components/product-image'
+import { countryFlag, countryName } from '@/lib/utils'
+import { TopProductCard, type ProductWithOffer } from '@/components/home/top-product-card'
 import { diverseTopProducts } from '@/lib/product-selection'
-import type { Product, ProductOffer } from '@/lib/types'
-
-type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
 
 interface Props {
   products: ProductWithOffer[]
@@ -55,7 +51,6 @@ export function TopByCountry({ products }: Props) {
         <div className="space-y-12">
           {sections.map(({ code, total, top3 }) => (
             <div key={code}>
-              {/* Country header */}
               <div className="flex items-baseline justify-between mb-5 flex-wrap gap-2">
                 <h3 className="text-[22px] font-[family-name:var(--font-display)] font-normal text-text">
                   {countryFlag(code)} Nejlepší {countryAdjectivePlural(code)} oleje
@@ -69,50 +64,15 @@ export function TopByCountry({ products }: Props) {
                 </Link>
               </div>
 
-              {/* Top 3 cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {top3.map((p) => (
-                  <Link
+              {/* Stejný grid jako TOP 12 — 2 col mobile → 3 tablet → 6 desktop */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 md:gap-3">
+                {top3.map((p, i) => (
+                  <TopProductCard
                     key={p.id}
-                    href={`/olej/${p.slug}`}
-                    className="group bg-white border border-off2 rounded-[var(--radius-card)] p-4 hover:border-olive-border hover:shadow-sm transition-all flex flex-col"
-                  >
-                    {/* Image */}
-                    <div className="w-full aspect-square relative mb-3 rounded-lg overflow-hidden bg-off/60">
-                      <ProductImage
-                        product={{ imageUrl: p.imageUrl ?? null, name: p.name }}
-                        className="group-hover:scale-105 transition-transform duration-300"
-                      />
-                      {p.olivatorScore != null && (
-                        <div className="absolute top-2 right-2">
-                          <ScoreBadge score={p.olivatorScore} size="small" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex flex-col flex-1">
-                      <div className="text-[14px] font-medium text-text leading-snug mb-auto line-clamp-2">
-                        {p.nameShort ?? p.name}
-                      </div>
-
-                      {p.cheapestOffer && (
-                        <div className="mt-3 pt-3 border-t border-off flex items-center justify-between">
-                          <div>
-                            <div className="text-[16px] font-bold text-text">
-                              {formatPrice(p.cheapestOffer.price)}
-                            </div>
-                            <div className="text-[11px] text-text3">
-                              u {p.cheapestOffer.retailer.name}
-                            </div>
-                          </div>
-                          <div className="text-[12px] font-medium text-olive group-hover:underline">
-                            Detail →
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </Link>
+                    product={p}
+                    rank={i + 1}
+                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 200px"
+                  />
                 ))}
               </div>
             </div>
