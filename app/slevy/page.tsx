@@ -117,7 +117,6 @@ function DealCard({ deal, rank }: { deal: SlevyDeal; rank: number }) {
         <Link
           href={`${deal.ctaUrl}?${UTM}&utm_content=deal_${rank}`}
           className="flex items-center justify-between w-full bg-olive hover:bg-olive2 text-white text-[12px] font-semibold px-4 py-2.5 rounded-full transition-colors"
-          onClick={(e) => e.stopPropagation()}
         >
           <span>Koupit u {deal.retailerName}</span>
           <span>→</span>
