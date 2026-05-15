@@ -328,38 +328,46 @@ export interface SlevyPageData {
 }
 
 export async function getSlevyDeals(limit = 20): Promise<SlevyPageData> {
-  const { data: offers } = await supabaseAdmin
-    .from('product_offers')
-    .select('product_id, price, retailer_id')
-    .eq('in_stock', true)
-
-  if (!offers || offers.length === 0) return { deals: [], stats: { totalDeals: 0, avgDropPct: 0, retailerCount: 0 } }
-
-  const productIds = Array.from(new Set(offers.map(o => o.product_id as string)))
-
-  const [productsResult, retailersResult, brandsResult, historyResult] = await Promise.all([
+  // Fetch offers + qualifying products in parallel — avoid .in() with 400+ IDs (URL length limit)
+  const [offersResult, productsResult, retailersResult, brandsResult] = await Promise.all([
+    supabaseAdmin
+      .from('product_offers')
+      .select('product_id, price, retailer_id')
+      .eq('in_stock', true),
     supabaseAdmin
       .from('products')
       .select('id, slug, name, name_short, olivator_score, brand_slug, image_url, volume_ml, origin_country')
-      .in('id', productIds)
       .eq('status', 'active')
       .gte('olivator_score', 70)
       .not('olivator_score', 'is', null),
     supabaseAdmin.from('retailers').select('id, slug, name'),
     supabaseAdmin.from('brands').select('slug, name'),
-    supabaseAdmin
-      .from('price_history')
-      .select('product_id, price')
-      .in('product_id', productIds)
-      .gte('recorded_at', new Date(Date.now() - 30 * 86400_000).toISOString()),
   ])
 
-  const productMap = new Map((productsResult.data ?? []).map(p => [p.id as string, p]))
+  const offers = offersResult.data ?? []
+  if (offers.length === 0) return { deals: [], stats: { totalDeals: 0, avgDropPct: 0, retailerCount: 0 } }
+
+  // Intersect: only qualifying products that actually have offers
+  const offerProductIds = new Set(offers.map(o => o.product_id as string))
+  const qualifyingProducts = (productsResult.data ?? []).filter(p => offerProductIds.has(p.id as string))
+  const qualifyingIds = qualifyingProducts.map(p => p.id as string)
+
+  // History only for qualifying products (small set, safe URL length)
+  const historyData = qualifyingIds.length > 0
+    ? (await supabaseAdmin
+        .from('price_history')
+        .select('product_id, price')
+        .in('product_id', qualifyingIds)
+        .gte('recorded_at', new Date(Date.now() - 30 * 86400_000).toISOString())
+        .limit(5000)).data ?? []
+    : []
+
+  const productMap = new Map(qualifyingProducts.map(p => [p.id as string, p]))
   const retailerMap = new Map((retailersResult.data ?? []).map(r => [r.id as string, { slug: r.slug as string, name: r.name as string }]))
   const brandNameMap = new Map((brandsResult.data ?? []).map(b => [b.slug as string, b.name as string]))
 
   const maxPriceByProduct = new Map<string, number>()
-  for (const h of historyResult.data ?? []) {
+  for (const h of historyData) {
     const pid = h.product_id as string
     const price = h.price as number
     const existing = maxPriceByProduct.get(pid)

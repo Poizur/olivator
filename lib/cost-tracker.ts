@@ -13,7 +13,6 @@
 type Model =
   | 'claude-haiku-4-5-20251001'
   | 'claude-haiku-4-5'
-  | 'claude-sonnet-4-20250514'
   | 'claude-sonnet-4-6'
   | 'claude-opus-4-7'
 
@@ -26,8 +25,7 @@ const PRICING: Record<Model, PricePerMillion> = {
   // Haiku 4.5 — fast & cheap
   'claude-haiku-4-5':           { inputUsd: 1.00, outputUsd: 5.00 },
   'claude-haiku-4-5-20251001':  { inputUsd: 1.00, outputUsd: 5.00 },
-  // Sonnet 4 — balanced
-  'claude-sonnet-4-20250514':   { inputUsd: 3.00, outputUsd: 15.00 },
+  // Sonnet 4.6 — balanced
   'claude-sonnet-4-6':          { inputUsd: 3.00, outputUsd: 15.00 },
   // Opus 4 — premium
   'claude-opus-4-7':             { inputUsd: 15.00, outputUsd: 75.00 },

@@ -13,7 +13,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { callClaude, extractText } from '@/lib/anthropic'
 
 const DRY_RUN = process.argv.includes('--dry-run')
-const MODEL = 'claude-sonnet-4-20250514'
+const MODEL = 'claude-sonnet-4-6'
 
 interface BrandRow {
   slug: string
