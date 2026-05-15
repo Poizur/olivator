@@ -21,7 +21,7 @@ async function main() {
   killTimer.unref()
 
   try {
-    const result = await runRadarAgent({ hoursBack: 168, maxItems: 5 })
+    const result = await runRadarAgent({ hoursBack: 168, maxItems: 15 })
     clearTimeout(killTimer)
     const elapsedSec = Math.round((Date.now() - startedAt) / 1000)
     console.log(`[cron:radar] done in ${elapsedSec}s`, {

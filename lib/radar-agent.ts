@@ -36,6 +36,12 @@ const BREAKING_SIGNALS: ReadonlyArray<string> = [
   'extra virgin', 'evoo',
   'fraud', 'podvod', 'falšov',
   'study', 'výzkum', 'vyzkum', 'health',
+  'mediterranean', 'polyphenol', 'antioxidant',
+  'competition', 'festival', 'fair',
+  'quality', 'premium', 'organic', 'bio',
+  'import', 'export', 'market', 'trh',
+  'oleic', 'acidity', 'kyselost',
+  'spain', 'italy', 'greece', 'croatia', 'řecko', 'itálie', 'španělsko', 'chorvatsko',
 ]
 
 export interface RadarRunResult {
@@ -118,6 +124,7 @@ interface TranslationResult {
   czechArticle: string
   czContext: string
   badge: string
+  countryCode: string | null
   metaTitle: string
   metaDescription: string
   unsplashQuery: string
@@ -135,6 +142,7 @@ const TRANSLATION_PROMPT = (source: string, title: string, description: string, 
   `  "czech_article": "Plnohodnotný článek 350-600 slov ve 4-6 odstavcích, oddělené \\n\\n. První odstavec = lead (kdo, co, kdy, kde). Další odstavce = kontext, čísla, citace, pozadí. Poslední odstavec = co to znamená pro českého spotřebitele/trh. Piš česky, plynule, novinářsky — ne jen překlad. Žádné marketingové fráze.",\n` +
   `  "cz_context": "1 věta — konkrétní dopad na české ceny/dostupnost",\n` +
   `  "badge": "harvest|price|award|science|quality|news",\n` +
+  `  "country_code": "Primární země článku — ISO kód: GR|IT|ES|HR|PT|TN|TR|US|MA|IL — nebo 'XX' (více zemí/global) nebo null (nezjistitelné)",\n` +
   `  "meta_title": "SEO title, max 60 znaků, klíčové slovo na začátku",\n` +
   `  "meta_description": "SEO description, 140-160 znaků, vysvětlení + benefit pro čtenáře",\n` +
   `  "unsplash_query": "Topic-specific anglicky 3-5 slov pro hero foto — KONKRÉTNĚ k článku, ne 'olive oil'. Příklady: 'olive harvest greece tractor', 'mediterranean olive grove sunset', 'olive oil bottling factory'",\n` +
@@ -169,6 +177,7 @@ async function translateAndLocalize(item: RssItem, fullText: string | null): Pro
       czech_article: string
       cz_context: string
       badge: string
+      country_code: string | null
       meta_title: string
       meta_description: string
       unsplash_query: string
@@ -177,16 +186,19 @@ async function translateAndLocalize(item: RssItem, fullText: string | null): Pro
     if (data.is_relevant === false) {
       return {
         czechTitle: '', czechSummary: '', czechArticle: '', czContext: '',
-        badge: 'news', metaTitle: '', metaDescription: '', unsplashQuery: '',
+        badge: 'news', countryCode: null, metaTitle: '', metaDescription: '', unsplashQuery: '',
         isRelevant: false,
       }
     }
+    const VALID_COUNTRIES = new Set(['GR','IT','ES','HR','PT','TN','TR','US','MA','IL','XX'])
+    const rawCountry = (data.country_code ?? '').toUpperCase()
     return {
       czechTitle: (data.czech_title ?? item.title).slice(0, 200),
       czechSummary: data.czech_summary ?? '',
       czechArticle: data.czech_article ?? '',
       czContext: data.cz_context ?? '',
       badge: data.badge ?? 'news',
+      countryCode: VALID_COUNTRIES.has(rawCountry) ? rawCountry : null,
       metaTitle: (data.meta_title ?? data.czech_title ?? '').slice(0, 70),
       metaDescription: (data.meta_description ?? data.czech_summary ?? '').slice(0, 200),
       unsplashQuery: data.unsplash_query ?? 'olive oil mediterranean',
@@ -265,11 +277,20 @@ export async function runRadarAgent(opts: { hoursBack?: number; maxItems?: numbe
   const items = await fetchAllOliveFeeds(hoursBack)
   result.itemsTotal = items.length
 
-  // Filter na breaking signals
+  // Filter na breaking signals — log per-feed pro diagnostiku
+  const byFeed = new Map<string, { total: number; passed: number }>()
   const signaled = items.filter((it) => {
+    const entry = byFeed.get(it.source) ?? { total: 0, passed: 0 }
+    entry.total++
     const text = (it.title + ' ' + it.description).toLowerCase()
-    return BREAKING_SIGNALS.some((sig) => text.includes(sig))
+    const pass = BREAKING_SIGNALS.some((sig) => text.includes(sig))
+    if (pass) entry.passed++
+    byFeed.set(it.source, entry)
+    return pass
   })
+  for (const [src, { total, passed }] of byFeed) {
+    console.log(`[radar] signal filter: ${src} ${passed}/${total}`)
+  }
   result.itemsAfterSignal = signaled.length
 
   // URL / title exact dedup
@@ -352,6 +373,7 @@ export async function runRadarAgent(opts: { hoursBack?: number; maxItems?: numbe
           czech_article: translation.czechArticle,
           cz_context: translation.czContext,
           badge,
+          country_code: translation.countryCode,
           meta_title: translation.metaTitle,
           meta_description: translation.metaDescription,
           image_url: hero?.url ?? null,

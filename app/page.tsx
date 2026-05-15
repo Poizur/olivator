@@ -23,6 +23,7 @@ import { classifyIntensity, INTENSITY_LABELS, INTENSITY_DESCRIPTIONS, type Inten
 import type { Product, ProductOffer } from '@/lib/types'
 import { ScoreBadge } from '@/components/score-badge'
 import { TopByCountry } from '@/components/home/top-by-country'
+import { RadarWidget } from '@/components/home/radar-widget'
 
 export const revalidate = 3600
 
@@ -617,6 +618,9 @@ export default async function Home() {
           </div>
         </section>
       )}
+
+      {/* ─── NOVINKY ZE SVĚTA ───────────────────────────────────── */}
+      <RadarWidget />
 
       {/* ─── PROČ OLIVÁTOR ─ final value prop ──────────────────── */}
       <section className="bg-olive-dark text-white py-16 px-6 md:px-10">
