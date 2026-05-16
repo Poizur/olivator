@@ -225,7 +225,8 @@ export function extractPeroxideValue(item: HeurekaItem): number | null {
   const match = raw.match(/(\d+(?:[,.]\d+)?)/)
   if (!match) return null
   const n = parseFloat(match[1].replace(',', '.'))
-  return Number.isFinite(n) && n > 0 && n < 50 ? n : null
+  // Hodnoty ≥ 20 jsou artefakt scraping EU limitu ("≤ 20 mEq/kg") → ignorovat
+  return Number.isFinite(n) && n > 0 && n < 20 ? n : null
 }
 
 export function detectPackaging(item: HeurekaItem): string | null {

@@ -323,12 +323,14 @@ export function extractPolyphenols(text: string | null): number | null {
   return null
 }
 
-/** Extract peroxide value — "peroxidové číslo: ≤ 20 mEq" / "peroxid 8,5 mEq/kg". */
+/** Extract peroxide value — "peroxidové číslo: ≤ 20 mEq" / "peroxid 8,5 mEq/kg".
+ *  Hodnoty ≥ 20 jsou artefakt scraping EU limitu ("≤ 20 mEq/kg") — ignorujeme je. */
 function extractPeroxide(text: string | null): number | null {
   if (!text) return null
   const m = text.match(/peroxid(?:ov[ée]? číslo)?[:\s]*(?:≤|<=?|max)?\s*(\d+[.,]?\d*)\s*m?Eq/i)
   if (!m) return null
-  return parseFloat(m[1].replace(',', '.'))
+  const n = parseFloat(m[1].replace(',', '.'))
+  return Number.isFinite(n) && n > 0 && n < 20 ? n : null
 }
 
 /** Parse a number from a string that may contain prefixes (≤, <, max), suffix

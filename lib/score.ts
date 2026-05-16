@@ -56,13 +56,26 @@ function calcAcidity(acidity: number): number {
   return Math.max(0, Math.round(14 - ((acidity - 0.8) / 0.7) * 14))
 }
 
+// Certifikace olivového oleje — jen tyto počítají jako scoring signal.
+// ISO 22000, FSSC 22000, ISO 9001 atd. jsou food-safety management certs,
+// ne quality signals pro olivový olej → nepatří sem.
+// pdo = PDO (Protected Designation of Origin, EU angličtina = DOP)
+// pgi/igp = Protected Geographical Indication (EU/IT angličtina = PGP)
+const SCORING_CERTS = new Set([
+  'dop', 'pdo',           // Protected Designation of Origin
+  'pgp', 'pgi', 'igp',   // Protected Geographical Indication
+  'bio', 'organic',       // Organic certifications
+  'nyiooc',               // New York International Olive Oil Competition
+  'demeter',              // Biodynamic
+])
+
 /** 25 points max. DOP + BIO is the gold standard. */
 function calcCertifications(certs: string[]): number {
-  const has = (c: string) => certs.includes(c)
+  const has = (c: string) => certs.map(x => x.toLowerCase()).includes(c)
 
-  const hasDOP = has('dop')
+  const hasDOP = has('dop') || has('pdo')
   const hasBIO = has('bio') || has('organic')
-  const hasPGP = has('pgp')
+  const hasPGP = has('pgp') || has('pgi') || has('igp')
   const hasNYIOOC = has('nyiooc')
   const hasDemeter = has('demeter')
 
@@ -142,13 +155,21 @@ export function calculateScore(input: ScoreInput): ScoreResult {
   }
 
   const hasAcid = input.acidity != null && !isNaN(input.acidity)
-  const hasCert = input.certifications != null && input.certifications.length > 0
+  // Fix A: pouze scoring-relevantní certifikace (DOP/BIO/PGP/NYIOOC/Demeter).
+  // ISO 22000, FSSC, ISO 9001 — food-safety management, ne quality signal pro olej —
+  // se nesprávně počítaly jako hasCert=true a nafukovaly jmenovatel normalizace.
+  const hasCert = input.certifications?.some(c => SCORING_CERTS.has(c.toLowerCase())) ?? false
   const hasPoly = input.polyphenols != null && !isNaN(input.polyphenols)
   const hasPrice = input.pricePer100ml != null && !isNaN(input.pricePer100ml)
 
   const acidityPts = hasAcid ? calcAcidity(input.acidity!) : 0
   const certPts = hasCert ? calcCertifications(input.certifications!) : 0
-  const qualityPts = hasPoly ? calcQuality(input.polyphenols!, input.peroxideValue) : 0
+  // Fix B: peroxid přesně 20.0 je scraper artefakt — EU EVOO limit je "≤ 20 mEq/kg",
+  // což scrapy parsují jako hodnotu 20.0. Reálné kvalitní oleje mají 3–8.
+  const peroxideSafe = input.peroxideValue != null && input.peroxideValue < 20
+    ? input.peroxideValue
+    : null
+  const qualityPts = hasPoly ? calcQuality(input.polyphenols!, peroxideSafe) : 0
   const valuePts = hasPrice ? calcValue(input.pricePer100ml!) : 0
 
   const availableWeight =
