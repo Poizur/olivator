@@ -5,7 +5,7 @@ import { NewsletterSignup } from '@/components/newsletter-signup'
 import { getSlevyDeals, type SlevyDeal } from '@/lib/welcome-series'
 import { countryFlag } from '@/lib/utils'
 
-export const revalidate = 3600
+export const revalidate = 600
 
 export const metadata: Metadata = {
   title: 'Olivový olej v akci — denně aktualizované slevy | Olivátor',
@@ -245,16 +245,40 @@ export default async function SlevyPage() {
                       {group.deals.length} {group.deals.length === 1 ? 'sleva' : group.deals.length <= 4 ? 'slevy' : 'slev'}
                     </span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-3">
                     {group.deals.map(d => (
                       <Link
                         key={d.productId}
                         href={`/olej/${d.slug}`}
-                        className="flex items-center gap-2 bg-white border border-off2 hover:border-olive-light rounded-full px-3 py-1.5 text-[12px] text-text transition-colors"
+                        className="flex flex-col bg-white border border-off2 hover:border-olive-light hover:shadow-[0_2px_8px_rgba(0,0,0,.06)] rounded-xl overflow-hidden transition-all w-[118px] shrink-0"
                       >
-                        <span className="font-medium">{d.name}</span>
-                        <span className="text-terra font-bold">-{d.dropPct}&nbsp;%</span>
-                        <span className="text-text2">{d.currentPrice}&nbsp;Kč</span>
+                        {/* Thumbnail */}
+                        <div className="relative w-full h-[88px] bg-off">
+                          {d.imageUrl ? (
+                            <Image
+                              src={d.imageUrl}
+                              alt={d.name}
+                              fill
+                              sizes="118px"
+                              className="object-contain p-2"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center text-3xl">🫒</div>
+                          )}
+                          <span className="absolute top-1.5 right-1.5 text-[9px] font-bold bg-terra text-white px-1.5 py-0.5 rounded-full leading-tight">
+                            -{d.dropPct}&nbsp;%
+                          </span>
+                        </div>
+                        {/* Info */}
+                        <div className="p-2">
+                          <p className="text-[11px] font-semibold text-text leading-snug line-clamp-2 min-h-[30px]">
+                            {d.name}
+                          </p>
+                          <p className="text-[13px] font-bold text-text mt-1">{d.currentPrice}&nbsp;Kč</p>
+                          {d.oldPrice && (
+                            <p className="text-[10px] text-text3 line-through">{d.oldPrice}&nbsp;Kč</p>
+                          )}
+                        </div>
                       </Link>
                     ))}
                   </div>
