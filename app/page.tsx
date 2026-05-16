@@ -85,14 +85,17 @@ export default async function Home() {
     pikantni: [...intensityGroups.pikantni].sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0)).slice(0, 5),
   }
 
-  // Comparator teaser — 3 prefab duely
+  // Comparator teaser — 3 hero karty, každá 1 produkt, max 1 per brand
   const withOffer = allProducts.filter((p) => p.cheapestOffer != null)
 
-  const duelTopScore = [...withOffer]
-    .filter((p) => p.olivatorScore != null && p.olivatorScore > 0)
-    .sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
-    .slice(0, 3)
+  // 1. Nejlepší v katalogu — max 1 per brand, top Score
+  const duelTopScore = diverseTopProducts(
+    withOffer.filter((p) => p.olivatorScore != null && p.olivatorScore > 0),
+    1,
+    1,
+  )
 
+  // 2. BIO řecké — nejlevnější za 100 ml (1 produkt)
   const duelBioGreek = withOffer
     .filter(
       (p) =>
@@ -107,45 +110,50 @@ export default async function Home() {
       const ppb = b.cheapestOffer!.price / Math.max(1, b.volumeMl ?? 500)
       return ppa - ppb
     })
-    .slice(0, 3)
+    .slice(0, 1)
 
-  // 3. duel — nejlepší Score do 500 Kč (běžný shopper)
-  const duelBudget = withOffer
-    .filter(
+  // 3. Do 500 Kč — top Score, jiný brand než v prvních dvou kartách
+  const usedBrands = new Set([
+    ...duelTopScore.map((p) => p.brandSlug ?? p.id),
+    ...duelBioGreek.map((p) => p.brandSlug ?? p.id),
+  ])
+  const duelBudget = diverseTopProducts(
+    withOffer.filter(
       (p) =>
         p.cheapestOffer!.price <= 500 &&
         p.olivatorScore != null && p.olivatorScore > 0 &&
-        !duelTopScore.some((t) => t.id === p.id)
-    )
-    .sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
-    .slice(0, 3)
+        !usedBrands.has(p.brandSlug ?? p.id),
+    ),
+    1,
+    1,
+  )
 
   const duels: Duel[] = [
     {
       key: 'top-score',
       icon: Trophy,
-      label: 'Top 3 dle Score',
-      sub: 'Absolutní špička katalogu',
-      hint: 'Tři nejlepší oleje napříč všemi kategoriemi — nejvyšší Olivator Score, nejtvrdší metriky.',
+      label: 'Nejlepší v katalogu',
+      sub: 'Absolutní špička',
+      hint: 'Nejvyšší Olivator Score napříč všemi 447 oleji. Nejtvrdší metriky, žádný kompromis.',
       products: duelTopScore,
     },
     {
       key: 'bio-greek',
       icon: Leaf,
-      label: 'BIO řecké do koše',
-      sub: 'Nejlepší poměr cena/100 ml',
-      hint: 'Tři nejlevnější bio řecké oleje za 100 ml — kvalita certifikovaná, peněženka v klidu.',
+      label: 'BIO řecké za koruny',
+      sub: 'Nejlepší cena / 100 ml',
+      hint: 'Certifikovaná BIO kvalita z Řecka. Nejlepší poměr cena/100 ml z celé GR kategorie.',
       products: duelBioGreek,
     },
     {
       key: 'budget',
       icon: Gift,
       label: 'Skvělé do 500 Kč',
-      sub: 'Nejlepší Score v rozumné ceně',
-      hint: 'Tři oleje pro každodenní vaření — nejlepší Score do 500 Kč. Žádný kompromis na kvalitě.',
+      sub: 'Top Score v rozumné ceně',
+      hint: 'Nejvyšší Score v cenové hranici 500 Kč. Každodenní kvalita, která neklame.',
       products: duelBudget,
     },
-  ].filter((d) => d.products.length >= 2) as Duel[]
+  ].filter((d) => d.products.length >= 1) as Duel[]
 
   return (
     <>
