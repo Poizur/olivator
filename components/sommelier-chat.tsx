@@ -139,7 +139,7 @@ export function SommelierChat() {
       {open && (
         <div
           className="fixed bottom-24 right-6 z-[50] w-[340px] sm:w-[380px] bg-white border border-off2 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-          style={{ maxHeight: 'min(520px, calc(100vh - 120px))' }}
+          style={{ height: 'min(520px, calc(100vh - 120px))' }}
         >
           {/* Header */}
           <div className="px-4 py-3 bg-olive text-white flex items-center gap-2.5 shrink-0">
@@ -153,7 +153,7 @@ export function SommelierChat() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+          <div className="flex-1 overflow-y-auto min-h-0 px-4 py-3 space-y-3">
             {messages.map((m, i) => (
               <div
                 key={i}
