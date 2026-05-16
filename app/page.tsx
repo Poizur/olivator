@@ -85,46 +85,52 @@ export default async function Home() {
     pikantni: [...intensityGroups.pikantni].sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0)).slice(0, 5),
   }
 
-  // Comparator teaser — 3 hero karty, každá 1 produkt, max 1 per brand
+  // Comparator teaser — 3 karty, každá 3 produkty, max 1 per brand
   const withOffer = allProducts.filter((p) => p.cheapestOffer != null)
 
-  // 1. Nejlepší v katalogu — max 1 per brand, top Score
+  // 1. Top Score — max 1 per brand
   const duelTopScore = diverseTopProducts(
     withOffer.filter((p) => p.olivatorScore != null && p.olivatorScore > 0),
-    1,
+    3,
     1,
   )
 
-  // 2. BIO řecké — nejlevnější za 100 ml (1 produkt)
-  const duelBioGreek = withOffer
-    .filter(
-      (p) =>
-        p.originCountry === 'GR' &&
-        p.certifications.some((c) => {
-          const lc = c.toLowerCase()
-          return lc === 'bio' || lc === 'organic' || lc === 'eu_bio'
-        })
-    )
-    .sort((a, b) => {
-      const ppa = a.cheapestOffer!.price / Math.max(1, a.volumeMl ?? 500)
-      const ppb = b.cheapestOffer!.price / Math.max(1, b.volumeMl ?? 500)
-      return ppa - ppb
-    })
-    .slice(0, 1)
+  // 2. BIO řecké — nejlevnější za 100 ml, dedup by brand
+  const duelBioGreek = (() => {
+    const seen = new Set<string>()
+    return withOffer
+      .filter(
+        (p) =>
+          p.originCountry === 'GR' &&
+          p.certifications.some((c) => {
+            const lc = c.toLowerCase()
+            return lc === 'bio' || lc === 'organic' || lc === 'eu_bio'
+          })
+      )
+      .sort((a, b) => {
+        const ppa = a.cheapestOffer!.price / Math.max(1, a.volumeMl ?? 500)
+        const ppb = b.cheapestOffer!.price / Math.max(1, b.volumeMl ?? 500)
+        return ppa - ppb
+      })
+      .filter((p) => {
+        const b = p.brandSlug ?? p.id
+        if (seen.has(b)) return false
+        seen.add(b)
+        return true
+      })
+      .slice(0, 3)
+  })()
 
-  // 3. Do 500 Kč — top Score, jiný brand než v prvních dvou kartách
-  const usedBrands = new Set([
-    ...duelTopScore.map((p) => p.brandSlug ?? p.id),
-    ...duelBioGreek.map((p) => p.brandSlug ?? p.id),
-  ])
+  // 3. Do 500 Kč — diverse, vylučuj brandy z karta 1
+  const usedTopBrands = new Set(duelTopScore.map((p) => p.brandSlug ?? p.id))
   const duelBudget = diverseTopProducts(
     withOffer.filter(
       (p) =>
         p.cheapestOffer!.price <= 500 &&
         p.olivatorScore != null && p.olivatorScore > 0 &&
-        !usedBrands.has(p.brandSlug ?? p.id),
+        !usedTopBrands.has(p.brandSlug ?? p.id),
     ),
-    1,
+    3,
     1,
   )
 
@@ -132,17 +138,17 @@ export default async function Home() {
     {
       key: 'top-score',
       icon: Trophy,
-      label: 'Nejlepší v katalogu',
-      sub: 'Absolutní špička',
-      hint: 'Nejvyšší Olivator Score napříč všemi 447 oleji. Nejtvrdší metriky, žádný kompromis.',
+      label: 'Top 3 dle Score',
+      sub: 'Absolutní špička katalogu',
+      hint: 'Tři nejlepší oleje napříč všemi kategoriemi — nejvyšší Olivator Score, nejtvrdší metriky.',
       products: duelTopScore,
     },
     {
       key: 'bio-greek',
       icon: Leaf,
-      label: 'BIO řecké za koruny',
-      sub: 'Nejlepší cena / 100 ml',
-      hint: 'Certifikovaná BIO kvalita z Řecka. Nejlepší poměr cena/100 ml z celé GR kategorie.',
+      label: 'BIO řecké do koše',
+      sub: 'Nejlepší poměr cena / 100 ml',
+      hint: 'Tři nejlevnější bio řecké oleje za 100 ml — kvalita certifikovaná, peněženka v klidu.',
       products: duelBioGreek,
     },
     {
@@ -150,10 +156,10 @@ export default async function Home() {
       icon: Gift,
       label: 'Skvělé do 500 Kč',
       sub: 'Top Score v rozumné ceně',
-      hint: 'Nejvyšší Score v cenové hranici 500 Kč. Každodenní kvalita, která neklame.',
+      hint: 'Tři oleje pro každodenní vaření — nejlepší Score do 500 Kč. Žádný kompromis na kvalitě.',
       products: duelBudget,
     },
-  ].filter((d) => d.products.length >= 1) as Duel[]
+  ].filter((d) => d.products.length >= 2) as Duel[]
 
   return (
     <>
