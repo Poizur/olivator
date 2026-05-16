@@ -169,10 +169,13 @@ export function isSuspectEan(ean: string | null): boolean {
 
 // Extract volume (ml) — z PARAM "Velikost balení" nebo z názvu produktu.
 export function extractVolumeMl(item: HeurekaItem): number | null {
+  // Name is authoritative (visible in product title, used for slug).
+  // Params like "Velikost balení" may contain bundle/packaging data that
+  // doesn't match the individual product — e.g. "500 ml" for a 100 ml sklo variant.
+  const fromName = parseVolumeText(item.productName)
+  if (fromName) return fromName
   const param = item.params['Velikost balení'] || item.params['Obsah balení'] || ''
-  const fromParam = parseVolumeText(param)
-  if (fromParam) return fromParam
-  return parseVolumeText(item.productName)
+  return parseVolumeText(param)
 }
 
 function parseVolumeText(text: string): number | null {

@@ -357,6 +357,29 @@ const rules: QualityRule[] = [
     },
   },
   {
+    ruleId: 'slug_volume_mismatch',
+    check: (p) => {
+      const slug = p.slug ?? ''
+      const db = p.volume_ml
+      // Extract volume hint from slug (common patterns)
+      const m = slug.match(/[_-](\d+)-ml[_-]?|[_-](\d+)ml[_-]?|[_-](\d+)-l[_-]?$|[_-](\d+)l[_-]?$/)
+      if (!m) return null // slug has no volume indicator — skip
+      const raw = m[1] ?? m[2]
+      const rawL = m[3] ?? m[4]
+      const slugVol = raw ? parseInt(raw) : rawL ? parseInt(rawL) * 1000 : null
+      if (!slugVol) return null
+      if (!db || Math.abs(db - slugVol) > 10) {
+        return {
+          ruleId: 'slug_volume_mismatch',
+          severity: 'warning',
+          message: `Slug naznačuje ${slugVol} ml, DB má volume_ml=${db ?? 'NULL'} — zkontroluj retailer URL`,
+          details: { slug_volume: slugVol, db_volume: db },
+        }
+      }
+      return null
+    },
+  },
+  {
     ruleId: 'name_short_too_generic',
     check: async (p) => {
       const ns = p.name_short

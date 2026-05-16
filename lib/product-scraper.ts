@@ -809,7 +809,9 @@ export async function scrapeProductPage(url: string): Promise<ScrapedProduct> {
   const allText = [name, shortDesc, rawDescription, paramsText].filter(Boolean).join(' ')
   const type = inferType(allText)
   const origin = inferOrigin(allText)
-  const volumeMl = inferVolumeMl(allText)
+  // Volume: prioritize product name (most reliable), fall back to rest of text.
+  // Prevents description/params "500 ml" overriding a "100 ml" in the product title.
+  const volumeMl = (name ? inferVolumeMl(name) : null) ?? inferVolumeMl([shortDesc, rawDescription, paramsText].filter(Boolean).join(' '))
   const inferredPackaging = inferPackaging(allText)
   const acidity = extractAcidity(rawDescription) ?? extractAcidity(shortDesc) ?? extractAcidity(paramsText)
   const polyphenols = extractPolyphenols(rawDescription) ?? extractPolyphenols(shortDesc) ?? extractPolyphenols(paramsText)
