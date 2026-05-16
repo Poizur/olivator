@@ -36,8 +36,8 @@ const FAQ_ITEMS = [
     a: 'Zatím ne automaticky, ale přihlášením k newsletteru dostanete slevy každý čtvrtek ráno do emailu. Pracujeme na price alertech — budou brzy.',
   },
   {
-    q: 'Proč nevidím slevy u levnějších olejů?',
-    a: 'Zobrazujeme pouze oleje s Olivator Score 70+. Levné oleje s nízkým skóre záměrně vynecháváme — cena bez kvality není deal.',
+    q: 'Jak jsou slevy seřazeny?',
+    a: 'Slevy řadíme kombinací výše slevy (40 %) a Olivator Score (60 %). Takže olej s vysokým skóre a menší slevou může být výše než levný olej s obří slevou — jde nám o nejlepší deal celkově.',
   },
   {
     q: 'Jsou tu oleje ze Španělska, Řecka i Itálie?',
@@ -199,7 +199,7 @@ export default async function SlevyPage() {
               <span className="text-[12px] text-text2 ml-1.5">prodejců</span>
             </div>
             <div className="bg-off rounded-full px-4 py-2 flex items-center">
-              <span className="text-[12px] text-text2">Pouze Score 70+</span>
+              <span className="text-[12px] text-text2">Ověřené srovnáním s 30d max</span>
             </div>
           </div>
         </section>
@@ -302,10 +302,10 @@ export default async function SlevyPage() {
             </div>
             <div>
               <div className="text-[28px] mb-2">🏆</div>
-              <h3 className="text-[14px] font-semibold text-text mb-1">Jen Score 70+</h3>
+              <h3 className="text-[14px] font-semibold text-text mb-1">Řazení dle hodnoty</h3>
               <p className="text-[13px] text-text2 leading-relaxed">
-                Levný olej s nízkým skóre není dobrý deal. Zobrazujeme
-                slevy jen na oleje, které stojí za to i za plnou cenu.
+                Výše slevy × Olivator Score. Nejlepší poměr kvality a
+                ceny vždy nahoře — ne jen největší slevový procento.
               </p>
             </div>
             <div>

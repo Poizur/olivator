@@ -338,7 +338,6 @@ export async function getSlevyDeals(limit = 20): Promise<SlevyPageData> {
       .from('products')
       .select('id, slug, name, name_short, olivator_score, brand_slug, image_url, volume_ml, origin_country')
       .eq('status', 'active')
-      .gte('olivator_score', 70)
       .not('olivator_score', 'is', null),
     supabaseAdmin.from('retailers').select('id, slug, name'),
     supabaseAdmin.from('brands').select('slug, name'),
