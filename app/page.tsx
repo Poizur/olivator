@@ -233,10 +233,9 @@ export default async function Home() {
 
       {/* ─── 5L FEATURED BOX ────────────────────────────────────────── */}
       {(() => {
-        const bulk5L = allProducts
+        const bulk5Lpool = allProducts
           .filter(p => p.volumeMl >= 4500 && p.volumeMl <= 5500 && p.cheapestOffer != null && p.olivatorScore != null)
-          .sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
-          .slice(0, 3)
+        const bulk5L = diverseTopProducts(bulk5Lpool, 6, 2)
         if (bulk5L.length < 2) return null
         const minPerLiter = Math.min(...bulk5L.map(p => Math.round(p.cheapestOffer!.price / (p.volumeMl / 1000))))
         return (
@@ -259,32 +258,40 @@ export default async function Home() {
                   Všech {allProducts.filter(p => p.volumeMl >= 4500 && p.volumeMl <= 5500 && p.cheapestOffer != null).length} produktů →
                 </Link>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {bulk5L.map((p, i) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 md:gap-3">
+                {bulk5L.map((p) => (
                   <Link
                     key={p.id}
                     href={`/olej/${p.slug}`}
-                    className="flex items-center gap-3 bg-white/10 hover:bg-white/15 border border-white/10 rounded-[var(--radius-card)] p-3 transition-colors group"
+                    className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_12px_32px_rgba(0,0,0,0.12)] hover:-translate-y-0.5"
                   >
-                    <span className="text-[11px] font-bold text-white/40 w-4 shrink-0">#{i + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[11px] font-semibold text-white leading-tight mb-0.5 line-clamp-2">
-                        {p.nameShort}
-                      </div>
-                      <div className="flex items-baseline gap-2 flex-wrap">
-                        <span className="text-[13px] font-bold text-white tabular-nums">
-                          {p.cheapestOffer ? `${Math.round(p.cheapestOffer.price)} Kč` : ''}
-                        </span>
-                        <span className="text-[10px] text-white/50 tabular-nums">
-                          {p.cheapestOffer ? `${Math.round(p.cheapestOffer.price / (p.volumeMl / 1000))} Kč/l` : ''}
-                        </span>
+                    <div className="relative aspect-[4/5] bg-white overflow-hidden">
+                      <span className="absolute top-1.5 right-1.5 z-10 shadow-md rounded-full">
+                        <ScoreBadge score={p.olivatorScore} type={p.type} size="small" />
+                      </span>
+                      <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
+                        <ProductImage
+                          product={p}
+                          fallbackSize="text-[60px]"
+                          sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 200px"
+                        />
                       </div>
                     </div>
-                    {p.olivatorScore != null && p.olivatorScore > 0 && (
-                      <span className="text-[11px] font-bold text-terra bg-terra-bg rounded px-1.5 py-0.5 shrink-0 tabular-nums">
-                        {p.olivatorScore}
-                      </span>
-                    )}
+                    <div className="p-2 flex-1 flex flex-col">
+                      <div className="text-[10px] font-semibold text-text leading-tight mb-1.5 line-clamp-2 min-h-[2.4em]">
+                        {p.nameShort || p.name}
+                      </div>
+                      {p.cheapestOffer && (
+                        <div className="mt-auto pt-1.5 border-t border-off">
+                          <div className="text-[12px] font-bold text-text tabular-nums">
+                            {Math.round(p.cheapestOffer.price / (p.volumeMl / 1000))} Kč/l
+                          </div>
+                          <div className="text-[10px] text-text2 tabular-nums">
+                            {Math.round(p.cheapestOffer.price)} Kč
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </Link>
                 ))}
               </div>
