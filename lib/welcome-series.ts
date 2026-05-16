@@ -352,15 +352,29 @@ export async function getSlevyDeals(limit = 20): Promise<SlevyPageData> {
   const qualifyingProducts = (productsResult.data ?? []).filter(p => offerProductIds.has(p.id as string))
   const qualifyingIds = qualifyingProducts.map(p => p.id as string)
 
-  // History only for qualifying products (small set, safe URL length)
-  const historyData = qualifyingIds.length > 0
-    ? (await supabaseAdmin
-        .from('price_history')
-        .select('product_id, price')
-        .in('product_id', qualifyingIds)
-        .gte('recorded_at', new Date(Date.now() - 30 * 86400_000).toISOString())
-        .limit(5000)).data ?? []
-    : []
+  // History + primary images for qualifying products (small set, safe URL length)
+  const [historyResult, imagesResult] = await Promise.all([
+    qualifyingIds.length > 0
+      ? supabaseAdmin
+          .from('price_history')
+          .select('product_id, price')
+          .in('product_id', qualifyingIds)
+          .gte('recorded_at', new Date(Date.now() - 30 * 86400_000).toISOString())
+          .limit(5000)
+      : Promise.resolve({ data: [] }),
+    qualifyingIds.length > 0
+      ? supabaseAdmin
+          .from('product_images')
+          .select('product_id, url')
+          .in('product_id', qualifyingIds)
+          .eq('is_primary', true)
+          .limit(500)
+      : Promise.resolve({ data: [] }),
+  ])
+  const historyData = historyResult.data ?? []
+  const primaryImageMap = new Map(
+    (imagesResult.data ?? []).map(img => [img.product_id as string, img.url as string])
+  )
 
   const productMap = new Map(qualifyingProducts.map(p => [p.id as string, p]))
   const retailerMap = new Map((retailersResult.data ?? []).map(r => [r.id as string, { slug: r.slug as string, name: r.name as string }]))
@@ -394,7 +408,7 @@ export async function getSlevyDeals(limit = 20): Promise<SlevyPageData> {
     const maxPrice = maxPriceByProduct.get(productId) ?? null
     if (!maxPrice || maxPrice <= offer.price) continue
     const dropPct = Math.round(((maxPrice - offer.price) / maxPrice) * 100)
-    if (dropPct < 15) continue
+    if (dropPct < 5) continue
 
     const brandSlug = product.brand_slug as string | null
     const rawName = getDisplayName(product as { name_short: string | null; name: string })
@@ -406,7 +420,7 @@ export async function getSlevyDeals(limit = 20): Promise<SlevyPageData> {
       name: truncateName(rawName),
       brandName: brandSlug ? (brandNameMap.get(brandSlug) ?? null) : null,
       originCountry: product.origin_country as string | null,
-      imageUrl: product.image_url as string | null,
+      imageUrl: (product.image_url as string | null) ?? primaryImageMap.get(productId) ?? null,
       score,
       currentPrice: Math.round(offer.price),
       oldPrice: Math.round(maxPrice),

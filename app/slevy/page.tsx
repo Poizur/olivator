@@ -25,7 +25,7 @@ const UTM = 'utm_source=web&utm_medium=slevy&utm_campaign=deals_page'
 const FAQ_ITEMS = [
   {
     q: 'Jak Olivátor ověřuje, že jde o skutečnou slevu?',
-    a: 'Sledujeme ceny ze 18 prodejců každý den. Slevu zobrazujeme pouze tehdy, pokud je aktuální cena alespoň 15 % pod maximální cenou za posledních 30 dní u konkrétního prodejce.',
+    a: 'Sledujeme ceny ze 18 prodejců každý den. Slevu zobrazujeme pouze tehdy, pokud je aktuální cena alespoň 5 % pod maximální cenou za posledních 30 dní u konkrétního prodejce.',
   },
   {
     q: 'Jak často se přehled aktualizuje?',
@@ -219,7 +219,7 @@ export default async function SlevyPage() {
           ) : (
             <div className="bg-off rounded-2xl p-8 text-center">
               <p className="text-[16px] text-text2 mb-4">
-                Aktuálně nemáme slevy nad 15 % na kvalitní oleje.<br />
+                Aktuálně nemáme žádné slevy na kvalitní oleje.<br />
                 Zkuste to znovu za pár dní — sezóna akcí přichází.
               </p>
               <Link
@@ -273,7 +273,7 @@ export default async function SlevyPage() {
               <h3 className="text-[14px] font-semibold text-text mb-1">30denní maximum</h3>
               <p className="text-[13px] text-text2 leading-relaxed">
                 Srovnáváme aktuální cenu s maximem za posledních 30 dní.
-                Sleva pod 15 % u nás neexistuje — filtrujeme „pseudoslevy".
+                Zobrazujeme i menší slevy — důležité je, že jde o reálný pokles ceny.
               </p>
             </div>
             <div>
