@@ -72,6 +72,37 @@ async function fixInactiveWithOffers() {
   console.log(`  ✓ ${ok}/${issues.length} resolved`)
 }
 
+// ── Unsplash sanity checks ────────────────────────────────────────────────────
+
+// Keywords that indicate the image is NOT an olive oil product photo.
+// Any match in alt text or Unsplash URL → image rejected.
+const UNSPLASH_BLOCKED = [
+  'shampoo', 'shower', 'cosmetic', 'lotion', 'soap',
+  'cream', 'toothpaste', 'perfume', 'skincare', 'hair',
+  'beauty', 'makeup', 'fragrance', 'deodorant', 'body',
+]
+
+function isUnsplashImageSafe(altText: string | null, url: string): { ok: boolean; reason: string } {
+  const text = (altText ?? '').toLowerCase()
+  const urlLower = url.toLowerCase()
+  for (const kw of UNSPLASH_BLOCKED) {
+    if (text.includes(kw)) return { ok: false, reason: `alt text: "${kw}"` }
+    if (urlLower.includes(kw)) return { ok: false, reason: `url path: "${kw}"` }
+  }
+  return { ok: true, reason: '' }
+}
+
+/** Returns number of OTHER products already using this URL as primary image.
+ *  If >= 3, the image is too generic to be useful. */
+async function countPrimaryDuplicates(url: string): Promise<number> {
+  const { count } = await supabaseAdmin
+    .from('product_images')
+    .select('*', { count: 'exact', head: true })
+    .eq('url', url)
+    .eq('is_primary', true)
+  return count ?? 0
+}
+
 // ── 2. image_missing ─────────────────────────────────────────────────────────
 async function fixImageMissing() {
   console.log('\n═══ image_missing ═══')
@@ -82,6 +113,8 @@ async function fixImageMissing() {
     return
   }
   let ok = 0
+  let rejectedAlt = 0
+  let rejectedDup = 0
   for (const i of issues) {
     const { data: p } = await supabaseAdmin
       .from('products')
@@ -94,8 +127,8 @@ async function fixImageMissing() {
     }
     const prod = p as { id: string; slug: string; name: string; type: string; origin_country: string | null; origin_region: string | null }
 
-    // Priorita 1: scraper_candidate — skutečná fotka produktu od retailera.
-    // Unsplash je poslední záchrana, NIKDY ne první volba pro produkty.
+    // ── Priorita 1: scraper_candidate — skutečná fotka od retailera. ──────────
+    // Unsplash je poslední záchrana, NIKDY ne první volba.
     const { data: existingImgs } = await supabaseAdmin
       .from('product_images')
       .select('id, url, source, alt_text')
@@ -106,7 +139,6 @@ async function fixImageMissing() {
 
     if (existingImgs && existingImgs.length > 0) {
       const img = existingImgs[0]
-      // Povyšme scraper_candidate → scraper + is_primary
       await supabaseAdmin
         .from('product_images')
         .update({ is_primary: true, source: 'scraper' })
@@ -120,35 +152,57 @@ async function fixImageMissing() {
       continue
     }
 
-    // Priorita 2: Unsplash — jen pokud žádná retailer fotka neexistuje.
-    // DŮLEŽITÉ: query musí být product-specific, ne generické "olive oil bottle GR"
-    // jinak dostaneme stejnou fotku pro desítky produktů.
+    // ── Priorita 2: Unsplash fallback ─────────────────────────────────────────
+    // Query musí být product-specific — generické "olive oil bottle GR"
+    // vrátí stejnou fotku pro desítky produktů.
     const brandWords = prod.name.split(/\s+/).slice(0, 3).join(' ')
     const queries = [
       `${brandWords} olive oil bottle`,
       `olive oil ${prod.origin_region ?? prod.origin_country ?? 'mediterranean'} bottle`,
     ]
-    let url: string | null = null
-    let alt: string | null = null
+    let chosenUrl: string | null = null
+    let chosenAlt: string | null = null
+
     for (const q of queries) {
       try {
-        const photos = await searchUnsplash(q, 3)
-        // Vyhni se fotkám s "shampoo", "hair", "soap" v alt textu
-        const safe = photos.find(ph =>
-          !/(shampoo|hair|soap|cosmetic|beauty|skincare)/i.test(ph.altText ?? '')
-        )
-        if (safe?.url) { url = safe.url; alt = safe.altText; break }
+        const photos = await searchUnsplash(q, 5)
+        for (const ph of photos) {
+          if (!ph.url) continue
+
+          // CHECK 1 — Alt text + URL keyword validation
+          const safety = isUnsplashImageSafe(ph.altText ?? null, ph.url)
+          if (!safety.ok) {
+            console.log(`  ⚠ [${prod.slug}] Rejected by keyword (${safety.reason}): ${ph.altText?.slice(0, 60)}`)
+            rejectedAlt++
+            continue
+          }
+
+          // CHECK 2 — Duplicate image detection
+          // An Unsplash photo used as primary for 3+ products is a generic stock image.
+          const dupCount = await countPrimaryDuplicates(ph.url)
+          if (dupCount >= 3) {
+            console.log(`  ⚠ [${prod.slug}] Rejected: URL already primary for ${dupCount} products`)
+            rejectedDup++
+            continue
+          }
+
+          chosenUrl = ph.url
+          chosenAlt = ph.altText ?? null
+          break
+        }
       } catch {}
+      if (chosenUrl) break
     }
-    if (!url) {
-      await markResolved(i.id, false, 'No Unsplash result')
+
+    if (!chosenUrl) {
+      await markResolved(i.id, false, 'No safe Unsplash result (all rejected or no results)')
       continue
     }
-    // Insert into product_images as primary
+
     const { error: insErr } = await supabaseAdmin.from('product_images').insert({
       product_id: prod.id,
-      url,
-      alt_text: alt ?? prod.name,
+      url: chosenUrl,
+      alt_text: chosenAlt ?? prod.name,
       is_primary: true,
       source: 'unsplash',
       sort_order: 0,
@@ -157,15 +211,17 @@ async function fixImageMissing() {
       await markResolved(i.id, false, insErr.message.slice(0, 100))
       continue
     }
-    // Update product.image_url
     await supabaseAdmin
       .from('products')
-      .update({ image_url: url, image_source: 'unsplash', updated_at: new Date().toISOString() })
+      .update({ image_url: chosenUrl, image_source: 'unsplash', updated_at: new Date().toISOString() })
       .eq('id', prod.id)
-    await markResolved(i.id, true, 'Unsplash fallback fetched')
+    await markResolved(i.id, true, `Unsplash fallback fetched (passed ${rejectedAlt + rejectedDup} safety checks)`)
     ok++
   }
   console.log(`  ✓ ${ok}/${issues.length} resolved`)
+  if (rejectedAlt + rejectedDup > 0) {
+    console.log(`  ✗ Rejected: ${rejectedAlt} by keyword, ${rejectedDup} by duplicate threshold`)
+  }
 }
 
 // ── 3. description_missing + description_too_short ───────────────────────────
