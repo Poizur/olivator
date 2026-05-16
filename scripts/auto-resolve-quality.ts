@@ -93,21 +93,51 @@ async function fixImageMissing() {
       continue
     }
     const prod = p as { id: string; slug: string; name: string; type: string; origin_country: string | null; origin_region: string | null }
+
+    // Priorita 1: scraper_candidate — skutečná fotka produktu od retailera.
+    // Unsplash je poslední záchrana, NIKDY ne první volba pro produkty.
+    const { data: existingImgs } = await supabaseAdmin
+      .from('product_images')
+      .select('id, url, source, alt_text')
+      .eq('product_id', prod.id)
+      .in('source', ['scraper', 'scraper_candidate'])
+      .order('sort_order', { ascending: true })
+      .limit(1)
+
+    if (existingImgs && existingImgs.length > 0) {
+      const img = existingImgs[0]
+      // Povyšme scraper_candidate → scraper + is_primary
+      await supabaseAdmin
+        .from('product_images')
+        .update({ is_primary: true, source: 'scraper' })
+        .eq('id', img.id as string)
+      await supabaseAdmin
+        .from('products')
+        .update({ image_url: img.url as string, image_source: 'scraper', updated_at: new Date().toISOString() })
+        .eq('id', prod.id)
+      await markResolved(i.id, true, 'Promoted scraper_candidate — no Unsplash needed')
+      ok++
+      continue
+    }
+
+    // Priorita 2: Unsplash — jen pokud žádná retailer fotka neexistuje.
+    // DŮLEŽITÉ: query musí být product-specific, ne generické "olive oil bottle GR"
+    // jinak dostaneme stejnou fotku pro desítky produktů.
+    const brandWords = prod.name.split(/\s+/).slice(0, 3).join(' ')
     const queries = [
-      `${prod.name.split(' ').slice(0, 4).join(' ')} olive oil`,
-      `olive oil bottle ${prod.origin_country ?? 'mediterranean'}`,
-      'olive oil bottle premium',
+      `${brandWords} olive oil bottle`,
+      `olive oil ${prod.origin_region ?? prod.origin_country ?? 'mediterranean'} bottle`,
     ]
     let url: string | null = null
     let alt: string | null = null
     for (const q of queries) {
       try {
-        const photos = await searchUnsplash(q, 1)
-        if (photos[0]?.url) {
-          url = photos[0].url
-          alt = photos[0].altText
-          break
-        }
+        const photos = await searchUnsplash(q, 3)
+        // Vyhni se fotkám s "shampoo", "hair", "soap" v alt textu
+        const safe = photos.find(ph =>
+          !/(shampoo|hair|soap|cosmetic|beauty|skincare)/i.test(ph.altText ?? '')
+        )
+        if (safe?.url) { url = safe.url; alt = safe.altText; break }
       } catch {}
     }
     if (!url) {
