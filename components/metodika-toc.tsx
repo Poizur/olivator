@@ -33,7 +33,7 @@ export function MetodikaToc() {
   }, [])
 
   return (
-    <nav className="sticky top-20 space-y-0.5" aria-label="Obsah stránky">
+    <nav className="space-y-0.5" aria-label="Obsah stránky">
       <div className="text-[10px] font-semibold uppercase tracking-widest text-text3 mb-3 px-2">
         Obsah
       </div>

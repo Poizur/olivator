@@ -288,10 +288,8 @@ export default async function ArticleDetailPage({
           </div>
         </article>
 
-        {/* Sidebar — sticky scrolling s článkem. lg:self-start je důležité:
-            bez něj grid-row stretchne aside na výšku article, sticky pak nemá
-            kde "klouzat". top-24 (96px) navazuje pod fixed header. */}
-        <aside className="lg:sticky lg:top-24 lg:self-start space-y-5 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-1">
+        {/* Sidebar */}
+        <aside className="space-y-5">
           {/* Top oleje */}
           {topProducts.length > 0 && (
             <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-4">

@@ -188,9 +188,8 @@ export default async function NovinkyPage() {
           </div>
         </div>
 
-        {/* Sidebar — sticky cenový widget. lg:self-start aby grid-row nestretchl
-            sidebar na výšku main column (sticky pak nemá kde klouzat). */}
-        <aside className="lg:sticky lg:top-24 lg:self-start space-y-5">
+        {/* Sidebar */}
+        <aside className="space-y-5">
           <MarketPricesWidget variant="sidebar" />
 
           {/* Kontext — proč jsou velkoobchodní ceny zajímavé pro běžného čtenáře */}

@@ -809,8 +809,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               })()}
             </div>
 
-            {/* Sticky aside — Rychlé fakty + Souvislosti pod sebou */}
-            <aside className="lg:sticky lg:top-[100px] space-y-4">
+            {/* Aside — Rychlé fakty + Souvislosti pod sebou */}
+            <aside className="space-y-4">
               {/* Rychlé fakty */}
               <div className="bg-olive-bg/40 border border-olive-border/40 rounded-[var(--radius-card)] p-5">
                 <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-3">

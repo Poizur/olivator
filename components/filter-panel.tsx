@@ -85,7 +85,7 @@ export function FilterPanel({ counts }: { counts: FilterCounts }) {
     .sort((a, b) => b.count - a.count)
 
   return (
-    <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-4 lg:sticky lg:top-[100px]">
+    <div className="bg-white border border-off2 rounded-[var(--radius-card)] p-4">
       {typeItems.length > 0 && (
         <FilterSection
           label="Typ"
