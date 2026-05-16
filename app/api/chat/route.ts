@@ -17,52 +17,81 @@ interface ProductContext {
   flavorProfile: Record<string, number>
 }
 
-async function getTopProducts(): Promise<ProductContext[]> {
+// Slova typická pro olivoolejové produkty nebo česká funkční slova — přeskočit při name-search
+const SKIP_TOKENS = new Set([
+  'extra', 'panenský', 'panenského', 'panenské', 'olivový', 'olivového', 'olivové',
+  'olej', 'oleji', 'olejem', 'chceš', 'hledám', 'máte', 'koupit', 'levný', 'dobrý',
+  'španělský', 'řecký', 'italský', 'chorvatský', 'tento', 'takový', 'který', 'jaký',
+  'nějaký', 'dobrý', 'doporuč', 'chutná', 'zkusil', 'hledat', 'najdi', 'řecké',
+  'třeba', 'něco', 'prosím', 'díky', 'máme', 'mají', 'mám', 'máš',
+])
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapToProductContext(p: any): ProductContext {
+  const offers = (p.product_offers ?? []) as Array<{ price: number; retailers: { name: string } }>
+  const offer = offers[0]
+  return {
+    name: p.name as string,
+    slug: p.slug as string,
+    score: p.olivator_score as number,
+    price: offer?.price ?? null,
+    retailer: offer?.retailers?.name ?? null,
+    origin: (p.origin_country as string | null) ?? '',
+    polyphenols: p.polyphenols as number | null,
+    acidity: p.acidity ? Number(p.acidity) : null,
+    certifications: (p.certifications as string[]) ?? [],
+    flavorProfile: ((p.flavor_profile as Record<string, number>) ?? {}),
+  }
+}
+
+const PRODUCT_SELECT = `
+  name, slug, olivator_score, origin_country,
+  polyphenols, acidity, certifications, flavor_profile,
+  product_offers ( price, retailers ( name ) )
+`
+
+/** Top N produktů dle Score — základ kontextu */
+async function getTopProducts(limit = 80): Promise<ProductContext[]> {
   const { data } = await supabaseAdmin
     .from('products')
-    .select(`
-      name, slug, olivator_score, origin_country,
-      polyphenols, acidity, certifications, flavor_profile,
-      product_offers (
-        price,
-        retailers ( name )
-      )
-    `)
+    .select(PRODUCT_SELECT)
     .eq('status', 'active')
     .gt('olivator_score', 0)
     .order('olivator_score', { ascending: false })
-    .limit(60)
+    .limit(limit)
 
-  return (data ?? []).map((p) => {
-    const offer = (p.product_offers as unknown[])?.[0] as
-      | { price: number; retailers: { name: string } }
-      | undefined
-    return {
-      name: p.name,
-      slug: p.slug,
-      score: p.olivator_score,
-      price: offer?.price ?? null,
-      retailer: offer?.retailers?.name ?? null,
-      origin: p.origin_country ?? '',
-      polyphenols: p.polyphenols,
-      acidity: p.acidity ? Number(p.acidity) : null,
-      certifications: p.certifications ?? [],
-      flavorProfile: (p.flavor_profile as Record<string, number>) ?? {},
-    }
-  })
+  return (data ?? []).map(mapToProductContext)
+}
+
+/**
+ * Vyhledá produkty podle slov z uživatelovy zprávy (ILIKE na name + name_short).
+ * Zabrání situaci, kdy je produkt v DB ale není v top N dle Score.
+ */
+async function searchByName(userQuery: string): Promise<ProductContext[]> {
+  const tokens = (userQuery.match(/\p{L}{5,}/gu) ?? [])
+    .map((w) => w.toLowerCase())
+    .filter((w) => !SKIP_TOKENS.has(w))
+
+  if (tokens.length === 0) return []
+
+  const orParts = tokens.flatMap((t) => [
+    `name.ilike.%${t}%`,
+    `name_short.ilike.%${t}%`,
+    `brand_slug.ilike.%${t}%`,
+  ])
+
+  const { data } = await supabaseAdmin
+    .from('products')
+    .select(PRODUCT_SELECT)
+    .eq('status', 'active')
+    .or(orParts.join(','))
+    .order('olivator_score', { ascending: false })
+    .limit(15)
+
+  return (data ?? []).map(mapToProductContext)
 }
 
 function flavorSummary(fp: Record<string, number>): string {
-  // Pojmenuj nejvýraznější chutě + lehkost. Bez dat → prázdný řetězec.
-  const axes: Array<[keyof typeof labels, number]> = [
-    ['spicy', fp.spicy ?? 0],
-    ['bitter', fp.bitter ?? 0],
-    ['herbal', fp.herbal ?? 0],
-    ['fruity', fp.fruity ?? 0],
-    ['mild', fp.mild ?? 0],
-    ['nutty', fp.nutty ?? 0],
-    ['buttery', fp.buttery ?? 0],
-  ]
   const labels = {
     spicy: 'palčivost',
     bitter: 'hořkost',
@@ -72,19 +101,17 @@ function flavorSummary(fp: Record<string, number>): string {
     nutty: 'oříšky',
     buttery: 'máslovost',
   } as const
-  if (axes.every(([, v]) => v === 0)) return ''
-  const parts = axes
-    .filter(([, v]) => v >= 40)
-    .map(([k, v]) => `${labels[k]} ${v}`)
-  if (parts.length === 0) return ''
+  const axes = Object.entries(labels) as Array<[keyof typeof labels, string]>
+  if (axes.every(([k]) => !fp[k])) return ''
+  const parts = axes.filter(([k]) => (fp[k] ?? 0) >= 40).map(([k, v]) => `${v} ${fp[k]}`)
   return parts.join(', ')
 }
 
-function buildSystemPrompt(products: ProductContext[]): string {
+function buildSystemPrompt(products: ProductContext[], hasNameMatches: boolean): string {
   const catalog = products
     .map((p) => {
       const flavor = flavorSummary(p.flavorProfile)
-      const parts = [
+      return [
         `• ${p.name} (Score ${p.score}`,
         p.origin ? `, ${p.origin}` : '',
         p.polyphenols ? `, ${p.polyphenols} mg/kg polyfenolů` : '',
@@ -93,10 +120,13 @@ function buildSystemPrompt(products: ProductContext[]): string {
         p.price ? `, ${Math.round(p.price)} Kč` : '',
         flavor ? ` | chuť: ${flavor}` : '',
         `): /olej/${p.slug}`,
-      ]
-      return parts.join('')
+      ].join('')
     })
     .join('\n')
+
+  const nameSearchNote = hasNameMatches
+    ? '\n[Poznámka: katalog začíná produkty odpovídajícími jménem aktuálnímu dotazu, pak top dle Score]'
+    : ''
 
   return `Jsi AI Sommelier Olivatoru — největšího srovnávače olivových olejů v ČR.
 Odpovídáš přirozenou češtinou, tón je přátelský ale odborný (jako znalý kamarád, ne obchodník).
@@ -125,9 +155,17 @@ PRAVIDLA:
 - Odpověz stručně (max 5–6 vět + seznam doporučení)
 - Odkazuj na /olej/[slug], nikdy /go/
 
+VYHLEDÁVÁNÍ KONKRÉTNÍ ZNAČKY/PRODUKTU:
+Pokud uživatel napíše název značky nebo produktu (např. "Corinto", "Lozano", "Arbequina", "Manaki"):
+- Prohledej CELÝ katalog níže — je sestavený pro TENTO dotaz
+- Pokud najdeš shodu v názvu → ukaž je (max 3 dle Score), i kdyby měly nižší Score
+- NIKDY neříkej "nemám v katalogu" nebo "tuto značku nemám" pokud jsi v katalogu neprošel všechny položky
+- Správná odpověď při nalezení: "Corinto máme! Tady jsou jejich oleje: ..."
+- Správná odpověď při nenalezení: "Corinto jsem v katalogu nenašel. Podobné značky: ..."
+
 FORMÁT ODPOVĚDI (POVINNÉ):
 - Krátký úvod 1–2 věty (proč právě tyhle 3).
-- Číslovaný seznam přesně 3 olejů. Pro každý:
+- Číslovaný seznam přesně 3 olejů (nebo méně pokud jich tolik nenajdeš). Pro každý:
   "1. **NÁZEV** – CENA Kč" první řádek
   "- první důvod (kyselost / polyfenoly / chuť)" druhý řádek (s pomlčkou)
   "- druhý důvod" třetí řádek (volitelně)
@@ -137,7 +175,7 @@ FORMÁT ODPOVĚDI (POVINNÉ):
 - ZAKÁZÁNO: text "(link)" v textu
 - Žádné nadpisy, žádné horizontální čáry — jen úvod + seznam.
 
-AKTUÁLNÍ KATALOG (top ${products.length} olejů dle Score):
+AKTUÁLNÍ KATALOG (${products.length} produktů):${nameSearchNote}
 ${catalog}`
 }
 
@@ -154,8 +192,26 @@ export async function POST(req: NextRequest) {
     // Cap conversation history to last 10 messages (cost control)
     const history = messages.slice(-10)
 
-    const products = await getTopProducts()
-    const systemPrompt = buildSystemPrompt(products)
+    // Poslední uživatelova zpráva — základ pro name-search
+    const lastUserMsg = history.filter((m) => m.role === 'user').at(-1)?.content ?? ''
+
+    // Paralelně: top produkty dle Score + name-search pro konkrétní dotaz
+    const [topProducts, nameMatches] = await Promise.all([
+      getTopProducts(80),
+      searchByName(lastUserMsg),
+    ])
+
+    // Merge: name matches vpředu (viditelné Claudovi), pak top dle Score, dedup
+    const seenSlugs = new Set<string>()
+    const merged: ProductContext[] = []
+    for (const p of [...nameMatches, ...topProducts]) {
+      if (!seenSlugs.has(p.slug)) {
+        seenSlugs.add(p.slug)
+        merged.push(p)
+      }
+    }
+
+    const systemPrompt = buildSystemPrompt(merged, nameMatches.length > 0)
 
     const response = await callClaude({
       model: MODEL,
