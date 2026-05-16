@@ -4,6 +4,7 @@ import {
   getSiteStats,
   getRegionTiles,
   getBrandTiles,
+  getBestsellers,
 } from '@/lib/data'
 import { getActiveArticles } from '@/lib/articles-db'
 import { getActiveRecipes } from '@/lib/recipes-db'
@@ -24,17 +25,19 @@ import type { Product, ProductOffer } from '@/lib/types'
 import { ScoreBadge } from '@/components/score-badge'
 import { TopByCountry } from '@/components/home/top-by-country'
 import { RadarWidget } from '@/components/home/radar-widget'
+import { BestsellersSection } from '@/components/home/bestsellers-section'
 
 export const revalidate = 3600
 
 type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
 
 export default async function Home() {
-  const [allProducts, stats, regions, brands] = await Promise.all([
+  const [allProducts, stats, regions, brands, rawBestsellers] = await Promise.all([
     getProductsWithOffers(),
     getSiteStats(),
     getRegionTiles(),
     getBrandTiles(),
+    getBestsellers({ limit: 20 }),
   ])
 
   const oilOfDay = pickOilOfDay(allProducts)
@@ -64,6 +67,19 @@ export default async function Home() {
 
   // Auto-vypočítané badges pro top 12 (Top Score / Nejvíc polyfenolů / …)
   const badgesByProduct = computeBadges(topTwelve)
+
+  // Bestsellery homepage — 6 produktů, max 2 per brand, zachovává click-rank pořadí
+  const _bsBrands = new Map<string, number>()
+  const homepageBestsellers: typeof rawBestsellers = []
+  for (const p of rawBestsellers) {
+    const b = p.brandSlug ?? p.id
+    const c = _bsBrands.get(b) ?? 0
+    if (c < 2) {
+      homepageBestsellers.push(p)
+      _bsBrands.set(b, c + 1)
+      if (homepageBestsellers.length >= 6) break
+    }
+  }
 
   // Tipy 3 olejů — výrazný / jemný / zdravý (shoptet-style featured cards)
   const tipVyrazny = pickByCategory(allProducts, 'vyrazny')
@@ -230,6 +246,9 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {/* ─── BESTSELLERS ─────────────────────────────────────────────── */}
+      <BestsellersSection products={homepageBestsellers} totalCount={rawBestsellers.length} />
 
       {/* ─── 5L FEATURED BOX ────────────────────────────────────────── */}
       {(() => {

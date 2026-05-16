@@ -1423,5 +1423,45 @@ export async function get5LProducts(limit = 51): Promise<Array<Product & { cheap
     .slice(0, limit)
 }
 
+// Motakis a podobné high-volume bestsellery jsou v ČR nejprodávanější bez
+// ohledu na Olivator Score (nízký pro chybějící lab data). Vrátí produkty
+// označené use_cases @> ['bestseller'], seřazené: Motakis pin → kliknutí → score.
+export async function getBestsellers(opts: { limit?: number } = {}): Promise<Array<Product & { cheapestOffer: ProductOffer | null }>> {
+  const { limit = 50 } = opts
+  const all = await getProductsWithOffers()
+  const pool = all.filter(p => p.useCases.includes('bestseller') && p.cheapestOffer != null)
+  if (pool.length === 0) return []
+
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString()
+  const { data: clicks } = await supabaseAdmin
+    .from('affiliate_clicks')
+    .select('product_id')
+    .gte('clicked_at', thirtyDaysAgo)
+
+  const clickCounts = new Map<string, number>()
+  for (const row of (clicks ?? [])) {
+    const pid = (row as { product_id: string }).product_id
+    clickCounts.set(pid, (clickCounts.get(pid) ?? 0) + 1)
+  }
+
+  // Motakis ručně pin na začátek — reálně nejprodávanější 5L v ČR
+  const PINNED = new Set([
+    'motakis-kreta-extra-panensky-olivovy-olej-5-l',
+    'motakis-kreta-extra-panensky-olivovy-olej-5-l-plech',
+  ])
+
+  return [...pool]
+    .sort((a, b) => {
+      const ap = PINNED.has(a.slug) ? 1 : 0
+      const bp = PINNED.has(b.slug) ? 1 : 0
+      if (bp !== ap) return bp - ap
+      const ac = clickCounts.get(a.id) ?? 0
+      const bc = clickCounts.get(b.id) ?? 0
+      if (bc !== ac) return bc - ac
+      return (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0)
+    })
+    .slice(0, limit)
+}
+
 // ── Articles, Rankings — still from static data (no CMS yet) ──────────
 export { ARTICLES, RANKINGS, getArticles, getArticleBySlug, getRankings, getRankingBySlug } from './static-content'
