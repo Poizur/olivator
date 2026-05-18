@@ -5,6 +5,16 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
   : 'dyaloliwynmfnpjemzrh.supabase.co'
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      // Staré/smazané URL z GSC — opraveno 2026-05-18
+      { source: '/znacka/antica',               destination: '/znacka/antica-sicilia',                           permanent: true },
+      { source: '/zebricek/olivovy-olej-do-200-kc', destination: '/zebricek/nejlepsi-olivovy-olej-do-200-kc',   permanent: true },
+      { source: '/olej/gaea-fresh-extra-virgin', destination: '/srovnavac',                                     permanent: true },
+      { source: '/olej/frantoio-franci-igp',     destination: '/srovnavac',                                     permanent: true },
+      { source: '/znacka/vanocni',               destination: '/srovnavac',                                     permanent: true },
+    ]
+  },
   images: {
     // Default 60s = boti (Google, Bing, OpenAI/Anthropic crawlers) re-fetchují
     // za minutu → každé kolo znova egress ze Supabase Storage. 30 dní (≈ 2.6M s)
