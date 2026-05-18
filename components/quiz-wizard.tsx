@@ -266,6 +266,7 @@ function QuizResults({
                           href={`/go/${offer.retailer.slug}/${p.slug}`}
                           className="px-3 py-1.5 text-[12px] font-semibold bg-olive text-white rounded-full hover:bg-olive2 transition-colors"
                           target="_blank"
+                          rel="nofollow noopener sponsored"
                         >
                           Koupit
                         </Link>

@@ -140,7 +140,7 @@ export function RetailerCard({ retailer, productSlug, price, photos = [] }: Prop
           <Link
             href={`/go/${retailer.slug}/${productSlug}`}
             target="_blank"
-            rel="noopener sponsored"
+            rel="nofollow noopener sponsored"
             className="inline-flex items-center gap-1.5 bg-olive text-white rounded-full px-5 py-2.5 text-[13px] font-semibold hover:bg-olive-dark transition-colors"
           >
             Otevřít u {retailer.name} — {Math.round(price)} Kč

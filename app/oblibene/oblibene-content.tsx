@@ -104,6 +104,7 @@ export function OblibeneContent({ allProducts }: Props) {
                   <Link
                     href={`/go/${offer.retailer.slug}/${p.slug}`}
                     target="_blank"
+                    rel="nofollow noopener sponsored"
                     className="text-[12px] font-semibold px-3 py-1.5 rounded-full bg-olive text-white hover:bg-olive2 transition-colors"
                   >
                     Koupit

@@ -103,7 +103,7 @@ export function ListCard({ product, offer, rank, compact = false }: ListCardProp
                 <a
                   href={`/go/${offer.retailer.slug}/${product.slug}`}
                   target="_blank"
-                  rel="noopener sponsored"
+                  rel="nofollow noopener sponsored"
                   onClick={(e) => e.stopPropagation()}
                   className="bg-olive text-white rounded-full px-4 py-2 text-[12px] font-medium hover:bg-olive2 transition-colors"
                 >
@@ -204,7 +204,7 @@ export function ListCard({ product, offer, rank, compact = false }: ListCardProp
             <a
               href={`/go/${offer.retailer.slug}/${product.slug}`}
               target="_blank"
-              rel="noopener sponsored"
+              rel="nofollow noopener sponsored"
               onClick={(e) => e.stopPropagation()}
               className="bg-olive text-white border-none rounded-full px-4 py-2 text-xs font-medium shrink-0 hover:bg-olive2 transition-colors"
             >

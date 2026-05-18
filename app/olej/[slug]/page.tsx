@@ -509,7 +509,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   <Link
                     href={`/go/${cheapest.retailer.slug}/${product.slug}`}
                     target="_blank"
-                    rel="noopener sponsored"
+                    rel="nofollow noopener sponsored"
                     className="text-[13px] text-olive italic hover:text-olive2 hover:underline inline-flex items-center gap-1"
                     title={`Otevřít detail u ${cheapest.retailer.name}`}
                   >

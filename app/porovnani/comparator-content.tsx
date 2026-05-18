@@ -354,7 +354,7 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
               <a
                 href={`/go/${winnerOffer.retailer.slug}/${winner.slug}`}
                 target="_blank"
-                rel="noopener sponsored"
+                rel="nofollow noopener sponsored"
                 className="bg-olive text-white rounded-full px-5 py-2.5 text-[13px] font-semibold hover:bg-olive-dark transition-colors flex items-center gap-2 whitespace-nowrap shrink-0"
                 title={`Koupit u ${winnerOffer.retailer.name}`}
               >
@@ -456,7 +456,7 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                           key={metric.label}
                           href={ctaHref}
                           target="_blank"
-                          rel="noopener sponsored"
+                          rel="nofollow noopener sponsored"
                           className="flex items-center justify-between px-4 py-3 bg-olive-bg/40 hover:bg-olive-bg transition-colors"
                         >
                           <span className="text-[12px] text-olive-dark font-medium">
@@ -582,7 +582,7 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                             <a
                               href={ctaHref}
                               target="_blank"
-                              rel="noopener sponsored"
+                              rel="nofollow noopener sponsored"
                               className={`group inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-semibold whitespace-nowrap transition-all ${
                                 isBest
                                   ? 'bg-olive text-white hover:bg-olive-dark shadow-sm'
