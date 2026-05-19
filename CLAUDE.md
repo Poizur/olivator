@@ -533,7 +533,8 @@ Pipeline si vybírá dle pole `retailers.xml_feed_url`:
 04:00 UTC  cron:feed-sync     XML retaileři      ~30s/shop
 04:30 UTC  cron:discovery     ostatní (Playwright) ~10min/shop
 05:00 UTC  cron:prospect      hledá nové eshopy
-06:00 UTC  cron:link-check    deaktivuj mrtvé affiliate URL
+02:00 UTC  cron:link-check    deaktivuj mrtvé affiliate URL (1. pass)
+04:00 UTC  cron:link-check    deaktivuj mrtvé affiliate URL (2. pass — threshold=2)
 ```
 
 **Dedup:** `lib/discovery-agent.ts` filtruje shopy přes
@@ -559,7 +560,7 @@ disabuj (signál v adminu, že XML to řeší).
 | `cron:learning` | `/api/cron/learning` | `0 8 * * 1` | Týdenní extrakt poučení z git commitů + agent_decisions (Claude Haiku) |
 | `cron:discovery` | `/api/cron/discovery` | `30 4 * * *` | Playwright crawl pro shopy bez XML feedu |
 | `cron:prospect` | `/api/cron/prospect` | `0 5 * * *` | hledá nové eshopy |
-| `cron:link-check` | `/api/cron/link-check` | `0 6 * * *` | mrtvé affiliate URL → status='inactive' |
+| `cron:link-check` | `/api/cron/link-check` | `0 2,4 * * *` | mrtvé affiliate URL → status='inactive'; threshold=2 (2× nočně) |
 | `cron:manager` | `/api/cron/manager` | `0 5 * * 1` | týdenní strategický report |
 | — | `/api/cron/newsletter-generate` | středa 18:00 UTC | (Newsletter generation, Fáze 2) |
 | — | `/api/cron/newsletter-send` | čtvrtek 8:00 UTC | (Newsletter send) |

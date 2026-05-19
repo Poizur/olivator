@@ -20,7 +20,7 @@ const FETCH_HEADERS = {
   Accept: 'text/html,application/xhtml+xml',
 }
 
-const FAIL_THRESHOLD = 3  // počet po sobě jdoucích HTTP 4xx → in_stock=false
+const FAIL_THRESHOLD = 2  // počet po sobě jdoucích HTTP 4xx → in_stock=false
 
 export interface LinkCheckResult {
   totalChecked: number
