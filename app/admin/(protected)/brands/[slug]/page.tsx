@@ -11,6 +11,7 @@ import { EntityProductsList } from '@/components/entity-products-list'
 import { AdminBlock } from '@/components/admin-block'
 import { BrandAutoResearchPanel } from '@/components/brand-auto-research-panel'
 import { BrandPhotoSections } from '@/components/brand-photo-sections'
+import { BrandFeaturedToggle } from '@/components/admin/brand-featured-toggle'
 import { ARTICLES } from '@/lib/static-content'
 
 async function getLinkedSlugs(entityType: 'region' | 'brand' | 'cultivar', entitySlug: string) {
@@ -126,6 +127,13 @@ export default async function EditBrandPage({ params }: { params: Promise<{ slug
       </div>
 
       <div className="space-y-6">
+        {/* Featured na homepage */}
+        <BrandFeaturedToggle
+          slug={brand.slug}
+          isFeatured={brand.is_featured ?? false}
+          featuredOrder={brand.featured_order ?? null}
+        />
+
         {/* Auto-research z webu výrobce — Claude Haiku navrhne příběh + logo */}
         <BrandAutoResearchPanel
           slug={brand.slug}
