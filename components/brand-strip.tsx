@@ -2,6 +2,22 @@ import Link from 'next/link'
 import { countryName } from '@/lib/utils'
 import type { BrandTile } from '@/lib/data'
 
+// 6 Mediterranean-palette backgrounds — deterministically assigned per brand name
+const FALLBACK_COLORS = [
+  '#1b4332', // olive-dark
+  '#2d6a4f', // olive
+  '#40916c', // olive-light
+  '#c4711a', // terra
+  '#6b4226', // warm brown
+  '#394251', // dark slate
+]
+
+function brandFallbackColor(name: string): string {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff
+  return FALLBACK_COLORS[Math.abs(h) % FALLBACK_COLORS.length]
+}
+
 export function BrandStrip({ brands }: { brands: BrandTile[] }) {
   if (brands.length === 0) return null
 
@@ -60,9 +76,15 @@ export function BrandStrip({ brands }: { brands: BrandTile[] }) {
                       />
                     </div>
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-olive-dark">
-                      <div className="font-[family-name:var(--font-display)] text-[80px] font-normal italic text-white/15 leading-none select-none">
-                        {b.name.charAt(0)}
+                    <div
+                      className="absolute inset-0 flex flex-col items-center justify-center gap-1"
+                      style={{ backgroundColor: brandFallbackColor(b.name) }}
+                    >
+                      <div className="font-[family-name:var(--font-display)] text-[64px] font-normal italic text-white/30 leading-none select-none">
+                        {b.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="text-[9px] font-bold tracking-[0.2em] uppercase text-white/20 select-none">
+                        {b.name.slice(0, 12)}
                       </div>
                     </div>
                   )}
