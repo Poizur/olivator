@@ -67,17 +67,13 @@ export default async function NejprodavanejiPage() {
             <>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 {bestsellers.map((p, i) => (
-                  <div key={p.id} className="relative">
-                    {/* Rank badge */}
-                    <div className="absolute top-1.5 left-1.5 z-20 flex items-center gap-0.5 bg-terra text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 shadow-sm leading-none">
-                      {i === 0 ? '🔥' : `#${i + 1}`}
-                    </div>
-                    <TopProductCard
-                      product={p}
-                      rank={i + 1}
-                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 200px"
-                    />
-                  </div>
+                  <TopProductCard
+                    key={p.id}
+                    product={p}
+                    rank={i + 1}
+                    badge={{ label: i === 0 ? '🔥 #1' : `#${i + 1}`, hint: 'Pořadí prodejnosti', tone: 'terra' }}
+                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 200px"
+                  />
                 ))}
               </div>
 
