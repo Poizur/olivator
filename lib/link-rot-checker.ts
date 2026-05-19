@@ -1,9 +1,15 @@
 // Link-Rot Checker — denně projde všechny aktivní nabídky a HEAD requestne
-// product_url + affiliate_url. Mrtvé (404/410/dns-fail/timeout) označí
+// affiliate_url (nebo product_url jako fallback). Mrtvé URL označí
 // in_stock=false, aby nevedly /go/... do nikam.
 //
-// Nepoužíváme XML feedy (Heureka), takže tohle je naše vlastní strážnice
-// proti link rotu. Cron: denně.
+// Fail tolerance (2026-05-19):
+//   HTTP 4xx  → inkrementuj fail_count; in_stock=false až po 3 selháních
+//   5xx/429   → interpretováno jako alive (dočasné), fail_count se nemění
+//   Síťová chyba (timeout, DNS) → jen last_checked; fail_count beze změny
+//   Úspěch    → reset fail_count=0, last_fail_at=null
+//
+// URL selection: affiliate_url má přednost; fallback na product_url
+// (řeší retailery bez affiliate programu — greekmarket, lozanocervenka atd.).
 
 import { supabaseAdmin } from './supabase'
 
@@ -14,6 +20,8 @@ const FETCH_HEADERS = {
   Accept: 'text/html,application/xhtml+xml',
 }
 
+const FAIL_THRESHOLD = 3  // počet po sobě jdoucích HTTP 4xx → in_stock=false
+
 export interface LinkCheckResult {
   totalChecked: number
   alive: number
@@ -21,6 +29,8 @@ export interface LinkCheckResult {
   errored: number
   deactivated: number
   reactivated: number
+  pendingFailures: number  // offers s fail_count 1-2 (ještě nedeaktivovány)
+  failCountReset: number   // offers které se zotavily a dostaly fail_count=0
   productsDeactivated: number
   productsReactivated: number
   deadOffers: Array<{
@@ -30,6 +40,7 @@ export interface LinkCheckResult {
     url: string
     statusCode: number | null
     reason: string
+    failCount: number
   }>
 }
 
@@ -84,19 +95,20 @@ export async function runLinkRotCheck(): Promise<LinkCheckResult> {
     errored: 0,
     deactivated: 0,
     reactivated: 0,
+    pendingFailures: 0,
+    failCountReset: 0,
     productsDeactivated: 0,
     productsReactivated: 0,
     deadOffers: [],
   }
 
-  // Sleduj product_ids u kterých se nějaký offer hnul — na konci pro ně
-  // přepočítáme product.status
   const touchedProductIds = new Set<string>()
+  const now = new Date().toISOString()
 
   const { data: offers } = await supabaseAdmin
     .from('product_offers')
     .select(`
-      id, product_id, product_url, affiliate_url, in_stock,
+      id, product_id, product_url, affiliate_url, in_stock, fail_count, last_fail_at,
       products ( slug, name ),
       retailers ( name, slug )
     `)
@@ -110,13 +122,16 @@ export async function runLinkRotCheck(): Promise<LinkCheckResult> {
     product_url: string | null
     affiliate_url: string | null
     in_stock: boolean
+    fail_count: number
+    last_fail_at: string | null
     products: { slug: string; name: string } | { slug: string; name: string }[] | null
     retailers: { name: string; slug: string } | { name: string; slug: string }[] | null
   }>) {
+    // URL selection: affiliate_url preferováno, fallback na product_url.
+    // Řeší retailery bez affiliate programu (greekmarket, lozanocervenka...).
     const url = raw.affiliate_url || raw.product_url
     if (!url) continue
 
-    // Supabase joins někdy vrátí pole, někdy objekt — normalizuj
     const product = Array.isArray(raw.products) ? raw.products[0] : raw.products
     const retailer = Array.isArray(raw.retailers) ? raw.retailers[0] : raw.retailers
 
@@ -125,20 +140,44 @@ export async function runLinkRotCheck(): Promise<LinkCheckResult> {
 
     if (outcome.alive) {
       result.alive++
-      if (!raw.in_stock && outcome.statusCode && outcome.statusCode < 400) {
-        await supabaseAdmin
-          .from('product_offers')
-          .update({ in_stock: true, last_checked: new Date().toISOString() })
-          .eq('id', raw.id)
+      const update: Record<string, unknown> = { last_checked: now }
+
+      // Zotavení po dřívějším selhání — reset čítače
+      if (raw.fail_count > 0) {
+        update.fail_count = 0
+        update.last_fail_at = null
+        result.failCountReset++
+        console.log(`[link-check] recovery ${raw.id}: fail_count ${raw.fail_count}→0`)
+      }
+
+      if (!raw.in_stock) {
+        update.in_stock = true
         result.reactivated++
         touchedProductIds.add(raw.product_id)
-      } else {
-        await supabaseAdmin
-          .from('product_offers')
-          .update({ last_checked: new Date().toISOString() })
-          .eq('id', raw.id)
+        console.log(`[link-check] reactivated ${product?.slug ?? raw.id}`)
       }
+
+      await supabaseAdmin.from('product_offers').update(update).eq('id', raw.id)
+
+    } else if (outcome.statusCode === null) {
+      // Síťová chyba / timeout — nezapočítáváme jako selhání,
+      // jen aktualizujeme last_checked a zkusíme zítra.
+      result.errored++
+      await supabaseAdmin
+        .from('product_offers')
+        .update({ last_checked: now })
+        .eq('id', raw.id)
+      console.log(`[link-check] network error ${product?.slug ?? raw.id}: ${outcome.reason}`)
+
     } else {
+      // HTTP chyba (4xx) — inkrementuj fail_count
+      const newFailCount = raw.fail_count + 1
+      const update: Record<string, unknown> = {
+        fail_count: newFailCount,
+        last_fail_at: now,
+        last_checked: now,
+      }
+
       result.dead++
       result.deadOffers.push({
         offerId: raw.id,
@@ -147,16 +186,24 @@ export async function runLinkRotCheck(): Promise<LinkCheckResult> {
         url,
         statusCode: outcome.statusCode,
         reason: outcome.reason,
+        failCount: newFailCount,
       })
-      // Deaktivovat (idempotentní — už může být in_stock=false)
-      if (raw.in_stock) {
-        await supabaseAdmin
-          .from('product_offers')
-          .update({ in_stock: false, last_checked: new Date().toISOString() })
-          .eq('id', raw.id)
-        result.deactivated++
-        touchedProductIds.add(raw.product_id)
+
+      if (newFailCount >= FAIL_THRESHOLD) {
+        // 3. selhání po sobě → deaktivovat
+        if (raw.in_stock) {
+          update.in_stock = false
+          result.deactivated++
+          touchedProductIds.add(raw.product_id)
+          console.log(`[link-check] deactivated ${product?.slug ?? raw.id} after ${newFailCount} failures (${outcome.reason})`)
+        }
+      } else {
+        // 1.–2. selhání — varování, ale ještě nechceme
+        result.pendingFailures++
+        console.log(`[link-check] fail ${newFailCount}/${FAIL_THRESHOLD} for ${product?.slug ?? raw.id} (${outcome.reason})`)
       }
+
+      await supabaseAdmin.from('product_offers').update(update).eq('id', raw.id)
     }
 
     await new Promise((r) => setTimeout(r, POLITE_DELAY_MS))
