@@ -5,6 +5,7 @@ import {
   getRegionTiles,
   getBrandTiles,
   getBestsellers,
+  getFeaturedBrands,
 } from '@/lib/data'
 import { getActiveArticles } from '@/lib/articles-db'
 import { getActiveRecipes } from '@/lib/recipes-db'
@@ -26,18 +27,20 @@ import { ScoreBadge } from '@/components/score-badge'
 import { TopByCountry } from '@/components/home/top-by-country'
 import { RadarWidget } from '@/components/home/radar-widget'
 import { BestsellersSection } from '@/components/home/bestsellers-section'
+import { FeaturedBrandsSection } from '@/components/home/featured-brands-section'
 
 export const revalidate = 3600
 
 type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
 
 export default async function Home() {
-  const [allProducts, stats, regions, brands, rawBestsellers] = await Promise.all([
+  const [allProducts, stats, regions, brands, rawBestsellers, featuredBrands] = await Promise.all([
     getProductsWithOffers(),
     getSiteStats(),
     getRegionTiles(),
     getBrandTiles(),
     getBestsellers({ limit: 20 }),
+    getFeaturedBrands(),
   ])
 
   const oilOfDay = pickOilOfDay(allProducts)
@@ -249,6 +252,9 @@ export default async function Home() {
 
       {/* ─── BESTSELLERS ─────────────────────────────────────────────── */}
       <BestsellersSection products={homepageBestsellers} totalCount={rawBestsellers.length} />
+
+      {/* ─── TOP ZNAČKY ──────────────────────────────────────────────── */}
+      <FeaturedBrandsSection brands={featuredBrands} />
 
       {/* ─── 5L FEATURED BOX ────────────────────────────────────────── */}
       {(() => {

@@ -1413,6 +1413,55 @@ export async function getBrandTiles(): Promise<BrandTile[]> {
     .sort((a, b) => b.productCount - a.productCount)
 }
 
+/** Top featured značky (is_featured=true) ordered by featured_order. Returns BrandTile[]. */
+export async function getFeaturedBrands(): Promise<BrandTile[]> {
+  const [brandsRes, productsRes, imagesRes] = await Promise.all([
+    supabaseAdmin
+      .from('brands')
+      .select('id, slug, name, country_code')
+      .eq('is_featured', true)
+      .order('featured_order', { ascending: true }),
+    supabaseAdmin.from('products').select('brand_slug').eq('status', 'active'),
+    supabaseAdmin
+      .from('entity_images')
+      .select('entity_id, url, image_role, is_primary, sort_order')
+      .eq('entity_type', 'brand')
+      .eq('status', 'active')
+      .order('sort_order', { ascending: true }),
+  ])
+
+  const counts: Record<string, number> = {}
+  for (const r of productsRes.data ?? []) {
+    if (r.brand_slug) counts[r.brand_slug] = (counts[r.brand_slug] ?? 0) + 1
+  }
+
+  const logoByEntity = new Map<string, string>()
+  const heroByEntity = new Map<string, string>()
+  for (const row of (imagesRes.data ?? []) as Array<{
+    entity_id: string; url: string; image_role: string | null; is_primary: boolean | null
+  }>) {
+    if (row.image_role === 'logo' || (row.is_primary && !logoByEntity.has(row.entity_id) && row.image_role !== 'gallery')) {
+      if (!logoByEntity.has(row.entity_id)) logoByEntity.set(row.entity_id, row.url)
+    } else if (!heroByEntity.has(row.entity_id)) {
+      heroByEntity.set(row.entity_id, row.url)
+    }
+  }
+
+  return (brandsRes.data ?? []).map((b: { id: string; slug: string; name: string; country_code: string }) => {
+    const logoUrl = logoByEntity.get(b.id) ?? null
+    const heroUrl = heroByEntity.get(b.id) ?? null
+    return {
+      slug: b.slug,
+      name: b.name,
+      countryCode: b.country_code,
+      productCount: counts[b.slug] ?? 0,
+      photoUrl: heroUrl ?? logoUrl,
+      logoUrl,
+      heroUrl,
+    }
+  })
+}
+
 // ── 5L bulk products ──────────────────────────────────────────────────
 /** Aktivní produkty 4.5–5.5 L s nejlevnější nabídkou, seřazené dle Score. */
 export async function get5LProducts(limit = 51): Promise<Array<Product & { cheapestOffer: ProductOffer | null }>> {
