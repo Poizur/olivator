@@ -2,7 +2,7 @@
 // Používá TopProductCard — shodný vzhled s TOP 12 sekcí.
 
 import Link from 'next/link'
-import { countryName } from '@/lib/utils'
+import { countryName, countryFlag } from '@/lib/utils'
 import { TopProductCard, type ProductWithOffer } from '@/components/home/top-product-card'
 import { diverseTopProducts } from '@/lib/product-selection'
 
@@ -18,9 +18,21 @@ const COUNTRIES: Array<{ code: string; minProducts: number }> = [
   { code: 'PT', minProducts: 4 },
 ]
 
+// Národní barvy pro vizuální identifikaci — primary = nejreprezentativnější barva
+const COUNTRY_COLOR: Record<string, string> = {
+  GR: '#0D5EAF', // řecká modrá
+  IT: '#009246', // italská zelená
+  ES: '#AA151B', // španělská červená
+  HR: '#171796', // chorvatská modrá
+  PT: '#006600', // portugalská zelená
+  TN: '#E70013', // tuniská červená
+  TR: '#E30A17', // turecká červená
+}
+
 function countryAdjectivePlural(code: string): string {
   const map: Record<string, string> = {
     GR: 'řecké', ES: 'španělské', IT: 'italské', HR: 'chorvatské', PT: 'portugalské',
+    TN: 'tuniské', TR: 'turecké',
   }
   return map[code] ?? countryName(code)
 }
@@ -48,43 +60,64 @@ export function TopByCountry({ products }: Props) {
           Nejlepší oleje podle země.
         </h2>
 
-        <div className="space-y-12">
-          {sections.map(({ code, total, top6 }) => (
-            <div key={code}>
-              <div className="flex items-baseline justify-between mb-5 flex-wrap gap-2">
-                <h3 className="text-[22px] font-[family-name:var(--font-display)] font-normal text-text flex items-center gap-2 flex-wrap">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={`https://flagcdn.com/w20/${code.toLowerCase()}.png`}
-                    alt={countryName(code)}
-                    title={countryName(code)}
-                    width={20}
-                    height={15}
-                    className="inline-block rounded-sm shadow-sm shrink-0"
-                  />
-                  Nejlepší {countryAdjectivePlural(code)} oleje
-                  <span className="text-[15px] font-normal text-text3 font-sans">({total})</span>
-                </h3>
-                <Link
-                  href={`/srovnavac?country=${code}`}
-                  className="text-[12px] text-olive border-b border-olive-border hover:text-olive2 whitespace-nowrap"
+        <div className="space-y-14">
+          {sections.map(({ code, total, top6 }) => {
+            const color = COUNTRY_COLOR[code] ?? '#2d6a4f'
+            const flag = countryFlag(code)
+            return (
+              <div key={code}>
+                {/* ── Hlavička sekce s barevným spodním okrajem ── */}
+                <div
+                  className="flex items-center justify-between mb-6 pb-4 flex-wrap gap-3"
+                  style={{ borderBottom: `3px solid ${color}` }}
                 >
-                  Zobrazit všechny →
-                </Link>
-              </div>
+                  <div className="flex items-center gap-4">
+                    {/* Velká vlajka — hlavní vizuální identifikátor */}
+                    <span
+                      className="text-5xl leading-none select-none shrink-0"
+                      role="img"
+                      aria-label={countryName(code)}
+                    >
+                      {flag}
+                    </span>
+                    <div>
+                      <h3 className="font-[family-name:var(--font-display)] text-2xl md:text-[28px] font-normal text-text leading-tight">
+                        Nejlepší {countryAdjectivePlural(code)} oleje
+                      </h3>
+                      <span className="text-[12px] text-text3">
+                        {total} produktů v databázi
+                      </span>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/srovnavac?country=${code}`}
+                    className="text-[12px] font-semibold hover:underline whitespace-nowrap"
+                    style={{ color }}
+                  >
+                    Zobrazit všechny →
+                  </Link>
+                </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 md:gap-3">
-                {top6.map((p, i) => (
-                  <TopProductCard
-                    key={p.id}
-                    product={p}
-                    rank={i + 1}
-                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 200px"
-                  />
-                ))}
+                {/* ── Grid karet s barevnou čepičkou ── */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 md:gap-3">
+                  {top6.map((p, i) => (
+                    // Wrapper přidá 3px barevný proužek nahoře — funguje s overflow-hidden uvnitř
+                    <div
+                      key={p.id}
+                      className="rounded-[var(--radius-card)] overflow-hidden"
+                      style={{ boxShadow: `0 -3px 0 0 ${color}` }}
+                    >
+                      <TopProductCard
+                        product={p}
+                        rank={i + 1}
+                        sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 200px"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </section>
