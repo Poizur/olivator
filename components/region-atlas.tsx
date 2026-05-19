@@ -2,20 +2,19 @@ import Link from 'next/link'
 import { countryName } from '@/lib/utils'
 import type { RegionTile } from '@/lib/data'
 
-const GENITIVE: Record<string, string> = {
-  kreta: 'Kréty',
-  peloponnes: 'Peloponésu',
-  apulie: 'Apulie',
-  korfu: 'Korfu',
-  zakynthos: 'Zakynthosu',
-  toskansko: 'Toskánska',
-  sicilie: 'Sicílie',
-  kalabrie: 'Kalábrie',
-  andalusie: 'Andalusie',
-  lesbos: 'Lesbosu',
-  alentejo: 'Alenteja',
-  katalansko: 'Katalánska',
-  estremadura: 'Estremadury',
+const FALLBACK_COLORS = [
+  '#1b4332', // olive-dark
+  '#2d6a4f', // olive
+  '#40916c', // olive-light
+  '#c4711a', // terra
+  '#6b4226', // warm brown
+  '#394251', // dark slate
+]
+
+function regionFallbackColor(name: string): string {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff
+  return FALLBACK_COLORS[Math.abs(h) % FALLBACK_COLORS.length]
 }
 
 export function RegionAtlas({ regions }: { regions: RegionTile[] }) {
@@ -38,23 +37,14 @@ export function RegionAtlas({ regions }: { regions: RegionTile[] }) {
           </div>
         </div>
 
-        {/* Hero region (první největší) + grid zbývajících 7
-            Layout: 1 velká dlaždice 2×2 + 4 menší vedle, pak řada 4 malých.
-            Celkově 8 regionů, ale s vizuální hierarchií. */}
-        <div className="grid grid-cols-2 md:grid-cols-4 grid-rows-2 gap-3 md:gap-4">
-          {regions.slice(0, 8).map((r, i) => {
-            const genitive = GENITIVE[r.slug] ?? r.name
-            const isHero = i === 0  // první regionem je hero (2×2)
-            return (
-              <Link
-                key={r.slug}
-                href={`/oblast/${r.slug}`}
-                className={`group relative rounded-[var(--radius-card)] overflow-hidden bg-olive-dark hover:scale-[1.02] transition-transform ${
-                  isHero
-                    ? 'col-span-2 row-span-2 aspect-square md:aspect-auto'
-                    : 'aspect-[4/5]'
-                }`}
-              >
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+          {regions.slice(0, 10).map((r) => (
+            <Link
+              key={r.slug}
+              href={`/oblast/${r.slug}`}
+              className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden hover:border-olive-light hover:shadow-md hover:-translate-y-0.5 transition-all"
+            >
+              <div className="aspect-[4/3] relative overflow-hidden">
                 {r.photoUrl ? (
                   <>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -63,43 +53,35 @@ export function RegionAtlas({ regions }: { regions: RegionTile[] }) {
                       alt={r.name}
                       className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                   </>
                 ) : (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className={`font-[family-name:var(--font-display)] font-normal italic text-white/15 leading-none select-none ${
-                      isHero ? 'text-[200px]' : 'text-[120px]'
-                    }`}>
-                      {r.name.charAt(0)}
+                  <div
+                    className="absolute inset-0 flex flex-col items-center justify-center gap-1"
+                    style={{ backgroundColor: regionFallbackColor(r.name) }}
+                  >
+                    <div className="font-[family-name:var(--font-display)] text-[64px] font-normal italic text-white/30 leading-none select-none">
+                      {r.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="text-[9px] font-bold tracking-[0.2em] uppercase text-white/20 select-none">
+                      {r.name.slice(0, 12)}
                     </div>
                   </div>
                 )}
-
-                <div className={`absolute inset-0 flex flex-col justify-end text-white ${
-                  isHero ? 'p-6 md:p-8' : 'p-4'
-                }`}>
-                  <div className={`font-medium tracking-widest uppercase text-white/70 mb-1 ${
-                    isHero ? 'text-[12px]' : 'text-[10px]'
-                  }`}>
-                    {countryName(r.countryCode)}
-                  </div>
-                  <div className={`font-[family-name:var(--font-display)] font-normal leading-tight mb-1 ${
-                    isHero ? 'text-4xl md:text-5xl' : 'text-2xl'
-                  }`}>
-                    {r.name}
-                  </div>
-                  <div className={`text-white/80 ${isHero ? 'text-[14px]' : 'text-[12px]'}`}>
-                    {r.productCount} {r.productCount === 1 ? 'olej' : r.productCount < 5 ? 'oleje' : 'olejů'} z {genitive}
-                  </div>
-                  {isHero && (
-                    <div className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-white border border-white/30 rounded-full px-3 py-1.5 w-fit group-hover:bg-white group-hover:text-olive-dark transition-colors">
-                      Prozkoumat oblast →
-                    </div>
-                  )}
+              </div>
+              <div className="p-3">
+                <div className="text-[10px] text-text3 mb-0.5 uppercase tracking-widest font-medium">
+                  {countryName(r.countryCode)}
                 </div>
-              </Link>
-            )
-          })}
+                <div className="text-[14px] font-semibold text-text leading-tight mb-0.5 truncate">
+                  {r.name}
+                </div>
+                <div className="text-[11px] text-text3">
+                  {r.productCount} {r.productCount === 1 ? 'olej' : r.productCount < 5 ? 'oleje' : 'olejů'}
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
     </section>
