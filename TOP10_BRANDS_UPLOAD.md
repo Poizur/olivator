@@ -14,7 +14,7 @@ Provize: reckonasbavi 10 % · italyshop 7,5 %
 | # | Značka | Země | Produktů | Reckonasbavi | Italyshop | Score | Logo? | Akce |
 |---|--------|------|----------|:---:|:---:|:---:|:---:|------|
 | 1 | **Bartolini** | 🇮🇹 | 18 | — | 18 ✅ | 54 | ❌ chybí | [oliobartolini.com](https://www.oliobartolini.com) |
-| 2 | **Intini** | 🇮🇹 | 10 | 10 ✅ | — | 30 | ✅ má | — nic |
+| 2 | **Motakis** | 🇬🇷 | 3 | — | — | — | ❌ chybí | [motakis.gr](https://motakis.gr) |
 | 3 | **Lozano Červenka** | 🇪🇸 | 29 | — | — | 29 | ❌ chybí | [Hledat logo](https://www.google.com/search?q=Lozano+Cervenka+olivovy+olej+logo&tbm=isch) |
 | 4 | **Corinto** | 🇬🇷 | 10 | 9 ✅ | — | 27 | ❌ chybí | [corinto.cz](https://www.corinto.cz) |
 | 5 | **Evoilino** | 🇬🇷 | 6 | 6 ✅ | — | 18 | ✅ má (5 fotek) | — nic |
