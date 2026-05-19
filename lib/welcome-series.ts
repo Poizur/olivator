@@ -352,14 +352,17 @@ export async function getSlevyDeals(limit = 20): Promise<SlevyPageData> {
   const qualifyingIds = qualifyingProducts.map(p => p.id as string)
 
   // History + primary images for qualifying products (small set, safe URL length)
+  // DŮLEŽITÉ: select retailer_id — srovnáváme per-retailer, ne cross-retailer.
+  // Cross-retailer srovnání způsobuje falešné slevy: max(retailerA) vs current(retailerB).
+  const MIN_HISTORY_DAYS = 3  // min. počet různých dní záznamu pro spolehlivý baseline
   const [historyResult, imagesResult] = await Promise.all([
     qualifyingIds.length > 0
       ? supabaseAdmin
           .from('price_history')
-          .select('product_id, price')
+          .select('product_id, retailer_id, price, recorded_at')
           .in('product_id', qualifyingIds)
           .gte('recorded_at', new Date(Date.now() - 30 * 86400_000).toISOString())
-          .limit(5000)
+          .limit(10000)
       : Promise.resolve({ data: [] }),
     qualifyingIds.length > 0
       ? supabaseAdmin
@@ -379,35 +382,54 @@ export async function getSlevyDeals(limit = 20): Promise<SlevyPageData> {
   const retailerMap = new Map((retailersResult.data ?? []).map(r => [r.id as string, { slug: r.slug as string, name: r.name as string }]))
   const brandNameMap = new Map((brandsResult.data ?? []).map(b => [b.slug as string, b.name as string]))
 
-  const maxPriceByProduct = new Map<string, number>()
-  for (const h of historyData) {
-    const pid = h.product_id as string
-    const price = h.price as number
-    const existing = maxPriceByProduct.get(pid)
-    if (!existing || price > existing) maxPriceByProduct.set(pid, price)
+  // Per-retailer aggregace: klíč = "productId|retailerId"
+  // Sledujeme max cenu A počet distinct dní — bez dostatečné historie nelze ověřit slevu.
+  const historyByKey = new Map<string, { maxPrice: number; days: Set<string> }>()
+  for (const h of historyData as Array<{ product_id: string; retailer_id: string; price: number; recorded_at: string }>) {
+    const key = `${h.product_id}|${h.retailer_id}`
+    const day = h.recorded_at.slice(0, 10)  // YYYY-MM-DD
+    const entry = historyByKey.get(key) ?? { maxPrice: 0, days: new Set() }
+    if (h.price > entry.maxPrice) entry.maxPrice = h.price
+    entry.days.add(day)
+    historyByKey.set(key, entry)
   }
 
-  const cheapestByProduct = new Map<string, { price: number; retailerId: string }>()
+  // Index aktuálních nabídek per (product, retailer) pro per-retailer srovnání
+  const offerByKey = new Map<string, { price: number; retailerId: string }>()
   for (const o of offers) {
     const pid = o.product_id as string
     if (!productMap.has(pid)) continue
-    const existing = cheapestByProduct.get(pid)
-    if (!existing || (o.price as number) < existing.price) {
-      cheapestByProduct.set(pid, { price: o.price as number, retailerId: o.retailer_id as string })
+    const key = `${pid}|${o.retailer_id}`
+    offerByKey.set(key, { price: o.price as number, retailerId: o.retailer_id as string })
+  }
+
+  // Nejlepší per-product deal — porovnáváme current vs STEJNÝ retailer 30d max
+  const bestDealByProduct = new Map<string, { price: number; retailerId: string; maxPrice: number; dropPct: number }>()
+  for (const [key, offer] of offerByKey.entries()) {
+    const [productId] = key.split('|')
+    const hist = historyByKey.get(key)
+    // Přeskočit: žádná nebo nedostatečná historie pro tento (produkt, retailer)
+    if (!hist || hist.days.size < MIN_HISTORY_DAYS) continue
+    if (hist.maxPrice <= offer.price) continue
+    const dropPct = Math.round(((hist.maxPrice - offer.price) / hist.maxPrice) * 100)
+    if (dropPct < 5) continue
+
+    const existing = bestDealByProduct.get(productId)
+    if (!existing || dropPct > existing.dropPct) {
+      bestDealByProduct.set(productId, { price: offer.price, retailerId: offer.retailerId, maxPrice: hist.maxPrice, dropPct })
     }
   }
 
   const deals: SlevyDeal[] = []
-  for (const [productId, offer] of cheapestByProduct.entries()) {
+  for (const [productId, deal] of bestDealByProduct.entries()) {
     const product = productMap.get(productId)
     if (!product) continue
-    const retailer = retailerMap.get(offer.retailerId)
+    const retailer = retailerMap.get(deal.retailerId)
     if (!retailer) continue
 
-    const maxPrice = maxPriceByProduct.get(productId) ?? null
-    if (!maxPrice || maxPrice <= offer.price) continue
-    const dropPct = Math.round(((maxPrice - offer.price) / maxPrice) * 100)
-    if (dropPct < 5) continue
+    const { price: offerPrice, maxPrice, dropPct } = deal
+    // alias pro zbytek bloku
+    const offer = { price: offerPrice, retailerId: deal.retailerId }
 
     const brandSlug = product.brand_slug as string | null
     const rawName = getDisplayName(product as { name_short: string | null; name: string })
