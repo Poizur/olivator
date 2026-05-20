@@ -273,7 +273,7 @@ export default async function Home() {
                   </div>
                   <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-[32px] font-normal text-white leading-tight">
                     Olivový olej 5L — ušetřete až 44 %.
-                    <span className="text-[16px] font-normal text-white/50 ml-3">Od {minPerLiter} Kč/litr</span>
+                    <span className="text-[16px] font-normal text-white/75 ml-3">Od {minPerLiter} Kč/litr</span>
                   </h2>
                 </div>
                 <Link
