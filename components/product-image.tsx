@@ -1,6 +1,13 @@
 import Image from 'next/image'
 import type { Product } from '@/lib/types'
 
+const SUPABASE_HOST = 'dyaloliwynmfnpjemzrh.supabase.co'
+
+/** True pro URL kde Next.js image cache přežije redeploy (Supabase Storage). */
+function shouldOptimize(url: string): boolean {
+  return url.includes(SUPABASE_HOST)
+}
+
 interface ProductImageProps {
   product: Pick<Product, 'imageUrl' | 'name'>
   className?: string
@@ -13,6 +20,8 @@ interface ProductImageProps {
   /** Volitelný zoom factor (1 = bez zoom, default). Pouze pokud má source
    *  fotka výrazný whitespace padding který chceš oříznout. */
   zoom?: number
+  /** LCP hint — nastav na true pro hlavní obrázek above the fold. */
+  priority?: boolean
 }
 
 export function ProductImage({
@@ -22,6 +31,7 @@ export function ProductImage({
   sizes = '(max-width: 768px) 100vw, 400px',
   fit = 'contain',
   zoom = 1,
+  priority = false,
 }: ProductImageProps) {
   if (product.imageUrl) {
     return (
@@ -31,6 +41,11 @@ export function ProductImage({
           alt={product.name}
           fill
           sizes={sizes}
+          priority={priority}
+          // Optimalizace jen pro Supabase Storage — Railway cache se maže při
+          // každém deployi, takže externí CDN by se vždy re-fetchovaly (= sekundy).
+          // Supabase URL jsou stabilní a cache přežije, externí servujeme přímo.
+          unoptimized={!shouldOptimize(product.imageUrl)}
           className={fit === 'cover' ? 'object-cover object-center' : 'object-contain'}
           style={zoom !== 1 ? { transform: `scale(${zoom})` } : undefined}
         />

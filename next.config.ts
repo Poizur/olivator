@@ -30,6 +30,8 @@ const nextConfig: NextConfig = {
       // External e-shop CDNs — fallback while admin migrates images to our storage.
       // Long-term every image should land in Supabase Storage via Gallery Manager.
       { protocol: 'https', hostname: 'cdn.myshoptet.com' },
+      // shop.reckonasbavi.cz — přímé URL (ne CDN) pro starší produktové fotky
+      { protocol: 'https', hostname: 'shop.reckonasbavi.cz' },
       { protocol: 'https', hostname: 'images.openfoodfacts.org' },
       { protocol: 'https', hostname: 'static.openfoodfacts.org' },
       { protocol: 'https', hostname: 'world.openfoodfacts.org' },
