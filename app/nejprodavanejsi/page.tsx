@@ -87,33 +87,50 @@ export default async function NejprodavanejiPage() {
 
       {/* ── Note o Motakis / Score vs popularita ── */}
       <section className="px-6 md:px-10 py-12 bg-off/50 border-t border-off2">
-        <div className="max-w-[760px] mx-auto">
-          <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-4">
-            Proč Motakis Kréta 5L?
-          </h2>
-          <p className="text-[15px] text-text2 leading-relaxed mb-4">
-            Motakis Kréta 5L je podle dat z českého maloobchodu nejprodávanější
-            5litrový olivový olej v ČR. Přesto má nízký Olivator Score (25–45) —
-            hlavně proto, že nemáme lab data o kyselosti a polyfenolech, které
-            tvoří 60 % výpočtu.
-          </p>
-          <p className="text-[15px] text-text2 leading-relaxed mb-6">
-            Neznamená to, že Motakis je špatný olej. Znamená to, že{' '}
-            <strong className="text-text">popularita ≠ Olivator Score</strong>.
-            Pro nezávislé hodnocení kvality doporučujeme Score 75+. Pro lidové
-            bestsellery je tato stránka.
-          </p>
-          <Link
-            href="/metodika"
-            className="text-[13px] text-olive font-semibold hover:text-olive2 transition-colors"
-          >
-            Jak počítáme Olivator Score →
-          </Link>
+        <div className="max-w-[1280px] mx-auto">
+          <div className="max-w-[660px]">
+            <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-4">
+              Proč Motakis Kréta 5L?
+            </h2>
+            <p className="text-[15px] text-text2 leading-relaxed mb-4">
+              Motakis Kréta 5L je podle dat z českého maloobchodu nejprodávanější
+              5litrový olivový olej v ČR. Přesto má nízký Olivator Score (25–45) —
+              hlavně proto, že nemáme lab data o kyselosti a polyfenolech, které
+              tvoří 60 % výpočtu.
+            </p>
+            <p className="text-[15px] text-text2 leading-relaxed mb-6">
+              Neznamená to, že Motakis je špatný olej. Znamená to, že{' '}
+              <strong className="text-text">popularita ≠ Olivator Score</strong>.
+              Pro nezávislé hodnocení kvality doporučujeme Score 75+. Pro lidové
+              bestsellery je tato stránka.
+            </p>
+            <Link
+              href="/metodika"
+              className="text-[13px] text-olive font-semibold hover:text-olive2 transition-colors"
+            >
+              Jak počítáme Olivator Score →
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* ── Newsletter ── */}
-      <NewsletterSignup />
+      <section className="px-6 md:px-10 py-16 bg-olive-dark">
+        <div className="max-w-[1280px] mx-auto">
+          <div className="max-w-[480px]">
+            <div className="text-[10px] font-bold tracking-widest uppercase text-olive3 mb-2">
+              — Zůstaň v obraze
+            </div>
+            <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-3xl font-normal text-white mb-2 leading-tight">
+              Olivový týden
+            </h2>
+            <p className="text-[14px] text-white/60 mb-6">
+              Nové bestsellery, slevy a tipy každý čtvrtek.
+            </p>
+            <NewsletterSignup source="footer" variant="dark" />
+          </div>
+        </div>
+      </section>
     </main>
   )
 }

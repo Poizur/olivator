@@ -13,8 +13,9 @@ export function CompareBar() {
 
   // Defense-in-depth: compare bar je veřejný UI, na /admin se nezobrazuje
   if (pathname.startsWith('/admin')) return null
-  // Na samotném srovnávači není potřeba duplikovat
+  // Na srovnávači ani na bestseller stránce (jiný účel, pill by rušil)
   if (pathname.startsWith('/porovnani')) return null
+  if (pathname.startsWith('/nejprodavanejsi')) return null
 
   // ── PRÁZDNÝ STAV — kompaktní pill uprostřed dole, vždy viditelný ──
   if (items.length === 0) {
