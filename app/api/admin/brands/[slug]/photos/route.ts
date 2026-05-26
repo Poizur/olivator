@@ -44,7 +44,7 @@ export async function PATCH(
 
   for (const u of updates) {
     if (!u.id) continue
-    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    const patch: Record<string, unknown> = {}
     if (u.image_role && ALLOWED_ROLES.has(u.image_role)) patch.image_role = u.image_role
     if (u.status && ALLOWED_STATUS.has(u.status)) patch.status = u.status
     if (typeof u.sort_order === 'number') patch.sort_order = u.sort_order

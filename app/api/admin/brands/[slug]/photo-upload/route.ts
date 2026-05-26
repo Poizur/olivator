@@ -220,7 +220,7 @@ export async function POST(
   if (section === 'logo' || section === 'hero' || section === 'editorial') {
     await supabaseAdmin
       .from('entity_images')
-      .update({ status: 'inactive', updated_at: new Date().toISOString() })
+      .update({ status: 'inactive' })
       .eq('entity_id', brand.id)
       .eq('entity_type', 'brand')
       .eq('image_role', section)
