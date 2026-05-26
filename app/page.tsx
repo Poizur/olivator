@@ -15,7 +15,7 @@ import { diverseTopProducts } from '@/lib/product-selection'
 import type { Product, ProductOffer } from '@/lib/types'
 import { ScoreBadge } from '@/components/score-badge'
 import { TopByCountry } from '@/components/home/top-by-country'
-import { RadarWidget } from '@/components/home/radar-widget'
+import { DealsNewsSection } from '@/components/home/deals-news-section'
 import { BestsellersSection } from '@/components/home/bestsellers-section'
 import { FeaturedBrandsSection } from '@/components/home/featured-brands-section'
 import { TopProductCard } from '@/components/home/top-product-card'
@@ -317,6 +317,7 @@ export default async function Home() {
                 <h2 className="font-[family-name:var(--font-display)] text-[30px] font-medium text-text leading-[1.1]">
                   Recepty s <em className="italic text-olive-light">olivovým olejem</em>
                 </h2>
+                <p className="text-[14px] text-text2 mt-[6px]">Jak vybraný olej použít — od dezertů po grilování.</p>
               </div>
               <Link href="/recept" className="text-[13px] text-olive border-b border-olive-border hover:text-olive2 whitespace-nowrap">
                 Všechny recepty →
@@ -358,8 +359,8 @@ export default async function Home() {
         </section>
       )}
 
-      {/* ─── NOVINKY ZE SVĚTA OLIVOVÉHO OLEJE ──────────────────────────── */}
-      <RadarWidget />
+      {/* ─── SLEVY + NOVINKY — 2-sloupcový layout ───────────────────────── */}
+      <DealsNewsSection />
 
       {/* ─── NEWSLETTER — jediný na stránce ─────────────────────────────── */}
       <section className="px-6 md:px-10 py-16 bg-olive-dark">

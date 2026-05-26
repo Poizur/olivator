@@ -336,7 +336,7 @@ export function SommelierHero({
               <div ref={resultsEndRef} />
             </div>
 
-            <div className="border-t border-off2 px-5 py-3 sticky bottom-0 bg-white rounded-b-[var(--radius-card)]">
+            <div className="border-t border-off2 px-5 py-3 bg-white rounded-b-[var(--radius-card)] shrink-0">
               <div className="flex gap-2 items-center bg-off rounded-full pl-4 pr-2 py-1.5 mb-2 focus-within:bg-olive-bg/50 transition-colors">
                 <input
                   ref={inputRef}
