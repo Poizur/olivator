@@ -63,6 +63,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }))
 
+  // DB recipes — samostatná tabulka, jinak by chyběly v sitemapě.
+  // Každý recept má /recept/[slug] URL → priority 0.65 (lehce vyšší než články,
+  // protože Recipe rich snippet má vyšší CTR v Google).
+  const dbRecipesRes = await supabaseAdmin
+    .from('recipes')
+    .select('slug, updated_at')
+    .eq('status', 'active')
+
+  const recipePages: MetadataRoute.Sitemap = (dbRecipesRes.data ?? []).map(
+    (r: { slug: string; updated_at: string | null }) => ({
+      url: `${baseUrl}/recept/${r.slug}`,
+      lastModified: dt(r.updated_at),
+      changeFrequency: 'monthly' as const,
+      priority: 0.65,
+    })
+  )
+
   // DB articles — primární zdroj. Static articles jako fallback pro slugy
   // které v DB nejsou (legacy static-content.ts).
   const dbArticlesRes = await supabaseAdmin
@@ -123,5 +140,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }))
 
-  return [...staticPages, ...productPages, ...rankingPages, ...articlePages, ...regionPages, ...brandPages, ...cultivarPages, ...glossaryPages]
+  return [...staticPages, ...productPages, ...rankingPages, ...articlePages, ...recipePages, ...regionPages, ...brandPages, ...cultivarPages, ...glossaryPages]
 }

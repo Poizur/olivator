@@ -203,6 +203,43 @@ export default async function ArticleDetailPage({
     { name: article.title, url: `/pruvodce/${article.slug}` },
   ])
 
+  // FAQPage schema — parsuje sekci ## FAQ / ## Časté dotazy z body_markdown.
+  // Google zobrazí FAQ rich snippet pokud stránka obsahuje platné Q&A.
+  // Formát v textu: **Otázka?** následovaná odpovědí (jeden nebo více odstavců
+  // než přijde další tučná otázka nebo konec sekce).
+  const faqSchema = (() => {
+    if (!resolvedBody) return null
+    const faqSectionMatch = resolvedBody.match(
+      /#{1,3}\s*(?:FAQ|Časté dotazy|Nejčastější dotazy|Otázky a odpovědi)[^\n]*\n([\s\S]*?)(?=\n#{1,3} |\s*$)/i
+    )
+    if (!faqSectionMatch) return null
+    const faqText = faqSectionMatch[1]
+    // Pattern: **Question?** (newline) answer text (until next ** or end)
+    const qaPattern = /\*\*([^*]+\?[^*]*)\*\*\s*\n([\s\S]*?)(?=\*\*[^*]+\?|\s*$)/g
+    const items: { question: string; answer: string }[] = []
+    let match
+    while ((match = qaPattern.exec(faqText)) !== null) {
+      const question = match[1].trim()
+      const answer = match[2].replace(/\*\*/g, '').replace(/\n+/g, ' ').trim()
+      if (question && answer && answer.length > 20) {
+        items.push({ question, answer })
+      }
+    }
+    if (items.length === 0) return null
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: items.map((item) => ({
+        '@type': 'Question',
+        name: item.question,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: item.answer,
+        },
+      })),
+    }
+  })()
+
   return (
     <div className="max-w-[1280px] mx-auto px-6 md:px-10 py-8 md:py-10">
       <script
@@ -213,6 +250,12 @@ export default async function ArticleDetailPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
       />
+      {faqSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        />
+      )}
 
       <div className="text-xs text-text3 mb-6">
         <Link href="/" className="text-olive">Olivátor</Link>
