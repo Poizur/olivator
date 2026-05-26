@@ -180,7 +180,7 @@ export function SommelierHero({
         <div className="max-w-[1280px] mx-auto">
           {/* olik-inner: emoji vlevo + content vpravo — přesně jako mockup */}
           <div className="flex items-center gap-6 mb-5">
-            <div className="shrink-0 w-[76px] h-[76px] md:w-[96px] md:h-[96px] relative drop-shadow-xl">
+            <div className="shrink-0 w-[152px] h-[152px] md:w-[192px] md:h-[192px] relative drop-shadow-xl">
               <Image src="/olik.png" alt="Olík" fill sizes="96px" priority className="object-contain" />
             </div>
             <div className="flex-1 min-w-0">
