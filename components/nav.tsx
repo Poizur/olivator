@@ -33,14 +33,18 @@ export function Nav({ hasAdminBar = false }: { hasAdminBar?: boolean }) {
       <nav className={`sticky ${hasAdminBar ? 'top-9' : 'top-0'} z-50 bg-white border-b border-off2 px-6 md:px-10`}>
         <div className="max-w-[1280px] mx-auto h-[52px] md:h-[56px] flex items-center gap-8">
           <Link href="/" className="shrink-0 flex items-center cursor-pointer" aria-label="olivátor — domů">
-            <Image
-              src="/logo-wordmark.png"
-              alt="olivátor"
-              width={720}
-              height={184}
-              priority
-              className="h-11 md:h-12 w-auto"
-            />
+            {/* wordmark má hodně whitespace → fill+object-cover ořeže okraje a zobrazí jen text */}
+            <div className="relative h-10 md:h-11 overflow-hidden" style={{ width: '148px' }}>
+              <Image
+                src="/logo-wordmark.png"
+                alt="olivátor"
+                fill
+                sizes="148px"
+                priority
+                className="object-cover"
+                style={{ objectPosition: 'center 45%' }}
+              />
+            </div>
           </Link>
 
           <div className="hidden md:flex gap-6 flex-1">

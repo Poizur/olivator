@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { ProductImage } from './product-image'
@@ -179,7 +180,9 @@ export function SommelierHero({
         <div className="max-w-[1280px] mx-auto">
           {/* olik-inner: emoji vlevo + content vpravo — přesně jako mockup */}
           <div className="flex items-center gap-6 mb-5">
-            <span className="text-[64px] leading-none shrink-0" aria-hidden>🫒</span>
+            <div className="shrink-0 w-[76px] h-[76px] md:w-[96px] md:h-[96px] relative drop-shadow-xl">
+              <Image src="/olik.png" alt="Olík" fill sizes="96px" priority className="object-contain" />
+            </div>
             <div className="flex-1 min-w-0">
               {/* olik-header: title vlevo, stats napravo */}
               <div className="flex items-baseline justify-between gap-4 flex-wrap mb-3">
