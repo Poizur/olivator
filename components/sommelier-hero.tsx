@@ -2,10 +2,10 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { Trophy, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { ProductImage } from './product-image'
 import { ScoreBadge } from './score-badge'
-import { formatPrice, formatPricePer100ml, countryName } from '@/lib/utils'
+import { formatPrice } from '@/lib/utils'
 import type { Product, ProductOffer } from '@/lib/types'
 
 type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
@@ -18,9 +18,6 @@ interface Message {
 interface Props {
   totalProducts: number
   activeRetailers: number
-  regionCount: number
-  brandCount: number
-  topPicks: ProductWithOffer[]
   productLookup: Record<string, ProductWithOffer>
 }
 
@@ -42,17 +39,15 @@ function extractSlugs(text: string): string[] {
  * Markdown bold **X** převede na <strong>.
  */
 function renderInlineMarkdown(text: string): React.ReactNode[] {
-  // Strip leftovers po stripping linků
   const cleaned = text
-    .replace(/\[\]\([^)]*\)/g, '')           // []() prázdný markdown link
-    .replace(/\(\/olej\/[\w-]+\)/g, '')      // (/olej/slug)
-    .replace(/\/olej\/[\w-]+/g, '')          // /olej/slug holé
-    .replace(/\(link\)/g, '')                // (link) leftover
-    .replace(/\s+\.\s*$/g, '.')              // " ." na konci
-    .replace(/\s+,/g, ',')                   // " ," uprostřed
+    .replace(/\[\]\([^)]*\)/g, '')
+    .replace(/\(\/olej\/[\w-]+\)/g, '')
+    .replace(/\/olej\/[\w-]+/g, '')
+    .replace(/\(link\)/g, '')
+    .replace(/\s+\.\s*$/g, '.')
+    .replace(/\s+,/g, ',')
     .trim()
 
-  // Split by **bold** segments
   const parts = cleaned.split(/(\*\*[^*]+\*\*)/g)
   return parts
     .filter((p) => p.length > 0)
@@ -75,14 +70,6 @@ interface ReplyBlock {
   slug?: string
 }
 
-/**
- * Rozparsuje AI odpověď na bloky:
- *   - intro: text před prvním očíslovaným bodem
- *   - oil: každý "1. ... 2. ... 3. ..." kus + slug toho produktu
- *   - outro: cokoliv za posledním očíslovaným bodem
- *
- * Používáme pro interleaved render: text bloku → karta produktu → další blok.
- */
 function parseReplyBlocks(text: string): ReplyBlock[] {
   const slugs = extractSlugs(text)
   const lines = text.split('\n')
@@ -106,15 +93,12 @@ function parseReplyBlocks(text: string): ReplyBlock[] {
   for (const line of lines) {
     const isNumberedItem = /^\d+\.\s/.test(line.trim())
     if (isNumberedItem) {
-      // Finish previous block
       flush()
       currentType = 'oil'
       currentText.push(line)
     } else if (currentType === 'oil' && line.trim() === '' && currentText.length > 0) {
-      // Empty line — pokud následuje další numbered item, ukončí současný oil blok
       currentText.push(line)
     } else if (currentType === 'oil' && /^\*\*/.test(line.trim()) && currentText.length > 0) {
-      // Začíná outro (např. "**Moje tip:**")
       flush()
       currentType = 'outro'
       currentText.push(line)
@@ -129,9 +113,6 @@ function parseReplyBlocks(text: string): ReplyBlock[] {
 export function SommelierHero({
   totalProducts,
   activeRetailers,
-  regionCount,
-  brandCount,
-  topPicks,
   productLookup,
 }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
@@ -187,57 +168,42 @@ export function SommelierHero({
   const hasConversation = messages.length > 0
 
   return (
-    <section className="relative bg-white overflow-hidden border-b border-off2">
-      <div
-        aria-hidden
-        className="absolute inset-0 -z-10 bg-gradient-to-b from-olive-bg/30 via-white to-white"
-      />
+    <section className="relative overflow-hidden border-b border-olive2/30">
+      <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-br from-[#1b4332] to-[#2d6a4f]" />
 
-      <div className="px-6 md:px-10 pt-12 pb-14">
+      <div className="px-6 md:px-10 py-8 md:py-10">
         <div className="max-w-[1280px] mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-10 items-start">
-          {/* LEFT: Sommelier search */}
-          <div>
-            <div className="inline-flex items-center gap-3 text-[14px] font-semibold text-olive-dark bg-olive-bg px-5 py-2.5 rounded-full mb-2.5 tracking-tight">
-              <span className="relative flex w-2.5 h-2.5">
-                <span className="animate-ping absolute inline-flex w-full h-full rounded-full bg-olive opacity-50" />
-                <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-olive" />
-              </span>
-              <span><strong>{totalProducts}</strong> olejů · <strong>{activeRetailers}</strong> prodejců · <strong>{regionCount}</strong> regionů · <strong>{brandCount}</strong> značek</span>
-            </div>
-            {/* Trust signals — E-E-A-T pro Google + uživatelská důvěra */}
-            <div className="flex items-center gap-4 text-[12px] text-text3 mb-5 flex-wrap">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="text-olive">✓</span> Nezávislé hodnocení
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="text-olive">✓</span> Žádná reklama v obsahu
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="text-olive">✓</span> Aktualizace každých 24 h
-              </span>
-            </div>
+          {/* Header row — emoji + title + refresh badge */}
+          <div className="flex items-start gap-4 mb-5">
+            <span className="text-4xl shrink-0 hidden sm:block mt-0.5" aria-hidden>🫒</span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline justify-between gap-4 flex-wrap mb-3">
+                <div>
+                  <h1 className="font-[family-name:var(--font-display)] text-2xl md:text-[32px] font-normal text-white leading-tight">
+                    Olík — <em className="text-olive4 italic">najde tvůj olej za 5 sekund</em>
+                  </h1>
+                  <p className="text-[13px] text-white/65 mt-1">
+                    AI prochází celý katalog · <strong className="text-white/80">{totalProducts}</strong> olejů · <strong className="text-white/80">{activeRetailers}</strong> prodejců
+                  </p>
+                </div>
+                <span className="hidden md:inline-flex items-center gap-1.5 text-[11px] text-white/50 shrink-0">
+                  <span className="relative flex w-2 h-2">
+                    <span className="animate-ping absolute inline-flex w-full h-full rounded-full bg-olive4 opacity-50" />
+                    <span className="relative inline-flex w-2 h-2 rounded-full bg-olive4" />
+                  </span>
+                  Aktualizováno dnes
+                </span>
+              </div>
 
-            <h1 className="font-[family-name:var(--font-display)] text-5xl md:text-[64px] font-normal leading-[1.02] tracking-tight text-text mb-4">
-              Zeptej se.<br />
-              <em className="text-olive italic">Najdeme tvůj olej.</em>
-            </h1>
-
-            <p className="text-[16px] text-text2 font-light leading-relaxed mb-7 max-w-[560px]">
-              Olík prochází celý katalog. Napiš co hledáš — chuť, cenu, příležitost — a dostaneš tři konkrétní oleje s cenou a důvodem proč.
-            </p>
-
-            {/* Search input — placeholder krátký, příklady jsou v pills níže.
-                Mobile: ikon-only button (40×40), desktop: full "Zeptat se →". */}
-            <div className="relative max-w-[640px]">
-              <div className="flex gap-2 items-center bg-white border border-off2 rounded-full pl-5 pr-2 py-2 shadow-[0_4px_24px_rgba(0,0,0,0.04)] focus-within:border-olive focus-within:shadow-[0_4px_24px_rgba(45,106,79,0.12)] transition-all">
+              {/* Search input */}
+              <div className="flex gap-2 items-center bg-white rounded-full pl-5 pr-2 py-1.5 shadow-[0_4px_24px_rgba(0,0,0,0.25)] focus-within:shadow-[0_6px_32px_rgba(0,0,0,0.35)] transition-all">
                 <input
                   ref={inputRef}
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && send()}
-                  placeholder="Co hledáš?"
+                  placeholder="Lehký řecký olej do 300 Kč na saláty..."
                   disabled={loading}
                   className="flex-1 min-w-0 text-[15px] outline-none placeholder:text-text3 bg-transparent py-2"
                 />
@@ -250,12 +216,12 @@ export function SommelierHero({
                     send()
                   }}
                   disabled={loading}
-                  aria-label="Zeptat se"
+                  aria-label="Zeptat se Olíka"
                   className="bg-olive text-white rounded-full sm:px-5 sm:py-2.5 px-3 py-2.5 text-[14px] font-semibold hover:bg-olive2 transition-colors whitespace-nowrap inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait shrink-0"
                 >
                   {loading ? '…' : (
                     <>
-                      <span className="hidden sm:inline">Zeptat se Olíka</span>
+                      <span className="hidden sm:inline">Zeptat se →</span>
                       <span className="bg-white rounded-full w-8 h-8 flex items-center justify-center shrink-0">
                         <img src="/olik.png" alt="" className="w-6 h-6 object-contain" />
                       </span>
@@ -263,84 +229,35 @@ export function SommelierHero({
                   )}
                 </button>
               </div>
+
+              {/* Suggestion chips */}
+              {!hasConversation && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {SUGGESTIONS.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => send(s)}
+                      disabled={loading}
+                      className="text-[12px] text-white/85 bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 rounded-full px-3.5 py-1.5 transition-colors"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-
-            {/* Suggestion chips */}
-            {!hasConversation && (
-              <div className="flex flex-wrap gap-2 mt-4 max-w-[640px]">
-                {SUGGESTIONS.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => send(s)}
-                    disabled={loading}
-                    className="text-[12px] text-text2 bg-off hover:bg-olive-bg hover:text-olive border border-off2 hover:border-olive-border rounded-full px-3.5 py-1.5 transition-colors"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
-
           </div>
 
-          {/* RIGHT: Top 3 této chvíle */}
-          <aside>
-            <div className="bg-olive-dark rounded-[var(--radius-card)] p-6 text-white">
-              <div className="flex items-center gap-1.5 mb-5">
-                <Trophy size={14} strokeWidth={1.75} className="text-white/80" />
-                <span className="text-[10px] font-bold tracking-widest uppercase text-white/80">
-                  Top 3 této chvíle
-                </span>
-              </div>
-
-              <div className="space-y-2.5">
-                {topPicks.map((p, i) => (
-                  <Link
-                    key={p.id}
-                    href={`/olej/${p.slug}`}
-                    className="flex items-center gap-3 bg-black/15 hover:bg-black/25 border border-white/15 rounded-xl p-2.5 transition-colors group"
-                  >
-                    <div className="text-[12px] font-bold text-white/85 tabular-nums w-4 shrink-0 text-center">
-                      {i + 1}
-                    </div>
-                    {/* Větší foto — obrázky prodávají, portrait aspect 3:4 */}
-                    <div className="w-16 h-20 shrink-0 bg-white rounded-lg overflow-hidden">
-                      <ProductImage product={p} fallbackSize="text-3xl" sizes="64px" />
-                    </div>
-                    <div className="flex-1 min-w-0 py-0.5">
-                      <div className="text-[13px] font-semibold text-white leading-tight line-clamp-2 group-hover:text-olive4 transition-colors">
-                        {p.name}
-                      </div>
-                      <div className="text-[11px] text-white/85 truncate mt-1">
-                        {p.cheapestOffer ? (
-                          <span>{countryName(p.originCountry)} · {formatPrice(p.cheapestOffer.price)}</span>
-                        ) : (
-                          <span>{countryName(p.originCountry)}</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="shrink-0">
-                      <ScoreBadge score={p.olivatorScore} type={p.type} size="small" />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-
-              <Link
-                href="/srovnavac"
-                className="mt-4 block text-center text-[12px] text-white/85 hover:text-white border border-white/30 rounded-lg py-2 transition-colors"
-              >
-                Celý žebříček →
-              </Link>
-            </div>
-          </aside>
-        </div>
+          {/* Trust signals */}
+          <div className="flex items-center gap-5 text-[11px] text-white/45 flex-wrap pl-0 sm:pl-12">
+            <span className="inline-flex items-center gap-1.5"><span className="text-olive4">✓</span> Nezávislé hodnocení</span>
+            <span className="inline-flex items-center gap-1.5"><span className="text-olive4">✓</span> Žádná reklama v obsahu</span>
+            <span className="inline-flex items-center gap-1.5"><span className="text-olive4">✓</span> Aktualizace každých 24 h</span>
+          </div>
         </div>
       </div>
 
-      {/* Chat modal — overlay, otevře se po prvním send().
-          Předtím se konverzace renderovala inline v hero — rozbíjelo to layout
-          stránky. Teď má vlastní okno, podobně jako Sommelier floating chat. */}
+      {/* ── Chat modal — slide-up overlay po prvním send() ── */}
       {hasConversation && (
         <div
           className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-end md:items-center justify-center p-0 md:p-4"
@@ -350,15 +267,10 @@ export function SommelierHero({
             className="bg-white w-full md:max-w-[720px] md:rounded-[var(--radius-card)] rounded-t-2xl shadow-2xl flex flex-col max-h-[85vh] md:max-h-[80vh]"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
             <div className="px-5 py-4 border-b border-off2 flex items-center justify-between sticky top-0 bg-white z-10 rounded-t-[var(--radius-card)]">
               <div>
-                <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-0.5">
-                  — Olík
-                </div>
-                <h3 className="text-[15px] font-semibold text-text">
-                  Náš katalog na míru tvé otázce
-                </h3>
+                <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-0.5">— Olík</div>
+                <h3 className="text-[15px] font-semibold text-text">Náš katalog na míru tvé otázce</h3>
               </div>
               <button
                 onClick={reset}
@@ -369,7 +281,6 @@ export function SommelierHero({
               </button>
             </div>
 
-            {/* Conversation — scrollable */}
             <div className="flex-1 overflow-y-auto px-5 py-4">
               {messages.map((m, i) => {
                 if (m.role === 'user') {
@@ -382,7 +293,6 @@ export function SommelierHero({
                   )
                 }
 
-                // Interleaved render: text bloku → karta produktu → další blok
                 const blocks = parseReplyBlocks(m.content)
                 return (
                   <div key={i} className="mb-5 space-y-3">
@@ -390,7 +300,6 @@ export function SommelierHero({
                       const product = block.slug ? productLookup[block.slug] : undefined
                       return (
                         <div key={bi}>
-                          {/* Text bloku — bez slug linků, s renderovaným bold */}
                           <div className="bg-off rounded-2xl rounded-bl-sm px-4 py-3 text-[14px] text-text leading-relaxed">
                             {block.text.split('\n').map((line, li) => {
                               const trimmed = line.trim()
@@ -402,7 +311,6 @@ export function SommelierHero({
                               )
                             })}
                           </div>
-                          {/* Karta produktu hned pod jeho textem */}
                           {block.type === 'oil' && product && (
                             <div className="mt-2">
                               <ProductMiniCard product={product} />
@@ -427,7 +335,6 @@ export function SommelierHero({
               <div ref={resultsEndRef} />
             </div>
 
-            {/* Footer — input pro pokračování + utility links */}
             <div className="border-t border-off2 px-5 py-3 sticky bottom-0 bg-white rounded-b-[var(--radius-card)]">
               <div className="flex gap-2 items-center bg-off rounded-full pl-4 pr-2 py-1.5 mb-2 focus-within:bg-olive-bg/50 transition-colors">
                 <input
@@ -460,12 +367,8 @@ export function SommelierHero({
                 </button>
               </div>
               <div className="flex items-center justify-between text-[11px] text-text3">
-                <button onClick={reset} className="hover:text-text">
-                  Začít znovu
-                </button>
-                <Link href="/srovnavac" className="hover:text-text">
-                  Procházet celý katalog →
-                </Link>
+                <button onClick={reset} className="hover:text-text">Začít znovu</button>
+                <Link href="/srovnavac" className="hover:text-text">Procházet celý katalog →</Link>
               </div>
             </div>
           </div>
@@ -490,7 +393,6 @@ function ProductMiniCard({ product }: { product: ProductWithOffer }) {
         </div>
         <div className="flex items-center gap-2 text-[11px] text-text3">
           <ScoreBadge score={product.olivatorScore} type={product.type} size="small" />
-
           {product.cheapestOffer && (
             <span className="font-semibold text-text">{formatPrice(product.cheapestOffer.price)}</span>
           )}

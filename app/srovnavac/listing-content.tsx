@@ -2,8 +2,8 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useMemo, useState, useEffect } from 'react'
-import { ListCard } from '@/components/list-card'
 import { FilterPanel, type FilterCounts } from '@/components/filter-panel'
+import { TopProductCard } from '@/components/home/top-product-card'
 import { countryName, certLabel, formatPrice } from '@/lib/utils'
 import { classifyIntensity, INTENSITY_LABELS, type Intensity } from '@/lib/intensity-classifier'
 import type { Product, ProductOffer } from '@/lib/types'
@@ -126,6 +126,13 @@ export function ListingContent({
       case 'price_desc':
         list.sort((a, b) => (b.cheapestOffer?.price ?? 0) - (a.cheapestOffer?.price ?? 0))
         break
+      case 'price_per_100ml':
+        list.sort((a, b) => {
+          const ppa = a.cheapestOffer ? a.cheapestOffer.price / Math.max(1, a.volumeMl ?? 500) : 9999
+          const ppb = b.cheapestOffer ? b.cheapestOffer.price / Math.max(1, b.volumeMl ?? 500) : 9999
+          return ppa - ppb
+        })
+        break
       case 'acidity':
         list.sort((a, b) => (a.acidity ?? 999) - (b.acidity ?? 999))
         break
@@ -206,18 +213,27 @@ export function ListingContent({
             })}
           </div>
 
-          {/* Sort */}
-          <select
-            className="bg-off border border-off2 rounded-md px-2.5 py-1.5 text-[13px] text-text cursor-pointer hover:border-olive-border"
-            value={sort}
-            onChange={(e) => updateParam('sort', e.target.value === 'score' ? null : e.target.value)}
-          >
-            <option value="score">Řadit: Score ↓</option>
-            <option value="price_asc">Cena ↑</option>
-            <option value="price_desc">Cena ↓</option>
-            <option value="acidity">Kyselost ↑</option>
-            <option value="polyphenols">Polyfenoly ↓</option>
-          </select>
+          {/* Sort — button group */}
+          <div className="flex gap-1 flex-wrap">
+            {[
+              { label: 'Score ↓', value: 'score' },
+              { label: 'Cena ↑', value: 'price_asc' },
+              { label: 'Cena/100ml', value: 'price_per_100ml' },
+              { label: 'Polyfenoly', value: 'polyphenols' },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => updateParam('sort', opt.value === 'score' ? null : opt.value)}
+                className={`text-[12px] rounded-md px-2.5 py-1.5 border transition-colors whitespace-nowrap ${
+                  sort === opt.value || (opt.value === 'score' && !searchParams.get('sort'))
+                    ? 'bg-olive text-white border-olive'
+                    : 'bg-white text-text2 border-off2 hover:border-olive-border'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-6 items-start">
@@ -296,13 +312,13 @@ export function ListingContent({
               <strong className="text-text">{filtered.length}</strong> {filtered.length === 1 ? 'výsledek' : filtered.length < 5 ? 'výsledky' : 'výsledků'}
             </div>
 
-            <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 md:gap-3">
               {filtered.map((p, i) => (
-                <ListCard
+                <TopProductCard
                   key={p.id}
                   product={p}
-                  offer={p.cheapestOffer ?? undefined}
                   rank={i + 1}
+                  sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1280px) 20vw, 200px"
                 />
               ))}
             </div>
