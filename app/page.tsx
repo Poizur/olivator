@@ -126,17 +126,17 @@ export default async function Home() {
       </div>
 
       {/* ─── TOP 12 OLEJŮ TÉTO CHVÍLE ─────────────────────────────────── */}
-      <section className="px-6 md:px-10 py-12">
+      <section className="px-6 md:px-10 py-9">
         <div className="max-w-[1280px] mx-auto">
-          <div className="flex items-end justify-between mb-6 flex-wrap gap-4">
+          <div className="flex items-end justify-between mb-[18px] flex-wrap gap-4">
             <div>
-              <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
+              <div className="text-[12px] font-medium tracking-[0.05em] uppercase text-text2 mb-[6px]">
                 — Tucet nejlepších
               </div>
-              <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text leading-tight">
-                Dvanáct olejů, na které sázíme.
+              <h2 className="font-[family-name:var(--font-display)] text-[30px] font-medium text-text leading-[1.1]">
+                Dvanáct olejů, na které <em className="italic text-olive-light">sázíme</em>.
               </h2>
-              <p className="text-[14px] text-text2 mt-1.5 max-w-[460px]">
+              <p className="text-[14px] text-text2 mt-[6px] max-w-[460px]">
                 Nejvyšší Score napříč katalogem. Aktualizováno denně podle nových cen.
               </p>
             </div>
@@ -180,15 +180,15 @@ export default async function Home() {
           ...bulk5L.map((p) => Math.round(p.cheapestOffer!.price / (p.volumeMl / 1000))),
         )
         return (
-          <section className="px-6 md:px-10 py-12 border-t border-off2 bg-olive-dark">
+          <section className="px-6 md:px-10 py-9 border-t border-off2 bg-olive-dark">
             <div className="max-w-[1280px] mx-auto">
-              <div className="flex items-end justify-between mb-6 flex-wrap gap-3">
+              <div className="flex items-end justify-between mb-[18px] flex-wrap gap-3">
                 <div>
-                  <div className="text-[10px] font-bold tracking-widest uppercase text-olive3 mb-1">
+                  <div className="text-[12px] font-medium tracking-[0.05em] uppercase text-olive3 mb-[6px]">
                     — Velká balení
                   </div>
-                  <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-[32px] font-normal text-white leading-tight">
-                    Olivový olej 5L — ušetřete až 44 %.
+                  <h2 className="font-[family-name:var(--font-display)] text-[30px] font-medium text-white leading-[1.1]">
+                    Olivový olej 5L — <em className="italic text-olive-bright">ušetřete až 44 %</em>
                     <span className="text-[16px] font-normal text-white/75 ml-3">Od {minPerLiter} Kč/litr</span>
                   </h2>
                 </div>
@@ -249,14 +249,14 @@ export default async function Home() {
 
       {/* ─── PRŮVODCE ────────────────────────────────────────────────────── */}
       {guides.length > 0 && (
-        <section className="px-6 md:px-10 py-14">
+        <section className="px-6 md:px-10 py-9">
           <div className="max-w-[1280px] mx-auto">
-            <div className="flex items-end justify-between mb-8">
+            <div className="flex items-end justify-between mb-[18px]">
               <div>
-                <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
+                <div className="text-[12px] font-medium tracking-[0.05em] uppercase text-text2 mb-[6px]">
                   — Vzdělávání a testy
                 </div>
-                <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text leading-tight">
+                <h2 className="font-[family-name:var(--font-display)] text-[30px] font-medium text-text leading-[1.1]">
                   Průvodce olivovým olejem
                 </h2>
               </div>
@@ -307,15 +307,15 @@ export default async function Home() {
 
       {/* ─── RECEPTY ─────────────────────────────────────────────────────── */}
       {recipes.length > 0 && (
-        <section className="px-6 md:px-10 py-14 bg-white border-t border-off2">
+        <section className="px-6 md:px-10 py-9 bg-white border-t border-off2">
           <div className="max-w-[1280px] mx-auto">
-            <div className="flex items-end justify-between mb-8">
+            <div className="flex items-end justify-between mb-[18px]">
               <div>
-                <div className="text-[10px] font-bold tracking-widest uppercase text-terra mb-1.5">
+                <div className="text-[12px] font-medium tracking-[0.05em] uppercase text-terra mb-[6px]">
                   — V kuchyni
                 </div>
-                <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text leading-tight">
-                  Recepty s olivovým olejem
+                <h2 className="font-[family-name:var(--font-display)] text-[30px] font-medium text-text leading-[1.1]">
+                  Recepty s <em className="italic text-olive-light">olivovým olejem</em>
                 </h2>
               </div>
               <Link href="/recept" className="text-[13px] text-olive border-b border-olive-border hover:text-olive2 whitespace-nowrap">
@@ -365,10 +365,10 @@ export default async function Home() {
       <section className="px-6 md:px-10 py-16 bg-olive-dark">
         <div className="max-w-[1280px] mx-auto">
           <div className="max-w-[480px]">
-            <div className="text-[10px] font-bold tracking-widest uppercase text-olive3 mb-2">
+            <div className="text-[12px] font-medium tracking-[0.05em] uppercase text-olive3 mb-[6px]">
               — Zůstaň v obraze
             </div>
-            <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-3xl font-normal text-white mb-2 leading-tight">
+            <h2 className="font-[family-name:var(--font-display)] text-[28px] font-medium text-white mb-2 leading-[1.1]">
               Olíkův týdenní digest
             </h2>
             <p className="text-[14px] text-white/60 mb-6">

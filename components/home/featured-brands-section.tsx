@@ -7,18 +7,18 @@ export function FeaturedBrandsSection({ brands }: { brands: BrandTile[] }) {
   if (brands.length === 0) return null
 
   return (
-    <section className="px-6 md:px-10 py-16 bg-off/40 border-y border-off2">
+    <section className="px-6 md:px-10 py-9 bg-off/40 border-y border-off2">
       <div className="max-w-[1280px] mx-auto">
 
-        <div className="flex items-end justify-between mb-8">
+        <div className="flex items-end justify-between mb-[18px]">
           <div>
-            <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
+            <div className="text-[12px] font-medium tracking-[0.05em] uppercase text-text2 mb-[6px]">
               — Značky
             </div>
-            <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text leading-tight">
-              Top značky olivového oleje
+            <h2 className="font-[family-name:var(--font-display)] text-[30px] font-medium text-text leading-[1.1]">
+              Top značky <em className="italic text-olive-light">olivového oleje</em>
             </h2>
-            <p className="text-[14px] text-text2 mt-1.5 max-w-[460px]">
+            <p className="text-[14px] text-text2 mt-[6px] max-w-[460px]">
               Prémiové rodiny a kooperativy, které za svými oleji stojí jménem.
             </p>
           </div>

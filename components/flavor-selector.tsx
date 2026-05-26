@@ -96,11 +96,11 @@ export function FlavorSelector({ totalProducts }: { totalProducts: number }) {
       <div className="max-w-[1280px] mx-auto">
         <div className="flex items-end justify-between mb-5 flex-wrap gap-3">
           <div>
-            <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1">
+            <div className="text-[12px] font-medium tracking-[0.05em] uppercase text-text2 mb-[6px]">
               — Nalaď podle chuti
             </div>
-            <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-[28px] font-normal text-text leading-tight">
-              Vyber chuť, ne značku.
+            <h2 className="font-[family-name:var(--font-display)] text-[26px] font-medium text-text leading-[1.1]">
+              Vyber chuť, <em className="italic text-olive-light">ne značku</em>.
             </h2>
           </div>
           <p className="text-[13px] text-text3 max-w-[420px]">

@@ -38,15 +38,15 @@ export async function RadarWidget() {
   if (!data || data.length === 0) return null
 
   return (
-    <section className="px-6 md:px-10 py-14 border-t border-off2">
+    <section className="px-6 md:px-10 py-9 border-t border-off2">
       <div className="max-w-[1280px] mx-auto">
         {/* Hlavička */}
-        <div className="flex items-end justify-between mb-7">
+        <div className="flex items-end justify-between mb-[18px]">
           <div>
-            <div className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1.5">
+            <div className="text-[12px] font-medium tracking-[0.05em] uppercase text-text3 mb-[6px]">
               — Ze světového tisku
             </div>
-            <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[36px] font-normal text-text leading-tight">
+            <h2 className="font-[family-name:var(--font-display)] text-[30px] font-medium text-text leading-[1.1]">
               Novinky olivového světa
             </h2>
           </div>

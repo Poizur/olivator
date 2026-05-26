@@ -51,13 +51,13 @@ export function TopByCountry({ products }: Props) {
   if (sections.length === 0) return null
 
   return (
-    <section className="px-6 md:px-10 py-16 border-t border-off2">
+    <section className="px-6 md:px-10 py-9 border-t border-off2">
       <div className="max-w-[1280px] mx-auto">
-        <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1.5">
+        <div className="text-[12px] font-medium tracking-[0.05em] uppercase text-text2 mb-[6px]">
           — Podle původu
         </div>
-        <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-text leading-tight mb-10">
-          Nejlepší oleje podle země.
+        <h2 className="font-[family-name:var(--font-display)] text-[30px] font-medium text-text leading-[1.1] mb-8">
+          Nejlepší oleje <em className="italic text-olive-light">podle země</em>.
         </h2>
 
         <div className="space-y-14">

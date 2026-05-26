@@ -14,19 +14,19 @@ export function BestsellersSection({ products, totalCount }: Props) {
   if (products.length === 0) return null
 
   return (
-    <section className="px-6 md:px-10 py-14 border-t border-off2 bg-[#FAEEDA]">
+    <section className="px-6 md:px-10 py-9 border-t border-off2 bg-[#FAEEDA]">
       <div className="max-w-[1280px] mx-auto">
 
-        <div className="flex items-end justify-between mb-7 flex-wrap gap-3">
+        <div className="flex items-end justify-between mb-[18px] flex-wrap gap-3">
           <div>
-            <div className="text-[10px] font-bold tracking-widest uppercase text-terra mb-1.5 inline-flex items-center gap-1.5">
+            <div className="text-[12px] font-medium tracking-[0.05em] uppercase text-terra mb-[6px] inline-flex items-center gap-1.5">
               <Flame size={11} strokeWidth={2.25} className="text-terra" />
               Bestsellery
             </div>
-            <h2 className="font-[family-name:var(--font-display)] text-2xl md:text-[32px] font-normal text-text leading-tight">
-              Co Češi reálně kupují
+            <h2 className="font-[family-name:var(--font-display)] text-[30px] font-medium text-text leading-[1.1]">
+              Co Češi <em className="italic text-olive-light">reálně kupují</em>.
             </h2>
-            <p className="text-[14px] text-text2 mt-1">
+            <p className="text-[14px] text-text2 mt-[6px]">
               Nejpopulárnější oleje napříč značkami — bez ohledu na Score.
             </p>
           </div>
