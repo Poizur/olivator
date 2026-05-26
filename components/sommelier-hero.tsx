@@ -26,6 +26,7 @@ const SUGGESTIONS = [
   'Co má nejvíc polyfenolů?',
   'Dárek pro tátu co rád vaří',
   'BIO olej na saláty',
+  '🇬🇷 Tradiční řecký na grilování',
 ]
 
 function extractSlugs(text: string): string[] {
@@ -170,12 +171,13 @@ export function SommelierHero({
   return (
     <section className="relative overflow-hidden border-b border-olive2/30">
       <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-br from-[#1b4332] to-[#2d6a4f]" />
+      <div aria-hidden className="absolute text-[300px] opacity-[0.05] -right-12 -top-20 -rotate-[15deg] leading-none select-none pointer-events-none -z-10">🫒</div>
 
       <div className="px-6 md:px-10 py-8 md:py-10">
         <div className="max-w-[1280px] mx-auto">
           {/* Header row — emoji + title + refresh badge */}
           <div className="flex items-start gap-4 mb-5">
-            <span className="text-4xl shrink-0 hidden sm:block mt-0.5" aria-hidden>🫒</span>
+            <span className="text-6xl shrink-0 mt-0.5" aria-hidden>🫒</span>
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline justify-between gap-4 flex-wrap mb-3">
                 <div>

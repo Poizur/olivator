@@ -105,7 +105,7 @@ export function TopByCountry({ products }: Props) {
                     <div
                       key={p.id}
                       className="rounded-[var(--radius-card)] overflow-hidden"
-                      style={{ boxShadow: `0 -3px 0 0 ${color}` }}
+                      style={{ borderLeft: `4px solid ${color}` }}
                     >
                       <TopProductCard
                         product={p}
