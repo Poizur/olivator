@@ -1,24 +1,10 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
-import { Playfair_Display, Inter } from 'next/font/google'
 import { GoogleAnalytics } from '@next/third-parties/google'
 import { CompareProvider } from '@/lib/compare-context'
 import { WishlistProvider } from '@/lib/wishlist-context'
 import { LayoutChrome } from '@/components/layout-chrome'
 import './globals.css'
-
-const playfair = Playfair_Display({
-  variable: '--font-display',
-  subsets: ['latin', 'latin-ext'],
-  weight: ['400', '500'],
-  style: ['normal', 'italic'],
-})
-
-const inter = Inter({
-  variable: '--font-body',
-  subsets: ['latin', 'latin-ext'],
-  weight: ['300', '400', '500', '600', '700'],
-})
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://olivator.cz'),
@@ -67,7 +53,7 @@ export default function RootLayout({
   const gaId = process.env.NEXT_PUBLIC_GA4_ID
 
   return (
-    <html lang="cs" className={`${playfair.variable} ${inter.variable}`}>
+    <html lang="cs">
       <body className="min-h-screen flex flex-col antialiased">
         <WishlistProvider>
           <CompareProvider>
