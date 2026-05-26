@@ -19,6 +19,7 @@ import { RadarWidget } from '@/components/home/radar-widget'
 import { BestsellersSection } from '@/components/home/bestsellers-section'
 import { FeaturedBrandsSection } from '@/components/home/featured-brands-section'
 import { TopProductCard } from '@/components/home/top-product-card'
+import { FlavorSelector } from '@/components/flavor-selector'
 
 export const revalidate = 3600
 
@@ -161,6 +162,9 @@ export default async function Home() {
 
       {/* ─── BESTSELLERS ────────────────────────────────────────────────── */}
       <BestsellersSection products={homepageBestsellers} totalCount={rawBestsellers.length} />
+
+      {/* ─── CHUŤOVÝ PROFIL ─────────────────────────────────────────────── */}
+      <FlavorSelector totalProducts={stats.totalProducts} />
 
       {/* ─── TOP ZNAČKY ─────────────────────────────────────────────────── */}
       <FeaturedBrandsSection brands={featuredBrands} />
