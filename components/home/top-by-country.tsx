@@ -65,12 +65,13 @@ export function TopByCountry({ products }: Props) {
             const color = COUNTRY_COLOR[code] ?? '#2d6a4f'
             const flag = countryFlag(code)
             return (
-              <div key={code}>
-                {/* ── Hlavička sekce s barevným spodním okrajem ── */}
-                <div
-                  className="flex items-center justify-between mb-6 pb-4 flex-wrap gap-3"
-                  style={{ borderBottom: `3px solid ${color}` }}
-                >
+              <div
+                key={code}
+                className="pb-4 mb-8"
+                style={{ borderBottom: `4px solid ${color}` }}
+              >
+                {/* ── Hlavička sekce ── */}
+                <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
                   <div className="flex items-center gap-4">
                     {/* Velká vlajka — hlavní vizuální identifikátor */}
                     <span

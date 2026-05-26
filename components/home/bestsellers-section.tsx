@@ -14,7 +14,7 @@ export function BestsellersSection({ products, totalCount }: Props) {
   if (products.length === 0) return null
 
   return (
-    <section className="px-6 md:px-10 py-14 border-t border-off2 bg-white">
+    <section className="px-6 md:px-10 py-14 border-t border-off2 bg-[#FAEEDA]">
       <div className="max-w-[1280px] mx-auto">
 
         <div className="flex items-end justify-between mb-7 flex-wrap gap-3">

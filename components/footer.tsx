@@ -1,45 +1,72 @@
-import Image from 'next/image'
 import Link from 'next/link'
-import { NewsletterSignup } from './newsletter-signup'
 
-// Footer je statický — nepotřebuje headers()/cookies(). Render decisions
-// (skrýt na /admin) řeší LayoutChrome client-side přes usePathname.
 export function Footer() {
   return (
-    <footer className="bg-off border-t border-off2 mt-12">
-      <div className="max-w-[1280px] mx-auto px-6 md:px-10 py-10 grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-        <div>
-          <Image
-            src="/logo-wordmark.png"
-            alt="olivátor"
-            width={720}
-            height={184}
-            className="h-16 md:h-28 w-auto"
-          />
-          <div className="text-xs text-text3 mt-2 leading-relaxed">
-            Největší srovnávač olivových olejů v ČR
-            <br />
-            &copy; {new Date().getFullYear()}
+    <footer className="bg-[#173404] text-white">
+      <div className="max-w-[1280px] mx-auto px-6 md:px-10 pt-12 pb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 pb-8 border-b border-white/10">
+          {/* Brand column */}
+          <div className="col-span-2 md:col-span-1">
+            <div className="font-[family-name:var(--font-display)] text-[26px] font-normal mb-3 text-white">
+              olivátor
+            </div>
+            <p className="text-[13px] text-white/65 leading-relaxed max-w-[280px]">
+              Největší srovnávač olivových olejů v ČR. Bez reklam, bez sponzorů — jen data, lab testy a 4 tvrdá čísla.
+            </p>
           </div>
-          <div className="flex gap-4 mt-4 flex-wrap">
+
+          {/* Oleje */}
+          <div>
+            <h4 className="text-[11px] font-medium tracking-widest uppercase text-white/50 mb-4">Oleje</h4>
             {[
-              { href: '/metodika', label: 'Metodika' },
+              { href: '/srovnavac', label: 'Katalog' },
+              { href: '/zebricek', label: 'Žebříčky' },
+              { href: '/nejprodavanejsi', label: 'Bestsellery' },
+              { href: '/slevy', label: 'Slevy' },
+              { href: '/olivovy-olej-5l', label: '5L balení' },
+            ].map(l => (
+              <Link key={l.href} href={l.href} className="block text-[13px] text-white/75 hover:text-white py-1 transition-colors">
+                {l.label}
+              </Link>
+            ))}
+          </div>
+
+          {/* Průvodce */}
+          <div>
+            <h4 className="text-[11px] font-medium tracking-widest uppercase text-white/50 mb-4">Průvodce</h4>
+            {[
+              { href: '/pruvodce/jak-vybrat-olivovy-olej', label: 'Jak vybrat olej' },
+              { href: '/pruvodce/acidita-olivoveho-oleje', label: 'Acidita' },
+              { href: '/pruvodce/polyfenoly-olivovy-olej', label: 'Polyfenoly' },
+              { href: '/pruvodce/pdo-pgp-certifikace', label: 'PDO/PGI' },
+              { href: '/recept', label: 'Recepty' },
+            ].map(l => (
+              <Link key={l.href} href={l.href} className="block text-[13px] text-white/75 hover:text-white py-1 transition-colors">
+                {l.label}
+              </Link>
+            ))}
+          </div>
+
+          {/* Olivátor */}
+          <div>
+            <h4 className="text-[11px] font-medium tracking-widest uppercase text-white/50 mb-4">Olivátor</h4>
+            {[
               { href: '/o-projektu', label: 'O projektu' },
-              { href: '/o-projektu#fotky', label: 'Fotky' },
+              { href: '/metodika', label: 'Metodika' },
+              { href: '/novinky', label: 'Novinky' },
               { href: '/o-projektu#affiliate', label: 'Affiliate' },
-            ].map((l) => (
-              <Link
-                key={l.label}
-                href={l.href}
-                className="text-xs text-text3 hover:text-olive transition-colors"
-              >
+              { href: '/o-projektu#kontakt', label: 'Kontakt' },
+            ].map(l => (
+              <Link key={l.href} href={l.href} className="block text-[13px] text-white/75 hover:text-white py-1 transition-colors">
                 {l.label}
               </Link>
             ))}
           </div>
         </div>
-        <div className="md:col-span-2 md:flex md:justify-end">
-          <NewsletterSignup source="footer" variant="inline" />
+
+        <div className="pt-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[12px] text-white/40">
+          <div>© {new Date().getFullYear()} Olivátor — Největší srovnávač olivových olejů v ČR</div>
+          <div>Aktualizace 2× denně · data z prodejců</div>
         </div>
       </div>
     </footer>

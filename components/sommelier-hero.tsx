@@ -170,7 +170,7 @@ export function SommelierHero({
 
   return (
     <section className="relative overflow-hidden border-b border-olive2/30">
-      <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-br from-[#1b4332] to-[#2d6a4f]" />
+      <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-br from-[#3B6D11] to-[#27500A]" />
       <div aria-hidden className="absolute text-[300px] opacity-[0.05] -right-12 -top-20 -rotate-[15deg] leading-none select-none pointer-events-none -z-10">🫒</div>
 
       <div className="px-6 md:px-10 py-8 md:py-10">

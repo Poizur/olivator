@@ -38,7 +38,7 @@ export function TopProductCard({
   return (
     <Link
       href={`/olej/${product.slug}`}
-      className="group bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:shadow-[0_12px_32px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 hover:border-olive-light"
+      className="group bg-white border border-off2 rounded-lg overflow-hidden flex flex-col transition-all hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 hover:border-olive-mid"
     >
       <div className="relative aspect-[4/5] bg-white overflow-hidden">
         {badge && (

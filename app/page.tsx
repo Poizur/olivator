@@ -72,19 +72,19 @@ export default async function Home() {
       />
 
       {/* ─── TRUST BAR ─────────────────────────────────────────────────── */}
-      <div className="bg-off border-b border-off2 px-6 md:px-10 py-3">
-        <div className="max-w-[1280px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="bg-white border-b border-off2 px-6 md:px-10 py-5">
+        <div className="max-w-[1280px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
-            { icon: '🔬', title: 'Lab data', body: 'Kyselost, polyfenoly' },
-            { icon: '🚫', title: 'Bez reklamy', body: 'Žádné sponsored' },
-            { icon: '📊', title: 'Olivator Score', body: '4 kritéria, 100 bodů' },
-            { icon: '🔄', title: 'Denní update', body: `${stats.activeRetailers} prodejců` },
+            { icon: '🔬', title: 'Lab data', body: 'Polyfenoly, kyselost, peroxidy' },
+            { icon: '🚫', title: 'Žádná reklama', body: 'Třídění podle kvality, ne provize' },
+            { icon: '📊', title: 'Nezávislé Score', body: '4 čísla, 100 bodů' },
+            { icon: '🔄', title: 'Aktualizace 2× denně', body: 'Ceny + dostupnost' },
           ].map((item) => (
-            <div key={item.title} className="flex items-center gap-2.5 py-1.5">
-              <span className="text-xl shrink-0">{item.icon}</span>
+            <div key={item.title} className="flex items-center gap-3">
+              <span className="text-2xl shrink-0">{item.icon}</span>
               <div>
-                <div className="text-[12px] font-semibold text-text leading-tight">{item.title}</div>
-                <div className="text-[11px] text-text3 leading-tight">{item.body}</div>
+                <div className="text-[14px] font-medium text-text leading-tight">{item.title}</div>
+                <div className="text-[12px] text-text2 leading-tight">{item.body}</div>
               </div>
             </div>
           ))}
@@ -92,24 +92,30 @@ export default async function Home() {
       </div>
 
       {/* ─── QUICK CATEGORIES ──────────────────────────────────────────── */}
-      <div className="bg-white border-b border-off2 px-6 md:px-10 py-3 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+      <div className="bg-white border-b border-off2 px-6 md:px-10 py-3.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         <div className="max-w-[1280px] mx-auto flex items-center gap-2 flex-nowrap">
           {[
-            { label: '🏆 Top Score', href: '/srovnavac' },
-            { label: '🔥 Bestsellery', href: '/nejprodavanejsi' },
-            { label: '🏷️ Slevy', href: '/slevy' },
-            { label: '🌱 BIO', href: '/srovnavac?cert=bio' },
-            { label: '📦 5L balení', href: '/olivovy-olej-5l' },
-            { label: '🇬🇷 Řecko', href: '/srovnavac?origin=GR' },
-            { label: '🇮🇹 Itálie', href: '/srovnavac?origin=IT' },
-            { label: '🇪🇸 Španělsko', href: '/srovnavac?origin=ES' },
-            { label: '🥇 DOP/CHOP', href: '/srovnavac?cert=dop' },
-            { label: '🫒 Nefiltrovaný', href: '/srovnavac?type=evoo' },
+            { label: '🏆 Top Score', href: '/srovnavac', variant: 'default' },
+            { label: '🔥 Bestsellery', href: '/nejprodavanejsi', variant: 'featured' },
+            { label: '🏷️ Slevy', href: '/slevy', variant: 'danger' },
+            { label: `🇬🇷 Řecko ${stats.byOrigin?.GR ?? ''}`, href: '/srovnavac?origin=GR', variant: 'default' },
+            { label: `🇮🇹 Itálie ${stats.byOrigin?.IT ?? ''}`, href: '/srovnavac?origin=IT', variant: 'default' },
+            { label: `🇪🇸 Španělsko ${stats.byOrigin?.ES ?? ''}`, href: '/srovnavac?origin=ES', variant: 'default' },
+            { label: '📦 5L balení', href: '/olivovy-olej-5l', variant: 'default' },
+            { label: `🌱 BIO`, href: '/srovnavac?cert=bio', variant: 'default' },
+            { label: '🏆 PDO', href: '/srovnavac?cert=dop', variant: 'default' },
+            { label: '🔬 Polyfenoly 250+', href: '/srovnavac?quality=high_polyphenols', variant: 'default' },
           ].map((chip) => (
             <Link
               key={chip.href}
               href={chip.href}
-              className="text-[12px] text-text2 whitespace-nowrap border border-off2 rounded-full px-3 py-1.5 hover:border-olive-border hover:bg-olive-bg hover:text-olive transition-all shrink-0"
+              className={`text-[13px] font-medium whitespace-nowrap rounded-full px-3.5 py-2 transition-all shrink-0 flex items-center gap-1.5 ${
+                chip.variant === 'featured'
+                  ? 'bg-amber-bg text-amber-text hover:bg-amber-mid hover:text-white'
+                  : chip.variant === 'danger'
+                  ? 'bg-[#FCEBEB] text-[#A32D2D] hover:bg-[#A32D2D] hover:text-white'
+                  : 'bg-off text-text2 hover:bg-olive-bg hover:text-olive'
+              }`}
             >
               {chip.label}
             </Link>
@@ -296,7 +302,7 @@ export default async function Home() {
 
       {/* ─── RECEPTY ─────────────────────────────────────────────────────── */}
       {recipes.length > 0 && (
-        <section className="px-6 md:px-10 py-14 bg-off">
+        <section className="px-6 md:px-10 py-14 bg-white border-t border-off2">
           <div className="max-w-[1280px] mx-auto">
             <div className="flex items-end justify-between mb-8">
               <div>
