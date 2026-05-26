@@ -160,7 +160,14 @@ const TRANSLATION_PROMPT = (source: string, title: string, description: string, 
   `Krátký popis: ${description}\n\n` +
   (fullText
     ? `Plný text článku (z webu zdroje):\n${fullText}`
-    : `(Plný text se nepodařilo stáhnout — vycházej jen z titulku + popisu.)`)
+    : `UPOZORNĚNÍ: Plný text se nepodařilo stáhnout. Máš k dispozici POUZE titulek a krátký popis.\n` +
+      `PRAVIDLA PRO TENTO PŘÍPAD:\n` +
+      `- Piš POUZE to, co lze odvodit z titulku a popisu — žádné spekulace\n` +
+      `- NEUVÁDĚJ konkrétní jména producentů, počty medailí ani čísla která neznáš\n` +
+      `- Kontext a pozadí (region, soutěž, trendy) je OK pokud je obecně znám\n` +
+      `- Použij SPRÁVNÉ české názvy: Puglia = "Apulie", adjektivum "apulský/apulská"\n` +
+      `- Pokud nelze napsat alespoň 3 faktické odstavce, vrať is_relevant: false\n` +
+      `- ABSOLUTNĚ ŽÁDNÁ cyrilická písmena — pouze latina s háčky a čárkami`)
 
 async function translateAndLocalize(item: RssItem, fullText: string | null): Promise<TranslationResult | null> {
   try {
@@ -349,6 +356,17 @@ export async function runRadarAgent(opts: { hoursBack?: number; maxItems?: numbe
       // Item není o olivovém oleji — Haiku rozhodl. Nepublikovat.
       continue
     }
+
+    // Quality gate: bez fullText + příliš krátký článek = nepublikovat automaticky
+    // Zachráníme do DB jako draft (is_published: false) pro ruční review
+    const articleLen = translation.czechArticle.length
+    const hasNoFullText = !fullText
+    const isTooShort = articleLen < 500
+    const isPublished = !(hasNoFullText && isTooShort)
+    if (!isPublished) {
+      console.warn(`[radar] quality gate: "${item.title.slice(0, 50)}" uloženo jako draft (no fullText, ${articleLen}z)`)
+    }
+
     result.itemsAfterRelevanceCheck++
 
     const badge = ALLOWED_BADGES.has(translation.badge) ? translation.badge : 'news'
@@ -382,7 +400,7 @@ export async function runRadarAgent(opts: { hoursBack?: number; maxItems?: numbe
           image_source_url: hero?.sourceUrl ?? null,
           fingerprint: item.fingerprint,
           published_at: (item.pubDate ?? new Date()).toISOString(),
-          is_published: true,
+          is_published: isPublished,
         },
         { onConflict: 'original_url' }
       )
