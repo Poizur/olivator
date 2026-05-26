@@ -94,24 +94,8 @@ export function FilterPanel({ counts }: { counts: FilterCounts }) {
           onToggle={(v) => toggleFilter('type', v)}
         />
       )}
-      {originItems.length > 0 && (
-        <FilterSection
-          label="Původ"
-          items={originItems}
-          active={activeOrigins}
-          onToggle={(v) => toggleFilter('origin', v)}
-        />
-      )}
-      {certItems.length > 0 && (
-        <FilterSection
-          label="Certifikace"
-          items={certItems}
-          active={activeCerts}
-          onToggle={(v) => toggleFilter('cert', v)}
-        />
-      )}
       <FilterSection
-        label="Kvalita"
+        label="Polyfenoly"
         items={[
           {
             value: 'high_polyphenols',
@@ -126,8 +110,24 @@ export function FilterPanel({ counts }: { counts: FilterCounts }) {
         ]}
         active={activeQuality}
         onToggle={(v) => toggleFilter('quality', v)}
-        isLast
       />
+      {originItems.length > 0 && (
+        <FilterSection
+          label="Původ"
+          items={originItems}
+          active={activeOrigins}
+          onToggle={(v) => toggleFilter('origin', v)}
+        />
+      )}
+      {certItems.length > 0 && (
+        <FilterSection
+          label="Certifikace"
+          items={certItems}
+          active={activeCerts}
+          onToggle={(v) => toggleFilter('cert', v)}
+          isLast
+        />
+      )}
     </div>
   )
 }
