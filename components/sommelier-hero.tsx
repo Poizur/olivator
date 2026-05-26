@@ -227,14 +227,7 @@ export function SommelierHero({
                   aria-label="Zeptat se Olíka"
                   className="bg-olive text-white rounded-full sm:px-5 sm:py-2.5 px-3 py-2.5 text-[14px] font-semibold hover:bg-olive2 transition-colors whitespace-nowrap inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-wait shrink-0"
                 >
-                  {loading ? '…' : (
-                    <>
-                      <span className="hidden sm:inline">Zeptat se →</span>
-                      <span className="bg-white rounded-full w-12 h-12 flex items-center justify-center shrink-0">
-                        <img src="/olik.png" alt="" className="w-10 h-10 object-contain" />
-                      </span>
-                    </>
-                  )}
+                  {loading ? '…' : 'Zeptat se →'}
                 </button>
               </div>
 
