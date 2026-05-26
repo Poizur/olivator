@@ -203,7 +203,13 @@ export const getProducts = cache(async (): Promise<Product[]> => {
     // nullsFirst: false → produkty bez score (flavored / data missing) jdou na konec
     // místo na začátek (Postgres default při DESC dává NULL první).
     .order('olivator_score', { ascending: false, nullsFirst: false })
-  if (error) throw error
+  // Graceful degradation: JSON parse error z Supabase (bad JSONB v 1 produktu)
+  // nesmí shodit build. Logujeme, vracíme [] — stránka se renderuje prázdná,
+  // příští revalidace přinese správná data.
+  if (error) {
+    console.error('[getProducts] Supabase error — returning empty:', error)
+    return []
+  }
   const products = (data as unknown as ProductRow[]).map(mapProduct)
   // Override imageUrl s primary obrázkem z product_images gallery (high-res
   // schválený obrázek). Detail stránka používá gallery, listing teď taky —

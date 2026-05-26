@@ -8,9 +8,9 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://olivator.cz/quiz' },
 }
 
-// Quiz produkty cache 1h — kvíz logika je client-side, fresh data každou
-// hodinu stačí. Bez tohoto každý bot request → fetch všech produktů + offers.
-export const revalidate = 3600
+// force-dynamic: quiz je interaktivní, SSG by stejně nefungovalo (client-side
+// logika), navíc SSG volá Supabase při buildu → riziko build failure z bad data.
+export const dynamic = 'force-dynamic'
 
 export default async function QuizPage() {
   const products = await getProductsWithOffers()

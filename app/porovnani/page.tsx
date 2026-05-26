@@ -4,10 +4,9 @@ import { redirect } from 'next/navigation'
 import { getProductsWithOffers } from '@/lib/data'
 import { ComparatorContent } from './comparator-content'
 
-// 1h cache — každý bot request /porovnani s libovolným ?ids= dnes fetchoval
-// celý katalog (getProductsWithOffers volán 2× v page). Pro různé combinace
-// ?ids= boti generují nové cache entries, ale aspoň ne dvojitý egress.
-export const revalidate = 3600
+// force-dynamic: komparátor je URL-param driven (?ids=...) — stránka nemá
+// smysl staticky generovat. Navíc SSG volá Supabase → riziko build failure.
+export const dynamic = 'force-dynamic'
 
 interface SearchParams {
   ids?: string
