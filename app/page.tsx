@@ -68,6 +68,7 @@ export default async function Home() {
       <SommelierHero
         totalProducts={stats.totalProducts}
         activeRetailers={stats.activeRetailers}
+        totalBrands={stats.totalBrands}
         productLookup={productLookup}
       />
 

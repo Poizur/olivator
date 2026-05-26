@@ -39,7 +39,7 @@ export function Nav({ hasAdminBar = false }: { hasAdminBar?: boolean }) {
               width={720}
               height={184}
               priority
-              className="h-9 md:h-9 w-auto"
+              className="h-11 md:h-12 w-auto"
             />
           </Link>
 
@@ -69,18 +69,12 @@ export function Nav({ hasAdminBar = false }: { hasAdminBar?: boolean }) {
               Hledat
             </Link>
             <Link
-              href="/quiz"
-              className="hidden sm:block text-[13px] text-text2 hover:text-olive transition-colors whitespace-nowrap"
-            >
-              Najít olej
-            </Link>
-            <Link
               href="/oblibene"
-              className="hidden sm:flex items-center text-[13px] text-text2 hover:text-olive transition-colors"
+              className="hidden sm:flex items-center gap-1.5 border border-off2 rounded-full px-3.5 py-1.5 text-[13px] text-text2 hover:border-olive-light hover:text-olive transition-colors whitespace-nowrap"
               aria-label="Oblíbené"
               title="Oblíbené oleje"
             >
-              ♡
+              ♡ <span>Oblíbené</span>
             </Link>
             {/* Porovnat — schované při 0 olejích (nemá co porovnávat).
                 Zobrazí se jakmile uživatel přidá první olej do comparátoru. */}

@@ -18,6 +18,7 @@ interface Message {
 interface Props {
   totalProducts: number
   activeRetailers: number
+  totalBrands: number
   productLookup: Record<string, ProductWithOffer>
 }
 
@@ -114,6 +115,7 @@ function parseReplyBlocks(text: string): ReplyBlock[] {
 export function SommelierHero({
   totalProducts,
   activeRetailers,
+  totalBrands,
   productLookup,
 }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
@@ -175,26 +177,28 @@ export function SommelierHero({
 
       <div className="px-6 md:px-10 py-8 md:py-10">
         <div className="max-w-[1280px] mx-auto">
-          {/* Header row — emoji + title + refresh badge */}
-          <div className="flex items-start gap-4 mb-5">
-            <span className="text-6xl shrink-0 mt-0.5" aria-hidden>🫒</span>
+          {/* olik-inner: emoji vlevo + content vpravo — přesně jako mockup */}
+          <div className="flex items-center gap-6 mb-5">
+            <span className="text-[64px] leading-none shrink-0" aria-hidden>🫒</span>
             <div className="flex-1 min-w-0">
+              {/* olik-header: title vlevo, stats napravo */}
               <div className="flex items-baseline justify-between gap-4 flex-wrap mb-3">
                 <div>
-                  <h1 className="font-[family-name:var(--font-display)] text-2xl md:text-[32px] font-normal text-white leading-tight">
-                    Olík — <em className="text-olive4 italic">najde tvůj olej za 5 sekund</em>
+                  <h1 className="font-[family-name:var(--font-display)] text-2xl md:text-[28px] font-normal text-white leading-tight">
+                    Olík — <em className="text-olive-bright italic">najde tvůj olej za 5 sekund</em>
                   </h1>
-                  <p className="text-[13px] text-white/65 mt-1">
-                    AI prochází celý katalog · <strong className="text-white/80">{totalProducts}</strong> olejů · <strong className="text-white/80">{activeRetailers}</strong> prodejců
+                  <p className="text-[13px] text-white/80 mt-1">
+                    AI poradce prochází celý katalog {totalProducts} olejů
                   </p>
                 </div>
-                <span className="hidden md:inline-flex items-center gap-1.5 text-[11px] text-white/50 shrink-0">
-                  <span className="relative flex w-2 h-2">
-                    <span className="animate-ping absolute inline-flex w-full h-full rounded-full bg-olive4 opacity-50" />
-                    <span className="relative inline-flex w-2 h-2 rounded-full bg-olive4" />
-                  </span>
-                  Aktualizováno dnes
-                </span>
+                {/* Stats napravo — přesně z mockupu */}
+                <div className="hidden md:flex items-center gap-3 text-[12px] text-white/80 shrink-0">
+                  <span><strong className="text-white font-semibold">{totalProducts}</strong> olejů</span>
+                  <span className="text-white/40">·</span>
+                  <span><strong className="text-white font-semibold">{activeRetailers}</strong> prodejců</span>
+                  <span className="text-white/40">·</span>
+                  <span><strong className="text-white font-semibold">{totalBrands}</strong> značek</span>
+                </div>
               </div>
 
               {/* Search input */}

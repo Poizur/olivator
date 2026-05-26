@@ -329,6 +329,7 @@ export async function getCheapestOffer(productId: string): Promise<ProductOffer 
 export interface SiteStats {
   totalProducts: number
   activeRetailers: number
+  totalBrands: number
   byOrigin: Record<string, number>
   byCertification: Record<string, number>
   byType: Record<string, number>
@@ -366,9 +367,12 @@ export const getSiteStats = cache(async (): Promise<SiteStats> => {
     .select('*', { count: 'exact', head: true })
     .eq('is_active', true)
 
+  const totalBrands = new Set(products.map(p => p.brandSlug).filter(Boolean)).size
+
   return {
     totalProducts: products.length,
     activeRetailers: count ?? 0,
+    totalBrands,
     byOrigin,
     byCertification,
     byType,
