@@ -154,6 +154,13 @@ const TRANSLATION_PROMPT = (source: string, title: string, description: string, 
   `- Pokud zdroj má citace, přelož je v uvozovkách s atribucí\n` +
   `- Vyhni se "podle zdroje", "uvádí článek" — piš jako bys to věděl sám\n` +
   `- Český kontext patří JEN do cz_context a posledního odstavce, ne do leadu\n\n` +
+  `ZAKÁZANÁ SLOVA A CHYBY (kritická pravidla češtiny):\n` +
+  `- "olivární" NEEXISTUJE — piš "olivový", "olivářský" nebo "výrobci olivového oleje"\n` +
+  `- "Řecka slaví/radují/dominují" — "Řecka" je genitiv státu, ne množné číslo lidí. Piš "Řečtí producenti", "řečtí oliváři", "výrobci z Řecka"\n` +
+  `- "celosvětová soutěž" — příliš vágní. Piš konkrétní název: NYIOOC, World Olive Oil Competition atd.\n` +
+  `- "Puljský/Puljská" — správně "apulský/apulská" (Puglia = Apulie česky)\n` +
+  `- ŽÁDNÉ cyrilické znaky — pouze latinika s háčky a čárkami\n` +
+  `- ŽÁDNÉ marketingové fráze: "prémiový zážitek", "expanzivně rozrůstá", "rostoucí povědomí"\n\n` +
   `Zpráva:\n` +
   `Zdroj: ${source}\n` +
   `Titulek: ${title}\n` +
