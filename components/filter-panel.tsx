@@ -110,26 +110,24 @@ export function FilterPanel({ counts }: { counts: FilterCounts }) {
           onToggle={(v) => toggleFilter('cert', v)}
         />
       )}
-      {((counts.highPolyphenols ?? 0) > 0 || (counts.highOleocanthal ?? 0) > 0) && (
-        <FilterSection
-          label="Kvalita"
-          items={[
-            ...((counts.highPolyphenols ?? 0) > 0 ? [{
-              value: 'high_polyphenols',
-              label: 'Vysoký obsah polyfenolů (≥500 mg/kg)',
-              count: counts.highPolyphenols ?? 0,
-            }] : []),
-            ...((counts.highOleocanthal ?? 0) > 0 ? [{
-              value: 'high_oleocanthal',
-              label: 'Vysoký oleokantal (≥100 mg/kg)',
-              count: counts.highOleocanthal ?? 0,
-            }] : []),
-          ]}
-          active={activeQuality}
-          onToggle={(v) => toggleFilter('quality', v)}
-          isLast
-        />
-      )}
+      <FilterSection
+        label="Kvalita"
+        items={[
+          {
+            value: 'high_polyphenols',
+            label: 'Vysocepolyfenolové (≥250 mg/kg)',
+            count: counts.highPolyphenols ?? 0,
+          },
+          ...((counts.highOleocanthal ?? 0) > 0 ? [{
+            value: 'high_oleocanthal',
+            label: 'Vysoký oleokantal (≥100 mg/kg)',
+            count: counts.highOleocanthal ?? 0,
+          }] : []),
+        ]}
+        active={activeQuality}
+        onToggle={(v) => toggleFilter('quality', v)}
+        isLast
+      />
     </div>
   )
 }

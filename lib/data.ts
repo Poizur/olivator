@@ -358,7 +358,7 @@ export const getSiteStats = cache(async (): Promise<SiteStats> => {
       byCertification[c] = (byCertification[c] ?? 0) + 1
     }
     if (p.cheapestOffer && p.cheapestOffer.price <= 200) under200Kc++
-    if (p.polyphenols != null && p.polyphenols >= 500) highPolyphenols++
+    if (p.polyphenols != null && p.polyphenols >= 250) highPolyphenols++
     if (p.oleocanthal != null && p.oleocanthal >= 100) highOleocanthal++
   }
 

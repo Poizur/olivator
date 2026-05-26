@@ -157,7 +157,7 @@ export function ListingContent({
     if (activeTypes.length > 0) list = list.filter((p) => activeTypes.includes(p.type))
     if (activeOrigins.length > 0) list = list.filter((p) => activeOrigins.includes(p.originCountry))
     if (activeCerts.length > 0) list = list.filter((p) => activeCerts.some((c) => p.certifications.includes(c)))
-    if (activeQuality.includes('high_polyphenols')) list = list.filter((p) => p.polyphenols != null && p.polyphenols >= 500)
+    if (activeQuality.includes('high_polyphenols')) list = list.filter((p) => p.polyphenols != null && p.polyphenols >= 250)
     if (activeQuality.includes('high_oleocanthal')) list = list.filter((p) => p.oleocanthal != null && p.oleocanthal >= 100)
     if (activeIntensity) list = list.filter((p) => classifyIntensity(p) === activeIntensity)
     if (maxPrice) {
