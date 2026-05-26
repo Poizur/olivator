@@ -10,10 +10,12 @@ export const metadata = {
   alternates: { canonical: 'https://olivator.cz/srovnavac' },
 }
 
-// Bez revalidate by každý bot fetch = celý katalog ze Supabase. 1h cache:
-// produkty se vidí max 1h zpožděně po admin update — ceny scrapuje
-// cron:discovery 1×/den, takže žádný real-time data loss.
-export const revalidate = 3600
+// force-dynamic: stránka renderována na request (ne SSG).
+// Důvod: SSG při buildu volá getProductsWithOffers() — pokud Supabase vrátí
+// poškozená data (bad JSONB), build padá. force-dynamic to eliminuje.
+// Cena: každý request = 1 Supabase query, ale katalog je interaktivní stránka
+// s filtry, takže cached snapshot by stejně nebyl ideální.
+export const dynamic = 'force-dynamic'
 
 export default async function SrovnavacPage() {
   const [products, stats] = await Promise.all([
