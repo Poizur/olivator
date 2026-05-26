@@ -52,7 +52,7 @@ export function Nav({ hasAdminBar = false }: { hasAdminBar?: boolean }) {
               <Link
                 key={l.href}
                 href={l.href}
-                className={`text-[13px] transition-colors whitespace-nowrap ${
+                className={`text-[13px] font-medium transition-colors whitespace-nowrap ${
                   pathname.startsWith(l.href) ? 'text-olive' : 'text-text2 hover:text-olive'
                 }`}
               >

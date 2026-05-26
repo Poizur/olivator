@@ -176,18 +176,17 @@ export function SommelierHero({
       <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-br from-[#3B6D11] to-[#27500A]" />
       <div aria-hidden className="absolute text-[300px] opacity-[0.05] -right-12 -top-20 -rotate-[15deg] leading-none select-none pointer-events-none -z-10">🫒</div>
 
-      <div className="px-6 md:px-10 py-8 md:py-10">
+      <div className="px-6 md:px-10 py-5 md:py-6">
         <div className="max-w-[1280px] mx-auto">
-          {/* olik-inner: emoji vlevo + content vpravo — přesně jako mockup */}
-          <div className="flex items-center gap-6 mb-5">
-            <div className="shrink-0 w-[152px] h-[152px] md:w-[192px] md:h-[192px] relative drop-shadow-xl">
-              <Image src="/olik.png" alt="Olík" fill sizes="(min-width: 768px) 192px, 152px" priority className="object-contain" />
+          <div className="flex items-center gap-5 mb-4">
+            <div className="shrink-0 w-[80px] h-[80px] md:w-[100px] md:h-[100px] relative drop-shadow-xl">
+              <Image src="/olik.png" alt="Olík" fill sizes="(min-width: 768px) 100px, 80px" priority className="object-contain" />
             </div>
             <div className="flex-1 min-w-0">
               {/* olik-header: title vlevo, stats napravo */}
               <div className="flex items-baseline justify-between gap-4 flex-wrap mb-3">
                 <div>
-                  <h1 className="font-[family-name:var(--font-display)] text-2xl md:text-[28px] font-normal text-white leading-tight">
+                  <h1 className="font-[family-name:var(--font-display)] text-[22px] md:text-[26px] leading-tight text-white">
                     Olík — <em className="text-olive-bright italic">najde tvůj olej za 5 sekund</em>
                   </h1>
                   <p className="text-[13px] text-white/80 mt-1">
@@ -258,7 +257,7 @@ export function SommelierHero({
           </div>
 
           {/* Trust signals */}
-          <div className="flex items-center gap-5 text-[11px] text-white/45 flex-wrap pl-0 sm:pl-12">
+          <div className="flex items-center gap-5 text-[11px] text-white/45 flex-wrap mt-1">
             <span className="inline-flex items-center gap-1.5"><span className="text-olive4">✓</span> Nezávislé hodnocení</span>
             <span className="inline-flex items-center gap-1.5"><span className="text-olive4">✓</span> Žádná reklama v obsahu</span>
             <span className="inline-flex items-center gap-1.5"><span className="text-olive4">✓</span> Aktualizace každých 24 h</span>
