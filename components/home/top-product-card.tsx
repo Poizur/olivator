@@ -41,7 +41,7 @@ export function TopProductCard({
       className="group bg-white border border-off2 rounded-lg overflow-hidden flex flex-col transition-all hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)] hover:-translate-y-0.5 hover:border-olive-mid"
     >
       {/* Image — fixní výška jako v mockupu, světlé pozadí */}
-      <div className="relative h-[110px] bg-off overflow-hidden">
+      <div className="relative h-[110px] bg-white overflow-hidden">
         {/* Badge vlevo nahoře */}
         {badge ? (
           <span
