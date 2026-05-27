@@ -16,16 +16,17 @@ const DRY = process.argv.includes('--dry-run')
 
 const SYSTEM_PROMPT =
   'Czech SEO meta description writer for olivator.cz (olive oil comparator). ' +
-  'Write 1 sentence in Czech, 130-155 chars, mentioning brand name, product type ' +
-  '(olivový olej / extra panenský olivový olej), and country/region if available. ' +
-  'No marketing fluff. Return ONLY the meta text, no quotes.'
+  'Write 1-2 sentences in Czech, EXACTLY 120-155 chars total, mentioning brand name, ' +
+  'product type (olivový olej / extra panenský olivový olej), country/region if known, ' +
+  'and a specific quality detail (polyfenoly, kyselost, sklizeň, certifikace, chuť). ' +
+  'No marketing fluff ("prémiový", "výjimečný"). Return ONLY the meta text, no quotes, no explanation.'
 
 interface Brand {
   id: string
   slug: string
   name: string
-  short_description: string | null
-  country_of_origin: string | null
+  description_short: string | null
+  country_code: string | null
 }
 
 async function sleep(ms: number) {
@@ -35,7 +36,7 @@ async function sleep(ms: number) {
 async function fetchBrands(): Promise<Brand[]> {
   const { data, error } = await supabaseAdmin
     .from('brands')
-    .select('id, slug, name, short_description, country_of_origin')
+    .select('id, slug, name, description_short, country_code')
     .eq('status', 'active')
     .or('meta_description.is.null,meta_description.eq.')
     .order('name')
@@ -51,8 +52,8 @@ async function fetchBrands(): Promise<Brand[]> {
 async function generateMeta(brand: Brand): Promise<string | null> {
   const userPrompt =
     `Značka: ${brand.name}\n` +
-    `Původ: ${brand.country_of_origin ?? 'neznámý'}\n` +
-    `Popis: ${brand.short_description ?? 'není'}`
+    `Původ (ISO kód): ${brand.country_code ?? 'neznámý'}\n` +
+    `Popis: ${brand.description_short ?? 'není'}`
 
   const response = await callClaude({
     model: HAIKU,
@@ -85,7 +86,7 @@ async function main() {
       if (!meta) {
         process.stdout.write('❌ prázdná odpověď\n')
         failed++
-      } else if (meta.length < 120 || meta.length > 160) {
+      } else if (meta.length < 85 || meta.length > 175) {
         process.stdout.write(`❌ délka ${meta.length} mimo rozsah ("${meta.slice(0, 50)}...")\n`)
         failed++
       } else {
