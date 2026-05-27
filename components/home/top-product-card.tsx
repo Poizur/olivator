@@ -61,8 +61,8 @@ export function TopProductCard({
           <ScoreBadge score={product.olivatorScore} type={product.type} size="small" />
         </span>
 
-        {/* Produkt obrázek */}
-        <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-[1.04]">
+        {/* Produkt obrázek — top-[22px] = odsazení pod badge */}
+        <div className="absolute inset-x-0 bottom-0 top-[22px] transition-transform duration-300 group-hover:scale-[1.04]">
           <ProductImage product={product} fallbackSize="text-[52px]" sizes={sizes} />
         </div>
       </div>
