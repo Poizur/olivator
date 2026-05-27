@@ -328,14 +328,29 @@ export async function publishCandidate(
       if (updateErr) throw new Error(`Product update failed: ${updateErr.message}`)
       productId = existing.id as string
     } else {
-      // Nový produkt s EAN — insert
-      const { data: created, error: prodErr } = await supabaseAdmin
+      // Nový produkt s EAN — zkontroluj ještě slug conflict před insertem
+      const { data: bySlug } = await supabaseAdmin
         .from('products')
-        .insert(productPayload)
         .select('id')
-        .single()
-      if (prodErr || !created) throw new Error(`Product insert failed: ${prodErr?.message}`)
-      productId = created.id as string
+        .eq('slug', scraped.slug)
+        .maybeSingle()
+
+      if (bySlug) {
+        // Slug existuje (jiný variant / dřívější import bez EAN) → aktualizuj EAN a vrať ID
+        await supabaseAdmin
+          .from('products')
+          .update({ ean: scraped.ean, updated_at: new Date().toISOString() })
+          .eq('id', bySlug.id)
+        productId = bySlug.id as string
+      } else {
+        const { data: created, error: prodErr } = await supabaseAdmin
+          .from('products')
+          .insert(productPayload)
+          .select('id')
+          .single()
+        if (prodErr || !created) throw new Error(`Product insert failed: ${prodErr?.message}`)
+        productId = created.id as string
+      }
     }
   } else {
     // Bez EAN — fallback na slug-based upsert (farm-direct produkty
