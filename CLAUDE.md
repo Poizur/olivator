@@ -73,7 +73,7 @@ Majitel (Architekt) určuje směr — systém běží sám. Majitel nekóduje, n
 Frontend:    Next.js 14 (App Router POUZE) + TypeScript
 Databáze:    Supabase (PostgreSQL + pgvector + Storage)
 Hosting:     Railway
-AI:          Claude API — claude-sonnet-4-20250514
+AI:          Claude API — claude-sonnet-4-6
 Scraping:    Playwright + Puppeteer
 Styling:     Tailwind CSS
 Node.js:     20+ | Next.js: 14.x | Supabase JS: 2.x
