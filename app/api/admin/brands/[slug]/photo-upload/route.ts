@@ -220,7 +220,7 @@ export async function POST(
   if (section === 'logo' || section === 'hero' || section === 'editorial') {
     await supabaseAdmin
       .from('entity_images')
-      .update({ status: 'inactive', updated_at: new Date().toISOString() })
+      .update({ status: 'inactive' })
       .eq('entity_id', brand.id)
       .eq('entity_type', 'brand')
       .eq('image_role', section)
@@ -301,7 +301,7 @@ export async function DELETE(
 
   const { error } = await supabaseAdmin
     .from('entity_images')
-    .update({ status: 'inactive', updated_at: new Date().toISOString() })
+    .update({ status: 'inactive' })
     .eq('id', photoId)
     .eq('entity_id', brand.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

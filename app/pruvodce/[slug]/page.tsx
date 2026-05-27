@@ -149,9 +149,25 @@ export default async function ArticleDetailPage({
             emoji: a.emoji,
             readTime: a.readTime,
             category: a.category,
+            heroImageUrl: null as string | null,
           }))
 
-  const recipeArticles = getArticles().filter((a) => a.category === 'recept').slice(0, 2)
+  // Recepty: DB-first (kvůli heroImageUrl), fallback static
+  const dbRecipes = dbArticles.filter((a) => a.category === 'recept').slice(0, 2)
+  const recipeArticles =
+    dbRecipes.length > 0
+      ? dbRecipes
+      : getArticles()
+          .filter((a) => a.category === 'recept')
+          .slice(0, 2)
+          .map((a) => ({
+            slug: a.slug,
+            title: a.title,
+            emoji: a.emoji,
+            readTime: a.readTime,
+            category: a.category,
+            heroImageUrl: null as string | null,
+          }))
 
   // Schema.org Article — datePublished/dateModified povinné pro Google rich
   // results (article snippet s autorem + datem). Bez nich Google nezobrazí.
@@ -353,7 +369,18 @@ export default async function ArticleDetailPage({
                       href={`/pruvodce/${a.slug}`}
                       className="flex items-start gap-2.5 group"
                     >
-                      <span className="text-base shrink-0">{a.emoji}</span>
+                      {a.heroImageUrl ? (
+                        <div className="w-12 h-12 rounded-md shrink-0 overflow-hidden bg-off">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={a.heroImageUrl}
+                            alt={a.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-base shrink-0 w-12 h-12 flex items-center justify-center bg-off rounded-md">{a.emoji}</span>
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="text-[13px] text-text font-medium leading-tight line-clamp-2 group-hover:text-olive">
                           {a.title}
@@ -380,7 +407,18 @@ export default async function ArticleDetailPage({
                       href={`/recept/${r.slug}`}
                       className="flex items-start gap-2.5 group"
                     >
-                      <span className="text-base shrink-0">{r.emoji}</span>
+                      {r.heroImageUrl ? (
+                        <div className="w-12 h-12 rounded-md shrink-0 overflow-hidden">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={r.heroImageUrl}
+                            alt={r.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-base shrink-0 w-12 h-12 flex items-center justify-center bg-olive-bg rounded-md">{r.emoji}</span>
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="text-[13px] text-olive-dark font-medium leading-tight line-clamp-2 group-hover:text-olive">
                           {r.title}
