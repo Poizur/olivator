@@ -194,7 +194,7 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
             className="flex-1 min-w-[160px] rounded-[var(--radius-card)] border-[1.5px] border-off2 p-4 text-center bg-white hover:border-olive-light transition-all"
           >
             <Link href={`/olej/${item.slug}`} className="block">
-              <div className="relative w-full aspect-square bg-off rounded-lg mb-2 overflow-hidden">
+              <div className="relative w-full aspect-square bg-white rounded-lg mb-2 overflow-hidden">
                 {item.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -264,7 +264,7 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
                   className="group flex items-center gap-2.5 p-2 rounded-lg bg-white border border-off2 hover:border-olive-light hover:shadow-sm transition-all text-left"
                   title={`Přidat: ${p.name}`}
                 >
-                  <div className="relative w-10 h-10 shrink-0 bg-off rounded overflow-hidden border border-off2">
+                  <div className="relative w-10 h-10 shrink-0 bg-white rounded overflow-hidden border border-off2">
                     {p.imageUrl ? (
                       <Image src={p.imageUrl} alt={p.name} fill sizes="40px" className="object-contain p-0.5" />
                     ) : (

@@ -273,7 +273,7 @@ export function EntityProductsTable({ products, entityType, filters = [], filter
                   onClick={() => setExpandedRow(expanded ? null : p.slug)}
                   className="w-full px-4 py-3 flex items-start gap-3 text-left"
                 >
-                  <div className="relative w-14 shrink-0 bg-off rounded-md overflow-hidden flex items-center justify-center" style={{ height: '4.5rem' }}>
+                  <div className="relative w-14 shrink-0 bg-white rounded-md overflow-hidden flex items-center justify-center" style={{ height: '4.5rem' }}>
                     {p.imageUrl ? (
                       <Image src={p.imageUrl} alt={p.name} fill sizes="56px" className="object-contain" />
                     ) : (

@@ -57,7 +57,7 @@ function DealCard({ deal, rank }: { deal: SlevyDeal; rank: number }) {
     <div className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden hover:border-olive-light hover:shadow-[0_4px_16px_rgba(0,0,0,.06)] transition-all">
       <Link href={`/olej/${deal.slug}`} className="flex gap-4 p-4 group">
         {/* Image */}
-        <div className="shrink-0 w-20 h-20 rounded-lg bg-off overflow-hidden flex items-center justify-center relative">
+        <div className="shrink-0 w-20 h-20 rounded-lg bg-white overflow-hidden flex items-center justify-center relative">
           {deal.imageUrl ? (
             <Image
               src={deal.imageUrl}
