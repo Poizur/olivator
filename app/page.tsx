@@ -83,6 +83,16 @@ export default async function Home() {
     pikantni: [...intensityGroups.pikantni].sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0)).slice(0, 5),
   }
 
+  // Velká balení — produkty >= 1,5 L seřazené od nejlevnějšího za litr
+  const largePacks = allProducts
+    .filter((p) => p.cheapestOffer != null && (p.volumeMl ?? 0) >= 1500)
+    .sort((a, b) => {
+      const pplA = a.cheapestOffer!.price / ((a.volumeMl ?? 1000) / 1000)
+      const pplB = b.cheapestOffer!.price / ((b.volumeMl ?? 1000) / 1000)
+      return pplA - pplB
+    })
+    .slice(0, 6)
+
   // Comparator teaser — 3 prefab duely
   const withOffer = allProducts.filter((p) => p.cheapestOffer != null)
 
@@ -264,6 +274,70 @@ export default async function Home() {
 
       {/* ─── FLAVOR SELECTOR ──────────────────────────────────────── */}
       <FlavorSelector totalProducts={stats.totalProducts} />
+
+      {/* ─── SEASONAL BANNER ─ nová sklizeň 2025/26 ──────────────── */}
+      <div
+        className="relative overflow-hidden py-8 px-6 md:px-10"
+        style={{ background: 'linear-gradient(135deg, #8B4513, #A0522D)' }}
+      >
+        {/* dekorativní velký lístek v pozadí */}
+        <div className="absolute right-4 top-[-60px] text-[220px] opacity-[0.08] select-none pointer-events-none leading-none">
+          🌿
+        </div>
+        <div className="max-w-[1280px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-5 relative">
+          <div>
+            <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-white leading-tight">
+              Nová sklizeň 2025/26 dorazila
+            </h2>
+            <p className="text-white/80 text-[14px] mt-1.5 max-w-[560px] leading-relaxed">
+              Čerstvě lisované oleje z podzimu 2025. Nejvyšší obsah polyfenolů, intenzivní chuť — poznejte, jaký má letošní ročník charakter.
+            </p>
+          </div>
+          <Link
+            href="/srovnavac"
+            className="bg-white text-[#8B4513] rounded-full px-5 py-2.5 text-[13px] font-semibold whitespace-nowrap hover:bg-white/90 transition-colors shrink-0"
+          >
+            Procházet nové oleje →
+          </Link>
+        </div>
+      </div>
+
+      {/* ─── VELKÁ BALENÍ — řazeno od nejlevnějšího za litr ─────── */}
+      {largePacks.length >= 3 && (
+        <section
+          className="px-6 md:px-10 py-16"
+          style={{ background: 'linear-gradient(160deg, #6b3012, #8B4513)' }}
+        >
+          <div className="max-w-[1280px] mx-auto">
+            <div className="flex items-end justify-between mb-8 flex-wrap gap-4">
+              <div>
+                <div className="text-[10px] font-bold tracking-widest uppercase text-white/50 mb-1.5">
+                  — Velká balení
+                </div>
+                <h2 className="font-[family-name:var(--font-display)] text-3xl md:text-[40px] font-normal text-white leading-tight">
+                  Olivový olej 5 L —{' '}
+                  <em className="italic text-amber-200">nakupte ve velkém.</em>
+                </h2>
+                <p className="text-white/70 text-[14px] mt-1.5">
+                  {largePacks.length}+ produktů · Bag-in-Box, plech, plast · Seřazeno od nejlevnějšího za litr
+                </p>
+              </div>
+              <Link
+                href="/srovnavac"
+                className="text-[13px] text-white/80 hover:text-white border-b border-white/30 hover:border-white whitespace-nowrap transition-colors"
+              >
+                Celý katalog →
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 md:gap-3">
+              {largePacks.map((p, i) => (
+                <BulkPackCard key={p.id} product={p} rank={i + 1} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ─── ATLAS REGIONŮ ───────────────────────────────────────── */}
       <RegionAtlas regions={regions} />
@@ -616,6 +690,50 @@ function badgeClass(tone: 'gold' | 'olive' | 'terra' | 'amber' | 'sage'): string
     case 'sage':
       return 'bg-olive-bg text-olive-dark'
   }
+}
+
+function BulkPackCard({ product, rank }: { product: ProductWithOffer; rank: number }) {
+  const offer = product.cheapestOffer!
+  const pricePerLitre = Math.round(offer.price / ((product.volumeMl ?? 1000) / 1000))
+  const volumeLabel = product.volumeMl ? `${product.volumeMl >= 1000 ? `${product.volumeMl / 1000} L` : `${product.volumeMl} ml`}` : ''
+  return (
+    <Link
+      href={`/olej/${product.slug}`}
+      className="group bg-white/10 border border-white/15 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:bg-white/[0.15] hover:-translate-y-0.5"
+    >
+      <div className="relative aspect-[4/5] bg-white overflow-hidden">
+        <span className="absolute top-1.5 left-1.5 z-10 text-[10px] font-bold tracking-widest uppercase text-text bg-white/90 backdrop-blur-sm rounded px-1.5 py-0.5 shadow-sm">
+          #{rank}
+        </span>
+        <span className="absolute top-1.5 right-1.5 z-10 shadow-md rounded-full">
+          <ScoreBadge score={product.olivatorScore} type={product.type} size="medium" />
+        </span>
+        <span
+          className="absolute bottom-1.5 left-1.5 z-10 text-[16px] leading-none bg-white/90 backdrop-blur-sm rounded px-1 py-0.5 shadow-sm"
+          aria-label={countryName(product.originCountry)}
+        >
+          {countryFlag(product.originCountry)}
+        </span>
+        <ProductImage product={product} sizes="(max-width:640px) 50vw,(max-width:1024px) 33vw,17vw" />
+      </div>
+      <div className="p-3 flex flex-col flex-1">
+        {volumeLabel && (
+          <div className="text-[10px] font-bold text-amber-300/80 uppercase tracking-wider mb-1">{volumeLabel}</div>
+        )}
+        <div className="text-[12px] font-semibold text-white leading-tight line-clamp-2 flex-1">
+          {product.nameShort || product.name}
+        </div>
+        <div className="mt-2 pt-2 border-t border-white/15">
+          <div className="text-amber-200 text-[15px] font-bold tabular-nums leading-none">
+            {pricePerLitre} Kč/litr
+          </div>
+          <div className="text-white/55 text-[11px] mt-0.5">
+            {formatPrice(offer.price)} celkem
+          </div>
+        </div>
+      </div>
+    </Link>
+  )
 }
 
 function ScoreBar({
