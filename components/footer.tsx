@@ -7,7 +7,7 @@ export function Footer() {
       <div className="max-w-[1280px] mx-auto px-6 md:px-10">
 
         {/* ── Newsletter row ── */}
-        <div className="flex flex-col sm:flex-row sm:items-end gap-5 py-8 border-b border-white/10">
+        <div className="flex flex-col md:flex-row md:items-center gap-6 py-8 border-b border-white/10">
           <div className="flex-1 min-w-0">
             <div className="text-[11px] font-medium tracking-[0.05em] uppercase text-olive3 mb-1.5">
               — Zůstaň v obraze
@@ -19,7 +19,7 @@ export function Footer() {
               Slevy, nové oleje a tipy každý čtvrtek v&nbsp;8:00.
             </p>
           </div>
-          <div className="sm:w-[380px] shrink-0">
+          <div className="w-full md:w-[380px] shrink-0">
             <NewsletterSignup source="footer" variant="dark" />
           </div>
         </div>
