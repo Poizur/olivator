@@ -7,7 +7,6 @@ import {
 } from '@/lib/data'
 import { getActiveArticles } from '@/lib/articles-db'
 import { getActiveRecipes } from '@/lib/recipes-db'
-import { NewsletterSignup } from '@/components/newsletter-signup'
 import { ProductImage } from '@/components/product-image'
 import { SommelierHero } from '@/components/sommelier-hero'
 import { computeBadges } from '@/lib/product-badges'
@@ -362,23 +361,6 @@ export default async function Home() {
       {/* ─── SLEVY + NOVINKY — 2-sloupcový layout ───────────────────────── */}
       <DealsNewsSection />
 
-      {/* ─── NEWSLETTER — jediný na stránce ─────────────────────────────── */}
-      <section className="px-6 md:px-10 py-16 bg-olive-dark">
-        <div className="max-w-[1280px] mx-auto">
-          <div className="max-w-[480px]">
-            <div className="text-[12px] font-medium tracking-[0.05em] uppercase text-olive3 mb-[6px]">
-              — Zůstaň v obraze
-            </div>
-            <h2 className="font-[family-name:var(--font-display)] text-[28px] font-medium text-white mb-2 leading-[1.1]">
-              Olíkův týdenní digest
-            </h2>
-            <p className="text-[14px] text-white/60 mb-6">
-              Slevy, nové oleje a tipy každý čtvrtek v 8:00.
-            </p>
-            <NewsletterSignup source="homepage" variant="dark" />
-          </div>
-        </div>
-      </section>
     </>
   )
 }
