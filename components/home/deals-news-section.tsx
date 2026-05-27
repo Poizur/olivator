@@ -41,15 +41,24 @@ export async function DealsNewsSection() {
     getSlevyDeals(4),
     supabaseAdmin
       .from('radar_items')
-      .select('slug, czech_title, badge, published_at, source, country_code')
+      .select('slug, czech_title, badge, published_at, source, country_code, image_url')
       .eq('is_published', true)
       .not('slug', 'is', null)
       .order('published_at', { ascending: false })
-      .limit(4),
+      .limit(12),
   ])
 
   const deals = slevyData.deals.slice(0, 4)
-  const news = radarData ?? []
+
+  // Max 2 per badge typ → zachovej rozmanitost kategorií
+  const seen = new Map<string, number>()
+  const news = (radarData ?? []).filter((item) => {
+    const key = item.badge ?? 'news'
+    const count = seen.get(key) ?? 0
+    if (count >= 2) return false
+    seen.set(key, count + 1)
+    return true
+  }).slice(0, 4)
 
   if (deals.length === 0 && news.length === 0) return null
 
@@ -132,14 +141,25 @@ export async function DealsNewsSection() {
                   <Link
                     key={item.slug}
                     href={`/novinky/${item.slug}`}
-                    className="bg-white border border-off2 rounded-xl p-3.5 flex items-start gap-3 hover:border-olive-light hover:shadow-sm transition-all group"
+                    className="bg-white border border-off2 rounded-xl p-3 flex items-start gap-3 hover:border-olive-light hover:shadow-sm transition-all group"
                   >
-                    <div className="text-[28px] leading-none shrink-0 mt-0.5">{b.emoji}</div>
+                    {/* Thumbnail — obrázek nebo fallback badge emoji */}
+                    <div className="w-14 h-14 shrink-0 rounded-lg overflow-hidden bg-off flex items-center justify-center text-2xl">
+                      {item.image_url ? (
+                        <img
+                          src={item.image_url}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        b.emoji
+                      )}
+                    </div>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.05em] text-text2 mb-1">
+                      <div className="text-[11px] font-medium uppercase tracking-[0.05em] text-text3 mb-0.5">
                         {b.label}
                         {item.country_code && (
-                          <span className="ml-1.5 font-normal not-italic">{countryFlag(item.country_code)}</span>
+                          <span className="ml-1">{countryFlag(item.country_code)}</span>
                         )}
                       </div>
                       <div className="text-[13px] font-semibold text-text leading-snug line-clamp-2 group-hover:text-olive transition-colors">
@@ -147,7 +167,6 @@ export async function DealsNewsSection() {
                       </div>
                       <div className="text-[11px] text-text3 mt-0.5">
                         {relativeTime(item.published_at)}
-                        {item.source && <> · {SOURCE_LABEL[item.source] ?? item.source}</>}
                       </div>
                     </div>
                   </Link>
