@@ -15,6 +15,15 @@ const BADGE: Record<string, { emoji: string; label: string }> = {
   news:    { emoji: '📡', label: 'Novinky' },
 }
 
+const SOURCE_LABEL: Record<string, string> = {
+  ioc:                 'IOC',
+  googlenews_olive:    'Google News',
+  googlenews_awards:   'Google News',
+  googlenews_health:   'Google News',
+  googlenews_cz:       'Google News',
+  olive_oil_times:     'Olive Oil Times',
+}
+
 function relativeTime(iso: string | null): string {
   if (!iso) return ''
   const diff = Date.now() - new Date(iso).getTime()
@@ -34,6 +43,7 @@ export async function DealsNewsSection() {
       .from('radar_items')
       .select('slug, czech_title, badge, published_at, source, country_code')
       .eq('is_published', true)
+      .not('slug', 'is', null)
       .order('published_at', { ascending: false })
       .limit(4),
   ])
@@ -137,7 +147,7 @@ export async function DealsNewsSection() {
                       </div>
                       <div className="text-[11px] text-text3 mt-0.5">
                         {relativeTime(item.published_at)}
-                        {item.source && <> · {item.source}</>}
+                        {item.source && <> · {SOURCE_LABEL[item.source] ?? item.source}</>}
                       </div>
                     </div>
                   </Link>

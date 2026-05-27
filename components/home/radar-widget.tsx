@@ -32,6 +32,7 @@ export async function RadarWidget() {
     .from('radar_items')
     .select('slug, czech_title, badge, published_at, image_url, image_alt')
     .eq('is_published', true)
+    .not('slug', 'is', null)
     .order('published_at', { ascending: false })
     .limit(3)
 
