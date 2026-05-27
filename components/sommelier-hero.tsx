@@ -24,10 +24,10 @@ interface Props {
 }
 
 const SUGGESTIONS = [
-  'Lehký řecký do 300 Kč',
-  'Co má nejvíc polyfenolů?',
-  'Dárek pro tátu co rád vaří',
-  'BIO olej na saláty',
+  '🇬🇷 Lehký řecký do 300 Kč',
+  '🔬 Co má nejvíc polyfenolů?',
+  '🎁 Dárek pro tátu co rád vaří',
+  '💚 BIO olej na saláty',
   '🇬🇷 Tradiční řecký na grilování',
 ]
 
@@ -186,20 +186,27 @@ export function SommelierHero({
               {/* olik-header: title vlevo, stats napravo */}
               <div className="flex items-baseline justify-between gap-4 flex-wrap mb-3">
                 <div>
-                  <h1 className="font-[family-name:var(--font-display)] text-[22px] md:text-[26px] leading-tight text-white">
-                    Olík — <em className="text-olive-bright italic">najde tvůj olej za 5 sekund</em>
+                  <h1 className="font-[family-name:var(--font-display)] text-[22px] md:text-[26px] font-semibold leading-tight text-white">
+                    Olík — <em className="text-olive-bright italic font-semibold">najde tvůj olej za 5 sekund</em>
                   </h1>
-                  <p className="text-[13px] text-white/80 mt-1">
+                  <p className="text-[13px] text-white/85 font-semibold mt-1">
                     AI poradce prochází celý katalog {totalProducts} olejů
                   </p>
                 </div>
-                {/* Stats napravo — přesně z mockupu */}
-                <div className="hidden md:flex items-center gap-3 text-[12px] text-white/80 shrink-0">
-                  <span><strong className="text-white font-semibold">{totalProducts}</strong> olejů</span>
-                  <span className="text-white/40">·</span>
-                  <span><strong className="text-white font-semibold">{activeRetailers}</strong> prodejců</span>
-                  <span className="text-white/40">·</span>
-                  <span><strong className="text-white font-semibold">{totalBrands}</strong> značek</span>
+                {/* Stats + trust signals napravo */}
+                <div className="hidden md:flex flex-col items-end gap-1.5 shrink-0">
+                  <div className="flex items-center gap-3 text-[12px] text-white/80">
+                    <span><strong className="text-white font-semibold">{totalProducts}</strong> olejů</span>
+                    <span className="text-white/40">·</span>
+                    <span><strong className="text-white font-semibold">{activeRetailers}</strong> prodejců</span>
+                    <span className="text-white/40">·</span>
+                    <span><strong className="text-white font-semibold">{totalBrands}</strong> značek</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-[11px] text-white/45">
+                    <span className="inline-flex items-center gap-1"><span className="text-olive4">✓</span> Nezávislé hodnocení</span>
+                    <span className="inline-flex items-center gap-1"><span className="text-olive4">✓</span> Žádná reklama</span>
+                    <span className="inline-flex items-center gap-1"><span className="text-olive4">✓</span> 24h aktualizace</span>
+                  </div>
                 </div>
               </div>
 
@@ -239,7 +246,7 @@ export function SommelierHero({
                       key={s}
                       onClick={() => send(s)}
                       disabled={loading}
-                      className="text-[12px] text-white/85 bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 rounded-full px-3.5 py-1.5 transition-colors"
+                      className="text-[12px] font-semibold text-white/90 bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 rounded-full px-3.5 py-1.5 transition-colors"
                     >
                       {s}
                     </button>
@@ -249,12 +256,6 @@ export function SommelierHero({
             </div>
           </div>
 
-          {/* Trust signals */}
-          <div className="flex items-center gap-5 text-[11px] text-white/45 flex-wrap mt-1">
-            <span className="inline-flex items-center gap-1.5"><span className="text-olive4">✓</span> Nezávislé hodnocení</span>
-            <span className="inline-flex items-center gap-1.5"><span className="text-olive4">✓</span> Žádná reklama v obsahu</span>
-            <span className="inline-flex items-center gap-1.5"><span className="text-olive4">✓</span> Aktualizace každých 24 h</span>
-          </div>
         </div>
       </div>
 
