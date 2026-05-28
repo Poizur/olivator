@@ -2,8 +2,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
 import { supabaseAdmin } from '@/lib/supabase'
-import { ScoreBadge } from '@/components/score-badge'
-import { NewsletterSignup } from '@/components/newsletter-signup'
 import { countryFlag, countryName, formatPrice, formatPricePer100ml } from '@/lib/utils'
 
 export const revalidate = 3600
@@ -63,15 +61,16 @@ interface BestsellerProduct {
   cheapestRetailerSlug: string | null
 }
 
-async function getBestsellers(limit = 50): Promise<{ products: BestsellerProduct[]; stats: { totalProducts: number; retailerCount: number; avgScore: number } }> {
-  // Produkty s nejvíce nabídkami u retailerů = proxy pro popularitu na trhu
+async function getBestsellers(limit = 10): Promise<{
+  products: BestsellerProduct[]
+  stats: { totalProducts: number; retailerCount: number; avgScore: number }
+}> {
   const { data: offerCounts } = await supabaseAdmin
     .from('product_offers')
     .select('product_id, price, retailers!inner(name, slug)')
 
   if (!offerCounts) return { products: [], stats: { totalProducts: 0, retailerCount: 0, avgScore: 0 } }
 
-  // Agregace per product_id
   const offerMap: Record<string, { count: number; minPrice: number; retailerName: string; retailerSlug: string }> = {}
   for (const o of offerCounts) {
     const pid = o.product_id as string
@@ -88,7 +87,6 @@ async function getBestsellers(limit = 50): Promise<{ products: BestsellerProduct
     }
   }
 
-  // Produkty s alespoň 1 nabídkou a Score
   const { data: products } = await supabaseAdmin
     .from('products')
     .select('id, slug, name, name_short, olivator_score, type, origin_country, origin_region, volume_ml, certifications')
@@ -99,7 +97,6 @@ async function getBestsellers(limit = 50): Promise<{ products: BestsellerProduct
 
   if (!products) return { products: [], stats: { totalProducts: 0, retailerCount: 0, avgScore: 0 } }
 
-  // Fotky — primary image per product (1 dotaz pro všechny)
   const productIds = products.map(p => p.id)
   const { data: images } = await supabaseAdmin
     .from('product_images')
@@ -111,7 +108,6 @@ async function getBestsellers(limit = 50): Promise<{ products: BestsellerProduct
   const imageMap: Record<string, string> = {}
   for (const img of images ?? []) imageMap[img.product_id as string] = img.url as string
 
-  // Seřadit: offer count DESC → score DESC
   const sorted = products
     .map(p => ({
       id: p.id as string,
@@ -137,7 +133,9 @@ async function getBestsellers(limit = 50): Promise<{ products: BestsellerProduct
     .slice(0, limit)
 
   const retailerSlugs = new Set(Object.values(offerMap).map(o => o.retailerSlug))
-  const avgScore = Math.round(sorted.reduce((s, p) => s + (p.olivatorScore ?? 0), 0) / Math.max(1, sorted.length))
+  const avgScore = Math.round(
+    sorted.reduce((s, p) => s + (p.olivatorScore ?? 0), 0) / Math.max(1, sorted.length)
+  )
 
   return {
     products: sorted,
@@ -146,120 +144,133 @@ async function getBestsellers(limit = 50): Promise<{ products: BestsellerProduct
 }
 
 function BestsellerCard({ product, rank }: { product: BestsellerProduct; rank: number }) {
-  const per100ml = product.cheapestPrice != null && product.volumeMl
-    ? formatPricePer100ml(product.cheapestPrice, product.volumeMl)
+  const per100ml =
+    product.cheapestPrice != null && product.volumeMl
+      ? formatPricePer100ml(product.cheapestPrice, product.volumeMl)
+      : null
+
+  const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null
+  const isTop1 = rank === 1
+
+  const volumeLabel = product.volumeMl
+    ? product.volumeMl >= 1000
+      ? `${product.volumeMl / 1000} l`
+      : `${product.volumeMl} ml`
     : null
 
-  const hasBio = product.certifications.some(c => ['bio', 'organic', 'eu_bio'].includes(c.toLowerCase()))
-  const hasDop = product.certifications.some(c => ['dop', 'igp', 'pgp'].includes(c.toLowerCase()))
-
   return (
-    <div className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden hover:border-olive-light hover:shadow-[0_4px_20px_rgba(0,0,0,.06)] transition-all group">
-      <Link href={`/olej/${product.slug}`} className="flex gap-0">
-
-        {/* ── Rank sloupec ── */}
-        <div className="w-10 shrink-0 flex flex-col items-center justify-start pt-4 gap-1">
-          <span className={`text-[13px] font-bold tabular-nums ${rank <= 3 ? 'text-terra' : 'text-text3'}`}>
-            {rank <= 3 ? '★' : '#'}{rank}
-          </span>
-          {product.offerCount >= 3 && (
-            <span className="text-[8px] font-bold uppercase tracking-wider text-olive/60 writing-mode-vertical">
-              {product.offerCount}×
-            </span>
+    <div
+      className={[
+        'relative bg-white rounded-[var(--radius-card)] overflow-hidden flex flex-col',
+        'hover:-translate-y-1 hover:shadow-[0_8px_28px_rgba(0,0,0,0.10)] transition-all duration-200 group',
+        isTop1 ? 'ring-2 ring-olive' : 'border border-off2',
+      ].join(' ')}
+    >
+      {/* ── Rank + badge ── */}
+      <div className="flex items-center justify-between px-3 pt-3 pb-0 min-h-[32px]">
+        <span className="flex items-center gap-1">
+          {medal ? (
+            <span className="text-[20px] leading-none">{medal}</span>
+          ) : (
+            <span className="text-[12px] font-bold text-text3">#{rank}</span>
           )}
-        </div>
+          {medal && (
+            <span className="text-[12px] font-semibold text-text2">#{rank}</span>
+          )}
+        </span>
+        {isTop1 ? (
+          <span className="text-[9px] font-bold bg-olive text-white px-2 py-0.5 rounded-full tracking-widest uppercase">
+            Bestseller ČR
+          </span>
+        ) : product.olivatorScore ? (
+          <span className="text-[11px] text-text3 font-medium">Score {product.olivatorScore}</span>
+        ) : null}
+      </div>
 
-        {/* ── Foto ── */}
-        <div className="w-[72px] h-[88px] shrink-0 bg-white flex items-center justify-center relative self-center mx-2 my-2 rounded-lg overflow-hidden border border-off2/60">
+      {/* ── Foto ── */}
+      <Link href={`/olej/${product.slug}`} className="block px-3 pt-2">
+        <div className="relative aspect-[4/5] bg-white rounded-xl overflow-hidden border border-off2/50">
           {product.imageUrl ? (
             <Image
               src={product.imageUrl}
               alt={product.name}
               fill
-              sizes="72px"
-              className="object-contain p-1"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 34vw, 20vw"
+              className="object-contain p-2"
             />
           ) : (
-            <span className="text-3xl">🫒</span>
+            <div className="flex items-center justify-center h-full text-5xl opacity-20 select-none">
+              🫒
+            </div>
           )}
-        </div>
-
-        {/* ── Info ── */}
-        <div className="flex-1 min-w-0 py-3 pr-3">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <div className="min-w-0">
-              {/* Origin + flags */}
-              <p className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-0.5 flex items-center gap-1">
-                {product.originCountry && (
-                  <span title={countryName(product.originCountry)}>{countryFlag(product.originCountry)}</span>
-                )}
-                {product.originRegion || (product.originCountry ? countryName(product.originCountry) : null)}
-                {hasBio && <span className="text-[8px] bg-olive4 text-olive rounded px-1">BIO</span>}
-                {hasDop && <span className="text-[8px] bg-amber-50 text-amber-700 rounded px-1">DOP</span>}
-              </p>
-              {/* Název */}
-              <p className="text-[14px] font-semibold text-text leading-snug line-clamp-2 group-hover:text-olive transition-colors">
-                {product.nameShort || product.name}
-              </p>
-              {product.volumeMl && (
-                <p className="text-[11px] text-text3 mt-0.5">{product.volumeMl} ml</p>
-              )}
-            </div>
-            {/* Score */}
-            <div className="shrink-0 mt-0.5">
-              <ScoreBadge score={product.olivatorScore} type={product.type} size="medium" />
-            </div>
-          </div>
-
-          {/* Dostupnost badge */}
-          <div className="flex flex-wrap items-center gap-2 mt-1.5">
-            <span className="text-[10px] font-semibold bg-olive-bg text-olive border border-olive-border rounded-full px-2 py-0.5">
-              ✓ {product.offerCount} {product.offerCount === 1 ? 'prodejce' : product.offerCount <= 4 ? 'prodejci' : 'prodejců'}
-            </span>
-            {product.cheapestPrice && (
-              <span className="text-[13px] font-bold text-text tabular-nums">
-                od {formatPrice(product.cheapestPrice)}
-              </span>
-            )}
-            {per100ml && (
-              <span className="text-[11px] text-text3">{per100ml}</span>
-            )}
-          </div>
         </div>
       </Link>
 
-      {/* ── CTA řádek ── */}
-      {product.cheapestRetailerSlug && product.slug && (
-        <div className="px-3 pb-3">
-          <Link
-            href={`/go/${product.cheapestRetailerSlug}/${product.slug}`}
-            className="flex items-center justify-between w-full bg-olive hover:bg-olive2 text-white text-[12px] font-semibold px-4 py-2 rounded-full transition-colors"
-          >
-            <span>Nejlevněji u {product.cheapestRetailer}</span>
-            <span>→</span>
-          </Link>
+      {/* ── Textové info ── */}
+      <div className="px-3 pt-2.5 pb-3 flex flex-col flex-1">
+        {/* Původ + objem */}
+        <p className="text-[11px] text-text3 mb-1.5 flex items-center gap-1 min-h-[16px]">
+          {product.originCountry && (
+            <span className="shrink-0">{countryFlag(product.originCountry)}</span>
+          )}
+          <span className="truncate">
+            {product.originRegion ||
+              (product.originCountry ? countryName(product.originCountry) : '')}
+          </span>
+          {volumeLabel && <span className="shrink-0 text-text3">· {volumeLabel}</span>}
+        </p>
+
+        {/* Název — jen jednou */}
+        <p className="text-[13px] font-semibold text-text leading-snug line-clamp-2 group-hover:text-olive transition-colors mb-3 flex-1">
+          {product.nameShort || product.name}
+        </p>
+
+        {/* Cena + cena/100 ml */}
+        <div className="flex items-baseline justify-between gap-1 mb-3">
+          {product.cheapestPrice ? (
+            <span className="text-[18px] font-bold text-text tabular-nums leading-none">
+              {formatPrice(product.cheapestPrice)}
+            </span>
+          ) : (
+            <span className="text-[13px] text-text3">—</span>
+          )}
+          {per100ml && (
+            <span className="text-[11px] font-semibold text-olive-light shrink-0">{per100ml}</span>
+          )}
         </div>
-      )}
+
+        {/* CTA — full-width */}
+        <Link
+          href={`/olej/${product.slug}`}
+          className="flex items-center justify-center w-full bg-olive-dark hover:bg-olive text-white text-[13px] font-semibold py-2.5 rounded-xl transition-colors"
+        >
+          Zobrazit →
+        </Link>
+      </div>
     </div>
   )
 }
 
 export default async function NejprodavanejiPage() {
-  const { products, stats } = await getBestsellers(50)
+  const { products, stats } = await getBestsellers(10)
 
-  const itemListSchema = products.length > 0 ? {
-    '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: 'Nejprodávanější olivové oleje v ČR — Olivátor',
-    description: 'Žebříček nejprodávanějších olivových olejů seřazených dle dostupnosti u prodejců a Olivator Score.',
-    numberOfItems: products.length,
-    itemListElement: products.slice(0, 20).map((p, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      url: `${SITE}/olej/${p.slug}`,
-      name: p.name,
-    })),
-  } : null
+  const itemListSchema =
+    products.length > 0
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'ItemList',
+          name: 'Nejprodávanější olivové oleje v ČR — Olivátor',
+          description:
+            'Žebříček nejprodávanějších olivových olejů seřazených dle dostupnosti u prodejců a Olivator Score.',
+          numberOfItems: products.length,
+          itemListElement: products.map((p, i) => ({
+            '@type': 'ListItem',
+            position: i + 1,
+            url: `${SITE}/olej/${p.slug}`,
+            name: p.name,
+          })),
+        }
+      : null
 
   const faqSchema = {
     '@context': 'https://schema.org',
@@ -276,67 +287,66 @@ export default async function NejprodavanejiPage() {
     '@type': 'BreadcrumbList',
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Olivátor', item: SITE },
-      { '@type': 'ListItem', position: 2, name: 'Nejprodávanější olivové oleje', item: `${SITE}/nejprodavanejsi` },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Nejprodávanější olivové oleje',
+        item: `${SITE}/nejprodavanejsi`,
+      },
     ],
   }
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       {itemListSchema && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
+        />
       )}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
 
-      <main className="max-w-[960px] mx-auto px-4 py-10 md:py-16">
+      <main className="max-w-[1240px] mx-auto px-4 py-10 md:py-14">
 
         {/* ── Breadcrumb ── */}
         <nav className="text-[12px] text-text3 mb-8 flex items-center gap-1.5">
-          <Link href="/" className="hover:text-olive transition-colors">Olivátor</Link>
+          <Link href="/" className="hover:text-olive transition-colors">
+            Olivátor
+          </Link>
           <span>›</span>
           <span className="text-text2">Nejprodávanější</span>
         </nav>
 
-        {/* ── Hero ── */}
-        <section className="mb-10">
+        {/* ── Hero (kompaktní) ── */}
+        <section className="mb-8">
           <p className="text-[11px] font-bold tracking-widest uppercase text-olive mb-3">
             🏆 Denně aktualizováno
           </p>
-          <h1 className="font-[family-name:var(--font-display)] text-[32px] md:text-[44px] font-normal text-text leading-tight mb-4">
+          <h1 className="font-[family-name:var(--font-display)] text-[32px] md:text-[44px] font-normal text-text leading-tight mb-3">
             Nejprodávanější olivový olej v ČR
           </h1>
-          <p className="text-[16px] text-text2 leading-relaxed max-w-2xl mb-8">
-            Žebříček olejů dostupných u nejvíce prodejců — kombinace reálné
-            popularity na českém trhu a Olivator Score. Ne nejlevnější,
-            ale nejdostupnější a ověřené.
+          <p className="text-[16px] text-text2 leading-relaxed max-w-xl">
+            Oleje dostupné u nejvíce prodejců — kombinace reálné popularity na českém trhu
+            a ověřené kvality Olivator Score.
           </p>
-
-          {/* Stats */}
-          <div className="flex flex-wrap gap-3">
-            <div className="bg-olive4 border border-olive-border rounded-full px-4 py-2 flex items-center gap-2">
-              <span className="text-[22px] font-bold text-olive">{stats.totalProducts}</span>
-              <span className="text-[12px] text-text2">hodnocených olejů</span>
-            </div>
-            <div className="bg-off rounded-full px-4 py-2 flex items-center gap-2">
-              <span className="text-[22px] font-bold text-text">{stats.retailerCount}</span>
-              <span className="text-[12px] text-text2">prodejců porovnáno</span>
-            </div>
-            <div className="bg-off rounded-full px-4 py-2 flex items-center gap-2">
-              <span className="text-[22px] font-bold text-text">{stats.avgScore}</span>
-              <span className="text-[12px] text-text2">průměrný Score</span>
-            </div>
-          </div>
         </section>
 
         {/* ── Rychlé filtry ── */}
-        <div className="flex flex-wrap gap-2 mb-8">
+        <div className="flex flex-wrap gap-2 mb-6">
           {[
             { label: '🇬🇷 Řecké', href: '/srovnavac?origin=GR' },
             { label: '🇪🇸 Španělské', href: '/srovnavac?origin=ES' },
             { label: '🇮🇹 Italské', href: '/srovnavac?origin=IT' },
             { label: '🌿 BIO', href: '/srovnavac?cert=bio' },
             { label: '🏅 DOP/PGI', href: '/srovnavac?cert=dop' },
-            { label: '📦 5L balení', href: '/nejprodavanejsi/velka-baleni' },
+            { label: '📦 5L balení', href: '/srovnavac?volume=5000' },
           ].map(f => (
             <Link
               key={f.label}
@@ -348,17 +358,30 @@ export default async function NejprodavanejiPage() {
           ))}
         </div>
 
-        {/* ── Seznam produktů ── */}
-        <section className="mb-14">
+        {/* ── Stats strip ── */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-text3 mb-6 pb-5 border-b border-off2">
+          <span>🛒 {stats.totalProducts} bestsellerů</span>
+          <span>·</span>
+          <span>Aktualizováno denně</span>
+          <span>·</span>
+          <span>Data z {stats.retailerCount}+ prodejců</span>
+          <span>·</span>
+          <span>Průměrný Score {stats.avgScore}/100</span>
+        </div>
+
+        {/* ── Mřížka ── */}
+        <section className="mb-4">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-[18px] font-semibold text-text">
-              {products.length > 0 ? `Top ${products.length} nejprodávanějších olejů` : 'Načítám žebříček…'}
+              Top {products.length} nejprodávanějších
             </h2>
-            <span className="text-[12px] text-text3">seřazeno: dostupnost + Score</span>
+            <span className="text-[12px] text-text3 hidden sm:block">
+              seřazeno: dostupnost + Score
+            </span>
           </div>
 
           {products.length > 0 ? (
-            <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {products.map((p, i) => (
                 <BestsellerCard key={p.id} product={p} rank={i + 1} />
               ))}
@@ -366,43 +389,87 @@ export default async function NejprodavanejiPage() {
           ) : (
             <div className="bg-off rounded-2xl p-8 text-center">
               <p className="text-[16px] text-text2 mb-4">Data se načítají.</p>
-              <Link href="/srovnavac" className="inline-block bg-olive text-white text-[13px] font-semibold px-6 py-3 rounded-full hover:bg-olive2 transition-colors">
+              <Link
+                href="/srovnavac"
+                className="inline-block bg-olive text-white text-[13px] font-semibold px-6 py-3 rounded-full hover:bg-olive2 transition-colors"
+              >
                 Otevřít celý katalog →
               </Link>
             </div>
           )}
+
+          <p className="text-[11px] text-text3 mt-4 text-center">
+            Affiliate partnerství — nákupem přes Olivátor podpoříte provoz srovnávače bez příplatku pro vás.
+          </p>
         </section>
 
         {/* ── Edukační blok ── */}
-        <section className="mb-14 bg-off rounded-2xl p-6 md:p-8">
+        <section className="my-12 bg-off rounded-2xl p-6 md:p-8">
           <h2 className="text-[18px] font-bold text-text mb-5">Jak vybrat ten správný?</h2>
           <div className="grid md:grid-cols-3 gap-6">
             <div>
               <div className="text-[28px] mb-2">🏆</div>
               <h3 className="text-[14px] font-semibold text-text mb-1">Olivator Score</h3>
               <p className="text-[13px] text-text2 leading-relaxed">
-                Score 0–100 zohledňuje kyselost, certifikace, polyfenoly
-                a poměr cena/kvalita. Čím výše, tím lepší objektivní hodnocení.
+                Score 0–100 zohledňuje kyselost, certifikace, polyfenoly a poměr cena/kvalita.
+                Čím výše, tím lepší objektivní hodnocení.
               </p>
             </div>
             <div>
               <div className="text-[28px] mb-2">📍</div>
               <h3 className="text-[14px] font-semibold text-text mb-1">Původ rozhoduje</h3>
               <p className="text-[13px] text-text2 leading-relaxed">
-                Řecké oleje mívají vyšší polyfenoly. Španělské jsou cenově
-                dostupnější. Italské nabídnou regionální rozmanitost a prémiové DOP.
+                Řecké oleje mívají vyšší polyfenoly. Španělské jsou cenově dostupnější.
+                Italské nabídnou regionální rozmanitost a prémiové DOP.
               </p>
             </div>
             <div>
               <div className="text-[28px] mb-2">🔢</div>
               <h3 className="text-[14px] font-semibold text-text mb-1">Počet prodejců = jistota</h3>
               <p className="text-[13px] text-text2 leading-relaxed">
-                Olej dostupný u 5+ prodejců je vždy k dostání a bývá
-                cenově stabilnější. Náš odznak „N prodejců" to ukazuje hned.
+                Olej dostupný u 5+ prodejců je vždy k dostání a bývá cenově stabilnější.
               </p>
             </div>
           </div>
         </section>
+
+        {/* ── Propojovací dlaždice ── */}
+        <div className="grid sm:grid-cols-2 gap-4 mb-14">
+          <Link
+            href="/slevy"
+            className="group bg-olive4 border border-olive-border hover:border-olive rounded-2xl p-6 flex items-center justify-between transition-all hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <div>
+              <p className="text-[10px] font-bold tracking-widest uppercase text-olive mb-1">
+                Aktuálně
+              </p>
+              <p className="text-[20px] font-bold text-text group-hover:text-olive transition-colors">
+                Hledáš slevy?
+              </p>
+              <p className="text-[13px] text-text2 mt-0.5">Denně aktualizované výprodeje</p>
+            </div>
+            <span className="text-3xl text-olive group-hover:translate-x-1 transition-transform">
+              →
+            </span>
+          </Link>
+          <Link
+            href="/srovnavac"
+            className="group bg-white border border-off2 hover:border-olive-light rounded-2xl p-6 flex items-center justify-between transition-all hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <div>
+              <p className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1">
+                500+ produktů
+              </p>
+              <p className="text-[20px] font-bold text-text group-hover:text-olive transition-colors">
+                Celý katalog →
+              </p>
+              <p className="text-[13px] text-text2 mt-0.5">Filtry, srovnání, detaily</p>
+            </div>
+            <span className="text-3xl text-text3 group-hover:translate-x-1 transition-transform">
+              →
+            </span>
+          </Link>
+        </div>
 
         {/* ── FAQ ── */}
         <section className="mb-14">
@@ -416,39 +483,6 @@ export default async function NejprodavanejiPage() {
             ))}
           </dl>
         </section>
-
-        {/* ── Newsletter ── */}
-        <section className="mb-4">
-          <div className="bg-olive4 border border-[#b7e4c7] rounded-2xl p-6 md:p-8">
-            <p className="text-[11px] font-bold tracking-widest uppercase text-olive mb-3">
-              🫒 Zůstaňte v obraze
-            </p>
-            <h2 className="text-[22px] font-bold text-text mb-2">
-              Novinky a akce každý čtvrtek
-            </h2>
-            <p className="text-[14px] text-text2 mb-6 leading-relaxed">
-              Nové oleje v žebříčku, největší slevy týdne, tipy od Olíka.
-              Bez spamu — odhlášení jedním klikem.
-            </p>
-            <NewsletterSignup source="homepage" variant="inline" />
-          </div>
-        </section>
-
-        {/* ── Cross-links ── */}
-        <div className="flex flex-wrap gap-4 mt-8 pt-8 border-t border-off2">
-          <Link href="/srovnavac" className="text-[13px] text-olive font-medium hover:underline">
-            → Celý katalog olejů
-          </Link>
-          <Link href="/slevy" className="text-[13px] text-olive font-medium hover:underline">
-            → Aktuální slevy
-          </Link>
-          <Link href="/zebricek/nejlepsi" className="text-[13px] text-olive font-medium hover:underline">
-            → Žebříček nejlepších
-          </Link>
-          <Link href="/metodika" className="text-[13px] text-olive font-medium hover:underline">
-            → Jak hodnotíme (Olivator Score)
-          </Link>
-        </div>
 
       </main>
     </>
