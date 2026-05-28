@@ -1289,6 +1289,56 @@ RAILWAY_ENVIRONMENT_ID=
 
 ---
 
+---
+
+## 25. PRODUKTOVÁ INTEGRITA V ČLÁNCÍCH — KRITICKÉ
+
+> Incident: Květen 2026 — článek `nejlepsi-olivovy-olej-2026` obsahoval 3 vymyšlené produkty
+> (Koroneiki Early Harvest BIO, Coratina Apulia DOP, Arbequina Katalánsko DOP) se smyšlenými
+> score, polyfenoly a cenami. Produkty neexistovaly v DB ani na webu. Článek byl na 3. místě
+> Google — věrohodnostní riziko třídy YMYL.
+
+### Absolutní pravidla
+
+1. **Nikdy nevymýšlej produkty** — v článcích (průvodce, žebříčky, srovnání) cituj VÝHRADNĚ
+   produkty existující v DB s `status = 'active'`. Slug musí odpovídat reálnému záznamu.
+
+2. **Nikdy nevymýšlej čísla** — score, kyselost, polyfenoly, cena: VŽDY z DB. Nikdy
+   neodhaduj ani nezaokrouhluj na "hezká čísla". Pokud v DB hodnota chybí, neuvádí se.
+
+3. **Formát odkazu** — vždy `[Název produktu](/olej/SLUG)` kde slug je z DB pole `slug`.
+
+4. **Prázdné doporučení > vymyšlené** — pokud pro daný segment neexistuje vhodný
+   reálný produkt, piš obecně bez konkrétního názvu. Nikdy neplní místo fake produktem.
+
+### Technické zábrany (existují od 2026-05-28)
+
+| Vrstva | Soubor | Funkce |
+|--------|--------|--------|
+| **Prevence** | `scripts/generate-articles.ts` | Pro `srovnani`/`zebricek` briefy injektuje real produktový katalog z DB do Claude promptu + strict pravidla `CATALOG_RULES` |
+| **Detekce** | `lib/article-validator.ts` | `validateArticle(slug)` — ověří každý `/olej/slug` link + porovná hardcoded čísla s DB |
+| **Blokace** | `app/api/admin/articles/[slug]/route.ts` | `status → active` je blokován dokud validace nevrátí `ok: true` |
+| **CLI audit** | `scripts/validate-article-products.ts` | Manuální kontrola: `npx tsx --env-file=.env.local scripts/validate-article-products.ts` |
+
+### Tolerance pro porovnání (validator)
+
+| Pole | Tolerance | Závažnost |
+|------|-----------|-----------|
+| score | ±0 | ERROR |
+| kyselost | ±0,02 % | ERROR |
+| polyfenoly | ±50 mg/kg | WARNING |
+| cena | ±100 Kč | WARNING |
+
+### Postup při přidávání produktových doporučení do článku
+
+1. Najdi produkty v DB: `/admin/produkty` nebo `scripts/validate-article-products.ts`
+2. Zkopíruj přesný slug z DB
+3. Zkopíruj přesné hodnoty (score, kyselost, polyfenoly) z DB — nezaokrouhluj
+4. Pro cenu cituj: "od X Kč u [retailer]" nebo jen "od X Kč" — vždy live data
+5. Po editaci spusť validátor a ověř 0 ERRORů před publish
+
+---
+
 *Živý dokument. Aktualizuj datum při každé změně.*
 *Při každém bugu přidej lesson do sekce 21.*
 *Při aktivaci feature flagu aktualizuj checklist.*

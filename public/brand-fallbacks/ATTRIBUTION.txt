@@ -1,6 +1,0 @@
-it: Photo: Mathilde Ro / Unsplash (CWwYdFYKIw0)
-gr: Photo: Kostas Morfiris / Unsplash (v8NbNY5OSbY)
-es: Photo: David Vives / Unsplash (lVXFvzbAtOw)
-pt: Photo: Joao / Unsplash (gNL_or9N2lg)
-hr: Photo: Devon MacKay / Unsplash (mczX2pC_iEI)
-default: Photo: Devon MacKay / Unsplash (mczX2pC_iEI)
