@@ -62,6 +62,16 @@ export default async function Home() {
     }
   }
 
+  // Velká balení ≥ 1500 ml — seřazená od nejlevnějšího za litr
+  const largePacks = allProducts
+    .filter((p) => p.cheapestOffer != null && p.volumeMl >= 1500)
+    .sort((a, b) => {
+      const pplA = a.cheapestOffer!.price / (a.volumeMl / 1000)
+      const pplB = b.cheapestOffer!.price / (b.volumeMl / 1000)
+      return pplA - pplB
+    })
+    .slice(0, 6)
+
   return (
     <>
       {/* ─── HERO: kompaktní Olík AI bar ──────────────────────────────── */}
@@ -358,9 +368,73 @@ export default async function Home() {
         </section>
       )}
 
+      {/* ─── VELKÁ BALENÍ — seřazeno od nejlevnějšího za litr ───────────── */}
+      {largePacks.length >= 3 && (
+        <section className="px-6 md:px-10 py-10 border-t border-off2" style={{ background: 'linear-gradient(160deg, #6b3012, #8B4513)' }}>
+          <div className="max-w-[1280px] mx-auto">
+            <div className="flex items-end justify-between mb-6 flex-wrap gap-3">
+              <div>
+                <div className="text-[10px] font-bold tracking-widest uppercase text-white/50 mb-2">
+                  — Ekonomické volby
+                </div>
+                <h2 className="font-[family-name:var(--font-display)] text-[26px] md:text-[32px] font-normal text-white leading-tight">
+                  Velká balení
+                </h2>
+                <p className="text-[13px] text-white/60 mt-1">
+                  {largePacks.length}+ produktů · Bag-in-Box, plech, plast · Seřazeno od nejlevnějšího za litr
+                </p>
+              </div>
+              <Link
+                href="/srovnavac?volume=1500"
+                className="text-[13px] font-semibold text-white/80 hover:text-white transition-colors whitespace-nowrap"
+              >
+                Všechna velká balení →
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {largePacks.map((p, i) => (
+                <BulkPackCard key={p.id} product={p} rank={i + 1} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* ─── SLEVY + NOVINKY — 2-sloupcový layout ───────────────────────── */}
       <DealsNewsSection />
 
     </>
+  )
+}
+
+function BulkPackCard({ product, rank }: { product: ProductWithOffer; rank: number }) {
+  const offer = product.cheapestOffer!
+  const pricePerLitre = Math.round(offer.price / (product.volumeMl / 1000))
+  const volumeLabel =
+    product.volumeMl >= 1000
+      ? `${product.volumeMl / 1000} l`
+      : `${product.volumeMl} ml`
+
+  return (
+    <Link
+      href={`/olej/${product.slug}`}
+      className="group bg-white/10 border border-white/15 hover:bg-white/20 rounded-[var(--radius-card)] overflow-hidden flex flex-col transition-all hover:-translate-y-0.5"
+    >
+      <div className="relative aspect-[4/5] bg-white overflow-hidden">
+        <span className="absolute top-1.5 left-1.5 z-10 text-[10px] font-bold bg-white/90 text-text rounded px-1.5 py-0.5 leading-none">
+          #{rank}
+        </span>
+        <ProductImage product={product} fallbackSize="text-4xl" sizes="(max-width: 640px) 50vw, 200px" />
+      </div>
+      <div className="p-2.5 flex flex-col flex-1">
+        <p className="text-amber-200 text-[15px] font-bold tabular-nums leading-none mb-0.5">
+          {pricePerLitre} Kč/l
+        </p>
+        <p className="text-white/50 text-[10px] mb-1.5">{offer.price} Kč · {volumeLabel}</p>
+        <p className="text-white/80 text-[11px] font-medium leading-snug line-clamp-2 flex-1">
+          {product.nameShort || product.name}
+        </p>
+      </div>
+    </Link>
   )
 }
