@@ -120,6 +120,7 @@ export async function AdminSidebar() {
       group: 'Analytika',
       items: [
         { href: '/admin/analytics', label: 'Affiliate clicks' },
+        { href: '/admin/gsc', label: 'GSC Dashboard' },
       ],
     },
     {

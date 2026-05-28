@@ -67,6 +67,7 @@ export function ProductForm({
 
   // SEO meta — null = use auto-fallback v generateMetadata; vyplněné = override.
   const [metaTitle, setMetaTitle] = useState(String(productRow.meta_title ?? ''))
+  const [metaTitleAlt, setMetaTitleAlt] = useState(String((productRow as Record<string, unknown>).meta_title_alt ?? ''))
   const [metaDescription, setMetaDescription] = useState(String(productRow.meta_description ?? ''))
 
   // Origin / type
@@ -128,6 +129,7 @@ export function ProductForm({
         descriptionLong: descriptionLong || undefined,
         // null = explicit clear → fallback. '' → null. Hodnota → override.
         metaTitle: metaTitle.trim() || null,
+        metaTitleAlt: metaTitleAlt.trim() || null,
         metaDescription: metaDescription.trim() || null,
         originCountry: originCountry || undefined,
         originRegion: originRegion || undefined,
@@ -231,7 +233,7 @@ export function ProductForm({
           Vyplň jen pokud chceš override defaultního auto-titlu/descripce. Prázdné = Olivator vygeneruje
           automaticky z názvu, Score a popisu.
         </div>
-        <Field label="Meta title (max 60 znaků)">
+        <Field label="Meta title A (max 60 znaků)">
           <input
             type="text"
             value={metaTitle}
@@ -244,6 +246,19 @@ export function ProductForm({
             metaTitle.length > 60 ? 'text-red-600' : metaTitle.length > 50 ? 'text-amber-600' : 'text-text3'
           }`}>
             {metaTitle.length} / 60 znaků {metaTitle.length > 60 ? '— Google ořízne!' : ''}
+          </div>
+        </Field>
+        <Field label="Meta title B — A/B variant (max 60 znaků)">
+          <input
+            type="text"
+            value={metaTitleAlt}
+            onChange={e => setMetaTitleAlt(e.target.value)}
+            maxLength={70}
+            className={inputCls}
+            placeholder="Alternativní titulek pro A/B test CTR v GSC…"
+          />
+          <div className="text-[10px] mt-1 text-text3">
+            {metaTitleAlt.length} / 60 znaků · Vyžaduje migraci DB (20260528100000_ab_meta_title.sql)
           </div>
         </Field>
         <Field label="Meta description (130-160 znaků)">

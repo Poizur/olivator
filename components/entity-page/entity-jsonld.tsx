@@ -46,6 +46,42 @@ export function FaqJsonLd({ faqs }: { faqs: FaqItem[] }) {
   )
 }
 
+// Hardcoded geo coordinates for known olive oil regions
+// Eliminates need for DB migration — extended when new regions are added
+const REGION_GEO: Record<string, { lat: number; lon: number }> = {
+  kreta: { lat: 35.24, lon: 24.81 },
+  peloponnes: { lat: 37.50, lon: 22.50 },
+  kalamata: { lat: 37.04, lon: 22.11 },
+  lesbos: { lat: 39.20, lon: 26.30 },
+  korfu: { lat: 39.62, lon: 19.92 },
+  zakynthos: { lat: 37.79, lon: 20.90 },
+  chalkidiki: { lat: 40.30, lon: 23.30 },
+  arcadia: { lat: 37.50, lon: 22.30 },
+  korinthie: { lat: 37.90, lon: 22.70 },
+  messinia: { lat: 37.00, lon: 22.10 },
+  messara: { lat: 35.05, lon: 24.93 },
+  sitia: { lat: 35.21, lon: 26.10 },
+  kolymbari: { lat: 35.54, lon: 23.73 },
+  kolymvari: { lat: 35.54, lon: 23.73 },
+  lakonia: { lat: 36.90, lon: 22.40 },
+  festos: { lat: 35.05, lon: 24.83 },
+  skillountia: { lat: 37.62, lon: 21.62 },
+  toskansko: { lat: 43.77, lon: 11.25 },
+  apulie: { lat: 40.90, lon: 16.60 },
+  sicilie: { lat: 37.50, lon: 14.00 },
+  molise: { lat: 41.50, lon: 14.50 },
+  umbrie: { lat: 43.10, lon: 12.40 },
+  alberobello: { lat: 40.79, lon: 17.24 },
+  andalusie: { lat: 37.54, lon: -4.73 },
+  jaen: { lat: 37.78, lon: -3.78 },
+  'terra-alta': { lat: 41.00, lon: 0.45 },
+  'castilla-la-mancha': { lat: 39.50, lon: -3.00 },
+  'kastilie-la-mancha': { lat: 39.50, lon: -3.00 },
+  istrie: { lat: 45.20, lon: 13.90 },
+  alentejo: { lat: 38.50, lon: -7.90 },
+  douro: { lat: 41.20, lon: -7.60 },
+}
+
 interface PlaceJsonLdProps {
   name: string
   description: string
@@ -54,9 +90,12 @@ interface PlaceJsonLdProps {
   imageUrl?: string | null
   /** Wikipedia, Wikidata, GeoNames URL — Knowledge Graph signál */
   sameAs?: string[]
+  /** Region slug for geo coordinate lookup */
+  regionSlug?: string
 }
 
-export function PlaceJsonLd({ name, description, countryName, url, imageUrl, sameAs }: PlaceJsonLdProps) {
+export function PlaceJsonLd({ name, description, countryName, url, imageUrl, sameAs, regionSlug }: PlaceJsonLdProps) {
+  const geo = regionSlug ? REGION_GEO[regionSlug] : undefined
   const data: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Place',
@@ -68,6 +107,7 @@ export function PlaceJsonLd({ name, description, countryName, url, imageUrl, sam
       addressRegion: name,
     },
     url,
+    ...(geo ? { geo: { '@type': 'GeoCoordinates', latitude: geo.lat, longitude: geo.lon } } : {}),
     ...(imageUrl ? { image: imageUrl } : {}),
     ...(sameAs && sameAs.length > 0 ? { sameAs } : {}),
   }

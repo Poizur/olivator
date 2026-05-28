@@ -212,6 +212,7 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
         url={url}
         imageUrl={heroPhoto?.url ?? null}
         sameAs={getRegionSameAs(slug)}
+        regionSlug={slug}
       />
       <FaqJsonLd faqs={faqs} />
       <BreadcrumbJsonLd
@@ -241,10 +242,12 @@ export default async function RegionPage({ params }: { params: Promise<{ slug: s
               {heroPhoto && (
                 <div className="relative md:w-[42%] shrink-0 h-44 md:h-auto">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={heroPhoto.url}
                     alt={heroPhoto.alt_text ?? region.name}
                     className="w-full h-full object-cover"
+                    fetchPriority="high"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent md:bg-gradient-to-r md:from-transparent md:to-white/10" />
                   {heroPhoto.source_attribution && (
