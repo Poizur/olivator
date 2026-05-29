@@ -16,10 +16,123 @@
 //   {{link:oblast/apulie|Apulie}}            → <a href="/oblast/apulie">Apulie</a>
 //   {{link:olej/some-slug|tento olej}}       → <a href="/olej/...">tento olej</a>
 //
+// Produktové karty:
+//   {{product:picual-5-l-extra-panensky-...}} → ArticleProductCard s živými daty
+//   Resolver sáhne do DB, vrátí ArticleProductData; renderer vykreslí kartu.
+//   Neexistující slug → console.warn + prázdný řádek (uživatel nevidí chybu).
+//   Validátor (lib/article-validator.ts) kontroluje existenci tokenu při publish.
+//
 // Pro markdown rendering: link tokeny se nahrazují za markdown link [text](path)
 // Pro HTML rendering: za <a href="path">text</a>
 
 import { supabaseAdmin } from './supabase'
+
+// ── Produktové karty ──────────────────────────────────────────────────────────
+
+export interface ArticleProductData {
+  slug: string
+  name: string
+  nameShort: string | null
+  olivatorScore: number | null
+  acidity: number | null
+  polyphenols: number | null
+  originCountry: string | null
+  volumeMl: number | null
+  imageUrl: string | null
+  cheapestPrice: number | null
+  retailerSlug: string | null  // pro /go/retailer-slug/product-slug
+}
+
+// Interní marker — ArticleBody ho rozpozná jako product-card blok.
+// Nesmí obsahovat znaky běžné v markdownu (*, #, [], atd.).
+export const PRODUCT_CARD_MARKER = '__PC:'
+export const PRODUCT_MISSING_MARKER = '__PM:'
+
+/** Najde všechny {{product:slug}} tokeny, fetchne z DB a vrátí:
+ *  - processedBody: body s markery namísto tokenů
+ *  - productMap: slug → data pro ArticleBody renderer
+ *
+ *  Neexistující slug → PRODUCT_MISSING_MARKER + console.warn (uživatel
+ *  nevidí chybu, validátor to zachytí při publish). */
+export async function resolveProductTokens(body: string): Promise<{
+  processedBody: string
+  productMap: Map<string, ArticleProductData>
+}> {
+  const productMap = new Map<string, ArticleProductData>()
+
+  if (!body.includes('{{product:')) {
+    return { processedBody: body, productMap }
+  }
+
+  // Collect unique slugs
+  const slugSet = new Set<string>()
+  const tokenRe = /\{\{product:([\w-]+)\}\}/g
+  let m: RegExpExecArray | null
+  while ((m = tokenRe.exec(body)) !== null) {
+    slugSet.add(m[1])
+  }
+  const slugs = [...slugSet]
+
+  // Fetch products
+  const { data: products } = await supabaseAdmin
+    .from('products')
+    .select('id, slug, name, name_short, olivator_score, acidity, polyphenols, origin_country, volume_ml, image_url')
+    .in('slug', slugs)
+    .eq('status', 'active')
+
+  if (products && products.length > 0) {
+    const idToSlug = new Map<string, string>()
+    const idToData = new Map<string, ArticleProductData>()
+
+    for (const p of products as any[]) {
+      const d: ArticleProductData = {
+        slug: p.slug,
+        name: p.name,
+        nameShort: p.name_short ?? null,
+        olivatorScore: p.olivator_score ?? null,
+        acidity: p.acidity ?? null,
+        polyphenols: p.polyphenols ?? null,
+        originCountry: p.origin_country ?? null,
+        volumeMl: p.volume_ml ?? null,
+        imageUrl: p.image_url ?? null,
+        cheapestPrice: null,
+        retailerSlug: null,
+      }
+      productMap.set(p.slug, d)
+      idToSlug.set(p.id, p.slug)
+      idToData.set(p.id, d)
+    }
+
+    // Fetch cheapest in-stock offer + retailer slug (single query, cheapest first)
+    const { data: offers } = await supabaseAdmin
+      .from('product_offers')
+      .select('product_id, price, retailer:retailers(slug)')
+      .in('product_id', [...idToSlug.keys()])
+      .eq('in_stock', true)
+      .order('price', { ascending: true })
+
+    const seen = new Set<string>()
+    for (const o of (offers ?? []) as any[]) {
+      if (seen.has(o.product_id)) continue
+      seen.add(o.product_id)
+      const d = idToData.get(o.product_id)
+      if (!d) continue
+      d.cheapestPrice = Number(o.price)
+      d.retailerSlug = (o.retailer as any)?.slug ?? null
+    }
+  }
+
+  // Replace tokens with markers
+  const processedBody = body.replace(/\{\{product:([\w-]+)\}\}/g, (_, slug) => {
+    if (productMap.has(slug)) {
+      return `${PRODUCT_CARD_MARKER}${slug}__`
+    }
+    console.warn(`[article-token] {{product:${slug}}} — slug nenalezen v DB`)
+    return `${PRODUCT_MISSING_MARKER}${slug}__`
+  })
+
+  return { processedBody, productMap }
+}
 
 interface SiteStats {
   productsCount: number

@@ -14,7 +14,8 @@
 import { supabaseAdmin } from './supabase'
 
 export type IssueType =
-  | 'missing_product'
+  | 'missing_product'        // /olej/slug odkaz — slug neexistuje v DB
+  | 'missing_product_token'  // {{product:slug}} token — slug neexistuje v DB
   | 'wrong_score'
   | 'wrong_acidity'
   | 'wrong_poly'
@@ -101,6 +102,43 @@ export async function validateArticle(articleSlug: string): Promise<ValidationRe
 
   const body: string = article.body_markdown
 
+  // Deklarujeme zde, před sekcí 0, aby sekce 0 mohla push do errors.
+  const errors:   ValidationIssue[] = []
+  const warnings: ValidationIssue[] = []
+
+  // ── 0. Validace {{product:slug}} tokenů ──────────────────────────────────
+  // Tokeny nemají hardcoded čísla → stačí ověřit existenci slugu v DB.
+  // Chybějící slug = ERROR stejné závažnosti jako missing /olej/ odkaz.
+  const tokenRe = /\{\{product:([\w-]+)\}\}/g
+  const tokenSlugs = new Set<string>()
+  let tm: RegExpExecArray | null
+  while ((tm = tokenRe.exec(body)) !== null) {
+    tokenSlugs.add(tm[1])
+  }
+
+  if (tokenSlugs.size > 0) {
+    const { data: tokenProducts } = await supabaseAdmin
+      .from('products')
+      .select('slug')
+      .in('slug', [...tokenSlugs])
+      .eq('status', 'active')
+
+    const tokenDbSlugs = new Set((tokenProducts ?? []).map((p: { slug: string }) => p.slug))
+    for (const slug of tokenSlugs) {
+      if (!tokenDbSlugs.has(slug)) {
+        errors.push({
+          articleSlug,
+          productSlug: slug,
+          type:        'missing_product_token',
+          severity:    'error',
+          articleValue: `{{product:${slug}}}`,
+          dbValue:     null,
+          context:     `Token odkazuje na neexistující produkt`,
+        })
+      }
+    }
+  }
+
   // ── 1. Najdi všechny /olej/slug linky ─────────────────────────────────────
   const linkRe = /\[([^\]]*)\]\(\/olej\/([\w-]+)\)/g
   const mentions: Array<{ slug: string; afterCtx: string }> = []
@@ -113,7 +151,10 @@ export async function validateArticle(articleSlug: string): Promise<ValidationRe
     const afterCtx = rawCtx.split('\n\n')[0]
     mentions.push({ slug: m[2], afterCtx })
   }
-  if (mentions.length === 0) return empty
+  // Pokud nejsou žádné /olej/ linky, ale jsou token errors → vrátit ty.
+  if (mentions.length === 0) {
+    return { articleSlug, errors, warnings, ok: errors.length === 0 }
+  }
 
   // ── 2. Fetch DB produkty (jeden dotaz) ────────────────────────────────────
   const uniqueSlugs = [...new Set(mentions.map(s => s.slug))]
@@ -148,9 +189,6 @@ export async function validateArticle(articleSlug: string): Promise<ValidationRe
   }
 
   // ── 4. Validace každé zmínky ──────────────────────────────────────────────
-  const errors:   ValidationIssue[] = []
-  const warnings: ValidationIssue[] = []
-
   for (const mention of mentions) {
     const dbP = dbMap.get(mention.slug)
 

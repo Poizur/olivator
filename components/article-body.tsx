@@ -1,18 +1,26 @@
 // Lehký markdown renderer — parsuje H2/H3, paragraphy, seznamy, tabulky.
 // Bez external dependencies. Žádné inline links zatím, jen čistý text.
 // Pro plný markdown později přidat react-markdown / mdx.
+//
+// Rozšíření: produktové karty přes {{product:slug}} tokeny.
+// resolveProductTokens() nahradí tokeny markery (__PC:slug__).
+// Tento renderer markery rozpozná a vykreslí ArticleProductCard.
 
 import Link from 'next/link'
+import type { ArticleProductData } from '@/lib/template-vars'
+import { PRODUCT_CARD_MARKER, PRODUCT_MISSING_MARKER } from '@/lib/template-vars'
+import { ArticleProductCard } from '@/components/article/article-product-card'
 
 interface Props {
   body: string
+  productMap?: Map<string, ArticleProductData>
 }
 
-export function ArticleBody({ body }: Props) {
+export function ArticleBody({ body, productMap }: Props) {
   const blocks = parseBlocks(body)
   return (
     <div className="space-y-5 text-[15px] leading-relaxed text-text2">
-      {blocks.map((b, i) => renderBlock(b, i))}
+      {blocks.map((b, i) => renderBlock(b, i, productMap))}
     </div>
   )
 }
@@ -25,6 +33,8 @@ type Block =
   | { type: 'ordered-list'; items: string[] }
   | { type: 'table'; headers: string[]; rows: string[][] }
   | { type: 'blockquote'; text: string }
+  | { type: 'product-card'; slug: string }
+  | { type: 'product-missing'; slug: string }
 
 function parseBlocks(body: string): Block[] {
   const lines = body.split('\n')
@@ -36,6 +46,20 @@ function parseBlocks(body: string): Block[] {
 
     // Skip empty
     if (!line.trim()) {
+      i++
+      continue
+    }
+
+    // Produktová karta — marker z resolveProductTokens
+    if (line.startsWith(PRODUCT_CARD_MARKER) && line.endsWith('__')) {
+      const slug = line.slice(PRODUCT_CARD_MARKER.length, -2)
+      blocks.push({ type: 'product-card', slug })
+      i++
+      continue
+    }
+    if (line.startsWith(PRODUCT_MISSING_MARKER) && line.endsWith('__')) {
+      const slug = line.slice(PRODUCT_MISSING_MARKER.length, -2)
+      blocks.push({ type: 'product-missing', slug })
       i++
       continue
     }
@@ -155,7 +179,7 @@ function renderInline(text: string, key: string | number) {
   return finalParts
 }
 
-function renderBlock(b: Block, key: number) {
+function renderBlock(b: Block, key: number, productMap?: Map<string, ArticleProductData>) {
   switch (b.type) {
     case 'h2':
       return (
@@ -220,5 +244,22 @@ function renderBlock(b: Block, key: number) {
           {renderInline(b.text, key)}
         </blockquote>
       )
+    case 'product-card': {
+      const data = productMap?.get(b.slug)
+      if (!data) {
+        // Slug existuje v markeru ale chybí v productMap — nemělo by nastat
+        // (resolveProductTokens zalogoval warning), ale pro jistotu fallback na link
+        return (
+          <div key={key} className="text-text3 text-sm italic py-2">
+            [Produkt nenalezen: {b.slug}]
+          </div>
+        )
+      }
+      return <ArticleProductCard key={key} data={data} />
+    }
+    case 'product-missing':
+      // Slug neexistoval v DB při resolve — viditelné jen v admin previewu přes log.
+      // Na public webu tichý fallback (prázdný div). Validátor to zachytí při publish.
+      return <div key={key} />
   }
 }

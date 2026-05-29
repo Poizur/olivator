@@ -5,7 +5,7 @@ import { getArticleBySlug as getArticleFromDb, getActiveArticles } from '@/lib/a
 import { getArticles, getArticleBySlug as getStaticArticle } from '@/lib/static-content'
 import { supabaseAdmin } from '@/lib/supabase'
 import { ArticleBody } from '@/components/article-body'
-import { resolveTemplateVars } from '@/lib/template-vars'
+import { resolveTemplateVars, resolveProductTokens } from '@/lib/template-vars'
 import { getProductsWithOffers } from '@/lib/data'
 import { diverseTopProducts } from '@/lib/product-selection'
 import { formatPrice } from '@/lib/utils'
@@ -123,8 +123,12 @@ export default async function ArticleDetailPage({
 
   if (!article) notFound()
 
-  // Resolve template variables ({{products.count}}, {{link:srovnavac|srovnávač}})
-  const resolvedBody = article.body ? await resolveTemplateVars(article.body, 'markdown') : ''
+  // Resolve template variables: nejdřív produktové karty ({{product:slug}} → markery
+  // + productMap), pak stat/link tokeny ({{products.count}}, {{link:...}}).
+  // Pořadí je důležité: resolveTemplateVars nesmí viděte neodřešené {{product:...}}.
+  const rawBody = article.body ?? ''
+  const { processedBody, productMap } = await resolveProductTokens(rawBody)
+  const resolvedBody = processedBody ? await resolveTemplateVars(processedBody, 'markdown') : ''
 
   // Sidebar data — top oleje + related články (DB) + recepty
   const [allProducts, dbArticles] = await Promise.all([
@@ -300,7 +304,7 @@ export default async function ArticleDetailPage({
           </div>
 
           {resolvedBody ? (
-            <ArticleBody body={resolvedBody} />
+            <ArticleBody body={resolvedBody} productMap={productMap} />
           ) : (
             <div className="space-y-4 text-text2">
               <p className="text-base leading-relaxed">{article.excerpt}</p>
