@@ -1012,6 +1012,61 @@ const supabase = createClient(url, process.env.SUPABASE_SERVICE_KEY!)
 
 ---
 
+### BUG-025: Claude Code worktree merge zničí celý repozitář — KRITICKÉ
+**Závažnost:** KATASTROFÁLNÍ — Railway build selže, všechny soubory mimo sparse checkout se ztratí.
+
+**Problém (29. května 2026):** Agent běžel uvnitř Claude Code worktree (sparse checkout
+`.claude/worktrees/xenodochial-pascal-9aa69c/`). Worktree má v git indexu pouze ~5 souborů
+(sparse checkout). Commit z tohoto prostředí zaindexuje jen těchto 5 souborů — ne celý repozitář.
+Merge takového commitu do `main` = tree s 5 soubory přepíše tree s 34 soubory.
+
+```
+# Stav před (správný):
+origin/main: 34 souborů — package.json, app/, lib/, scripts/, ...
+
+# Agent commitnul z worktree → commit má 5-itemový tree
+# git merge feature/... → Railway build:
+# "package.json not found — Railpack cannot detect Node.js"
+# → BUILD FAILED
+# → website down
+
+# Stav po merge (katastrofa):
+origin/main: 5 souborů — CLAUDE.md, VALIDATION-REPORT.md, ...
+```
+
+**Recovery (90 minut ztraceno):**
+1. Záloha nových souborů do `/tmp/olivator-rescue/`
+2. `git reset --hard <posledni-dobry-commit>` na feature branchi
+3. Obnova souborů z `/tmp/`, commit
+4. `git checkout main && git reset --hard <posledni-dobry-commit> && git cherry-pick <novy-commit>`
+5. `git push origin main --force`
+
+**ABSOLUTNÍ PRAVIDLO pro Olivator:**
+> **NIKDY nespouštěj `git merge`, `git push origin main`, ani `git commit -a` z Claude Code worktree.**
+> Worktree = sparse checkout = jen část souborů v indexu.
+> Veškerý git workflow (merge do main, push) provádět VÝHRADNĚ v `/Users/martinnavratil/Desktop/Projekty/olivator/`
+> (plný repozitář), ne v `.claude/worktrees/*`.
+
+**Jak poznat že jsi v worktree:**
+```bash
+git rev-parse --show-toplevel
+# Pokud výstup obsahuje ".claude/worktrees/" → JSI V WORKTREE → nepushuj na main
+# Správný výstup: /Users/martinnavratil/Desktop/Projekty/olivator
+```
+
+**Bezpečný pattern:**
+```bash
+# Z worktree jen lokálně commitni
+git add lib/article-validator.ts && git commit -m "feat: validator"
+
+# Pak přejdi do hlavního repozitáře
+cd /Users/martinnavratil/Desktop/Projekty/olivator
+git cherry-pick <hash>   # nebo merge z feature branch
+git push origin main     # TEPRVE TEĎ je bezpečné pushovat
+```
+
+---
+
 ### BUG-024: XML feed nemusí pokrývat všechny kategorie eshopu
 **Závažnost:** STŘEDNÍ — vede k tomu že napojený retailer nepřinese žádný produkt.
 
@@ -1072,6 +1127,7 @@ curl -sL "ESHOP_URL/kategorie-oleje" | grep -c "data-id-product\|product-miniatu
 | 18 | Server-side Supabase VŽDY `SUPABASE_SERVICE_KEY`, ne anon | Database |
 | 19 | Batch commits — 1 commit na feature, ne série commitů | Deploy |
 | 20 | XML feed pre-flight check — `grep -c "olej" FEED_URL` před napojením | Scraper |
+| 21 | **NIKDY** git merge/push z Claude Code worktree — sparse checkout zničí repo | Git |
 
 ---
 
