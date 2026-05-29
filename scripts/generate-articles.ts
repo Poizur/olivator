@@ -18,6 +18,23 @@ import { getInjectionBlock } from '@/lib/learning-injector'
 const TARGET_SLUG = process.argv.find(a => a.startsWith('--slug='))?.split('=')[1]
 const SKIP_EXISTING = !process.argv.includes('--force')
 const DRY = process.argv.includes('--dry-run')
+const DETECT_ONLY = process.argv.includes('--detect-only')
+
+type FocusDimension =
+  | 'polyphenols'
+  | 'price_per_100ml'
+  | 'acidity'
+  | 'certification_bio'
+  | 'certification_dop'
+  | 'origin:GR'
+  | 'origin:IT'
+  | 'origin:ES'
+  | 'size:large'
+  | 'size:small'
+  | 'usage:frying'
+  | 'mixed:GR,IT'
+  | 'mixed:GR,IT,ES'
+  | null
 
 interface ArticleBrief {
   slug: string
@@ -29,6 +46,7 @@ interface ArticleBrief {
   targetKeyword: string  // primary keyword pro SEO
   briefPoints: string[]  // 5-8 klíčových témat článku
   unsplashQuery: string  // topic-specific (BUG-014 z CLAUDE.md)
+  focus_dimension?: FocusDimension  // explicit override; undefined = auto-detect from slug+keyword
 }
 
 const ARTICLE_BRIEFS: ArticleBrief[] = [
@@ -51,6 +69,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Co NENÍ na etiketě (peroxidové číslo, oleic acid %) — proč',
     ],
     unsplashQuery: 'olive oil bottle label closeup ingredients',
+    focus_dimension: null,
   },
   {
     slug: 'polyfenoly-kolik-je-dost',
@@ -70,6 +89,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Proč se polyfenoly snižují v čase a teple',
     ],
     unsplashQuery: 'olive oil pouring health antioxidants',
+    focus_dimension: 'polyphenols',
   },
   {
     slug: 'extra-panensky-vs-panensky-vs-rafinovany',
@@ -89,6 +109,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Co když vidíš "Light" nebo "Pure"? — marketingové fráze',
     ],
     unsplashQuery: 'olive oil bottles different qualities comparison',
+    focus_dimension: null,
   },
   {
     slug: 'olivovy-olej-na-smazeni-bod-zakoureni',
@@ -108,6 +129,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Pro hluboké fritování (>200°C dlouhodobě): EVOO není ideální, lépe panenský nebo i normální olivový olej',
     ],
     unsplashQuery: 'olive oil cooking pan kitchen mediterranean',
+    focus_dimension: 'usage:frying',
   },
   {
     slug: 'olivovy-olej-a-zdravi-veda-2026',
@@ -127,6 +149,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Doporučení EFSA: 20g denně (~2 lžíce) pro health claim',
     ],
     unsplashQuery: 'olive oil bread mediterranean diet healthy',
+    focus_dimension: 'polyphenols',
   },
   {
     slug: 'dop-pgi-bio-certifikace',
@@ -146,6 +169,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Které certifikace jsou na CZ trhu reálně viditelné',
     ],
     unsplashQuery: 'olive oil certification quality bottle europe',
+    focus_dimension: 'certification_dop',
   },
   {
     slug: 'sklizen-oliv-early-vs-late-harvest',
@@ -165,6 +189,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Jak poznat na etiketě: "Early Harvest", "Olio Nuovo", konkrétní datum',
     ],
     unsplashQuery: 'olive harvest tree picking october autumn',
+    focus_dimension: null,
   },
   {
     slug: 'filtrovany-vs-nefiltrovany-olivovy-olej',
@@ -184,6 +209,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Kdy si vybrat co — saláty + dipping (nefiltrovaný), vaření (filtrovaný)',
     ],
     unsplashQuery: 'unfiltered olive oil bottle italian cloudy',
+    focus_dimension: null,
   },
   {
     slug: 'stredomorska-strava-olivovy-olej',
@@ -203,6 +229,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Tipy: ranní pečivo s olejem, salát s olejem, místo másla',
     ],
     unsplashQuery: 'mediterranean diet table food bread olive oil',
+    focus_dimension: 'polyphenols',
   },
   {
     slug: 'olivovy-olej-pro-deti',
@@ -222,6 +249,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Studie: Mediterranean Diet u dětí a obesity prevention',
     ],
     unsplashQuery: 'baby food family healthy olive oil mediterranean',
+    focus_dimension: 'certification_bio',
   },
 
   // ── Srovnání (4 — bez "italský vs řecký" který už máme) ───────────────────
@@ -243,6 +271,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Mýty: "EVOO se nehodí na vaření"',
     ],
     unsplashQuery: 'olive oil salad fresh tomatoes mediterranean',
+    focus_dimension: 'polyphenols',
   },
   {
     slug: 'premium-olivovy-olej-ma-smysl',
@@ -262,6 +291,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Top 3 premium picks z Olivator katalogu (Score 85+)',
     ],
     unsplashQuery: 'premium olive oil bottle gold luxury gourmet',
+    focus_dimension: 'polyphenols',
   },
   {
     slug: 'olivovy-olej-do-200-kc',
@@ -281,6 +311,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Co se opravdu vyplatí — proč investovat 50 Kč navíc',
     ],
     unsplashQuery: 'olive oil supermarket budget bottle shelf',
+    focus_dimension: 'price_per_100ml',
   },
   {
     slug: 'darkove-baleni-olivovy-olej',
@@ -300,6 +331,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Top 3 dárkové sady z Olivator katalogu',
     ],
     unsplashQuery: 'olive oil gift box wrapped premium present',
+    focus_dimension: 'size:small',
   },
 
   // ── Praktické (5) ──────────────────────────────────────────────────────────
@@ -321,6 +353,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Praktický tip: malé lahve do kuchyně, hlavní zásoba ve sklepě',
     ],
     unsplashQuery: 'olive oil dark glass bottle storage kitchen pantry',
+    focus_dimension: null,
   },
   {
     slug: 'otevrena-lahev-jak-rychle-spotrebovat',
@@ -340,6 +373,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Praktický tip: dvě lahve — denní + zásobní',
     ],
     unsplashQuery: 'olive oil bottle kitchen counter open',
+    focus_dimension: null,
   },
   {
     slug: 'kde-koupit-olivovy-olej-cr',
@@ -359,6 +393,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Olivátor jako cenový aggregator — ukáže nejlevnější cenu napříč prodejci',
     ],
     unsplashQuery: 'olive oil specialty store delicatessen shopping',
+    focus_dimension: null,
   },
   {
     slug: 'falesny-olivovy-olej-jak-rozeznat',
@@ -378,6 +413,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Jak se chránit: certified DOP/PGI, NYIOOC vítězové, transparentní výrobci',
     ],
     unsplashQuery: 'olive oil fraud authenticity check lab',
+    focus_dimension: null,
   },
   {
     slug: 'degustace-olivoveho-oleje-doma',
@@ -397,6 +433,7 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
       'Setup pro skupinu: 3-5 olejů, 30 min, papír na poznámky',
     ],
     unsplashQuery: 'olive oil tasting glass tasting professional',
+    focus_dimension: null,
   },
 ]
 
@@ -466,21 +503,70 @@ interface CatalogProduct {
   volumeMl: number | null
 }
 
-/** Načte top-N aktivních produktů z DB pro injekci do promptu.
+/** Načte top-N aktivních produktů z DB seřazených podle focus dimenze.
  *  Pro 'srovnani'/'zebricek' kategorie — záchrana proti halucinacím. */
-async function fetchProductCatalog(limit = 35): Promise<CatalogProduct[]> {
-  const { data: products, error: pe } = await supabaseAdmin
+async function fetchProductCatalog(focus: FocusDimension = null, limit = 35): Promise<CatalogProduct[]> {
+  // Price focus: invertovaný dotaz — začínáme od nabídek seřazených cenou
+  if (focus === 'price_per_100ml') return fetchProductsByPrice(limit)
+
+  // Mixed-origin focus: 'mixed:GR,IT' nebo 'mixed:GR,IT,ES'
+  if (focus !== null && focus.startsWith('mixed:')) {
+    const origins = focus.slice(6).split(',')
+    return fetchProductsByOriginMix(origins, limit)
+  }
+
+  type RawProduct = {
+    id: string; slug: string; name: string; olivator_score: number | null;
+    acidity: number | null; polyphenols: number | null; origin_country: string | null;
+    certifications: string[] | null; volume_ml: number | null; use_cases: string[] | null
+  }
+
+  let query = supabaseAdmin
     .from('products')
-    .select('id, slug, name, olivator_score, acidity, polyphenols, origin_country, certifications, volume_ml')
+    .select('id, slug, name, olivator_score, acidity, polyphenols, origin_country, certifications, volume_ml, use_cases')
     .eq('status', 'active')
     .not('olivator_score', 'is', null)
-    .order('olivator_score', { ascending: false })
-    .limit(limit)
 
+  switch (focus) {
+    case 'polyphenols':
+      query = query.not('polyphenols', 'is', null).order('polyphenols', { ascending: false })
+      break
+    case 'acidity':
+      query = query.not('acidity', 'is', null).order('acidity', { ascending: true })
+      break
+    case 'certification_bio':
+      query = query.contains('certifications', ['bio']).order('olivator_score', { ascending: false })
+      break
+    case 'certification_dop':
+      query = query.contains('certifications', ['dop']).order('olivator_score', { ascending: false })
+      break
+    case 'origin:GR':
+      query = query.eq('origin_country', 'GR').order('olivator_score', { ascending: false })
+      break
+    case 'origin:IT':
+      query = query.eq('origin_country', 'IT').order('olivator_score', { ascending: false })
+      break
+    case 'origin:ES':
+      query = query.eq('origin_country', 'ES').order('olivator_score', { ascending: false })
+      break
+    case 'usage:frying':
+      query = query.contains('use_cases', ['frying']).order('olivator_score', { ascending: false })
+      break
+    case 'size:large':
+      query = query.gte('volume_ml', 500).order('olivator_score', { ascending: false })
+      break
+    case 'size:small':
+      query = query.lte('volume_ml', 250).order('olivator_score', { ascending: false })
+      break
+    default:
+      query = query.order('olivator_score', { ascending: false })
+  }
+
+  const { data: products, error: pe } = await query.limit(limit)
   if (pe || !products) return []
 
   // Načti nejlevnější offer pro každý produkt (single query)
-  const ids = products.map((p: { id: string }) => p.id)
+  const ids = (products as RawProduct[]).map(p => p.id)
   const { data: offers } = await supabaseAdmin
     .from('product_offers')
     .select('product_id, price')
@@ -493,11 +579,114 @@ async function fetchProductCatalog(limit = 35): Promise<CatalogProduct[]> {
     if (!cheapest.has(o.product_id)) cheapest.set(o.product_id, o.price)
   }
 
-  return products.map((p: {
+  return (products as RawProduct[]).map(p => ({
+    slug: p.slug,
+    name: p.name,
+    score: p.olivator_score,
+    acidity: p.acidity,
+    polyphenols: p.polyphenols,
+    originCountry: p.origin_country,
+    certifications: p.certifications ?? [],
+    priceKc: cheapest.get(p.id) ?? null,
+    volumeMl: p.volume_ml,
+  }))
+}
+
+/** Price-focused fetch: řadí produkty od nejlevnějšího.
+ *  Invertovaný dotaz — začínáme od product_offers. */
+async function fetchProductsByPrice(limit = 35): Promise<CatalogProduct[]> {
+  const { data: offers } = await supabaseAdmin
+    .from('product_offers')
+    .select('product_id, price')
+    .eq('in_stock', true)
+    .order('price', { ascending: true })
+
+  if (!offers || offers.length === 0) return []
+
+  const cheapest = new Map<string, number>()
+  const orderedIds: string[] = []
+  for (const o of offers as Array<{ product_id: string; price: number }>) {
+    if (!cheapest.has(o.product_id)) {
+      cheapest.set(o.product_id, o.price)
+      orderedIds.push(o.product_id)
+      if (orderedIds.length >= limit) break
+    }
+  }
+
+  const { data: products } = await supabaseAdmin
+    .from('products')
+    .select('id, slug, name, olivator_score, acidity, polyphenols, origin_country, certifications, volume_ml')
+    .eq('status', 'active')
+    .in('id', orderedIds)
+
+  if (!products) return []
+
+  type RawProduct = {
     id: string; slug: string; name: string; olivator_score: number | null;
     acidity: number | null; polyphenols: number | null; origin_country: string | null;
     certifications: string[] | null; volume_ml: number | null
-  }) => ({
+  }
+
+  // Zachovej pořadí podle ceny (orderedIds)
+  const productMap = new Map((products as RawProduct[]).map(p => [p.id, p]))
+  return orderedIds
+    .map(id => productMap.get(id))
+    .filter((p): p is RawProduct => p != null && p !== undefined)
+    .map(p => ({
+      slug: p.slug,
+      name: p.name,
+      score: p.olivator_score,
+      acidity: p.acidity,
+      polyphenols: p.polyphenols,
+      originCountry: p.origin_country,
+      certifications: p.certifications ?? [],
+      priceKc: cheapest.get(p.id) ?? null,
+      volumeMl: p.volume_ml,
+    }))
+}
+
+/** Mixed-origin fetch: vrací top-N/k produktů z každé zadané země.
+ *  Používá se pro VS články (recky-vs-italsky, recky-italsky-spanelsky). */
+async function fetchProductsByOriginMix(origins: string[], limit = 35): Promise<CatalogProduct[]> {
+  const perOrigin = Math.floor(limit / origins.length)
+
+  type RawProduct = {
+    id: string; slug: string; name: string; olivator_score: number | null;
+    acidity: number | null; polyphenols: number | null; origin_country: string | null;
+    certifications: string[] | null; volume_ml: number | null
+  }
+
+  // Parallel fetch per origin
+  const batches = await Promise.all(origins.map(async origin => {
+    const { data } = await supabaseAdmin
+      .from('products')
+      .select('id, slug, name, olivator_score, acidity, polyphenols, origin_country, certifications, volume_ml')
+      .eq('status', 'active')
+      .eq('origin_country', origin)
+      .not('olivator_score', 'is', null)
+      .order('olivator_score', { ascending: false })
+      .limit(perOrigin)
+    return (data ?? []) as RawProduct[]
+  }))
+
+  const allProducts = batches.flat()
+  if (allProducts.length === 0) return []
+
+  // Single price query for all products
+  const ids = allProducts.map(p => p.id)
+  const { data: offers } = await supabaseAdmin
+    .from('product_offers')
+    .select('product_id, price')
+    .in('product_id', ids)
+    .eq('in_stock', true)
+    .order('price', { ascending: true })
+
+  const cheapest = new Map<string, number>()
+  for (const o of (offers ?? []) as Array<{ product_id: string; price: number }>) {
+    if (!cheapest.has(o.product_id)) cheapest.set(o.product_id, o.price)
+  }
+
+  return allProducts.map(p => ({
     slug: p.slug,
     name: p.name,
     score: p.olivator_score,
@@ -528,6 +717,61 @@ function formatCatalogForPrompt(products: CatalogProduct[]): string {
   return `\n\n══ CATALOG_CONTEXT — Aktuální produkty z Olivator DB ══\n\n${rows}\n\n══ KONEC KATALOGU ══`
 }
 
+/** Detekuje relevantní focus dimenzi ze slug + targetKeyword.
+ *  NIKDY nečte body_markdown — jen slug a keyword (prevence false positives). */
+function detectFocusDimension(slug: string, targetKeyword: string): FocusDimension {
+  const s = slug.toLowerCase()
+  const k = targetKeyword.toLowerCase()
+
+  if (s.includes('polyfenol') || k.includes('polyfenol')) return 'polyphenols'
+
+  // Cenové články — budget (ascending price)
+  if (s.includes('do-200') || k.includes('do 200') || k.includes('nejlevněj')) return 'price_per_100ml'
+
+  // Smažení / fritování
+  if (s.includes('smazeni') || k.includes('smažení') || k.includes('fritov')) return 'usage:frying'
+
+  // Certifikace — BIO před DOP (BIO je catch-all pro dop-pgi-bio slug)
+  if (s.includes('certifikac') || k.includes('certifikac')) {
+    if (s.includes('bio') || k.includes('bio')) return 'certification_bio'
+    return 'certification_dop'
+  }
+
+  // Původ — VS články (recky-vs-italsky) nemají single origin, vrátíme null
+  if (s.includes('-vs-') && (s.includes('recky') || s.includes('italsky') || s.includes('spanelsky'))) return null
+
+  if (s.startsWith('recky') || s.includes('-recky-') || k.includes('řecký')) return 'origin:GR'
+  if (s.startsWith('italsky') || s.includes('-italsky') || k.includes('italský')) return 'origin:IT'
+  if (s.includes('spanelsky') || k.includes('španělský')) return 'origin:ES'
+
+  if (s.includes('kyselost') || k.includes('kyselost')) return 'acidity'
+  if (k.includes('velké balení') || s.includes('velke-baleni')) return 'size:large'
+  if (k.includes('malé balení') || s.includes('male-baleni')) return 'size:small'
+
+  return null
+}
+
+/** Zaloguje detekci focus dimenze do agent_decisions pro analytics.
+ *  Non-critical — chyba nezastaví generování článku. */
+async function logFocusDimension(
+  slug: string,
+  detectedFocus: FocusDimension,
+  source: 'explicit' | 'auto' | 'fallback',
+  catalogTop3Slugs: string[],
+): Promise<void> {
+  try {
+    await supabaseAdmin.from('agent_decisions').insert({
+      agent_name: 'article_generator',
+      decision_type: 'focus_dimension',
+      context: slug,
+      data: { detected_focus: detectedFocus, source, catalog_top_3_slugs: catalogTop3Slugs },
+      created_at: new Date().toISOString(),
+    })
+  } catch {
+    // Non-critical — nevypisuj varování aby neznečišťoval výstup
+  }
+}
+
 /** True pokud brief potřebuje katalogový kontext (produktové žebříčky/srovnání). */
 function needsCatalogContext(brief: ArticleBrief): boolean {
   if (brief.category === 'zebricek' || brief.category === 'srovnani') return true
@@ -547,9 +791,22 @@ async function generateArticleBody(brief: ArticleBrief): Promise<string> {
   let catalogBlock = ''
 
   if (withCatalog) {
-    const products = await fetchProductCatalog(35)
+    // Detekce focus dimenze: explicit override v briefu > auto z slug+keyword
+    const focus: FocusDimension = brief.focus_dimension !== undefined
+      ? brief.focus_dimension
+      : detectFocusDimension(brief.slug, brief.targetKeyword)
+    const source = brief.focus_dimension !== undefined ? 'explicit' : (focus !== null ? 'auto' : 'fallback')
+
+    const products = await fetchProductCatalog(focus, 35)
     catalogBlock = formatCatalogForPrompt(products)
     systemPrompt += CATALOG_RULES
+
+    // Zaloguj detekci do agent_decisions (non-critical)
+    await logFocusDimension(brief.slug, focus, source, products.slice(0, 3).map(p => p.slug))
+
+    if (process.env.VERBOSE) {
+      console.log(`    🎯 focus=${focus ?? 'null'} (${source}), catalog[0]=${products[0]?.slug ?? '—'}`)
+    }
   }
 
   const userPrompt = `Napiš článek na téma: "${brief.title}"
@@ -657,7 +914,45 @@ async function processOne(brief: ArticleBrief): Promise<{ ok: boolean; reason?: 
   return { ok: true, bodyChars: body.length }
 }
 
+// Statické články — existují v DB ale nemají brief v ARTICLE_BRIEFS
+const STATIC_ARTICLES: Array<{ slug: string; targetKeyword: string; focus_dimension: FocusDimension }> = [
+  { slug: 'jak-vybrat-olivovy-olej',             targetKeyword: 'jak vybrat olivový olej',            focus_dimension: null },
+  { slug: 'polyfenoly-proc-na-nich-zalezi',       targetKeyword: 'polyfenoly olivový olej',            focus_dimension: 'polyphenols' },
+  { slug: 'nejlepsi-olivovy-olej-2026',           targetKeyword: 'nejlepší olivový olej 2026',         focus_dimension: null },
+  { slug: 'recky-vs-italsky',                     targetKeyword: 'řecký vs italský olivový olej',      focus_dimension: 'mixed:GR,IT' },
+  { slug: 'recky-italsky-spanelsky-olej',         targetKeyword: 'řecký italský španělský olivový olej', focus_dimension: 'mixed:GR,IT,ES' },
+]
+
 async function main() {
+  // --detect-only: vypiš tabulku detekce pro všechny slug, bez generování
+  if (DETECT_ONLY) {
+    const allEntries = [
+      ...ARTICLE_BRIEFS.map(b => ({
+        slug: b.slug,
+        targetKeyword: b.targetKeyword,
+        focus_dimension: b.focus_dimension,
+      })),
+      ...STATIC_ARTICLES.map(s => ({
+        slug: s.slug,
+        targetKeyword: s.targetKeyword,
+        focus_dimension: s.focus_dimension,
+      })),
+    ]
+
+    console.log('\nFocus dimension detection — všechny články:\n')
+    console.log('Slug'.padEnd(52) + 'Focus dimension'.padEnd(22) + 'Source')
+    console.log('─'.repeat(85))
+    for (const a of allEntries) {
+      // focus_dimension is now always explicit in all entries
+      const focus = a.focus_dimension !== undefined ? a.focus_dimension : detectFocusDimension(a.slug, a.targetKeyword)
+      const source = a.focus_dimension !== undefined ? 'explicit' : (focus !== null ? 'auto' : 'fallback(null)')
+      console.log(`${a.slug.padEnd(52)}${String(focus).padEnd(22)}${source}`)
+    }
+    const withFocus = allEntries.filter(a => (a.focus_dimension !== undefined ? a.focus_dimension : detectFocusDimension(a.slug, a.targetKeyword)) !== null).length
+    console.log(`\nCelkem: ${allEntries.length} článků | s focus: ${withFocus} | null: ${allEntries.length - withFocus}`)
+    process.exit(0)
+  }
+
   const briefs = TARGET_SLUG
     ? ARTICLE_BRIEFS.filter(b => b.slug === TARGET_SLUG)
     : ARTICLE_BRIEFS

@@ -1225,6 +1225,55 @@ RAILWAY_ENVIRONMENT_ID=
 
 ---
 
+## 25. PRAVIDLO FOCUS_DIMENSION — ARTICLE CATALOG INJECTION
+
+### Problém (objeveno 2026-05-29)
+`fetchProductCatalog()` vždy řadila TOP 35 produktů podle `olivator_score DESC`.
+Výsledek: article o polyfenolech dostával katalog bez Evolia Platinum 2777 mg/kg,
+article o levných oleji dostával drahé produkty. Claude pak doporučoval nevhodné produkty.
+
+### Pravidlo
+**Každý article dostává katalog seřazený podle své tematické dimenze, ne obecného Score.**
+
+```typescript
+// Každý brief v ARTICLE_BRIEFS MUSÍ mít explicit focus_dimension
+// (undefined → auto-detect; null → záměrný score sort; 'X' → tematický sort)
+{
+  slug: 'polyfenoly-kolik-je-dost',
+  focus_dimension: 'polyphenols',   // → ORDER BY polyphenols DESC
+}
+```
+
+### FocusDimension hodnoty
+| Hodnota | Seřazení / Filtr |
+|---|---|
+| `polyphenols` | ORDER BY polyphenols DESC, NOT NULL |
+| `price_per_100ml` | Invertovaný dotaz: nabídky → nejlevnější produkt |
+| `acidity` | ORDER BY acidity ASC, NOT NULL |
+| `certification_bio` | WHERE certifications @> ['bio'] |
+| `certification_dop` | WHERE certifications @> ['dop'] |
+| `origin:GR/IT/ES` | WHERE origin_country = 'GR/IT/ES' |
+| `usage:frying` | WHERE use_cases @> ['frying'] |
+| `size:small/large` | WHERE volume_ml <= 250 / >= 500 |
+| `mixed:GR,IT` | TOP N/2 z GR + TOP N/2 z IT — pro VS články |
+| `mixed:GR,IT,ES` | TOP N/3 z každé země |
+| `null` | Výchozí ORDER BY olivator_score DESC |
+
+### Detekce
+- **Explicit override v `brief.focus_dimension`** má nejvyšší prioritu (doporučeno pro všechny existující briefs)
+- **Auto-detekce** ze slug + targetKeyword jako fallback (nikdy z body_markdown — false positives)
+- `detectFocusDimension(slug, keyword)` v `scripts/generate-articles.ts`
+
+### STATIC_ARTICLES
+Články bez briefs (v DB staticky) mají `focus_dimension` uložen v konstantě `STATIC_ARTICLES`
+v `generate-articles.ts` — pro referenci a `--detect-only` mode.
+
+### Logging
+Každé volání loguje detekci do `agent_decisions`:
+`{ detected_focus, source: 'explicit'|'auto'|'fallback', catalog_top_3_slugs }`
+
+---
+
 ## ════════════════════════════════════════
 ## KOMPLETNÍ CHECKLIST — VŠE NAPLÁNOVÁNO
 ## ════════════════════════════════════════
