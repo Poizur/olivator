@@ -109,6 +109,7 @@ export async function resolveProductTokens(body: string): Promise<{
       .select('product_id, price, retailer:retailers(slug)')
       .in('product_id', [...idToSlug.keys()])
       .eq('in_stock', true)
+      .not('retailer_id', 'is', null)
       .order('price', { ascending: true })
 
     const seen = new Set<string>()
@@ -118,7 +119,11 @@ export async function resolveProductTokens(body: string): Promise<{
       const d = idToData.get(o.product_id)
       if (!d) continue
       d.cheapestPrice = Number(o.price)
-      d.retailerSlug = (o.retailer as any)?.slug ?? null
+      const rSlug = (o.retailer as any)?.slug ?? null
+      if (!rSlug) {
+        console.error(`[article-token] product_offers row bez retailer slug, product_id=${o.product_id}`)
+      }
+      d.retailerSlug = rSlug
     }
   }
 
