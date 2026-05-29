@@ -21,6 +21,7 @@ import { supabaseAdmin } from './supabase'
 
 export type AgentName =
   | 'content_agent'
+  | 'article_agent'        // bulk article generování — scripts/generate-articles.ts
   | 'fact_extractor'       // re-extractor analog — extrakce faktů z raw textu
   | 'flavor_agent'         // odhad chuťového profilu
   | 'discovery_agent'      // orchestrace + pomocná AI volání
@@ -46,6 +47,7 @@ type LearningCategory =
 // 'agent_behavior' (jak Claude reaguje).
 const AGENT_CATEGORIES: Record<AgentName, LearningCategory[]> = {
   content_agent:    ['content_quality', 'agent_behavior'],
+  article_agent:    ['content_quality', 'agent_behavior'],
   fact_extractor:   ['scraper', 'pipeline', 'agent_behavior', 'content_quality'],
   flavor_agent:     ['content_quality', 'agent_behavior'],
   discovery_agent:  ['scraper', 'pipeline', 'agent_behavior'],

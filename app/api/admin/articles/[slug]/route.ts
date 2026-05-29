@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { validateArticle } from '@/lib/article-validator'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,6 +35,19 @@ export async function PATCH(
       if (ALLOWED.includes(key)) payload[key] = v
     }
     if (payload.status === 'active') {
+      // Validace produktových dat — blokuje publish pokud jsou v článku nefunkční linky
+      // nebo hardcoded čísla nesedící s DB. Pouze pro články s /olej/ linky.
+      const validation = await validateArticle(slug)
+      if (!validation.ok) {
+        const summary = validation.errors
+          .map(e => `${e.productSlug}: ${e.type}`)
+          .join('; ')
+        return NextResponse.json(
+          { error: `Článek obsahuje chyby v produktových datech: ${summary}`, validation },
+          { status: 422 }
+        )
+      }
+
       const { data: existing } = await supabaseAdmin
         .from('articles').select('published_at').eq('slug', slug).maybeSingle()
       if (existing && !existing.published_at) {

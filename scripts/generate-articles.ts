@@ -13,6 +13,7 @@
 import { supabaseAdmin } from '@/lib/supabase'
 import { callClaude, extractText } from '@/lib/anthropic'
 import { searchUnsplash } from '@/lib/unsplash'
+import { getInjectionBlock } from '@/lib/learning-injector'
 
 const TARGET_SLUG = process.argv.find(a => a.startsWith('--slug='))?.split('=')[1]
 const SKIP_EXISTING = !process.argv.includes('--force')
@@ -21,7 +22,7 @@ const DRY = process.argv.includes('--dry-run')
 interface ArticleBrief {
   slug: string
   title: string
-  category: 'pruvodce' | 'vzdelavani' | 'srovnani'
+  category: 'pruvodce' | 'vzdelavani' | 'srovnani' | 'zebricek'
   emoji: string
   excerpt: string  // ~150 chars hook pro listing
   readTime: string
@@ -399,9 +400,9 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
   },
 ]
 
-// ── Generation prompt ────────────────────────────────────────────────────────
+// ── Generation prompts ────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `Jsi hlavní editor Olivator.cz, největšího srovnávače olivových olejů v ČR.
+const SYSTEM_PROMPT_BASE = `Jsi hlavní editor Olivator.cz, největšího srovnávače olivových olejů v ČR.
 Píšeš editorial articles pro /pruvodce sekci.
 
 ══ STYLISTIKA ══
@@ -423,8 +424,6 @@ Píšeš editorial articles pro /pruvodce sekci.
 ══ KONKRÉTNOST ══
 - Pokud cituješ studii, uveď author + rok
 - Konkrétní čísla raději než vágní rozsahy
-- Příklady z reálných oleju (Sitia Kréta, Coratina, Manaki, Frantoio)
-- České prostředí: ceny v Kč, prodejci CZ (Rohlík, Košík, specializované eshopy)
 - Olivator Score se uvádí jen pokud máš konkrétní příklad
 
 ══ SEO ══
@@ -436,7 +435,123 @@ Píšeš editorial articles pro /pruvodce sekci.
 Vrať POUZE markdown body článku. Žádný YAML frontmatter, žádný JSON wrapper.
 Začni první H2 nadpisem nebo lead odstavcem (NE titlem — ten je v DB).`
 
+// Rozšíření systémového promptu pro články s produktovými doporučeními.
+// Přidává se POUZE pro kategorie 'zebricek' a 'srovnani', kde hrozí halucinace
+// konkrétních produktů, cen a parametrů.
+const CATALOG_RULES = `
+══ CATALOG_CONTEXT — PRODUKTOVÁ INTEGRITA (ABSOLUTNÍ PRAVIDLO) ══
+
+V tomto článku jsou konkrétní doporučení produktů. Platí bez výjimky:
+
+1. SMÍŠ odkazovat POUZE na produkty z CATALOG_CONTEXT níže — nikdy jiné.
+2. Score, kyselost, polyfenoly, cena: POUZE hodnoty z CATALOG_CONTEXT — nikdy
+   nevymýšlej ani neodhaduj čísla. Pokud pro produkt chybí hodnota (prázdné),
+   neuvádí se.
+3. Odkaz vždy ve formátu [Název produktu](/olej/SLUG) — slug je v katalogu.
+4. Pokud pro daný kontext nenajdeš vhodný reálný produkt, piš obecně bez
+   konkrétního názvu/čísla. Prázdná doporučení > vymyšlená doporučení.
+`
+
+// ── Catalog fetcher ────────────────────────────────────────────────────────
+
+interface CatalogProduct {
+  slug: string
+  name: string
+  score: number | null
+  acidity: number | null
+  polyphenols: number | null
+  originCountry: string | null
+  certifications: string[]
+  priceKc: number | null
+  volumeMl: number | null
+}
+
+/** Načte top-N aktivních produktů z DB pro injekci do promptu.
+ *  Pro 'srovnani'/'zebricek' kategorie — záchrana proti halucinacím. */
+async function fetchProductCatalog(limit = 35): Promise<CatalogProduct[]> {
+  const { data: products, error: pe } = await supabaseAdmin
+    .from('products')
+    .select('id, slug, name, olivator_score, acidity, polyphenols, origin_country, certifications, volume_ml')
+    .eq('status', 'active')
+    .not('olivator_score', 'is', null)
+    .order('olivator_score', { ascending: false })
+    .limit(limit)
+
+  if (pe || !products) return []
+
+  // Načti nejlevnější offer pro každý produkt (single query)
+  const ids = products.map((p: { id: string }) => p.id)
+  const { data: offers } = await supabaseAdmin
+    .from('product_offers')
+    .select('product_id, price')
+    .in('product_id', ids)
+    .eq('in_stock', true)
+    .order('price', { ascending: true })
+
+  const cheapest = new Map<string, number>()
+  for (const o of (offers ?? []) as Array<{ product_id: string; price: number }>) {
+    if (!cheapest.has(o.product_id)) cheapest.set(o.product_id, o.price)
+  }
+
+  return products.map((p: {
+    id: string; slug: string; name: string; olivator_score: number | null;
+    acidity: number | null; polyphenols: number | null; origin_country: string | null;
+    certifications: string[] | null; volume_ml: number | null
+  }) => ({
+    slug: p.slug,
+    name: p.name,
+    score: p.olivator_score,
+    acidity: p.acidity,
+    polyphenols: p.polyphenols,
+    originCountry: p.origin_country,
+    certifications: p.certifications ?? [],
+    priceKc: cheapest.get(p.id) ?? null,
+    volumeMl: p.volume_ml,
+  }))
+}
+
+function formatCatalogForPrompt(products: CatalogProduct[]): string {
+  if (products.length === 0) return ''
+
+  const rows = products.map((p, i) => {
+    const acid = p.acidity != null ? `${p.acidity} %` : '—'
+    const poly = p.polyphenols != null ? `${p.polyphenols} mg/kg` : '—'
+    const price = p.priceKc != null ? `${p.priceKc} Kč` : '—'
+    const vol = p.volumeMl != null ? `${p.volumeMl} ml` : '—'
+    const cert = p.certifications.length > 0 ? p.certifications.join(', ') : '—'
+    return `${i + 1}. slug: ${p.slug}
+   název: ${p.name}
+   score: ${p.score ?? '—'} | kyselost: ${acid} | polyfenoly: ${poly} | certifikace: ${cert}
+   cena: ${price} / ${vol} | origin: ${p.originCountry ?? '—'}`
+  }).join('\n\n')
+
+  return `\n\n══ CATALOG_CONTEXT — Aktuální produkty z Olivator DB ══\n\n${rows}\n\n══ KONEC KATALOGU ══`
+}
+
+/** True pokud brief potřebuje katalogový kontext (produktové žebříčky/srovnání). */
+function needsCatalogContext(brief: ArticleBrief): boolean {
+  if (brief.category === 'zebricek' || brief.category === 'srovnani') return true
+  // Vzdělávací/průvodce articles s konkrétními "top picks" v brief points
+  const pickKeywords = ['top ', 'pick', 'doporučen', 'konkrétní doporučen', 'z olivator katalogu']
+  const lowerPoints = brief.briefPoints.join(' ').toLowerCase()
+  return pickKeywords.some(k => lowerPoints.includes(k))
+}
+
 async function generateArticleBody(brief: ArticleBrief): Promise<string> {
+  const withCatalog = needsCatalogContext(brief)
+
+  // Lekce z project_learnings — prevence opakování chyb
+  const learningsBlock = await getInjectionBlock('article_agent', 8)
+
+  let systemPrompt = `${learningsBlock}${SYSTEM_PROMPT_BASE}`
+  let catalogBlock = ''
+
+  if (withCatalog) {
+    const products = await fetchProductCatalog(35)
+    catalogBlock = formatCatalogForPrompt(products)
+    systemPrompt += CATALOG_RULES
+  }
+
   const userPrompt = `Napiš článek na téma: "${brief.title}"
 
 Kategorie: ${brief.category}
@@ -444,7 +559,7 @@ Target keyword: ${brief.targetKeyword}
 Excerpt (lead pro listing): ${brief.excerpt}
 
 Klíčové body, které musí článek pokrýt (v rozumném pořadí, ne nutně 1:1):
-${brief.briefPoints.map((p, i) => `${i + 1}. ${p}`).join('\n')}
+${brief.briefPoints.map((p, i) => `${i + 1}. ${p}`).join('\n')}${catalogBlock}
 
 Délka: 1500-2500 slov. Markdown s ## H2 sekcemi.
 NEPŘIDÁVEJ titulek (## ${brief.title}) — to je v DB. Začni rovnou lead/H2 první sekce.`
@@ -452,7 +567,7 @@ NEPŘIDÁVEJ titulek (## ${brief.title}) — to je v DB. Začni rovnou lead/H2 p
   const res = await callClaude({
     model: 'claude-sonnet-4-5',
     max_tokens: 6000,
-    system: SYSTEM_PROMPT,
+    system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }],
   })
   return extractText(res).trim()
