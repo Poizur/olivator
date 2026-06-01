@@ -438,6 +438,30 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
 
   // ── SEO Vlna 2 — zdravotní cluster ──────────────────────────────────────────
   {
+    slug: 'olivovy-olej-s-citronem-po-rano',
+    title: 'Olivový olej s citronem po ránu: co funguje a co je mýtus',
+    category: 'pruvodce',
+    emoji: '🍋',
+    excerpt: 'Olivový olej s citronem nalačno — populární ranní rituál. Co na to říká věda, kdy pomáhá a kdy naopak dráždí žaludek.',
+    readTime: '7 min čtení',
+    targetKeyword: 'olivový olej s citronem',
+    briefPoints: [
+      '⚠️ YMYL/ZDRAVÍ — POVINNÉ: Žádné léčebné nároky. Formulace: "studie naznačují", "tradičně se uvádí ale věda zatím nepotvrdila", "anekdotické důkazy". Žádné "vyplaví toxiny", "odbouráte tuky", "zaručeně zhubnete" — tohle je influencer detox rétorika bez vědeckého základu. Pokud tvrzení nemá oporu v datech, řekni to explicitně. Na začátek textu: _Autor: Olík — [Jak hodnotíme](/metodika)_',
+      'Lead hook: Rituál se šíří na TikToku milionům sledovatelů. Otázka je jednoduchá: pomáhá, škodí, nebo je to prostě dobrý zvyk obalený přehnanými sliby? Přímá odpověď hned v úvodu — bez diplomatické mlhy.',
+      'Co citron dělá s olejem (biochemie): citronová kyselina emulguje olej → menší kapičky → mírně rychlejší trávení. Vitamin C v citronové šťávě je reálný přínos (antioxidant). Polyfenoly z EVOO se uvolňují stejně jako bez citronu — kombinace je chuťově a prakticky dobrá, ale nepřidává "zázračný efekt".',
+      'Ranní konzumace nalačno — argumenty PRO a PROTI: PRO: prázdný žaludek = max vstřebání tuku a polyfenolů (jednoduché lipidy se absorbují bez kompetice s jídlem), citron stimuluje produkci žaludeční kyseliny a žluče. PROTI: U citlivých lidí citron nalačno dráždí sliznici → pálení žáhy, reflux, zvýšená kyselost. Kdo má GERD, gastritidu nebo citlivý žaludek, experiment nedoporučit. To je reálné riziko — nezhazovat ho.',
+      'Věda za "detoxem": neexistuje. Játra a ledviny fungují nepřetržitě bez ohledu na ranní ritual. Žádná klinická studie neprokázala, že kombinace olej+citron "detoxikuje" organismus lépe než normální strava. Říct to jasně a nezakotvit mýtus opakováním.',
+      'Co skutečně může fungovat: ranní ritual = konzistentní příjem zdravých tuků (MUFAs, polyfenoly), vitamin C, hydratace s teplou vodou. To jsou reálné benefity, ne magic. Pravidelnost > suplement.',
+      'Jak na to prakticky (recept a dávky): 1 lžíce (10–15 ml) EVOO + šťáva z 1/4 citronu + 200 ml teplé vody. Nebo jednoduše na chleba + citronový dresink. EVOO s polyfenoly > 300 mg/kg pro maximální efekt polyfenolů. Dávka 20 g/den = EFSA oxidativní claim.',
+      'Jaké oleje se hodí nejlépe: pro čistou konzumaci nalačno = EVOO s vysokými polyfenoly (hořkost = přítomnost oleocanthalu a hydroxytyrosolů). Filtrovaný > nefiltrovaný (čistší chuť v kombinaci s citronem). Sekce "Oleje vhodné pro ranní ritual": použij {{product:SLUG}} tokeny pro 4-5 produktů s nejvyššími polyfenoly z CATALOG_CONTEXT, seřazené sestupně. Žádný jiný text na řádku s tokenem.',
+      'Interní linky: [zdravotní účinky olivového oleje](/pruvodce/je-olivovy-olej-zdravy), [proč polyfenoly záleží](/pruvodce/polyfenoly-proc-na-nich-zalezi), [srovnávač olejů s vysokými polyfenoly](/srovnavac?quality=high_polyphenols).',
+      'FAQ (4-5 otázek): "Je olivový olej s citronem na hubnutí?", "Můžu pít olivový olej s citronem každý den?", "Co dělá citron s olejem?", "Pomáhá olivový olej s citronem na žaludek?", "Jaký olivový olej je nejlepší nalačno?"',
+    ],
+    unsplashQuery: 'lemon olive oil morning ritual glass wooden table',
+    focus_dimension: 'polyphenols',
+  },
+
+  {
     slug: 'je-olivovy-olej-zdravy',
     title: 'Je olivový olej zdravý? Co říká věda',
     category: 'pruvodce',
