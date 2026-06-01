@@ -435,6 +435,32 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
     unsplashQuery: 'olive oil tasting glass tasting professional',
     focus_dimension: null,
   },
+
+  // ── SEO Vlna 2 — zdravotní cluster ──────────────────────────────────────────
+  {
+    slug: 'je-olivovy-olej-zdravy',
+    title: 'Je olivový olej zdravý? Co říká věda',
+    category: 'pruvodce',
+    emoji: '❤️',
+    excerpt: 'Přímá odpověď: záleží na kvalitě a množství. PREDIMED, EFSA a reálná čísla polyfenolů — bez marketingového šumu.',
+    readTime: '8 min čtení',
+    targetKeyword: 'je olivový olej zdravý',
+    briefPoints: [
+      '⚠️ YMYL/ZDRAVÍ — POVINNÉ PRO KAŽDOU ZDRAVOTNÍ TVRZENÍ: Žádné léčebné nároky ("léčí", "vyléčí", "zaručeně"). Formulace vždy: "studie naznačují", "spojuje se s nižším rizikem", "podle EFSA". Každé zdravotní tvrzení = zdroj v textu (autor + rok nebo "podle EFSA"). Na začátek textu přidej řádek: _Autor: Olík — [Jak hodnotíme](/metodika)_',
+      'Přímá odpověď na otázku v úvodu: EVOO s polyfenoly = ano dle dostupného výzkumu; rafinovaný nebo žluklý olej = jiná kategorie. Bez diplomatického vyhýbání.',
+      'PREDIMED studie (Estruch et al., NEJM 2013, n=7 447): tři větve — středomořská dieta + 50 ml EVOO vs kontrola (nízkotučná). Výsledek: -30 % kardiovaskulárních příhod ve EVOO skupině. Kontext: celkový dietní vzorec, ne izolovaný olej.',
+      'Mononenasycené tuky: oleická kyselina tvoří 70-80 % EVOO. EFSA 2004 — claim schválen: nahrazení nasycených tuků nenasycenými "přispívá k normálním hladinám LDL cholesterolu".',
+      'Oleocanthal: přírodní COX-1 a COX-2 inhibitor (Beauchamp et al., Nature 2005). Pálivost v hrdle = přítomnost oleocanthalu. Analogie s ibuprufenem (oba COX inhibitory, jiná dávka a mechanismus).',
+      'EFSA health claim 432/2012: "polyfenoly olivového oleje chrání krevní lipidy před oxidativním stresem" — podmínka: 5 mg hydroxytyrosolů na 20 g oleje (≈ 250 mg/kg polyfenolů v oleji).',
+      'Kdy olivový olej zdravotně NEVYNIKÁ: žluklý olej (přesáhlá trvanlivost, špatné skladování), rafinovaný (polyfenoly odstraněny rafinací), přepálený nad 190 °C.',
+      'Doporučená dávka: 20 g/den (cca 2 lžíce) pro EFSA oxidativní claim; PREDIMED protokol 50 ml. Praktické okno: 2-4 lžíce denně raw (dressingy, finishing, chleba).',
+      'Sekce "Které olivové oleje v ČR mají nejvyšší polyfenoly" — použij {{product:SLUG}} tokeny (jeden per řádek, nic jiného na řádku) pro 4-5 produktů s nejvyššími polyfenoly z CATALOG_CONTEXT, seřazené sestupně. Pod sekci přidej: [Proč polyfenoly záleží →](/pruvodce/polyfenoly-proc-na-nich-zalezi)',
+      'Interní linky v textu: [středomořská strava](/pruvodce/stredomorska-strava-olivovy-olej), [porovnávač olejů](/srovnavac?quality=high_polyphenols).',
+      'FAQ (3-5 otázek): "Je olivový olej zdravý pro srdce?", "Kolik olivového oleje denně?", "Jaký olivový olej je nejzdravější?", "Ztratí olivový olej zdravotní benefity při smažení?"',
+    ],
+    unsplashQuery: 'olive oil pouring glass health mediterranean diet',
+    focus_dimension: 'polyphenols',
+  },
 ]
 
 // ── Generation prompts ────────────────────────────────────────────────────────
@@ -484,7 +510,11 @@ V tomto článku jsou konkrétní doporučení produktů. Platí bez výjimky:
 2. Score, kyselost, polyfenoly, cena: POUZE hodnoty z CATALOG_CONTEXT — nikdy
    nevymýšlej ani neodhaduj čísla. Pokud pro produkt chybí hodnota (prázdné),
    neuvádí se.
-3. Odkaz vždy ve formátu [Název produktu](/olej/SLUG) — slug je v katalogu.
+3. Formát odkazu závisí na kontextu:
+   • Inline text (zmínka v odstavci): [Název produktu](/olej/SLUG)
+   • Dedikovaná produktová sekce (top picks, doporučení): {{product:SLUG}}
+     — jeden token per řádek, žádný jiný text na témže řádku
+     — seřadit sestupně dle hodnoty relevantní pro článek (polyfenoly, cena apod.)
 4. Pokud pro daný kontext nenajdeš vhodný reálný produkt, piš obecně bez
    konkrétního názvu/čísla. Prázdná doporučení > vymyšlená doporučení.
 `
