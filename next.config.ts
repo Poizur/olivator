@@ -7,6 +7,8 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
 const nextConfig: NextConfig = {
   async redirects() {
     return [
+      // Kanibalizace merge — 2026-06-01
+      { source: '/pruvodce/olivovy-olej-a-zdravi-veda-2026', destination: '/pruvodce/je-olivovy-olej-zdravy',   permanent: true },
       // Staré/smazané URL z GSC — opraveno 2026-05-18
       { source: '/znacka/antica',               destination: '/znacka/antica-sicilia',                           permanent: true },
       { source: '/zebricek/olivovy-olej-do-200-kc', destination: '/zebricek/nejlepsi-olivovy-olej-do-200-kc',   permanent: true },

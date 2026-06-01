@@ -1442,6 +1442,21 @@ Každé volání loguje detekci do `agent_decisions`:
 4. Pro cenu cituj: "od X Kč u [retailer]" nebo jen "od X Kč" — vždy live data
 5. Po editaci spusť validátor a ověř 0 ERRORů před publish
 
+### Hero image — kontrola před publikací
+
+Po každé generaci článku ověř, že `hero_image_url` je nastavený (ne null).
+Pokud null, doplnit přes Unsplash search **před** přepnutím na `status = active`:
+
+```bash
+UNSPLASH_KEY=$(grep UNSPLASH_ACCESS_KEY .env.local | cut -d= -f2-)
+curl -s "https://api.unsplash.com/search/photos?query=QUERY&per_page=1&orientation=landscape&client_id=$UNSPLASH_KEY" \
+  | python3 -c "import sys,json; r=json.load(sys.stdin)['results'][0]; print(r['urls']['regular'])"
+# Pak PATCH articles SET hero_image_url = URL WHERE slug = SLUG
+```
+
+Příčina: `searchUnsplash()` v `generate-articles.ts` tiše selhává při chybějícím
+`UNSPLASH_ACCESS_KEY` — hero se nenastaví, ale generace pokračuje bez erroru. (T-06)
+
 ---
 
 *Živý dokument. Aktualizuj datum při každé změně.*
