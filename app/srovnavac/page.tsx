@@ -3,8 +3,8 @@ import { getProductsWithOffers, getSiteStats } from '@/lib/data'
 import { ListingContent } from './listing-content'
 
 export const metadata = {
-  title: 'Katalog olivových olejů',
-  description: 'Procházejte všechny olivové oleje. Filtry podle typu, původu, certifikace a ceny.',
+  title: 'Srovnávač olivových olejů — kvalita, ceny, Score | Olivátor',
+  description: 'Porovnejte 450+ olivových olejů. Olivator Score hodnotí kyselost, polyfenoly a certifikace. Aktuální ceny ze 18 prodejců včetně Tesco, Billa, Kaufland a Albert.',
   // Explicit canonical — query string varianty (?origin=GR&type=evoo) by jinak
   // mohly být brány jako duplicate content. Konsoliduje page authority.
   alternates: { canonical: 'https://olivator.cz/srovnavac' },

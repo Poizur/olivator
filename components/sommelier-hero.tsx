@@ -187,7 +187,7 @@ export function SommelierHero({
               <div className="flex items-baseline justify-between gap-4 flex-wrap mb-3">
                 <div>
                   <h1 className="font-[family-name:var(--font-display)] text-[22px] md:text-[26px] font-semibold leading-tight text-white">
-                    Olík — <em className="text-olive-bright italic font-semibold">najde tvůj olej za 5 sekund</em>
+                    Olivový olej — <em className="text-olive-bright italic font-semibold">Olík ho najde za 5 sekund</em>
                   </h1>
                   <p className="text-[13px] text-white/85 font-semibold mt-1">
                     AI poradce prochází celý katalog {totalProducts} olejů

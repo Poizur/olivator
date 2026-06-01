@@ -20,6 +20,11 @@ import { FeaturedBrandsSection } from '@/components/home/featured-brands-section
 import { TopProductCard } from '@/components/home/top-product-card'
 import { FlavorSelector } from '@/components/flavor-selector'
 
+export const metadata = {
+  title: 'Olivový olej — srovnávač Olivátor | Score, ceny, recenze',
+  alternates: { canonical: 'https://olivator.cz' },
+}
+
 export const revalidate = 3600
 
 type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
