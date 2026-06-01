@@ -8,12 +8,12 @@ import { countryFlag } from '@/lib/utils'
 export const revalidate = 600
 
 export const metadata: Metadata = {
-  title: 'Olivový olej v akci — denně aktualizované slevy | Olivátor',
+  title: 'Olivový olej — akce a slevy dnes | Olivátor',
   description:
-    'Přehled aktuálních slev na olivový olej ze 18 českých prodejců. Pouze ověřené slevy porovnané s 30denním maximem ceny.',
+    'Přehled aktuálních slev a akcí na olivový olej ze 18 českých prodejců. Pouze ověřené slevy porovnané s 30denním maximem ceny.',
   alternates: { canonical: 'https://olivator.cz/slevy' },
   openGraph: {
-    title: 'Slevy na olivový olej — Olivátor',
+    title: 'Olivový olej — akce a slevy dnes | Olivátor',
     description: 'Denně aktualizovaný přehled skutečných slev ze 18 prodejců.',
     url: 'https://olivator.cz/slevy',
   },
@@ -177,7 +177,7 @@ export default async function SlevyPage() {
             🏷 Denně aktualizováno
           </p>
           <h1 className="text-[32px] md:text-[44px] font-bold text-text leading-tight mb-4">
-            Slevy na olivový olej
+            Olivový olej — akce a slevy dnes
           </h1>
           <p className="text-[16px] text-text2 leading-relaxed max-w-xl mb-8">
             Jenom ověřené slevy — porovnáváme s 30denním maximem ceny
