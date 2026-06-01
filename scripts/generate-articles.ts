@@ -436,6 +436,32 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
     focus_dimension: null,
   },
 
+  // ── SEO Vlna 2 — kosmetický cluster ─────────────────────────────────────────
+  {
+    slug: 'olivovy-olej-na-plet-a-vlasy',
+    title: 'Olivový olej na pleť a vlasy: co funguje a na co si dát pozor',
+    category: 'pruvodce',
+    emoji: '🫒',
+    excerpt: 'Přírodní kosmetika s olivovým olejem — hydratace pleti, vlasová maska i letní opalování. Včetně jasného slova k SPF mýtu a fototoxicitě citronu.',
+    readTime: '8 min čtení',
+    targetKeyword: 'olivový olej na pleť',
+    briefPoints: [
+      '⚠️ YMYL/health-adjacent — POVINNÉ: Žádná léčebná tvrzení. Pro akné VŽDY: "komedogenní pro některé typy pleti, může zhoršit akné" — NE "léčí" ani "vyléčí". Pro vlasy: "tradičně se používá", "anekdotálně pomáhá". Na začátek textu: _Autor: Olík — [Jak hodnotíme](/metodika)_',
+      'Pleť — mechanismus: kyselina olejová = okluzní vrstva bránící ztrátě vlhkosti. Squalene v EVOO (přirozená složka i lidského mazu) = dobrá biokompatibilita a antioxidační efekt. OCM (oil cleansing method): olej rozpouští kožní maz a make-up lépe než mýdlo — populární u suchých typů. Formulace "studie naznačují" pro antioxidační efekt na kůži.',
+      '⚠️ KOMEDOGENITA (říct PŘÍMO, nezaretušovat): Olivový olej má komedogenní index 2/5. Pro akné, mastnou nebo smíšenou pleť s aktivními výskyty NEVHODNÝ — může ucpat póry a zhoršit výskyt. Doporučit pouze: suchá, normální pleť a suché lokality (lokty, kolena, paty). OCM jen pro suché typy. Citlivá pleť: test na malé ploše za uchem 48h před plošným použitím.',
+      '⚠️ GENERAČNÍ POJISTKA — ABSOLUTNÍ PRAVIDLO: V kosmetických receptech (peeling, maska, OCM, jakákoli příprava pro kůži) NIKDY NEPOUŽIJ citronovou šťávu ani lemon juice. Žádný recept v článku nesmí citronovou šťávu obsahovat jako ingredienci kosmetiky. Citron se v celém článku zmiňuje VÝHRADNĚ jako varování v sekci fototoxicity — nikde jinde.',
+      'Konkrétní kosmetické recepty (přesné poměry, BEZ citronu): 1) Cukrový peeling: 1 lžíce EVOO + 1 lžíce třtinového cukru, aplikovat na vlhkou kůži kruhovými pohyby, opláchnout. 2) Noční hydratační vrstva: 3–4 kapky EVOO na čistou suchou pleť, lehce zmasírovat. 3) Odličovač (OCM): vatový tampon napuštěný EVOO, kruhovými pohyby, opláchnout jemným čisticím gelem — pouze pro suché typy pleti. 4) Vlasová maska: 2–3 lžíce EVOO prohřát v dlaních, nanést na délky a konečky (ne kořeny!), zabalit ručníkem nebo fólií, 30–60 min nebo přes noc.',
+      'Vlasy — aplikace a limity: Maska na suché konečky (ne kořeny!) pomáhá s lámáním a elektrostatickým nábojem. Masáž pokožky hlavy — zlepšuje prokrvení, ale evidence pro stimulaci růstu vlasů je slabá ("tradičně se uvádí"). ⚠️ Mastné nebo jemné vlasy: olej přetíží a zploští — aplikovat výhradně na délky od půlky dolů. Jak odmytí efektivně: šampon nanést na suché vlasy PŘED sprchováním, pak spláchni — funguje lépe než šamponovat mokré vlasy napuštěné olejem.',
+      '🔴 OPALOVÁNÍ — KRITICKÁ SEKCE, NEZMĚKČOVAT: Olivový olej NENÍ sunscreen. SPF olivového oleje je cca 2–8 (různé studie) — dermatologicky doporučený minimální SPF pro každodenní použití je 30. Rozdíl: 15–20×. Olej může vizuálně zintenzivnit opálení (urychluje tanning), ale NECHRANÍ před UV-B poškozením DNA ani spálením. "Olivový olej na opalování" = rychlejší opálení + nechráněná kůže = vyšší riziko fotostárnutí a spálení, ne výhoda. After-sun použití OK: hydratace po slunci. Nikdy jako náhrada SPF.',
+      '🔴 FOTOTOXICITA CITRONU + SLUNCE (jasné varování, ne jen zmínka): Furokumariny obsažené v citronové šťávě jsou fototoxické — po kontaktu s kůží a UV zářením způsobují chemické reakce vedoucí k popáleninám a trvalým pigmentačním skvrnám (berloque dermatitis, phytophotodermatitis). KLÍČOVÝ DETAIL: reakce není okamžitá — typicky vzniká 24–72 hodin po expozici, takže si lidé spojení s olejem a citronem na kůži často vůbec neuvědomí. Trend "olivový olej s citronem na opalování" šířený na TikToku a Instagramu je zdravotně nebezpečný. Odkaz: viz také [Olivový olej s citronem po ránu](/pruvodce/olivovy-olej-s-citronem-po-rano).',
+      'Jak vybrat olej pro kosmetické použití: EVOO (extra panenský) = nerafinovaný = zachovány polyfenoly a squalene. BIO certifikace = žádné pesticidy kontaktně na pokožce. Filtrace pro kosmetiku nehraje roli. Cenové okno 40–65 Kč/100ml — kosmetika je spotřeba, není to gastro investice. Sekce "Oleje vhodné pro kosmetické použití" — použij {{product:SLUG}} tokeny pro 5 olejů z CATALOG_CONTEXT (BIO preferovaně, polyfenoly min. 450+, cena pod 70 Kč/100ml), jeden token na řádek, seřadit dle polyfenolů sestupně.',
+      'Interní linky: [zdravotní benefity olivového oleje](/pruvodce/je-olivovy-olej-zdravy), [olivový olej s citronem a fototoxicita](/pruvodce/olivovy-olej-s-citronem-po-rano), [proč polyfenoly záleží](/pruvodce/polyfenoly-proc-na-nich-zalezi), [BIO olivové oleje](/srovnavac?certifications=bio).',
+      'FAQ (5 otázek): "Můžu si dát olivový olej místo krému?", "Pomáhá olivový olej proti akné?", "Olivový olej na opalování — funguje jako SPF?", "Jak dlouho nechat olivový olej ve vlasech?", "Co se stane, když dám citron s olejem na kůži na slunci?"',
+    ],
+    unsplashQuery: 'olive oil glass bottle natural beauty skin care wooden',
+    focus_dimension: 'polyphenols',
+  },
+
   // ── SEO Vlna 2 — zdravotní cluster ──────────────────────────────────────────
   {
     slug: 'olivovy-olej-s-citronem-po-rano',
