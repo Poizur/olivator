@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { get5LProducts } from '@/lib/data'
-import { TopProductCard } from '@/components/home/top-product-card'
 import { NewsletterSignup } from '@/components/newsletter-signup'
 import { SavingsCalculator } from './savings-calculator'
+import { BulkProductTabs } from './bulk-product-tabs'
 
 export const revalidate = 3600
 
@@ -59,9 +59,13 @@ export default async function BulkOilPage() {
 
   const sorted = [...products].sort((a, b) => calcPpl(a) - calcPpl(b))
 
-  // Rozdělit: extra panenský (non-pomace) vs pokrutiny (pomace)
-  const evooList    = sorted.filter(p => p.type !== 'pomace')
-  const pomaceList  = sorted.filter(p => p.type === 'pomace')
+  // Detekce pokrutin: type=pomace NEBO název obsahuje "pokrutin"/"pomace"
+  // (safety net pro případy kdy type není správně nastaven v DB)
+  const isPomace = (p: typeof products[0]) =>
+    p.type === 'pomace' || p.name.toLowerCase().includes('pokrutin')
+
+  const evooList   = sorted.filter(p => !isPomace(p))
+  const pomaceList = sorted.filter(p => isPomace(p))
 
   const minPpl = sorted.length > 0 && sorted[0].cheapestOffer
     ? Math.round(calcPpl(sorted[0]))
@@ -197,54 +201,11 @@ export default async function BulkOilPage() {
             </Link>
           </div>
 
-          {/* Extra panenský olivový olej */}
-          <div className="flex items-center gap-3 mb-5">
-            <span className="bg-olive text-white text-[12px] font-semibold px-3.5 py-1.5 rounded-full">
-              Extra panenský olivový olej
-            </span>
-            <span className="text-[12px] text-text3">{evooList.length} produktů</span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 md:gap-3">
-            {evooList.map((p, i) => (
-              <TopProductCard key={p.id} product={p} rank={i + 1} />
-            ))}
-          </div>
-
-          {/* Divider + pokrutiny */}
-          {pomaceList.length > 0 && (
-            <>
-              <div className="flex items-center gap-4 mt-10 mb-3">
-                <div className="flex-1 h-px bg-off2" />
-                <div className="flex items-center gap-2.5 bg-amber-50 border border-amber-200 rounded-full px-4 py-2 shrink-0">
-                  <span className="text-[12px] font-semibold text-amber-900">
-                    Olivový olej z pokrutin (Pomace)
-                  </span>
-                  <span className="text-[11px] text-amber-500 font-medium">{pomaceList.length} produkty</span>
-                </div>
-                <div className="flex-1 h-px bg-off2" />
-              </div>
-              <p className="text-[12px] text-text3 text-center mb-6">
-                Vyráběn extrakcí z výlisků · méně polyfenolů · vhodný pro smažení a vaření ve větším množství
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 md:gap-3">
-                {pomaceList.map((p, i) => (
-                  <TopProductCard key={p.id} product={p} rank={i + 1} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {total > 15 && (
-            <div className="mt-8 text-center">
-              <Link
-                href="/srovnavac?volume=5l"
-                className="inline-block border border-olive-border text-olive text-[14px] font-medium px-6 py-2.5 rounded-lg hover:bg-olive-bg transition-colors"
-              >
-                Zobrazit všech {total} produktů ve srovnávači →
-              </Link>
-            </div>
-          )}
+          <BulkProductTabs
+            evooProducts={evooList}
+            pomaceProducts={pomaceList}
+            total={total}
+          />
         </div>
       </section>
 
