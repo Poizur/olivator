@@ -1442,6 +1442,29 @@ Každé volání loguje detekci do `agent_decisions`:
 4. Pro cenu cituj: "od X Kč u [retailer]" nebo jen "od X Kč" — vždy live data
 5. Po editaci spusť validátor a ověř 0 ERRORů před publish
 
+### Inline parametry vedle produktového tokenu — ZAKÁZÁNO
+
+`{{product:slug}}` token renderuje kartu se živými daty z DB — foto, jméno, score,
+kyselost, polyfenoly, cena. Psát stejné parametry ještě v okolním textu je drift risk:
+cena a dostupnost se mění denně, text v článku ne.
+
+**Pravidlo (L-009 z project_learnings):**
+```
+❌ ZAKÁZÁNO — inline parametry
+"Mechanická pumpa s BIO certifikací, kyselost 0,14 %, 293 mg/kg polyfenolů. Cena 349 Kč / 250 ml."
+{{product:bio-extra-panensky-...}}
+
+✅ SPRÁVNĚ — popis použití/charakteru, ne parametrů
+"Mechanický sprej z italské Sicílie, nejlepší volba pro pečení a gril."
+{{product:bio-extra-panensky-...}}
+```
+
+- Token = primární zdroj parametrů (z DB, vždy aktuální)
+- Kontext = popis **kdy / proč / pro koho** je produkt vhodný — ne čísla
+- Retroaktivně: při revizi článků vyhledat inline parametry vedle tokenů → smazat
+
+---
+
 ### Hero image — kontrola před publikací
 
 Po každé generaci článku ověř, že `hero_image_url` je nastavený (ne null).
