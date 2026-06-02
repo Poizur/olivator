@@ -55,6 +55,7 @@ export function ListingContent({
   const activeIntensity = searchParams.get('intensity') as Intensity | null
   const sort = searchParams.get('sort') || 'score'
   const maxPrice = searchParams.get('maxPrice')
+  const volume = searchParams.get('volume')
   const search = searchParams.get('q') || ''
   const page = Math.max(1, Number(searchParams.get('page') ?? 1))
 
@@ -160,6 +161,7 @@ export function ListingContent({
     if (activeQuality.includes('high_polyphenols')) list = list.filter((p) => p.polyphenols != null && p.polyphenols >= 250)
     if (activeQuality.includes('high_oleocanthal')) list = list.filter((p) => p.oleocanthal != null && p.oleocanthal >= 100)
     if (activeIntensity) list = list.filter((p) => classifyIntensity(p) === activeIntensity)
+    if (volume === '5l') list = list.filter((p) => p.volumeMl != null && p.volumeMl >= 4500 && p.volumeMl <= 5500)
     if (maxPrice) {
       const max = Number(maxPrice)
       if (!isNaN(max)) list = list.filter((p) => p.cheapestOffer != null && p.cheapestOffer.price <= max)
@@ -202,7 +204,7 @@ export function ListingContent({
         list.sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
     }
     return list
-  }, [products, search, activeTypes, activeOrigins, activeCerts, activeQuality, activeIntensity, sort, maxPrice, flavorOpen, flavorState])
+  }, [products, search, activeTypes, activeOrigins, activeCerts, activeQuality, activeIntensity, sort, maxPrice, volume, flavorOpen, flavorState])
 
   // ── Pagination ───────────────────────────────────────────────────────────────
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
@@ -211,7 +213,7 @@ export function ListingContent({
 
   const hasActiveFilters =
     activeTypes.length > 0 || activeOrigins.length > 0 || activeCerts.length > 0 ||
-    activeQuality.length > 0 || !!activeIntensity || !!maxPrice || !!search.trim() || flavorOpen
+    activeQuality.length > 0 || !!activeIntensity || !!maxPrice || !!search.trim() || flavorOpen || volume === '5l'
 
   return (
     <div className="px-4 md:px-8 py-6 md:py-8">
@@ -272,6 +274,18 @@ export function ListingContent({
               )
             })}
           </div>
+
+          {/* Balení: 5L toggle */}
+          <button
+            onClick={() => updateParam('volume', volume === '5l' ? null : '5l')}
+            className={`text-[12px] rounded-md px-2.5 py-1.5 border transition-colors whitespace-nowrap ${
+              volume === '5l'
+                ? 'bg-olive text-white border-olive'
+                : 'bg-white text-text2 border-off2 hover:border-olive-border'
+            }`}
+          >
+            📦 5L balení
+          </button>
 
           {/* Sort */}
           <div className="flex gap-1 flex-wrap">
@@ -412,6 +426,9 @@ export function ListingContent({
                 )}
                 {maxPrice && (
                   <FilterChip label={`Do ${formatPrice(Number(maxPrice))}`} onRemove={() => clearFilter('maxPrice')} />
+                )}
+                {volume === '5l' && (
+                  <FilterChip label="5L balení" onRemove={() => clearFilter('volume')} />
                 )}
                 <button onClick={clearAll} className="text-[12px] text-text3 hover:text-text underline ml-2">
                   Vymazat vše

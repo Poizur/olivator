@@ -190,7 +190,7 @@ export default async function BulkOilPage() {
               </p>
             </div>
             <Link
-              href="/srovnavac"
+              href="/srovnavac?volume=5l"
               className="text-[13px] text-olive border-b border-olive-border hover:text-olive2 whitespace-nowrap"
             >
               Celý katalog ({total}) →
@@ -238,7 +238,7 @@ export default async function BulkOilPage() {
           {total > 15 && (
             <div className="mt-8 text-center">
               <Link
-                href="/srovnavac"
+                href="/srovnavac?volume=5l"
                 className="inline-block border border-olive-border text-olive text-[14px] font-medium px-6 py-2.5 rounded-lg hover:bg-olive-bg transition-colors"
               >
                 Zobrazit všech {total} produktů ve srovnávači →
