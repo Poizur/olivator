@@ -39,6 +39,7 @@ type FocusDimension =
 interface ArticleBrief {
   slug: string
   title: string
+  meta_title_override?: string  // přepíše AI-generovaný meta_title v DB (H1 zůstane title)
   category: 'pruvodce' | 'vzdelavani' | 'srovnani' | 'zebricek'
   emoji: string
   excerpt: string  // ~150 chars hook pro listing
@@ -511,6 +512,73 @@ const ARTICLE_BRIEFS: ArticleBrief[] = [
     unsplashQuery: 'olive oil pouring glass health mediterranean diet',
     focus_dimension: 'polyphenols',
   },
+
+  // ── Vlna 3 — produkt/typ cluster ──────────────────────────────────────────
+  {
+    slug: 'olivovy-olej-ve-spreji',
+    title: 'Olivový olej ve spreji: srovnání 2026',
+    category: 'srovnani',
+    emoji: '🫙',
+    excerpt: 'Sprej vs lahev — pohodlí za vyšší cenu na ml. Který sprej za to stojí a kdy je to jen balení.',
+    readTime: '5 min čtení',
+    targetKeyword: 'olivový olej ve spreji',
+    briefPoints: [
+      'Co je olivový olej ve spreji — mechanický pumpový vs propellant sprej. Cena na 100 ml obvykle 2–4× vyšší než lahev.',
+      'Kdy sprej dává smysl: pečení v troubě (rovnoměrné pokrytí plechu), grilování, vaření se sledováním kalorií, fitness kuchyně.',
+      'Kdy nedává smysl: dipping, salát ve větší porci, vaření na pánvi s větším množstvím — tam lahev vychází levněji a lépe.',
+      'Propellant vs mechanický pump: propellant funguje spolehlivěji, mechanická pumpa nezasahuje do složení oleje.',
+      'Co číst na etiketě sprejů: je olej 100% olivový (ne směs se slunečnicovým), kyselost, datum sklizně. BIO nebo DOP je plus.',
+      'Sekce "Spreji dostupné v ČR" — zahrn tyto tři produkty jako {{product:SLUG}} tokeny v uvedeném pořadí, jeden per řádek, nic jiného na témže řádku. Produkty existují v DB a karta se zobrazí správně i pro null score:\n{{product:bio-extra-panensky-olivovy-olej-frantoi-cutrera-primo-250-ml-ve-spreji}}\n{{product:extra-panensky-olivovy-olej-kyselost-0-3-250ml-sprej-liokarpi-protogerakis}}\n{{product:sagra-olivovy-olej-ve-spreji-classico-spray-extra-vergine-200ml}}',
+      'Jak dávkovat: 1 sekunda spreji ≈ 1–2 ml (5–10 kcal). Sprej umožňuje přesnější kontrolu kalorií než nalití z lahve.',
+      'Závěr: sprej = pohodlí, ne nutně kvalita. Dobrý EVOO sprej s BIO certifikací je legitimní volba pro pečení — jen si spočítej cenu na ml.',
+      'FAQ (3 otázky): "Je olivový olej ve spreji stejně zdravý jako z lahve?", "Jak poznat, jestli sprej obsahuje 100% olivový olej?", "Jak dávkovat — kolik kalorií má jedna vteřina spreji?"',
+    ],
+    unsplashQuery: 'olive oil spray bottle kitchen cooking baking',
+    focus_dimension: null,
+  },
+  {
+    slug: 'rafinovany-olivovy-olej',
+    title: 'Rafinovaný olivový olej: jak rafinace mění olej',
+    meta_title_override: 'Rafinovaný olivový olej: co to je a kdy ho použít',
+    category: 'vzdelavani',
+    emoji: '🔬',
+    excerpt: 'Rafinace odstraní kyselost i vady — ale také polyfenoly a chuť. Co zbyde a kdy to může dávat smysl.',
+    readTime: '6 min čtení',
+    targetKeyword: 'rafinovaný olivový olej',
+    briefPoints: [
+      'Co je rafinace: fyzikální nebo chemický proces (odkyselení, bělení, deodorace) odstraňující volné mastné kyseliny, oxidované sloučeniny a senzorické vady. Výsledek: neutrální chuť, vyšší smoke point, delší trvanlivost.',
+      'Co rafinace odstraní: polyfenoly (oleocanthal, oleuropein, hydroxytyrosol), chlorofyly, aromatické sloučeniny. Zbyde převážně oleická kyselina bez zdravotních benefitů spojených s EVOO.',
+      'EU kategorie: "olivový olej" (bez přívlastku) = rafinovaný + virgin mix, kyselost ≤1 %. Odkaz: [Extra panenský vs panenský vs rafinovaný: srovnání kategorií](/pruvodce/extra-panensky-vs-panensky-vs-rafinovany)',
+      'Kdy rafinovaný dává smysl: pečení s výraznými příchutěmi (koláče, muffiny) kde olej nesmí dominovat, fritování při vyšších teplotách dlouhodobě, velké restaurační objemy kde EVOO není ekonomicky únosný.',
+      'Kdy nedává smysl: salát, dipping, finishing pokrmů, ranní ritual, zdravotní benefity — zde polyfenoly záleží a EVOO je správná volba.',
+      'Cenová logika: rafinovaný je levnější na litr. Ale skutečná hodnota EVOO je v polyfenolech a chuti, ne jen oleické kyselině. Za podobné peníze dostaneš horší produkt.',
+      'Ukázka EVOO olejů jako protiváha: co dostaneš místo rafinovaného za srovnatelnou nebo mírně vyšší cenu. Použij tokeny v pořadí, jeden per řádek:\n{{product:picual-500-ml-extra-panensky-nefiltrovany-olivovy-olej}}\n{{product:arbequina-500-ml}}\n{{product:sitia-premium-gold-sitia-kreta-premium-gold-0-2-extra-panensky-olivovy-olej-1-l-plech}}',
+      'FAQ (4 otázky): "Je rafinovaný olivový olej zdravý?", "Jaký je rozdíl mezi olivovým olejem a extra panenským?", "Dá se na rafinovaném oleji smažit?", "Jak poznat rafinovaný olivový olej na etiketě?"',
+    ],
+    unsplashQuery: 'olive oil bottle light neutral cooking oil kitchen',
+    focus_dimension: null,
+  },
+  {
+    slug: 'olivovy-olej-z-pokrutin',
+    title: 'Olivový olej z pokrutin (pomace): co to je a kdy ho použít',
+    category: 'vzdelavani',
+    emoji: '🫒',
+    excerpt: 'Pokrutiny jsou zbytky lisování oliv. Olej z nich se extrahuje chemicky — pro potravinářství legální, ale jiná kategorie než EVOO.',
+    readTime: '5 min čtení',
+    targetKeyword: 'olivový olej z pokrutin',
+    briefPoints: [
+      'Co jsou pokrutiny: pevný odpad po mechanickém lisování oliv (slupky, pecky, zbytková dřeň). Extra panenský se lisuje bez chemie, pokrutinový olej se extrahuje hexanem nebo jinými rozpouštědly, pak rafinuje.',
+      'EU kategorie "olivový olej z výlisků (pomace)": legální pro potravinářské použití po rafinaci. Polyfenoly prakticky nulové, chuť neutrální. Nejnižší třída v EU klasifikaci.',
+      'Kdy dává smysl: velká balení pro smažení a fritování, průmyslová kuchyně, grilování při vyšších teplotách. Smoke point cca 238°C po rafinaci — vyšší než EVOO.',
+      'Kdy nedává smysl: salát, dipping, zdravotní benefity, každodenní konzumace raw — tady jde o jinou kategorii bez polyfenolů.',
+      'Transparentnost a označení: pokrutinový olej musí být legislativně označen "olivový olej z výlisků" — nesmí se prodávat jako extra panenský. Cena na litr by měla být nižší než EVOO.',
+      'Produkty dostupné v ČR — zahrn tyto tři tokeny jako {{product:SLUG}} v pořadí, jeden per řádek. Pomace produkty nemají olivator_score — karta se zobrazí správně i bez score kruhu:\n{{product:olivovy-olej-z-pokrutin-liofyto-1-l-pet}}\n{{product:efzin-olivovy-olej-z-pokrutin-5-l-pet}}\n{{product:pons-olivovy-olej-z-pokrutin-pomace-plech-4l}}',
+      'Závěr: pokrutinový olej má své místo — velký objem, vysoké teploty, nízká cena. Pro každodenní zdravé vaření a polyfenolové benefity sahej po extra panenském.',
+      'FAQ (3 otázky): "Je olivový olej z pokrutin škodlivý?", "Jaký je rozdíl mezi pomace a extra panenským olivovým olejem?", "Dá se na oleji z pokrutin smažit?"',
+    ],
+    unsplashQuery: 'olive press traditional stone mill harvest olives',
+    focus_dimension: null,
+  },
 ]
 
 // ── Generation prompts ────────────────────────────────────────────────────────
@@ -971,7 +1039,8 @@ async function processOne(brief: ArticleBrief): Promise<{ ok: boolean; reason?: 
 
   // DB má meta_title VARCHAR(70), meta_description VARCHAR(160) — Claude občas
   // překročí. Hard truncate s … (ellipsis) zachová čitelnost v SERP.
-  const metaTitle = meta.title.length > 70 ? meta.title.slice(0, 67) + '…' : meta.title
+  const rawMetaTitle = brief.meta_title_override ?? meta.title
+  const metaTitle = rawMetaTitle.length > 70 ? rawMetaTitle.slice(0, 67) + '…' : rawMetaTitle
   const metaDesc = meta.description.length > 160 ? meta.description.slice(0, 157) + '…' : meta.description
 
   const { error } = await supabaseAdmin.from('articles').upsert({
