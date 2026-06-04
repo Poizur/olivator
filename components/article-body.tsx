@@ -29,6 +29,7 @@ type Block =
   | { type: 'h2'; text: string }
   | { type: 'h3'; text: string }
   | { type: 'paragraph'; text: string }
+  | { type: 'image'; src: string; alt: string }
   | { type: 'bullet-list'; items: string[] }
   | { type: 'ordered-list'; items: string[] }
   | { type: 'table'; headers: string[]; rows: string[][] }
@@ -62,6 +63,16 @@ function parseBlocks(body: string): Block[] {
       blocks.push({ type: 'product-missing', slug })
       i++
       continue
+    }
+
+    // Image — must check before paragraph fallthrough
+    if (line.startsWith('![')) {
+      const m = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/)
+      if (m) {
+        blocks.push({ type: 'image', alt: m[1], src: m[2] })
+        i++
+        continue
+      }
     }
 
     // Heading H2
@@ -192,6 +203,19 @@ function renderBlock(b: Block, key: number, productMap?: Map<string, ArticleProd
         <h3 key={key} className="text-lg font-semibold text-text mt-5 mb-2">
           {b.text}
         </h3>
+      )
+    case 'image':
+      return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <figure key={key} className="my-6 -mx-0 rounded-[var(--radius-card)] overflow-hidden bg-off">
+          <img
+            src={b.src}
+            alt={b.alt}
+            className="w-full h-auto object-cover"
+            loading="lazy"
+            decoding="async"
+          />
+        </figure>
       )
     case 'paragraph':
       return (
