@@ -156,7 +156,14 @@ export default async function ArticleDetailPage({
             category: a.category,
           }))
 
-  const recipeArticles = getArticles().filter((a) => a.category === 'recept').slice(0, 2)
+  const recipeArticles =
+    dbArticles.filter((a) => a.category === 'recept').slice(0, 2).length > 0
+      ? dbArticles.filter((a) => a.category === 'recept').slice(0, 2)
+      : getArticles().filter((a) => a.category === 'recept').slice(0, 2).map((r) => ({
+          slug: r.slug, title: r.title, emoji: r.emoji, readTime: r.readTime,
+          category: r.category, heroImageUrl: (r as { imageUrl?: string }).imageUrl ?? null,
+          excerpt: '', body: null, bodyMarkdown: null, publishedAt: null, updatedAt: null,
+        }))
 
   // Schema.org Article — datePublished/dateModified povinné pro Google rich
   // results (article snippet s autorem + datem). Bez nich Google nezobrazí.
@@ -399,7 +406,14 @@ export default async function ArticleDetailPage({
                       href={`/pruvodce/${a.slug}`}
                       className="flex items-start gap-2.5 group"
                     >
-                      <span className="text-base shrink-0">{a.emoji}</span>
+                      {'heroImageUrl' in a && a.heroImageUrl ? (
+                        <div className="w-12 h-12 shrink-0 rounded overflow-hidden bg-olive-bg/40">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={a.heroImageUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                        </div>
+                      ) : (
+                        <span className="text-base shrink-0 leading-none mt-0.5">{a.emoji}</span>
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="text-[13px] text-text font-medium leading-tight line-clamp-2 group-hover:text-olive">
                           {a.title}
@@ -426,7 +440,14 @@ export default async function ArticleDetailPage({
                       href={`/recept/${r.slug}`}
                       className="flex items-start gap-2.5 group"
                     >
-                      <span className="text-base shrink-0">{r.emoji}</span>
+                      {'heroImageUrl' in r && r.heroImageUrl ? (
+                        <div className="w-12 h-12 shrink-0 rounded overflow-hidden bg-olive-bg/40">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={r.heroImageUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+                        </div>
+                      ) : (
+                        <span className="text-base shrink-0 leading-none mt-0.5">{r.emoji}</span>
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="text-[13px] text-olive-dark font-medium leading-tight line-clamp-2 group-hover:text-olive">
                           {r.title}
