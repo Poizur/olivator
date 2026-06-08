@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { supabaseAdmin } from '@/lib/supabase'
 import { AdminBlock } from '@/components/admin-block'
+import { getSetting } from '@/lib/settings'
 import { DraftActions } from './draft-actions'
 
 export const dynamic = 'force-dynamic'
@@ -57,7 +58,10 @@ export default async function DraftDetailPage({
   const draft = await getDraft(id)
   if (!draft) notFound()
 
-  const eligibleRecipients = await getEligibleRecipientCount(draft.campaign_type)
+  const [eligibleRecipients, defaultTestEmail] = await Promise.all([
+    getEligibleRecipientCount(draft.campaign_type),
+    getSetting<string>('notification_email').catch(() => ''),
+  ])
 
   return (
     <div className="p-6 md:p-8 max-w-5xl mx-auto">
@@ -93,44 +97,11 @@ export default async function DraftDetailPage({
         status={draft.status}
         currentSubject={draft.subject}
         currentPreheader={draft.preheader ?? ''}
+        currentHtmlBody={draft.html_body}
+        currentTextBody={draft.text_body ?? ''}
         eligibleRecipients={eligibleRecipients}
+        defaultTestEmail={defaultTestEmail}
       />
-
-      <div className="mt-6 space-y-6">
-        {/* Preview iframe */}
-        <AdminBlock
-          number={1}
-          icon="👁"
-          title="Preview emailu"
-          description="Takhle vypadá email v inboxu. Jednotlivé bloky jsou auto-generated z DB dat."
-          variant="header-only"
-        >
-          <div className="bg-off rounded-2xl p-4 border border-off2">
-            <iframe
-              srcDoc={draft.html_body}
-              title="Email preview"
-              className="w-full bg-white rounded-xl border border-off2"
-              style={{ minHeight: '700px' }}
-              sandbox="allow-same-origin"
-            />
-          </div>
-        </AdminBlock>
-
-        {/* Plain text fallback */}
-        {draft.text_body && (
-          <AdminBlock
-            number={2}
-            icon="📄"
-            title="Plain text varianta"
-            description="Fallback pro klienty co neumí HTML (vzácné). Auto-generated z HTML."
-            variant="header-only"
-          >
-            <pre className="bg-off rounded-xl p-4 text-[12px] font-mono whitespace-pre-wrap text-text2 max-h-[300px] overflow-y-auto">
-              {draft.text_body}
-            </pre>
-          </AdminBlock>
-        )}
-      </div>
     </div>
   )
 }
