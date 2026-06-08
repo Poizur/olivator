@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { render } from '@react-email/render'
 import React from 'react'
 import { supabaseAdmin } from '@/lib/supabase'
+import { getSetting } from '@/lib/settings'
 import { sendTransactionalEmail } from '@/lib/newsletter-sender'
 import { WelcomeD0DealsEmail } from '@/emails/welcome-d0-deals'
 import { enqueueWelcomeSeries, getWelcomeDeals } from '@/lib/welcome-series'
@@ -139,7 +140,7 @@ export async function POST(request: NextRequest) {
 
     // Notifikace majiteli o novém odběrateli (best-effort)
     if (stored) {
-      const alertEmail = process.env.ALERT_EMAIL
+      const alertEmail = await getSetting<string>('notification_email').catch(() => null)
       if (alertEmail) {
         sendTransactionalEmail({
           to: alertEmail,
