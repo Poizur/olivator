@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
     const userAgent = request.headers.get('user-agent') ?? ''
 
     let stored = false
+    let isNewSubscriber = true
     try {
       // Načti existující řádek aby se zachoval token (pokud existuje)
       const { data: existing } = await supabaseAdmin
@@ -100,6 +101,7 @@ export async function POST(request: NextRequest) {
         .eq('email', email)
         .maybeSingle()
 
+      if (existing) isNewSubscriber = false
       const unsubToken = (existing?.unsubscribe_token as string | null) ?? generateUnsubToken()
 
       const { error } = await supabaseAdmin
@@ -133,6 +135,21 @@ export async function POST(request: NextRequest) {
         .update({ resend_contact_id: resendId })
         .eq('email', email)
         .then(() => null, () => null)
+    }
+
+    // Notifikace majiteli o novém odběrateli (best-effort)
+    if (stored) {
+      const alertEmail = process.env.ALERT_EMAIL
+      if (alertEmail) {
+        sendTransactionalEmail({
+          to: alertEmail,
+          subject: isNewSubscriber
+            ? `Nový odběratel: ${email}`
+            : `Re-subscribe: ${email}`,
+          html: `<p>${isNewSubscriber ? 'Nový odběratel' : 'Znovu přihlášen'}: <strong>${email}</strong></p><p>Zdroj: ${source}</p><p>Preference: ${Object.entries(preferences).filter(([, v]) => v).map(([k]) => k).join(', ')}</p>`,
+          text: `${isNewSubscriber ? 'Nový odběratel' : 'Znovu přihlášen'}: ${email}\nZdroj: ${source}\nPreference: ${Object.entries(preferences).filter(([, v]) => v).map(([k]) => k).join(', ')}`,
+        }).catch(() => null)
+      }
     }
 
     // Pošli welcome email + zařaď do welcome série (best-effort)
