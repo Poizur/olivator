@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateWeeklyDraft } from '@/lib/newsletter-composer'
 import { getSetting } from '@/lib/settings'
+import { sendTransactionalEmail } from '@/lib/newsletter-sender'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120 // hook generation + render ~30-60s
@@ -36,6 +37,19 @@ export async function POST(req: NextRequest) {
 
   try {
     const result = await generateWeeklyDraft()
+
+    // Notifikace majiteli — draft čeká na schválení (best-effort)
+    const notifyEmail = await getSetting<string>('notification_email').catch(() => null)
+    if (notifyEmail) {
+      const draftUrl = `https://olivator.cz/admin/newsletter/drafts/${result.id}`
+      sendTransactionalEmail({
+        to: notifyEmail,
+        subject: `[Olivator] Newsletter draft čeká na schválení: ${result.subject}`,
+        html: `<p>Týdenní newsletter draft byl vygenerován a čeká na tvoje schválení.</p><p><strong>Předmět:</strong> ${result.subject}</p><p><a href="${draftUrl}">Zobrazit a schválit draft →</a></p><p>Odesílání je naplánováno na čtvrtek 8:00 UTC.</p>`,
+        text: `Newsletter draft čeká na schválení.\nPředmět: ${result.subject}\nOdkaz: ${draftUrl}\nOdesílání: čtvrtek 8:00 UTC.`,
+      }).catch(() => null)
+    }
+
     return NextResponse.json({
       ok: true,
       draftId: result.id,
