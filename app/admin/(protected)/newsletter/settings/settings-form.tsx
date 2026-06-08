@@ -1,7 +1,157 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { AdminBlock } from '@/components/admin-block'
+
+interface ProductHit {
+  id: string
+  slug: string
+  name: string
+  name_short: string | null
+  image_url: string | null
+  olivator_score: number | null
+  origin_country: string | null
+}
+
+function TipPicker({
+  selectedSlug,
+  selectedName,
+  message,
+  onSelect,
+  onMessageChange,
+  onClear,
+  saving,
+  onSave,
+}: {
+  selectedSlug: string
+  selectedName: string
+  message: string
+  onSelect: (slug: string, name: string) => void
+  onMessageChange: (v: string) => void
+  onClear: () => void
+  saving: boolean
+  onSave: () => void
+}) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<ProductHit[]>([])
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  function search(q: string) {
+    setQuery(q)
+    if (debounce.current) clearTimeout(debounce.current)
+    if (q.length < 2) { setResults([]); setOpen(false); return }
+    debounce.current = setTimeout(async () => {
+      setLoading(true)
+      try {
+        const res = await fetch(`/api/admin/newsletter/product-search?q=${encodeURIComponent(q)}&limit=8`)
+        const data = await res.json()
+        setResults(Array.isArray(data) ? data : [])
+        setOpen(true)
+      } finally {
+        setLoading(false)
+      }
+    }, 300)
+  }
+
+  function pick(hit: ProductHit) {
+    onSelect(hit.slug, hit.name_short ?? hit.name)
+    setQuery('')
+    setResults([])
+    setOpen(false)
+  }
+
+  return (
+    <div className="py-2 space-y-3">
+      {selectedSlug ? (
+        <div className="flex items-center gap-3 bg-olive4 border border-olive5 rounded-xl px-4 py-3">
+          <span className="text-olive text-[18px]">💡</span>
+          <div className="flex-1 min-w-0">
+            <div className="text-[13px] font-semibold text-olive2 truncate">{selectedName}</div>
+            <div className="text-[11px] text-olive font-mono">{selectedSlug}</div>
+          </div>
+          <button onClick={onClear} className="text-text3 hover:text-red-500 shrink-0 text-[18px] leading-none">×</button>
+        </div>
+      ) : (
+        <div ref={wrapperRef} className="relative">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => search(e.target.value)}
+            onFocus={() => results.length > 0 && setOpen(true)}
+            placeholder="Hledat produkt podle názvu…"
+            className="w-full border border-off2 rounded-xl px-3 py-2 text-[13px] focus:outline-none focus:border-olive"
+          />
+          {loading && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-text3 text-[11px]">…</span>
+          )}
+          {open && results.length > 0 && (
+            <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-white border border-off2 rounded-xl shadow-lg overflow-hidden">
+              {results.map((hit) => (
+                <button
+                  key={hit.slug}
+                  onClick={() => pick(hit)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-off text-left"
+                >
+                  {hit.image_url && (
+                    <img src={hit.image_url} alt="" className="w-8 h-8 object-contain rounded shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-medium text-text truncate">
+                      {hit.name_short ?? hit.name}
+                    </div>
+                    <div className="text-[11px] text-text3 font-mono truncate">{hit.slug}</div>
+                  </div>
+                  {hit.olivator_score && (
+                    <span className="shrink-0 text-[11px] font-bold text-white bg-terra rounded-full px-2 py-0.5">
+                      {hit.olivator_score}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div>
+        <label className="block text-[11px] font-medium text-text2 uppercase tracking-wider mb-1">
+          Tvůj vzkaz (proč doporučuješ — zobrazí se v emailu)
+        </label>
+        <textarea
+          value={message}
+          onChange={(e) => onMessageChange(e.target.value.slice(0, 200))}
+          placeholder="Např: Tento týden jsme domluvili výjimečné podmínky s Olivio.cz — výborná kyselost pod 0,2 % za skvělou cenu."
+          rows={3}
+          className="w-full border border-off2 rounded-xl px-3 py-2 text-[13px] focus:outline-none focus:border-olive resize-none"
+        />
+        <div className="text-[10px] text-text3 mt-0.5">{message.length}/200</div>
+      </div>
+
+      {selectedSlug && (
+        <button
+          onClick={onSave}
+          disabled={saving}
+          className="text-[12px] bg-olive text-white rounded-full px-4 py-1.5 font-medium disabled:opacity-40"
+        >
+          {saving ? 'Ukládám…' : '💾 Uložit tip pro příští newsletter'}
+        </button>
+      )}
+    </div>
+  )
+}
 
 interface Props {
   initial: Record<string, unknown>
@@ -224,6 +374,36 @@ export function SettingsForm({ initial }: Props) {
 
       <AdminBlock
         number={6}
+        icon="💡"
+        title="Náš tip — doporučení pro příští newsletter"
+        description="Vyber produkt který chceš tento týden doporučit. Zobrazí se jako samostatný blok v emailu. Po vygenerování draftu se automaticky smaže."
+      >
+        <TipPicker
+          selectedSlug={(values['newsletter_tip_product'] as string) ?? ''}
+          selectedName={((values['_tip_name'] as string) || (values['newsletter_tip_product'] as string)) ?? ''}
+          message={(values['newsletter_tip_message'] as string) ?? ''}
+          onSelect={(slug, name) => {
+            set('newsletter_tip_product', slug)
+            set('_tip_name', name)
+          }}
+          onMessageChange={(v) => set('newsletter_tip_message', v)}
+          onClear={() => {
+            set('newsletter_tip_product', '')
+            set('_tip_name', '')
+            set('newsletter_tip_message', '')
+            save('newsletter_tip_product', '')
+            save('newsletter_tip_message', '')
+          }}
+          saving={saving === 'newsletter_tip_product'}
+          onSave={() => {
+            save('newsletter_tip_product', values['newsletter_tip_product'] ?? '')
+            save('newsletter_tip_message', values['newsletter_tip_message'] ?? '')
+          }}
+        />
+      </AdminBlock>
+
+      <AdminBlock
+        number={7}
         icon="⚠️"
         title="Pokročilé"
         description="Pozor — používej s rozvahou."

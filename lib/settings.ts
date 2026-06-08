@@ -22,6 +22,8 @@ export type SettingKey =
   | 'newsletter_auto_send'
   | 'newsletter_test_mode'
   | 'newsletter_pinned_product'
+  | 'newsletter_tip_product'
+  | 'newsletter_tip_message'
 
 interface SettingDef<T> {
   key: SettingKey
@@ -116,6 +118,16 @@ export const SETTINGS: Record<SettingKey, SettingDef<unknown>> = {
     key: 'newsletter_pinned_product',
     default: '',
     description: 'Slug produktu pro příští newsletter (Olej týdne). Po vygenerování draftu se automaticky smaže.',
+  },
+  newsletter_tip_product: {
+    key: 'newsletter_tip_product',
+    default: '',
+    description: 'Slug produktu pro blok "Náš tip" v příštím newsletteru. Po vygenerování draftu se automaticky smaže.',
+  },
+  newsletter_tip_message: {
+    key: 'newsletter_tip_message',
+    default: '',
+    description: 'Krátká zpráva k "Náš tip" (proč doporučuješ). Max 200 znaků.',
   },
 }
 

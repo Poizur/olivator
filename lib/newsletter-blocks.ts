@@ -324,6 +324,60 @@ export async function pickDeals(
     .slice(0, limit)
 }
 
+// ── 2b. Náš tip — admin-pinned produkt s vlastní zprávou ──────────────────
+//
+// Načte produkt dle slugu, najde nejlevnější nabídku, vrátí OilCardData
+// s admin zprávou jako reasoning. Pokud produkt/offer nenajde → null.
+export async function pickTipProduct(
+  slug: string,
+  message: string
+): Promise<OilCardData | null> {
+  if (!slug) return null
+
+  const [retailerMap, brandMap] = await Promise.all([loadRetailerMap(), loadBrandMap()])
+
+  const { data: product } = await supabaseAdmin
+    .from('products')
+    .select('id, slug, name, name_short, image_url, olivator_score, brand_slug')
+    .eq('status', 'active')
+    .eq('slug', slug)
+    .maybeSingle()
+
+  if (!product) return null
+
+  const { data: offers } = await supabaseAdmin
+    .from('product_offers')
+    .select('price, retailer_id')
+    .eq('product_id', product.id)
+    .eq('in_stock', true)
+    .order('price', { ascending: true })
+    .limit(1)
+
+  if (!offers || offers.length === 0) return null
+
+  const offer = offers[0]
+  const retailer = retailerMap.get(offer.retailer_id as string)
+  if (!retailer) return null
+
+  const brand = product.brand_slug ? brandMap.get(product.brand_slug as string) ?? null : null
+  const productName = getDisplayName(product as { name_short: string | null; name: string })
+
+  return {
+    productId: product.id as string,
+    slug: product.slug as string,
+    name: productName,
+    brandName: brand?.name ?? null,
+    imageUrl: product.image_url as string | null,
+    score: product.olivator_score as number,
+    price: offer.price as number,
+    oldPrice: null,
+    retailerName: retailer.name,
+    retailerSlug: retailer.slug,
+    ctaUrl: buildAffiliateUrl(retailer.slug, product.slug as string, 'nas_tip'),
+    reasoning: message || null,
+  }
+}
+
 // ── 3. Premiéra — nejnovější active produkt ────────────────────────────────
 //
 // Najde produkty kde created_at < 30 dnů, status='active'. Bez score threshold —

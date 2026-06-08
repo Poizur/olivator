@@ -12,6 +12,7 @@ import { supabaseAdmin } from './supabase'
 import { getSetting, setSetting } from './settings'
 import {
   pickOilOfTheWeek,
+  pickTipProduct,
   pickDeals,
   pickNewArrival,
   pickFact,
@@ -36,6 +37,7 @@ export interface ComposedDraft {
 
 export interface WeeklyBlocks {
   oilOfWeek: OilCardData | null
+  tipProduct: OilCardData | null
   deals: DealData[]
   newArrival: OilCardData | null
   recipe: RecipeData | null
@@ -135,29 +137,34 @@ export async function composeWeeklyDraft(): Promise<ComposedDraft> {
   // 1. Stats pro hook
   const stats = await getNewsletterStats()
 
-  // Pinned product — admin může preferovat konkrétní produkt
-  const pinnedSlug = await getSetting<string>('newsletter_pinned_product').catch(() => '')
+  // Pinned/tip produkty — admin může preferovat konkrétní produkty
+  const [pinnedSlug, tipSlug, tipMessage] = await Promise.all([
+    getSetting<string>('newsletter_pinned_product').catch(() => ''),
+    getSetting<string>('newsletter_tip_product').catch(() => ''),
+    getSetting<string>('newsletter_tip_message').catch(() => ''),
+  ])
 
   // 2. Pick blocks (parallel)
   // Deals threshold 5 % — pro malou DB s krátkou price history. Až bude
   // dostatek dat, nastav vyšší (10-15 %) v admin/newsletter/settings.
-  const [oilOfWeek, deals, newArrival, recipe, fact] = await Promise.all([
+  const [oilOfWeek, tipProduct, deals, newArrival, recipe, fact] = await Promise.all([
     pickOilOfTheWeek([], pinnedSlug || undefined),
+    tipSlug ? pickTipProduct(tipSlug, tipMessage) : Promise.resolve(null),
     pickDeals(5, 5),
     pickNewArrival(),
     pickRecipe(),
     pickFact(),
   ])
 
-  // Vyhneme se duplikaci: pokud oil of week má drop, neukazujeme ho znovu v deals
-  const filteredDeals = oilOfWeek
-    ? deals.filter((d) => d.productId !== oilOfWeek.productId)
-    : deals
+  // Vyhneme se duplikaci
+  const excludeIds = [oilOfWeek?.productId, tipProduct?.productId].filter(Boolean) as string[]
+  const filteredDeals = deals.filter((d) => !excludeIds.includes(d.productId))
 
   const blocks: WeeklyBlocks = {
     oilOfWeek,
+    tipProduct,
     deals: filteredDeals.slice(0, 5),
-    newArrival: newArrival && newArrival.productId !== oilOfWeek?.productId ? newArrival : null,
+    newArrival: newArrival && !excludeIds.includes(newArrival.productId) ? newArrival : null,
     recipe,
     fact,
   }
@@ -222,14 +229,22 @@ export async function generateWeeklyDraft(): Promise<{
   subject: string
   pinnedProductUsed: string | null
 }> {
-  const pinnedSlug = await getSetting<string>('newsletter_pinned_product').catch(() => '')
+  // Přečti před generací — composeWeeklyDraft je také přečte interně, ale
+  // potřebujeme je tady pro auto-clear a notifikaci.
+  const [pinnedSlug, tipSlug] = await Promise.all([
+    getSetting<string>('newsletter_pinned_product').catch(() => ''),
+    getSetting<string>('newsletter_tip_product').catch(() => ''),
+  ])
+
   const composed = await composeWeeklyDraft()
   const { id } = await saveDraftToDb('weekly', composed)
 
-  // Auto-clear pinned product po úspěšném vygenerování draftu
-  if (pinnedSlug) {
-    await setSetting('newsletter_pinned_product', '').catch(() => null)
-  }
+  // Auto-clear pinned + tip produkty po úspěšném vygenerování draftu
+  await Promise.all([
+    pinnedSlug ? setSetting('newsletter_pinned_product', '').catch(() => null) : null,
+    tipSlug ? setSetting('newsletter_tip_product', '').catch(() => null) : null,
+    tipSlug ? setSetting('newsletter_tip_message', '').catch(() => null) : null,
+  ])
 
   return { id, subject: composed.subject, pinnedProductUsed: pinnedSlug || null }
 }
