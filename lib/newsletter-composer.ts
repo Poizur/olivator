@@ -9,6 +9,7 @@
 import { render } from '@react-email/render'
 import { callClaude, extractText } from './anthropic'
 import { supabaseAdmin } from './supabase'
+import { getSetting, setSetting } from './settings'
 import {
   pickOilOfTheWeek,
   pickDeals,
@@ -134,11 +135,14 @@ export async function composeWeeklyDraft(): Promise<ComposedDraft> {
   // 1. Stats pro hook
   const stats = await getNewsletterStats()
 
+  // Pinned product — admin může preferovat konkrétní produkt
+  const pinnedSlug = await getSetting<string>('newsletter_pinned_product').catch(() => '')
+
   // 2. Pick blocks (parallel)
   // Deals threshold 5 % — pro malou DB s krátkou price history. Až bude
   // dostatek dat, nastav vyšší (10-15 %) v admin/newsletter/settings.
   const [oilOfWeek, deals, newArrival, recipe, fact] = await Promise.all([
-    pickOilOfTheWeek(),
+    pickOilOfTheWeek([], pinnedSlug || undefined),
     pickDeals(5, 5),
     pickNewArrival(),
     pickRecipe(),
@@ -216,8 +220,16 @@ export async function saveDraftToDb(
 export async function generateWeeklyDraft(): Promise<{
   id: string
   subject: string
+  pinnedProductUsed: string | null
 }> {
+  const pinnedSlug = await getSetting<string>('newsletter_pinned_product').catch(() => '')
   const composed = await composeWeeklyDraft()
   const { id } = await saveDraftToDb('weekly', composed)
-  return { id, subject: composed.subject }
+
+  // Auto-clear pinned product po úspěšném vygenerování draftu
+  if (pinnedSlug) {
+    await setSetting('newsletter_pinned_product', '').catch(() => null)
+  }
+
+  return { id, subject: composed.subject, pinnedProductUsed: pinnedSlug || null }
 }

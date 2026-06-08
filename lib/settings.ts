@@ -21,6 +21,7 @@ export type SettingKey =
   | 'newsletter_alerts_enabled'
   | 'newsletter_auto_send'
   | 'newsletter_test_mode'
+  | 'newsletter_pinned_product'
 
 interface SettingDef<T> {
   key: SettingKey
@@ -110,6 +111,11 @@ export const SETTINGS: Record<SettingKey, SettingDef<unknown>> = {
     key: 'newsletter_test_mode',
     default: false,
     description: 'Test mode — odesílá pouze adminovi (nikdy ne všem subscribers)',
+  },
+  newsletter_pinned_product: {
+    key: 'newsletter_pinned_product',
+    default: '',
+    description: 'Slug produktu pro příští newsletter (Olej týdne). Po vygenerování draftu se automaticky smaže.',
   },
 }
 

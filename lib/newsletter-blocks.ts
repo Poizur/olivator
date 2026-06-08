@@ -99,17 +99,25 @@ async function loadBrandMap(): Promise<Map<string, { name: string; slug: string 
 //
 // Returns null pouze pokud catalog je prázdný nebo nikdo nemá aktivní nabídku.
 export async function pickOilOfTheWeek(
-  excludeProductIds: string[] = []
+  excludeProductIds: string[] = [],
+  forcedSlug?: string
 ): Promise<OilCardData | null> {
   const [retailerMap, brandMap] = await Promise.all([loadRetailerMap(), loadBrandMap()])
 
-  const { data: products } = await supabaseAdmin
+  // Pokud admin pinned konkrétní produkt, načti ho jako první kandidát
+  let query = supabaseAdmin
     .from('products')
     .select('id, slug, name, name_short, image_url, olivator_score, brand_slug')
     .eq('status', 'active')
     .not('olivator_score', 'is', null)
-    .order('olivator_score', { ascending: false })
-    .limit(30)
+
+  if (forcedSlug) {
+    query = query.eq('slug', forcedSlug).limit(1)
+  } else {
+    query = query.order('olivator_score', { ascending: false }).limit(30)
+  }
+
+  const { data: products } = await query
 
   if (!products) return null
 

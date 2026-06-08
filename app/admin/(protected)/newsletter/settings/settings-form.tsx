@@ -181,6 +181,49 @@ export function SettingsForm({ initial }: Props) {
 
       <AdminBlock
         number={5}
+        icon="📌"
+        title="Preferovaný produkt pro příští newsletter"
+        description="Vlož slug produktu — ten bude použit jako Olej týdne místo automatického výběru. Po vygenerování draftu se pole automaticky smaže."
+      >
+        <div className="py-2 space-y-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={(values['newsletter_pinned_product'] as string) ?? ''}
+              onChange={(e) => set('newsletter_pinned_product', e.target.value)}
+              placeholder="např. corinto-pelopones-manaki-5l"
+              className="flex-1 border border-off2 rounded-lg px-3 py-2 text-[13px] font-mono focus:outline-none focus:border-olive"
+            />
+            <button
+              onClick={() => save('newsletter_pinned_product', values['newsletter_pinned_product'] ?? '')}
+              disabled={saving === 'newsletter_pinned_product'}
+              className="text-[12px] bg-olive text-white rounded-full px-4 py-2 font-medium disabled:opacity-40 shrink-0"
+            >
+              {saving === 'newsletter_pinned_product' ? 'Ukládám…' : 'Uložit'}
+            </button>
+            {(values['newsletter_pinned_product'] as string) && (
+              <button
+                onClick={() => { set('newsletter_pinned_product', ''); save('newsletter_pinned_product', '') }}
+                className="text-[12px] text-text3 hover:text-red-600 shrink-0"
+                title="Smazat"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          <p className="text-[11px] text-text3">
+            Slug najdeš v URL produktu: olivator.cz/olej/<strong>tento-slug</strong>
+          </p>
+          {(values['newsletter_pinned_product'] as string) && (
+            <div className="text-[11px] bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-3 py-2">
+              📌 Aktivní pin: <strong>{values['newsletter_pinned_product'] as string}</strong> — použije se v příštím draftu
+            </div>
+          )}
+        </div>
+      </AdminBlock>
+
+      <AdminBlock
+        number={6}
         icon="⚠️"
         title="Pokročilé"
         description="Pozor — používej s rozvahou."
