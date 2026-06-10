@@ -15,6 +15,8 @@
     "cron:feed-sync": "tsx scripts/cron/feed-sync.ts",
     "cron:radar": "tsx scripts/cron/radar.ts",
     "cron:learning": "tsx scripts/cron/learning.ts",
+    "cron:newsletter-generate": "tsx scripts/cron/newsletter-generate.ts",
+    "cron:newsletter-send": "tsx scripts/cron/newsletter-send.ts",
     "cron:welcome-dispatcher": "tsx scripts/cron/welcome-dispatcher.ts",
     "cron:seasonal-dispatcher": "tsx scripts/cron/seasonal-dispatcher.ts",
     "cron:lab-research": "tsx scripts/cron/lab-research.ts",
