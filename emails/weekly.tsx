@@ -96,6 +96,7 @@ export function WeeklyEmail({ preheader, hook, unsubscribeUrl, blocks }: Props) 
             <DealRow
               key={`${deal.productId}-${i}`}
               name={deal.name}
+              imageUrl={deal.imageUrl}
               oldPrice={deal.oldPrice}
               newPrice={deal.newPrice}
               retailerName={deal.retailerName}

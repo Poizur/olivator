@@ -28,6 +28,7 @@ export interface OilCardData {
 export interface DealData {
   productId: string
   name: string
+  imageUrl: string | null
   oldPrice: number
   newPrice: number
   dropPct: number
@@ -225,7 +226,7 @@ export async function pickDeals(
   for (let i = 0; i < productIds.length; i += BATCH) {
     const { data } = await supabaseAdmin
       .from('products')
-      .select('id, slug, name, name_short, status, olivator_score')
+      .select('id, slug, name, name_short, status, olivator_score, image_url')
       .in('id', productIds.slice(i, i + BATCH))
     if (data) allProductsData.push(...(data as Record<string, unknown>[]))
   }
@@ -236,6 +237,7 @@ export async function pickDeals(
     name_short: string | null
     status: string
     olivator_score: number
+    image_url: string | null
   }>()
   for (const p of productsData ?? []) {
     productMap.set(p.id as string, {
@@ -244,6 +246,7 @@ export async function pickDeals(
       name_short: p.name_short as string | null,
       status: p.status as string,
       olivator_score: p.olivator_score as number,
+      image_url: (p.image_url as string | null) ?? null,
     })
   }
 
@@ -252,7 +255,7 @@ export async function pickDeals(
     retailer_id: string
     price: number
     retailer: { name: string; slug: string; is_active: boolean; commissionPct: number }
-    product: { slug: string; name: string; name_short: string | null; olivator_score: number }
+    product: { slug: string; name: string; name_short: string | null; olivator_score: number; image_url: string | null }
   }
 
   const candidates: DealData[] = []
@@ -277,6 +280,7 @@ export async function pickDeals(
         name: product.name,
         name_short: product.name_short,
         olivator_score: product.olivator_score,
+        image_url: product.image_url,
       },
     }
 
@@ -295,7 +299,19 @@ export async function pickDeals(
     }
   }
 
+  const week7ago = new Date(Date.now() - 7 * 86400000).toISOString()
+
   for (const offer of byProduct.values()) {
+    // Aktivita check — produkt musí mít ≥2 záznamy za posledních 7 dní u tohoto retailera.
+    // Filtruje phantom listingy kde retailer drží in_stock=true ale produkt je fakticky nedostupný.
+    const { count: recentCount } = await supabaseAdmin
+      .from('price_history')
+      .select('*', { count: 'exact', head: true })
+      .eq('product_id', offer.product_id)
+      .eq('retailer_id', offer.retailer_id)
+      .gte('recorded_at', week7ago)
+    if ((recentCount ?? 0) < 2) continue
+
     // Najdi 90d max cenu u STEJNÉHO retailera — cross-retailer srovnání by vyvolalo
     // falešné "poklesy" (jiný retailer měl vždy jinou cenu, není to sleva)
     const { data: history } = await supabaseAdmin
@@ -333,6 +349,7 @@ export async function pickDeals(
     candidates.push({
       productId: offer.product_id,
       name: productName,
+      imageUrl: offer.product.image_url,
       oldPrice: maxPrice,
       newPrice: offer.price,
       dropPct: Math.round(dropPct),

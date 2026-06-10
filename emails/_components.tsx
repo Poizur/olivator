@@ -198,6 +198,7 @@ export function OilCard({
 // ── Compact deal row — pro slevový radar (3-5 položek pod sebou) ───────────
 interface DealRowProps {
   name: string
+  imageUrl?: string | null
   oldPrice: number
   newPrice: number
   retailerName: string
@@ -208,6 +209,7 @@ interface DealRowProps {
 
 export function DealRow({
   name,
+  imageUrl,
   oldPrice,
   newPrice,
   retailerName,
@@ -216,31 +218,47 @@ export function DealRow({
 }: DealRowProps) {
   const discountPct = Math.round(((oldPrice - newPrice) / oldPrice) * 100)
   return (
-    <Section className="my-2">
+    <Section className="my-1">
       <table width="100%" cellPadding={0} cellSpacing={0} role="presentation" style={{ borderCollapse: 'collapse' }}>
         <tbody>
           <tr>
-            <td valign="top" style={{ padding: '12px 0', borderTop: '1px solid #e8e8ed' }}>
-              <Text className="text-[14px] font-medium text-text m-0 leading-tight">
+            {/* Thumbnail */}
+            <td width="52" valign="middle" style={{ padding: '10px 10px 10px 0', borderTop: '1px solid #e8e8ed' }}>
+              {imageUrl ? (
+                <Img
+                  src={imageUrl}
+                  alt={name}
+                  width={44}
+                  height={52}
+                  style={{ width: '44px', height: '52px', objectFit: 'contain', borderRadius: '6px', border: '1px solid #e8e8ed', background: '#fff' }}
+                />
+              ) : (
+                <div style={{ width: '44px', height: '52px', borderRadius: '6px', background: '#f5f5f7', border: '1px solid #e8e8ed', display: 'inline-block' }} />
+              )}
+            </td>
+            {/* Název + kontext */}
+            <td valign="middle" style={{ padding: '10px 8px', borderTop: '1px solid #e8e8ed' }}>
+              <Text className="text-[13px] font-medium text-text m-0 leading-tight">
                 {name}
               </Text>
               {context && (
-                <Text className="text-[11px] text-text3 m-0 mt-1">{context}</Text>
+                <Text className="text-[11px] text-text3 m-0 mt-0.5">{context}</Text>
               )}
             </td>
-            <td valign="top" align="right" style={{ padding: '12px 0', borderTop: '1px solid #e8e8ed', whiteSpace: 'nowrap' }}>
+            {/* Cena + CTA */}
+            <td valign="middle" align="right" style={{ padding: '10px 0', borderTop: '1px solid #e8e8ed', whiteSpace: 'nowrap' }}>
               <Text className="text-[11px] text-text3 line-through m-0 leading-tight">
                 {oldPrice} Kč
               </Text>
               <Text className="text-[15px] font-bold text-text m-0 leading-tight">
                 {newPrice} Kč
               </Text>
-              <Text className="text-[10px] text-terra font-semibold m-0 mt-0.5">
+              <Text className="text-[10px] font-semibold m-0 mt-0.5" style={{ color: '#c4711a' }}>
                 -{discountPct}%
               </Text>
               <Link
                 href={ctaUrl}
-                className="text-[11px] text-olive font-medium"
+                style={{ fontSize: '11px', color: '#2d6a4f', fontWeight: 500 }}
               >
                 {retailerName} →
               </Link>
