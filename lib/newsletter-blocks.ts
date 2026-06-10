@@ -67,17 +67,24 @@ function buildAffiliateUrl(retailerSlug: string, productSlug: string, utmContent
 //
 // Důvod: Supabase nested select `retailers ( ... )` může vrátit null pokud
 // FK constraint není v DB schématu. Bezpečnější: 2 separate queries + Map.
-async function loadRetailerMap(): Promise<Map<string, { name: string; slug: string; is_active: boolean }>> {
-  const { data } = await supabaseAdmin.from('retailers').select('id, name, slug, is_active')
-  const map = new Map<string, { name: string; slug: string; is_active: boolean }>()
+async function loadRetailerMap(): Promise<Map<string, { name: string; slug: string; is_active: boolean; commissionPct: number }>> {
+  const { data } = await supabaseAdmin.from('retailers').select('id, name, slug, is_active, default_commission_pct')
+  const map = new Map<string, { name: string; slug: string; is_active: boolean; commissionPct: number }>()
   for (const r of data ?? []) {
     map.set(r.id as string, {
       name: r.name as string,
       slug: r.slug as string,
       is_active: r.is_active as boolean,
+      commissionPct: (r.default_commission_pct as number | null) ?? 0,
     })
   }
   return map
+}
+
+/** Efektivní cena pro porovnání nabídek — vyšší komise = nižší efektivní cena = preferovaný.
+ *  Váha 0.5 znamená: retailer s 10% komisí vyhraje nad 5% levnějším (ale ne 6%+). */
+function effectivePrice(price: number, commissionPct: number): number {
+  return price * (1 - commissionPct * 0.005)
 }
 
 // Map brand by slug (products.brand_slug → brands.slug). Není FK přes brand_id.
@@ -142,12 +149,16 @@ export async function pickOilOfTheWeek(
       }))
       .filter((o) => o.retailer !== null) as Array<{
         price: number
-        retailer: { name: string; slug: string; is_active: boolean }
+        retailer: { name: string; slug: string; is_active: boolean; commissionPct: number }
       }>
 
     if (enriched.length === 0) continue
-    // Preferuj is_active retailera, fallback jakýkoliv
-    const cheapest = enriched.find((o) => o.retailer.is_active) ?? enriched[0]
+    // Seřaď podle efektivní ceny (komise váha 0.5) — is_active retailer má přednost
+    const active = enriched.filter((o) => o.retailer.is_active)
+    const pool = active.length > 0 ? active : enriched
+    const cheapest = pool.sort(
+      (a, b) => effectivePrice(a.price, a.retailer.commissionPct) - effectivePrice(b.price, b.retailer.commissionPct)
+    )[0]
 
     // Min cena 30d (drop kontext)
     const { data: history } = await supabaseAdmin
@@ -233,7 +244,7 @@ export async function pickDeals(
   interface OfferData {
     product_id: string
     price: number
-    retailer: { name: string; slug: string; is_active: boolean }
+    retailer: { name: string; slug: string; is_active: boolean; commissionPct: number }
     product: { slug: string; name: string; name_short: string | null; olivator_score: number }
   }
 
@@ -265,10 +276,12 @@ export async function pickDeals(
     if (!existing) {
       byProduct.set(productId, candidate)
     } else {
-      // Preferuj active retailer; pokud oba stejné, levnější
+      // Preferuj active retailer; pak efektivní cena (komise-weighted)
       const existingActive = existing.retailer.is_active
       const newActive = candidate.retailer.is_active
-      if ((newActive && !existingActive) || (newActive === existingActive && candidate.price < existing.price)) {
+      const newEffective = effectivePrice(candidate.price, candidate.retailer.commissionPct)
+      const existingEffective = effectivePrice(existing.price, existing.retailer.commissionPct)
+      if ((newActive && !existingActive) || (newActive === existingActive && newEffective < existingEffective)) {
         byProduct.set(productId, candidate)
       }
     }
@@ -351,12 +364,21 @@ export async function pickTipProduct(
     .eq('product_id', product.id)
     .eq('in_stock', true)
     .order('price', { ascending: true })
-    .limit(1)
 
   if (!offers || offers.length === 0) return null
 
-  const offer = offers[0]
-  const retailer = retailerMap.get(offer.retailer_id as string)
+  const enrichedOffers = offers
+    .map((o) => ({ price: o.price as number, retailer: retailerMap.get(o.retailer_id as string) ?? null }))
+    .filter((o) => o.retailer !== null) as Array<{ price: number; retailer: { name: string; slug: string; is_active: boolean; commissionPct: number } }>
+
+  if (enrichedOffers.length === 0) return null
+
+  const active = enrichedOffers.filter((o) => o.retailer.is_active)
+  const pool = active.length > 0 ? active : enrichedOffers
+  const offer = pool.sort(
+    (a, b) => effectivePrice(a.price, a.retailer.commissionPct) - effectivePrice(b.price, b.retailer.commissionPct)
+  )[0]
+  const retailer = offer.retailer
   if (!retailer) return null
 
   const brand = product.brand_slug ? brandMap.get(product.brand_slug as string) ?? null : null
