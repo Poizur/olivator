@@ -144,11 +144,27 @@ export async function composeWeeklyDraft(): Promise<ComposedDraft> {
     getSetting<string>('newsletter_tip_message').catch(() => ''),
   ])
 
+  // Produkty z posledních 8 draftů — vyloučit z Oleje týdne aby se neopakoval
+  const { data: recentDrafts } = await supabaseAdmin
+    .from('newsletter_drafts')
+    .select('blocks')
+    .in('status', ['sent', 'approved', 'draft'])
+    .order('created_at', { ascending: false })
+    .limit(8)
+
+  const recentlyFeaturedIds: string[] = (recentDrafts ?? []).flatMap((d) => {
+    const b = (d.blocks ?? {}) as Record<string, unknown>
+    return [
+      (b.oilOfWeek as { productId?: string } | null)?.productId,
+      (b.tipProduct as { productId?: string } | null)?.productId,
+    ].filter(Boolean) as string[]
+  })
+
   // 2. Pick blocks (parallel)
   // Deals threshold 5 % — pro malou DB s krátkou price history. Až bude
   // dostatek dat, nastav vyšší (10-15 %) v admin/newsletter/settings.
   const [oilOfWeek, tipProduct, deals, newArrival, recipe, fact] = await Promise.all([
-    pickOilOfTheWeek([], pinnedSlug || undefined),
+    pickOilOfTheWeek(recentlyFeaturedIds, pinnedSlug || undefined),
     tipSlug ? pickTipProduct(tipSlug, tipMessage) : Promise.resolve(null),
     pickDeals(5, 5),
     pickNewArrival(),
