@@ -218,12 +218,18 @@ export async function pickDeals(
 
   if (!offers || offers.length === 0) return []
 
-  // Načti products data (status + name) jednou
+  // Načti products data (status + name) jednou — po dávkách (Supabase .in() limit ~60 UUID)
   const productIds = Array.from(new Set(offers.map((o) => o.product_id as string)))
-  const { data: productsData } = await supabaseAdmin
-    .from('products')
-    .select('id, slug, name, name_short, status, olivator_score')
-    .in('id', productIds)
+  const BATCH = 60
+  const allProductsData: Record<string, unknown>[] = []
+  for (let i = 0; i < productIds.length; i += BATCH) {
+    const { data } = await supabaseAdmin
+      .from('products')
+      .select('id, slug, name, name_short, status, olivator_score')
+      .in('id', productIds.slice(i, i + BATCH))
+    if (data) allProductsData.push(...(data as Record<string, unknown>[]))
+  }
+  const productsData = allProductsData
   const productMap = new Map<string, {
     slug: string
     name: string
@@ -243,6 +249,7 @@ export async function pickDeals(
 
   interface OfferData {
     product_id: string
+    retailer_id: string
     price: number
     retailer: { name: string; slug: string; is_active: boolean; commissionPct: number }
     product: { slug: string; name: string; name_short: string | null; olivator_score: number }
@@ -262,6 +269,7 @@ export async function pickDeals(
 
     const candidate: OfferData = {
       product_id: productId,
+      retailer_id: o.retailer_id as string,
       price: o.price as number,
       retailer,
       product: {
@@ -288,11 +296,13 @@ export async function pickDeals(
   }
 
   for (const offer of byProduct.values()) {
-    // Najdi 90d max cenu pro tento produkt
+    // Najdi 90d max cenu u STEJNÉHO retailera — cross-retailer srovnání by vyvolalo
+    // falešné "poklesy" (jiný retailer měl vždy jinou cenu, není to sleva)
     const { data: history } = await supabaseAdmin
       .from('price_history')
       .select('price, recorded_at')
       .eq('product_id', offer.product_id)
+      .eq('retailer_id', offer.retailer_id)
       .gte('recorded_at', new Date(Date.now() - 90 * 86400000).toISOString())
       .order('price', { ascending: false })
       .limit(1)
@@ -303,12 +313,15 @@ export async function pickDeals(
 
     const dropPct = ((maxPrice - offer.price) / maxPrice) * 100
     if (dropPct < minDropPct) continue
+    // Cap 50 % — vyšší hodnoty jsou téměř vždy datová anomálie (jiný objem, chybný import)
+    if (dropPct > 50) continue
 
-    // Najdi 90d minimum (jestli jsme na minimu)
+    // Najdi 90d minimum u stejného retailera
     const { data: minHistory } = await supabaseAdmin
       .from('price_history')
       .select('price')
       .eq('product_id', offer.product_id)
+      .eq('retailer_id', offer.retailer_id)
       .gte('recorded_at', new Date(Date.now() - 90 * 86400000).toISOString())
       .order('price', { ascending: true })
       .limit(1)
