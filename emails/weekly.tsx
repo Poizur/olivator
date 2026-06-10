@@ -25,6 +25,7 @@ interface Props {
     oilOfWeek: OilCardData | null
     tipProduct: OilCardData | null
     deals: DealData[]
+    valuePicks: OilCardData[]
     newArrival: OilCardData | null
     recipe: RecipeData | null
     fact: FactData | null
@@ -32,7 +33,7 @@ interface Props {
 }
 
 export function WeeklyEmail({ preheader, hook, unsubscribeUrl, blocks }: Props) {
-  const { oilOfWeek, tipProduct, deals, newArrival, recipe, fact } = blocks
+  const { oilOfWeek, tipProduct, deals, valuePicks, newArrival, recipe, fact } = blocks
 
   return (
     <NewsletterLayout preheader={preheader} unsubscribeUrl={unsubscribeUrl}>
@@ -100,6 +101,31 @@ export function WeeklyEmail({ preheader, hook, unsubscribeUrl, blocks }: Props) 
               retailerName={deal.retailerName}
               ctaUrl={deal.ctaUrl}
               context={deal.context}
+            />
+          ))}
+        </>
+      )}
+
+      {/* Tipy týdne — fallback když žádné slevy */}
+      {deals.length === 0 && valuePicks.length > 0 && (
+        <>
+          <EmailSectionHeader
+            emoji="🌿"
+            title="Tipy týdne"
+            lead="Tento týden bez výrazných cenových pohybů — ale tyhle oleje za pozornost stojí."
+          />
+          {valuePicks.map((pick) => (
+            <OilCard
+              key={pick.productId}
+              imageUrl={pick.imageUrl}
+              name={pick.name}
+              brandName={pick.brandName}
+              score={pick.score}
+              price={pick.price}
+              oldPrice={null}
+              retailerName={pick.retailerName}
+              ctaUrl={pick.ctaUrl}
+              reasoning={pick.reasoning ?? undefined}
             />
           ))}
         </>

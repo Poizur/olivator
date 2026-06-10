@@ -14,6 +14,7 @@ import {
   pickOilOfTheWeek,
   pickTipProduct,
   pickDeals,
+  pickValuePicks,
   pickNewArrival,
   pickFact,
   pickRecipe,
@@ -39,6 +40,7 @@ export interface WeeklyBlocks {
   oilOfWeek: OilCardData | null
   tipProduct: OilCardData | null
   deals: DealData[]
+  valuePicks: OilCardData[]
   newArrival: OilCardData | null
   recipe: RecipeData | null
   fact: FactData | null
@@ -176,10 +178,17 @@ export async function composeWeeklyDraft(): Promise<ComposedDraft> {
   const excludeIds = [oilOfWeek?.productId, tipProduct?.productId].filter(Boolean) as string[]
   const filteredDeals = deals.filter((d) => !excludeIds.includes(d.productId))
 
+  // Fallback tipy — zobrazí se jen když žádné reálné slevy nejsou
+  const dealsFiltered = filteredDeals.slice(0, 5)
+  const valuePicks = dealsFiltered.length === 0
+    ? await pickValuePicks([...excludeIds, ...recentlyFeaturedIds], 3)
+    : []
+
   const blocks: WeeklyBlocks = {
     oilOfWeek,
     tipProduct,
-    deals: filteredDeals.slice(0, 5),
+    deals: dealsFiltered,
+    valuePicks,
     newArrival: newArrival && !excludeIds.includes(newArrival.productId) ? newArrival : null,
     recipe,
     fact,

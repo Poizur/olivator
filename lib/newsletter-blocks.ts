@@ -400,6 +400,72 @@ export async function pickTipProduct(
   }
 }
 
+// ── 2c. Value picks — fallback když žádné slevy ───────────────────────────
+//
+// Vrátí top N produktů seřazených dle skóre × komise váha, s aktivní nabídkou.
+// Používá se jako "Tipy týdne" když pickDeals vrátí prázdné pole.
+export async function pickValuePicks(
+  excludeProductIds: string[] = [],
+  limit = 3
+): Promise<OilCardData[]> {
+  const [retailerMap, brandMap] = await Promise.all([loadRetailerMap(), loadBrandMap()])
+
+  const { data: products } = await supabaseAdmin
+    .from('products')
+    .select('id, slug, name, name_short, image_url, olivator_score, brand_slug')
+    .eq('status', 'active')
+    .not('olivator_score', 'is', null)
+    .order('olivator_score', { ascending: false })
+    .limit(40)
+
+  if (!products) return []
+
+  const result: OilCardData[] = []
+
+  for (const p of products) {
+    if (result.length >= limit) break
+    if (excludeProductIds.includes(p.id as string)) continue
+
+    const { data: offers } = await supabaseAdmin
+      .from('product_offers')
+      .select('price, retailer_id')
+      .eq('product_id', p.id)
+      .eq('in_stock', true)
+
+    if (!offers || offers.length === 0) continue
+
+    const enriched = offers
+      .map((o) => ({ price: o.price as number, retailer: retailerMap.get(o.retailer_id as string) ?? null }))
+      .filter((o) => o.retailer !== null) as Array<{ price: number; retailer: { name: string; slug: string; is_active: boolean; commissionPct: number } }>
+
+    if (enriched.length === 0) continue
+    const active = enriched.filter((o) => o.retailer.is_active)
+    const pool = active.length > 0 ? active : enriched
+    const best = pool.sort(
+      (a, b) => effectivePrice(a.price, a.retailer.commissionPct) - effectivePrice(b.price, b.retailer.commissionPct)
+    )[0]
+
+    const brand = p.brand_slug ? brandMap.get(p.brand_slug as string) ?? null : null
+
+    result.push({
+      productId: p.id as string,
+      slug: p.slug as string,
+      name: getDisplayName(p as { name_short: string | null; name: string }),
+      brandName: brand?.name ?? null,
+      imageUrl: p.image_url as string | null,
+      score: p.olivator_score as number,
+      price: best.price,
+      oldPrice: null,
+      retailerName: best.retailer.name,
+      retailerSlug: best.retailer.slug,
+      ctaUrl: buildAffiliateUrl(best.retailer.slug, p.slug as string, 'value_pick'),
+      reasoning: `Score ${p.olivator_score} — dlouhodobě stabilní cena.`,
+    })
+  }
+
+  return result
+}
+
 // ── 3. Premiéra — nejnovější active produkt ────────────────────────────────
 //
 // Najde produkty kde created_at < 30 dnů, status='active'. Bez score threshold —
