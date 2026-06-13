@@ -409,7 +409,11 @@ export default async function AnalyticsPage({
               const pct = (d.count / maxBar) * 100
               const isLast = i === data.byDay.length - 1
               return (
-                <div key={d.date} className="flex-1 relative group" title={`${d.date}: ${d.count}`}>
+                <div
+                  key={d.date}
+                  className="flex-1 h-full flex flex-col justify-end group"
+                  title={`${d.date}: ${d.count}`}
+                >
                   <div
                     className={`rounded-t-sm transition-colors ${isLast ? 'bg-olive-dark' : 'bg-olive'}`}
                     style={{ height: `${Math.max(pct, d.count > 0 ? 5 : 0)}%` }}
