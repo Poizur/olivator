@@ -6,6 +6,7 @@ import { BulkRescrapeButton } from './bulk-rescrape-button'
 import { BackfillDraftsButton } from './backfill-drafts-button'
 import { ProductsBulkTable } from './products-bulk-table'
 import { ProductsFilterPanel } from './products-filter-panel'
+import { BrandSelect } from './brand-select'
 import { StatusFilters } from '@/components/admin/status-filters'
 import { BulkFillSpecsButton } from '@/components/admin/bulk-fill-specs-button'
 import { AdminPagination } from '@/components/admin/admin-pagination'
@@ -123,8 +124,7 @@ export default async function AdminProductsPage({
 
   const VISIBLE_BRANDS = 15
   const visibleBrands = brands.slice(0, VISIBLE_BRANDS)
-  const hiddenBrands = brands.slice(VISIBLE_BRANDS)
-  const hasActiveInHidden = !!brand && hiddenBrands.some(([slug]) => slug === brand)
+  const hiddenBrands = brands.slice(VISIBLE_BRANDS).sort((a, b) => a[2].localeCompare(b[2], 'cs'))
 
   // Available types + origins for filter panel
   const availableTypes = [...new Set((typeRows.data ?? []).map((r) => r.type as string))].sort()
@@ -262,29 +262,14 @@ export default async function AdminProductsPage({
               Bez výrobce ({noBrandCount})
             </Link>
           )}
+          {hiddenBrands.length > 0 && (
+            <BrandSelect
+              currentParamsString={currentParamsString}
+              brands={hiddenBrands}
+              activeBrand={brand}
+            />
+          )}
         </div>
-        {hiddenBrands.length > 0 && (
-          <details className="mt-2" open={hasActiveInHidden}>
-            <summary className="text-[12px] text-olive cursor-pointer hover:underline select-none w-fit">
-              Další výrobci ({hiddenBrands.length})
-            </summary>
-            <div className="flex gap-2 flex-wrap items-center mt-2">
-              {hiddenBrands.map(([slug, count, label]) => (
-                <Link
-                  key={slug}
-                  href={brandHref(slug)}
-                  className={`text-[13px] px-3 py-1.5 rounded-full transition-colors ${
-                    brand === slug
-                      ? 'bg-olive text-white'
-                      : 'bg-white border border-off2 text-text2 hover:border-olive3 hover:text-olive'
-                  }`}
-                >
-                  {label} ({count})
-                </Link>
-              ))}
-            </div>
-          </details>
-        )}
       </div>
 
       {/* Advanced filters */}
