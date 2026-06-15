@@ -118,25 +118,26 @@ async function main() {
       { plainText: true }
     )
 
-    // Ulož draft do DB a pošli
-    const { id: draftId } = await saveDraftToDb('seasonal', {
+    // Ulož draft do DB a pošli — campaign_type musí být v CHECK (weekly|deals|harvest|alert)
+    const campaignType: 'weekly' | 'harvest' = requiredPref === 'harvest' ? 'harvest' : 'weekly'
+    const { id: draftId } = await saveDraftToDb(campaignType, {
       subject: email.subject_template as string,
       preheader: content.preheader,
       hook: intro,
-      html: draftHtml,
-      text: draftText,
+      htmlBody: draftHtml,
+      textBody: draftText,
       blocks: {},
     })
 
     const result = await sendDraft(draftId)
     if (result.ok) {
-      console.log(`[seasonal-dispatcher] ${email.email_key} — odesláno ${result.sentCount} subscribers`)
+      console.log(`[seasonal-dispatcher] ${email.email_key} — odesláno ${result.totalSent} subscribers`)
       await supabaseAdmin
         .from('seasonal_emails')
         .update({ last_sent_year: year })
         .eq('id', email.id)
     } else {
-      console.error(`[seasonal-dispatcher] ${email.email_key} — send failed: ${result.error}`)
+      console.error(`[seasonal-dispatcher] ${email.email_key} — send failed: ${result.errors.join('; ')}`)
     }
   }
 
