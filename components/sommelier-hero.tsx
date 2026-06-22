@@ -178,8 +178,8 @@ export function SommelierHero({
 
       <div className="px-6 md:px-10 py-5 md:py-6">
         <div className="max-w-[1280px] mx-auto">
-          <div className="flex items-center gap-5 mb-4">
-            <div className="hidden sm:block shrink-0 w-[80px] h-[80px] md:w-[100px] md:h-[100px] relative drop-shadow-xl">
+          <div className="flex items-start sm:items-center gap-3 sm:gap-5 mb-4">
+            <div className="shrink-0 w-12 h-12 sm:w-[80px] sm:h-[80px] md:w-[100px] md:h-[100px] relative drop-shadow-xl mt-1 sm:mt-0">
               <Image src="/olik.png" alt="Olík" fill sizes="(min-width: 768px) 100px, 80px" priority className="object-contain" />
             </div>
             <div className="flex-1 min-w-0">
