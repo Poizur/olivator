@@ -23,6 +23,7 @@
     "cron:seo-snapshot": "tsx scripts/cron/seo-snapshot.ts",
     "cron:auto-audit": "tsx scripts/cron/auto-audit.ts",
     "cron:proposal-audit": "tsx scripts/cron/proposal-audit.ts",
+    "cron:validate-tokens": "tsx scripts/cron/validate-tokens.ts",
     "audit:coverage": "tsx scripts/coverage-check.ts",
     "backfill:radar-articles": "tsx scripts/backfill-radar-articles.ts"
   },

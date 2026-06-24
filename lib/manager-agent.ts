@@ -297,13 +297,35 @@ Vrať JSON s ai_analysis (4-6 vět) + 3 actions.`
   })
   const text = extractText(res).trim()
   const cleaned = text.replace(/^```(?:json)?\s*/, '').replace(/\s*```\s*$/, '').trim()
-  const parsed = JSON.parse(cleaned) as {
-    ai_analysis?: string
-    actions?: SuggestedAction[]
-  }
-  return {
-    aiAnalysis: parsed.ai_analysis ?? '(prázdná analýza)',
-    suggestedActions: Array.isArray(parsed.actions) ? parsed.actions.slice(0, 3) : [],
+
+  try {
+    const parsed = JSON.parse(cleaned) as {
+      ai_analysis?: string
+      actions?: SuggestedAction[]
+    }
+    return {
+      aiAnalysis: parsed.ai_analysis ?? '(prázdná analýza)',
+      suggestedActions: Array.isArray(parsed.actions) ? parsed.actions.slice(0, 3) : [],
+    }
+  } catch (err) {
+    console.error('[manager] Claude response nebyl validní JSON:', err)
+    try {
+      await supabaseAdmin.from('agent_decisions').insert({
+        agent_name: 'manager',
+        decision_type: 'json_parse_failed',
+        payload: {
+          error: err instanceof Error ? err.message : String(err),
+          raw_response: cleaned.slice(0, 500),
+        },
+      })
+    } catch {
+      // log selhal — nesmí shodit celý report kvůli logování
+    }
+    // Graceful degradation (BUG-017 vzor) — report bez AI analýzy je lepší než žádný report
+    return {
+      aiAnalysis: '(AI analýza nebyla k dispozici — odpověď nebyla validní JSON, zaznamenáno v agent_decisions)',
+      suggestedActions: [],
+    }
   }
 }
 

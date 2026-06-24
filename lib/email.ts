@@ -341,3 +341,53 @@ export async function sendManagerReport(report: ManagerReport): Promise<void> {
   const sendResult = await sendViaResend(recipient, subject, html)
   await logNotification(recipient, subject, 'manager_report', html, sendResult)
 }
+
+export interface BrokenTokenReport {
+  articleSlug: string
+  brokenTokens: string[]
+  severity: 'critical' | 'warning'
+}
+
+/** Denní token-validator cron — alert na {{product:slug}} tokeny mířící na neexistující/neaktivní produkty. */
+export async function sendBrokenTokensAlert(reports: BrokenTokenReport[]): Promise<void> {
+  const recipient = await getSetting<string>('notification_email')
+  if (!recipient) return
+
+  const subject = `[Olivator] ${reports.length} ${reports.length === 1 ? 'článek' : 'článků'} s broken tokeny`
+
+  const rowsHtml = reports
+    .map(
+      (r) => `
+      <li style="margin-bottom:10px;padding:12px;background:#fafafa;border-radius:8px;border:1px solid #e8e8ed">
+        <div style="font-size:13px;font-weight:600;color:#1d1d1f">
+          <a href="https://olivator.cz/admin/articles/${r.articleSlug}" style="color:#2d6a4f">${r.articleSlug}</a>
+          <span style="${r.severity === 'critical' ? 'background:#fee;color:#c00;border:1px solid #fcc' : 'background:#fff8e6;color:#946800;border:1px solid #ffd966'};padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase;margin-left:6px">${r.severity}</span>
+        </div>
+        <div style="font-size:12px;color:#6e6e73;margin-top:4px">${r.brokenTokens.join(', ')}</div>
+      </li>`
+    )
+    .join('')
+
+  const html = `<!DOCTYPE html>
+<html lang="cs"><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#fafafa">
+<div style="background:white;border-radius:12px;padding:32px;border:1px solid #e8e8ed">
+  <h1 style="font-size:20px;color:#c4711a;margin:0 0 8px">⚠️ Broken produktové tokeny</h1>
+  <p style="color:#6e6e73;font-size:14px;margin:0 0 24px">${reports.length} aktivních článků odkazuje na neexistující nebo neaktivní produkty.</p>
+
+  <ul style="list-style:none;padding:0;margin:0">${rowsHtml}</ul>
+
+  <div style="text-align:center;margin-top:24px">
+    <a href="https://olivator.cz/admin/articles" style="display:inline-block;background:#2d6a4f;color:white;text-decoration:none;padding:12px 24px;border-radius:24px;font-size:14px;font-weight:500">
+      Otevřít články →
+    </a>
+  </div>
+
+  <p style="font-size:11px;color:#aeaeb2;margin-top:32px;border-top:1px solid #e8e8ed;padding-top:16px">
+    Generováno automaticky cron:validate-tokens (denně 07:00 UTC).
+  </p>
+</div>
+</body></html>`.trim()
+
+  const sendResult = await sendViaResend(recipient, subject, html)
+  await logNotification(recipient, subject, 'broken_tokens_alert', html, sendResult)
+}
