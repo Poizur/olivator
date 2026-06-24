@@ -62,6 +62,7 @@ interface RetailerRow {
 interface OfferRow {
   product_id: string
   affiliate_url: string | null
+  retailer: { base_tracking_url: string | null } | null
 }
 interface DiscoveryRow {
   status: string
@@ -126,11 +127,15 @@ async function gatherMetrics(): Promise<ManagerMetrics> {
     .slice(0, 5)
 
   // ── Offers bez affiliate URL ──
+  // L-010: offer je "skutečně bez affiliate" jen pokud nemá explicit affiliate_url
+  // ANI retailer.base_tracking_url template — ten řeší komisi runtime přes /go/ route.
   const { data: allOffers } = await supabaseAdmin
     .from('product_offers')
-    .select('product_id, affiliate_url')
+    .select('product_id, affiliate_url, retailer:retailers(base_tracking_url)')
     .returns<OfferRow[]>()
-  const offersWithoutAffiliate = (allOffers ?? []).filter((o) => !o.affiliate_url).length
+  const offersWithoutAffiliate = (allOffers ?? []).filter(
+    (o) => !o.affiliate_url && !o.retailer?.base_tracking_url
+  ).length
   const totalOffers = allOffers?.length ?? 0
 
   // ── Discovery ──
