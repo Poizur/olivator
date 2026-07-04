@@ -7,6 +7,8 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
 const nextConfig: NextConfig = {
   async redirects() {
     return [
+      // Italská žebříčková kanibalizace — 2026-07-03
+      { source: '/zebricek/nejlepsi-italsky-olej', destination: '/zebricek/nejlepsi-italsky-olivovy-olej', permanent: true },
       // Kanibalizace merge — 2026-06-01
       { source: '/pruvodce/olivovy-olej-a-zdravi-veda-2026', destination: '/pruvodce/je-olivovy-olej-zdravy',   permanent: true },
       // Sitia mis-kategorizace (T-08/T-15) — 2026-06-24
