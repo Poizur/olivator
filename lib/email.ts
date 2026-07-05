@@ -348,33 +348,66 @@ export interface BrokenTokenReport {
   severity: 'critical' | 'warning'
 }
 
-/** Denní token-validator cron — alert na {{product:slug}} tokeny mířící na neexistující/neaktivní produkty. */
-export async function sendBrokenTokensAlert(reports: BrokenTokenReport[]): Promise<void> {
+export interface HealedTokenReport {
+  articleSlug: string
+  replacements: Array<{ oldToken: string; newToken: string }>
+}
+
+/** Denní token-validator cron — alert na broken tokeny + přehled auto-healed náhrad. */
+export async function sendBrokenTokensAlert(
+  reports: BrokenTokenReport[],
+  healed: HealedTokenReport[] = [],
+): Promise<void> {
   const recipient = await getSetting<string>('notification_email')
   if (!recipient) return
 
-  const subject = `[Olivator] ${reports.length} ${reports.length === 1 ? 'článek' : 'článků'} s broken tokeny`
+  const hasManual = reports.length > 0
+  const hasHealed = healed.length > 0
 
-  const rowsHtml = reports
-    .map(
-      (r) => `
-      <li style="margin-bottom:10px;padding:12px;background:#fafafa;border-radius:8px;border:1px solid #e8e8ed">
-        <div style="font-size:13px;font-weight:600;color:#1d1d1f">
-          <a href="https://olivator.cz/admin/articles/${r.articleSlug}" style="color:#2d6a4f">${r.articleSlug}</a>
-          <span style="${r.severity === 'critical' ? 'background:#fee;color:#c00;border:1px solid #fcc' : 'background:#fff8e6;color:#946800;border:1px solid #ffd966'};padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase;margin-left:6px">${r.severity}</span>
-        </div>
-        <div style="font-size:12px;color:#6e6e73;margin-top:4px">${r.brokenTokens.join(', ')}</div>
-      </li>`
-    )
-    .join('')
+  const subjectParts: string[] = []
+  if (hasManual) subjectParts.push(`${reports.length} vyžaduje ruční zásah`)
+  if (hasHealed) subjectParts.push(`${healed.length} auto-healed`)
+  const subject = `[Olivator] Broken tokeny: ${subjectParts.join(', ')}`
+
+  const manualHtml = hasManual
+    ? `
+  <h2 style="font-size:15px;color:#c4711a;margin:0 0 12px">⚠️ Vyžaduje ruční zásah (${reports.length})</h2>
+  <ul style="list-style:none;padding:0;margin:0 0 24px">
+    ${reports.map((r) => `
+    <li style="margin-bottom:10px;padding:12px;background:#fafafa;border-radius:8px;border:1px solid #e8e8ed">
+      <div style="font-size:13px;font-weight:600;color:#1d1d1f">
+        <a href="https://olivator.cz/admin/articles/${r.articleSlug}" style="color:#2d6a4f">${r.articleSlug}</a>
+        <span style="${r.severity === 'critical' ? 'background:#fee;color:#c00;border:1px solid #fcc' : 'background:#fff8e6;color:#946800;border:1px solid #ffd966'};padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase;margin-left:6px">${r.severity}</span>
+      </div>
+      <div style="font-size:12px;color:#6e6e73;margin-top:4px">${r.brokenTokens.join(', ')}</div>
+    </li>`).join('')}
+  </ul>`
+    : ''
+
+  const healedHtml = hasHealed
+    ? `
+  <h2 style="font-size:15px;color:#2d6a4f;margin:0 0 12px">✅ Auto-healed (${healed.length})</h2>
+  <ul style="list-style:none;padding:0;margin:0 0 24px">
+    ${healed.map((h) => `
+    <li style="margin-bottom:10px;padding:12px;background:#f0faf4;border-radius:8px;border:1px solid #b7e4c7">
+      <div style="font-size:13px;font-weight:600;color:#1b4332">
+        <a href="https://olivator.cz/admin/articles/${h.articleSlug}" style="color:#2d6a4f">${h.articleSlug}</a>
+      </div>
+      <div style="font-size:12px;color:#40916c;margin-top:4px">
+        ${h.replacements.map((rep) => `${rep.oldToken} → ${rep.newToken}`).join('<br>')}
+      </div>
+    </li>`).join('')}
+  </ul>`
+    : ''
 
   const html = `<!DOCTYPE html>
 <html lang="cs"><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#fafafa">
 <div style="background:white;border-radius:12px;padding:32px;border:1px solid #e8e8ed">
-  <h1 style="font-size:20px;color:#c4711a;margin:0 0 8px">⚠️ Broken produktové tokeny</h1>
-  <p style="color:#6e6e73;font-size:14px;margin:0 0 24px">${reports.length} aktivních článků odkazuje na neexistující nebo neaktivní produkty.</p>
+  <h1 style="font-size:20px;color:#1d1d1f;margin:0 0 8px">🔗 Token validátor</h1>
+  <p style="color:#6e6e73;font-size:14px;margin:0 0 24px">Denní kontrola {{product:}} tokenů v aktivních článcích.</p>
 
-  <ul style="list-style:none;padding:0;margin:0">${rowsHtml}</ul>
+  ${healedHtml}
+  ${manualHtml}
 
   <div style="text-align:center;margin-top:24px">
     <a href="https://olivator.cz/admin/articles" style="display:inline-block;background:#2d6a4f;color:white;text-decoration:none;padding:12px 24px;border-radius:24px;font-size:14px;font-weight:500">
