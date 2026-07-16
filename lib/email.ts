@@ -424,3 +424,41 @@ export async function sendBrokenTokensAlert(
   const sendResult = await sendViaResend(recipient, subject, html)
   await logNotification(recipient, subject, 'broken_tokens_alert', html, sendResult)
 }
+
+export async function sendBriefNotification(info: {
+  briefId: string
+  weekLabel: string
+  decisionCount: number
+}): Promise<void> {
+  const recipient = await getSetting<string>('notification_email')
+  if (!recipient) return
+
+  const briefUrl = `https://olivator.cz/admin/brief`
+  const subject = `[Olivator] Týdenní brief ${info.weekLabel} — ${info.decisionCount} rozhodnutí čeká`
+
+  const html = `<!DOCTYPE html>
+<html lang="cs"><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#fafafa">
+<div style="background:white;border-radius:12px;padding:32px;border:1px solid #e8e8ed">
+  <h1 style="font-size:20px;color:#1d1d1f;margin:0 0 8px">📋 AI Ředitel — ${info.weekLabel}</h1>
+  <p style="color:#6e6e73;font-size:14px;margin:0 0 24px">Týdenní executive brief je připraven.</p>
+
+  <div style="background:#f5f5f7;border-radius:10px;padding:20px;margin-bottom:24px">
+    <div style="font-size:28px;font-weight:700;color:#2d6a4f;text-align:center">${info.decisionCount}</div>
+    <div style="font-size:13px;color:#6e6e73;text-align:center;margin-top:4px">rozhodnutí čeká na tvůj vstup</div>
+  </div>
+
+  <div style="text-align:center">
+    <a href="${briefUrl}" style="display:inline-block;background:#2d6a4f;color:white;text-decoration:none;padding:14px 32px;border-radius:24px;font-size:15px;font-weight:600">
+      Otevřít brief →
+    </a>
+  </div>
+
+  <p style="font-size:11px;color:#aeaeb2;margin-top:32px;border-top:1px solid #e8e8ed;padding-top:16px">
+    Generováno automaticky cron:executive-brief (neděle 20:00 UTC). ID: ${info.briefId.slice(0, 8)}
+  </p>
+</div>
+</body></html>`.trim()
+
+  const sendResult = await sendViaResend(recipient, subject, html)
+  await logNotification(recipient, subject, 'executive_brief', html, sendResult)
+}

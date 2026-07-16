@@ -106,6 +106,7 @@ export async function AdminSidebar() {
           ],
         },
         { href: '/admin/manager', label: 'Manager Agent' },
+        { href: '/admin/brief', label: '📋 AI Ředitel' },
       ],
     },
     {
