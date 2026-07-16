@@ -18,6 +18,7 @@ const CATEGORY_ICON: Record<string, string> = {
   tech: '⚙️',
   newsletter: '📨',
   catalog: '📦',
+  growth: '📈',
 }
 
 export default async function BriefPage() {
@@ -83,6 +84,13 @@ export default async function BriefPage() {
 
       {briefJson && (
         <>
+          {/* TL;DR */}
+          {briefJson.tldr && (
+            <div className="bg-olive text-white rounded-2xl px-5 py-4 text-[14px] font-medium leading-snug">
+              {briefJson.tldr}
+            </div>
+          )}
+
           {/* STAV */}
           <section>
             <h2 className="text-[11px] font-bold text-text3 uppercase tracking-widest mb-3">Stav</h2>

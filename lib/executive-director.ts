@@ -32,7 +32,7 @@ export interface BriefDecision {
   options: DecisionOption[]
   recommended_option: string
   priority: 'high' | 'medium' | 'low'
-  category: 'seo' | 'content' | 'affiliate' | 'product' | 'tech'
+  category: 'seo' | 'content' | 'affiliate' | 'product' | 'tech' | 'newsletter' | 'catalog' | 'growth'
   learning_applied: string | null   // kód lekce (L-001...) nebo null
 }
 
@@ -44,13 +44,14 @@ export interface BriefMetric {
 }
 
 export interface BriefJson {
+  tldr: string        // 1 věta + počet čekajících akcí
   stav: {
     summary: string
     metrics: BriefMetric[]
   }
   ceka: string[]      // co čeká na akci (bez rozhodnutí)
-  nasel: string[]     // anomálie / překvapivé nálezy
-  posun: string       // co se zásadně změnilo oproti minulému týdnu
+  nasel: string[]     // anomálie / překvapivé nálezy (max 3)
+  posun: string       // co se zásadně změnilo (max 3 odrážky)
   rozhodnuti: BriefDecision[]
   pamet: {
     learnings_used: string[]   // kódy lekcí (L-001...)
@@ -296,14 +297,14 @@ Hlavní problémy: 490 nabídek bez affiliate URL, 8 GSC kliků (malý web), 5 s
 
 Vygeneruj KOMPLETNÍ JSON brief (striktně valid JSON, ŽÁDNÉ markdown code blocks):
 {
+  "tldr": "Tento týden: [1 věta co je nejdůležitější — konkrétní číslo nebo akce] + [N akcí čeká na tebe]",
   "stav": {
-    "summary": "3 věty: stav webu, co funguje, co havaruje",
+    "summary": "2 věty max: co funguje a co je kritické",
     "metrics": [
       {"label": "Affiliate kliky (7d)", "value": X, "unit": "kliků", "note": "kontextová poznámka"},
+      {"label": "GSC kliky (7d)", "value": X, "unit": "kliků", "note": "avg pozice X.X"},
       {"label": "Nabídky bez affiliate", "value": X, "unit": "nabídek", "note": "X% z aktivních"},
-      {"label": "GSC kliky (7d)", "value": X, "unit": "kliků", "note": "..."},
-      {"label": "Aktivní produkty", "value": X},
-      {"label": "Newsletter subscribers", "value": X}
+      {"label": "Newsletter subscribers", "value": X, "note": "confirmed"}
     ]
   },
   "ceka": [
@@ -311,10 +312,11 @@ Vygeneruj KOMPLETNÍ JSON brief (striktně valid JSON, ŽÁDNÉ markdown code bl
     "..."
   ],
   "nasel": [
-    "Překvapivý/anomální nález z dat (konkrétní čísla, ne vágní pozorování)",
-    "..."
+    "Nejpalčivější nález č.1 — konkrétní čísla",
+    "Nejpalčivější nález č.2 — konkrétní čísla",
+    "Nejpalčivější nález č.3 — konkrétní čísla"
   ],
-  "posun": "1–2 věty: co se tenhle týden posunulo oproti předchozímu (commity, stav)",
+  "posun": "• Odrážka 1 — co se posunulo (1 věta)\n• Odrážka 2 — commity / změny (1 věta)\n• Odrážka 3 — trend (1 věta)",
   "rozhodnuti": [
     {
       "key": "kebab-klic",
@@ -341,9 +343,13 @@ Vygeneruj KOMPLETNÍ JSON brief (striktně valid JSON, ŽÁDNÉ markdown code bl
   }
 }
 
-Počet rozhodnutí: přesně 5 (seřaď: high priority → medium → low).
-Vždy uveď ROI a čas — admin potřebuje vědět cost/benefit.
-Pokud jsi použil lekci z LEKCE K POUŽITÍ sekce, uveď její kód v learning_applied.`
+PRAVIDLA:
+- tldr: přesně 1 věta + "X akcí čeká" — skenovatelné za 5 sekund
+- stav.metrics: přesně 4 položky v tomto pořadí (affiliate kliky, GSC kliky, nabídky bez affiliate, subscribers)
+- nasel: přesně 3 body, jen nejpalčivější — žádná nízko-prioritní pozorování
+- posun: přesně 3 odrážky (•), každá max 1 věta
+- rozhodnuti: přesně 5, seřaď high → medium → low, každé s ROI a čas
+- Pokud jsi použil lekci z LEKCE K POUŽITÍ sekce, uveď její kód v learning_applied.`
 }
 
 // ── AI generation + token tracking ───────────────────────────────────────────
