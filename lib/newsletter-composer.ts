@@ -149,7 +149,7 @@ export async function composeWeeklyDraft(): Promise<ComposedDraft> {
   // Produkty z posledních 8 draftů — vyloučit z Oleje týdne aby se neopakoval
   const { data: recentDrafts } = await supabaseAdmin
     .from('newsletter_drafts')
-    .select('blocks')
+    .select('blocks, status')
     .in('status', ['sent', 'approved', 'draft'])
     .order('created_at', { ascending: false })
     .limit(8)
@@ -162,13 +162,48 @@ export async function composeWeeklyDraft(): Promise<ComposedDraft> {
     ].filter(Boolean) as string[]
   })
 
+  // T-18: Brand + cultivar LRU exclusion
+  // Picual (a jiné odrůdy s 10+ variantami) by prošla productId exclusion, ale
+  // brand/cultivar exclusion ji zachytí i u jiného balení či varianty.
+  const sentDrafts = (recentDrafts ?? [])
+    .filter((d) => d.status === 'sent' || d.status === 'approved')
+    .slice(0, 4)
+  const sentProductIds = sentDrafts.flatMap((d) => {
+    const b = (d.blocks ?? {}) as Record<string, unknown>
+    const pid = (b.oilOfWeek as { productId?: string } | null)?.productId
+    return pid ? [pid] : []
+  })
+
+  let recentBrandSlugs: string[] = []
+  let recentCultivarSlugs: string[] = []
+  if (sentProductIds.length > 0) {
+    const brandProductIds = sentProductIds.slice(0, 2)   // brand: posledních 2 drafty
+    const cultivarProductIds = sentProductIds.slice(0, 3) // cultivar: posledních 3 drafty
+    const [brandRows, cultivarRows] = await Promise.all([
+      supabaseAdmin
+        .from('products')
+        .select('brand_slug')
+        .in('id', brandProductIds)
+        .not('brand_slug', 'is', null),
+      supabaseAdmin
+        .from('product_cultivars')
+        .select('cultivar_slug')
+        .in('product_id', cultivarProductIds),
+    ])
+    recentBrandSlugs = (brandRows.data ?? []).map((p) => p.brand_slug as string).filter(Boolean)
+    recentCultivarSlugs = (cultivarRows.data ?? []).map((c) => c.cultivar_slug as string).filter(Boolean)
+    if (recentBrandSlugs.length > 0 || recentCultivarSlugs.length > 0) {
+      console.log(`[composer] T-18 LRU exclusion — brands: [${recentBrandSlugs.join(', ')}], cultivars: [${recentCultivarSlugs.join(', ')}]`)
+    }
+  }
+
   // 2. Pick blocks (parallel)
   // Deals threshold 5 % — pro malou DB s krátkou price history. Až bude
   // dostatek dat, nastav vyšší (10-15 %) v admin/newsletter/settings.
   const [oilOfWeek, tipProduct, deals, newArrival, recipe, fact] = await Promise.all([
-    pickOilOfTheWeek(recentlyFeaturedIds, pinnedSlug || undefined),
+    pickOilOfTheWeek(recentlyFeaturedIds, pinnedSlug || undefined, recentBrandSlugs, recentCultivarSlugs),
     tipSlug ? pickTipProduct(tipSlug, tipMessage) : Promise.resolve(null),
-    pickDeals(5, 5),
+    pickDeals(5, 5, [], recentBrandSlugs, recentCultivarSlugs),
     pickNewArrival(),
     pickRecipe(),
     pickFact(),

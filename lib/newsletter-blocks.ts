@@ -102,13 +102,15 @@ async function loadBrandMap(): Promise<Map<string, { name: string; slug: string 
 //
 // Strategie výběru:
 //  - Nejvyšší Score co MÁ aktivní nabídku (žádný hard threshold — bereme co máme)
-//  - Není ten samý jako minulý týden (LRU)
+//  - Není ten samý jako minulý týden (LRU) — podle productId, brand_slug i cultivar_slug
 //  - Preferuj olej co má drop > 10 % (vědět "proč právě teď")
 //
 // Returns null pouze pokud catalog je prázdný nebo nikdo nemá aktivní nabídku.
 export async function pickOilOfTheWeek(
   excludeProductIds: string[] = [],
-  forcedSlug?: string
+  forcedSlug?: string,
+  excludeBrandSlugs: string[] = [],
+  excludeCultivarSlugs: string[] = []
 ): Promise<OilCardData | null> {
   const [retailerMap, brandMap] = await Promise.all([loadRetailerMap(), loadBrandMap()])
 
@@ -129,8 +131,31 @@ export async function pickOilOfTheWeek(
 
   if (!products) return null
 
+  // T-18: Pre-load cultivar links pro všechny kandidáty (1 query, ne N)
+  const productCultivarMap = new Map<string, string[]>()
+  if (excludeCultivarSlugs.length > 0 && products.length > 0) {
+    const allProductIds = products.map((p) => p.id as string)
+    const { data: cultivarLinks } = await supabaseAdmin
+      .from('product_cultivars')
+      .select('product_id, cultivar_slug')
+      .in('product_id', allProductIds)
+    for (const link of cultivarLinks ?? []) {
+      const pid = link.product_id as string
+      const cslug = link.cultivar_slug as string
+      if (!productCultivarMap.has(pid)) productCultivarMap.set(pid, [])
+      productCultivarMap.get(pid)!.push(cslug)
+    }
+  }
+
   for (const p of products) {
     if (excludeProductIds.includes(p.id as string)) continue
+    // T-18: Brand exclusion — vylučuj celou značku, ne jen konkrétní produkt
+    if (excludeBrandSlugs.length > 0 && p.brand_slug && excludeBrandSlugs.includes(p.brand_slug as string)) continue
+    // T-18: Cultivar exclusion — vylučuj odrůdu (Picual má 10+ variant s různými ID)
+    if (excludeCultivarSlugs.length > 0) {
+      const pCultivars = productCultivarMap.get(p.id as string) ?? []
+      if (pCultivars.some((c) => excludeCultivarSlugs.includes(c))) continue
+    }
 
     // Načti všechny in_stock offers pro tento produkt
     const { data: offers } = await supabaseAdmin
@@ -207,7 +232,9 @@ export async function pickOilOfTheWeek(
 export async function pickDeals(
   minDropPct = 10,
   limit = 5,
-  excludeProductIds: string[] = []
+  excludeProductIds: string[] = [],
+  excludeBrandSlugs: string[] = [],
+  excludeCultivarSlugs: string[] = []
 ): Promise<DealData[]> {
   const retailerMap = await loadRetailerMap()
 
@@ -226,7 +253,7 @@ export async function pickDeals(
   for (let i = 0; i < productIds.length; i += BATCH) {
     const { data } = await supabaseAdmin
       .from('products')
-      .select('id, slug, name, name_short, status, olivator_score, image_url')
+      .select('id, slug, name, name_short, status, olivator_score, image_url, brand_slug')
       .in('id', productIds.slice(i, i + BATCH))
     if (data) allProductsData.push(...(data as Record<string, unknown>[]))
   }
@@ -238,6 +265,7 @@ export async function pickDeals(
     status: string
     olivator_score: number
     image_url: string | null
+    brand_slug: string | null
   }>()
   for (const p of productsData ?? []) {
     productMap.set(p.id as string, {
@@ -247,6 +275,7 @@ export async function pickDeals(
       status: p.status as string,
       olivator_score: p.olivator_score as number,
       image_url: (p.image_url as string | null) ?? null,
+      brand_slug: (p.brand_slug as string | null) ?? null,
     })
   }
 
@@ -256,6 +285,23 @@ export async function pickDeals(
     price: number
     retailer: { name: string; slug: string; is_active: boolean; commissionPct: number }
     product: { slug: string; name: string; name_short: string | null; olivator_score: number; image_url: string | null }
+  }
+
+  // T-18: Pre-load cultivar links pro deals kandidáty (batched — stejný limit jako products)
+  const dealCultivarMap = new Map<string, string[]>()
+  if (excludeCultivarSlugs.length > 0 && productIds.length > 0) {
+    for (let i = 0; i < productIds.length; i += BATCH) {
+      const { data: cultivarLinks } = await supabaseAdmin
+        .from('product_cultivars')
+        .select('product_id, cultivar_slug')
+        .in('product_id', productIds.slice(i, i + BATCH))
+      for (const link of cultivarLinks ?? []) {
+        const pid = link.product_id as string
+        const cslug = link.cultivar_slug as string
+        if (!dealCultivarMap.has(pid)) dealCultivarMap.set(pid, [])
+        dealCultivarMap.get(pid)!.push(cslug)
+      }
+    }
   }
 
   const candidates: DealData[] = []
@@ -269,6 +315,13 @@ export async function pickDeals(
     if (!product || !retailer) continue
     if (product.status !== 'active') continue
     if (excludeProductIds.includes(productId)) continue
+    // T-18: Brand exclusion pro deals
+    if (excludeBrandSlugs.length > 0 && product.brand_slug && excludeBrandSlugs.includes(product.brand_slug)) continue
+    // T-18: Cultivar exclusion pro deals (fallback pro brand_slug=null)
+    if (excludeCultivarSlugs.length > 0) {
+      const pCultivars = dealCultivarMap.get(productId) ?? []
+      if (pCultivars.some((c) => excludeCultivarSlugs.includes(c))) continue
+    }
 
     const candidate: OfferData = {
       product_id: productId,
