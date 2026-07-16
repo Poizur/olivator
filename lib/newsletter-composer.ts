@@ -150,7 +150,7 @@ export async function composeWeeklyDraft(): Promise<ComposedDraft> {
   const { data: recentDrafts } = await supabaseAdmin
     .from('newsletter_drafts')
     .select('blocks, status')
-    .in('status', ['sent', 'approved', 'draft'])
+    .in('status', ['sent', 'approved', 'draft', 'archived'])
     .order('created_at', { ascending: false })
     .limit(8)
 
@@ -165,8 +165,11 @@ export async function composeWeeklyDraft(): Promise<ComposedDraft> {
   // T-18: Brand + cultivar LRU exclusion
   // Picual (a jiné odrůdy s 10+ variantami) by prošla productId exclusion, ale
   // brand/cultivar exclusion ji zachytí i u jiného balení či varianty.
+  // "sent" i "archived" informují LRU — archivovaný draft byl vygenerován,
+  // admin ho zahodil (duplicita/kvalita), ale obsah stále ukazuje co systém
+  // nedávno nabídl. Bez toho by archivace shrinkovala LRU okno.
   const sentDrafts = (recentDrafts ?? [])
-    .filter((d) => d.status === 'sent' || d.status === 'approved')
+    .filter((d) => d.status === 'sent' || d.status === 'approved' || d.status === 'archived')
     .slice(0, 4)
   const sentProductIds = sentDrafts.flatMap((d) => {
     const b = (d.blocks ?? {}) as Record<string, unknown>
