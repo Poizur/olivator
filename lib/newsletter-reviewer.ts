@@ -10,6 +10,7 @@
 
 import { supabaseAdmin } from './supabase'
 import { runReview, type ReviewResult } from './ai-reviewer'
+import { getRelevantLearnings, recordApplication, formatLearningsForPrompt } from './learning-memory'
 
 interface DraftRow {
   id: string
@@ -83,14 +84,18 @@ Vrať POUZE čistý JSON (bez markdown kódu, bez komentářů):
 }
 
 export async function runNewsletterReview(draftId: string): Promise<ReviewResult> {
-  // Fetch current draft + posledních 8 (celkem max 9)
-  const { data: allDrafts } = await supabaseAdmin
-    .from('newsletter_drafts')
-    .select('id, subject, generated_at, blocks')
-    .in('status', ['sent', 'approved', 'draft'])
-    .order('generated_at', { ascending: false })
-    .limit(9)
+  // Fetch current draft + posledních 8 (celkem max 9) + relevantní lekce
+  const [draftsResult, relevantLearnings] = await Promise.all([
+    supabaseAdmin
+      .from('newsletter_drafts')
+      .select('id, subject, generated_at, blocks')
+      .in('status', ['sent', 'approved', 'draft'])
+      .order('generated_at', { ascending: false })
+      .limit(9),
+    getRelevantLearnings({ keywords: ['newsletter', 'lru', 'cultivar', 'diversity', 'repeat'], limit: 4 }),
+  ])
 
+  const allDrafts = draftsResult.data
   if (!allDrafts || allDrafts.length === 0) {
     return { verdict: 'ok', issues: [], summary: 'Žádná historická data k porovnání.' }
   }
@@ -101,8 +106,21 @@ export async function runNewsletterReview(draftId: string): Promise<ReviewResult
   const current = extractMeta(currentRow as DraftRow)
   const history = historyRows.map(d => extractMeta(d as DraftRow))
 
-  const prompt = buildPrompt(current, history)
-  return runReview({ agentName: 'newsletter-reviewer', prompt })
+  const learningContext = formatLearningsForPrompt(relevantLearnings)
+  const prompt = buildPrompt(current, history) + learningContext
+  const result = await runReview({ agentName: 'newsletter-reviewer', prompt })
+
+  // Zaloguj aplikaci lekcí do learning_applications (fire-and-forget)
+  for (const l of relevantLearnings) {
+    recordApplication({
+      learningId: l.id,
+      agentName: 'newsletter-reviewer',
+      context: `draft_id=${draftId}, oil=${current.oilName}, verdict=${result.verdict}`,
+      decisionMade: `Reviewer použil lekci ${l.code} při kontrole draftu`,
+    }).catch(() => null)
+  }
+
+  return result
 }
 
 export async function patchDraftReviewerNotes(draftId: string, review: ReviewResult): Promise<void> {
