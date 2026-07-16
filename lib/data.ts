@@ -273,6 +273,7 @@ export const getProductsWithOffers = cache(async (): Promise<Array<Product & { c
   const { data, error } = await supabaseAdmin
     .from('product_offers')
     .select(`id, product_id, retailer_id, price, currency, in_stock, product_url, affiliate_url, commission_pct, retailer:retailers(${RETAILER_PUBLIC_COLUMNS})`)
+    .not('price', 'is', null)
     .order('price', { ascending: true })
   if (error) throw error
 

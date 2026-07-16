@@ -46,9 +46,19 @@ export default async function Home() {
   const productLookup: Record<string, ProductWithOffer> = {}
   for (const p of allProducts) productLookup[p.slug] = p
 
+  // Dedup by name_short — jeden produkt per name_short (nejvyšší score vyhraje)
+  const _nsMap = new Map<string, ProductWithOffer>()
+  for (const p of allProducts) {
+    const key = p.nameShort ?? p.name
+    if (!_nsMap.has(key) || ((_nsMap.get(key)!.olivatorScore ?? 0) < (p.olivatorScore ?? 0))) {
+      _nsMap.set(key, p)
+    }
+  }
+  const dedupedByNameShort = Array.from(_nsMap.values())
+
   // Top 12 olejů této chvíle (2×6 grid) — max 2 per brand
   const topTwelve = diverseTopProducts(
-    allProducts.filter((p) => p.cheapestOffer != null && p.olivatorScore != null && p.olivatorScore > 0),
+    dedupedByNameShort.filter((p) => p.cheapestOffer != null && p.olivatorScore != null && p.olivatorScore > 0),
     12,
     2,
   )
