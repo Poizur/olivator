@@ -4,7 +4,6 @@
 // vrátí brief se sekcemi STAV/ČEKÁ/NAŠEL/POSUN/ROZHODNUTÍ/PAMĚŤ.
 // Cron: neděle 20:00 UTC (0 20 * * 0).
 
-import { execSync } from 'child_process'
 import { callClaude, extractText } from './anthropic'
 import { supabaseAdmin } from './supabase'
 import { fetchGscSummary } from './gsc'
@@ -190,14 +189,23 @@ async function collectCronStatus(): Promise<object> {
 }
 
 async function collectGit(): Promise<object> {
+  const token = process.env.GITHUB_TOKEN
+  if (!token) return { available: false, reason: 'GITHUB_TOKEN missing' }
   try {
-    const log = execSync('git log --oneline -7 --no-merges', {
-      cwd: process.env.REPO_PATH ?? '/Users/martinnavratil/Desktop/Projekty/olivator',
-      timeout: 5000,
-    }).toString().trim()
-    return { lastCommits: log.split('\n').map((line) => line.trim()) }
-  } catch {
-    return { available: false }
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    const res = await fetch(
+      `https://api.github.com/repos/Poizur/olivator/commits?since=${since}&per_page=20`,
+      { headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'olivator-agent' } }
+    )
+    if (!res.ok) return { available: false, reason: `GitHub API ${res.status}` }
+    const commits = (await res.json()) as Array<{ sha: string; commit: { message: string } }>
+    const lastCommits = commits
+      .map((c) => `${c.sha.slice(0, 7)} ${c.commit.message.split('\n')[0]}`)
+      .filter((msg) => !msg.includes('Merge '))
+      .slice(0, 7)
+    return { lastCommits }
+  } catch (e) {
+    return { available: false, reason: (e as Error).message }
   }
 }
 
@@ -327,7 +335,7 @@ Vygeneruj KOMPLETNÍ JSON brief (striktně valid JSON, ŽÁDNÉ markdown code bl
       "options": [
         {"label": "ANO", "description": "Přesně co se udělá", "impact": "Měřitelný dopad"},
         {"label": "NE", "description": "Co se nestane / alternativa", "impact": "Co promarníme"},
-        {"label": "SPÄTER", "description": "Podmínky pro odložení", "impact": "Risk čekání"}
+        {"label": "POZDĚJI", "description": "Podmínky pro odložení", "impact": "Risk čekání"}
       ],
       "recommended_option": "ANO",
       "priority": "high",

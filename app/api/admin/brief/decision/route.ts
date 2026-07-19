@@ -5,7 +5,7 @@ import { isAdminAuthenticated } from '@/lib/admin-auth'
 export const dynamic = 'force-dynamic'
 
 // PATCH /api/admin/brief/decision
-// Body: { decisionId, choice: 'ANO' | 'NE' | 'SPÄTER' | string, note?: string }
+// Body: { decisionId, choice: 'ANO' | 'NE' | 'POZDĚJI' | string, note?: string }
 export async function PATCH(req: NextRequest) {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

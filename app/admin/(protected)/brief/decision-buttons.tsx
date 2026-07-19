@@ -17,7 +17,7 @@ interface Props {
 const CHOICE_STYLE: Record<string, { bg: string; text: string; border: string }> = {
   ANO: { bg: 'bg-olive/10', text: 'text-olive font-semibold', border: 'border-olive' },
   NE: { bg: 'bg-red-50', text: 'text-red-700 font-semibold', border: 'border-red-300' },
-  SPÄTER: { bg: 'bg-amber-50', text: 'text-amber-700 font-semibold', border: 'border-amber-300' },
+  POZDĚJI: { bg: 'bg-amber-50', text: 'text-amber-700 font-semibold', border: 'border-amber-300' },
 }
 
 export function DecisionButtons({ decisionId, options, currentChoice }: Props) {
