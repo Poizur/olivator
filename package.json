@@ -26,7 +26,8 @@
     "cron:validate-tokens": "tsx scripts/cron/validate-tokens.ts",
     "cron:executive-brief": "tsx --env-file=.env.local scripts/cron/executive-brief.ts",
     "audit:coverage": "tsx scripts/coverage-check.ts",
-    "backfill:radar-articles": "tsx scripts/backfill-radar-articles.ts"
+    "backfill:radar-articles": "tsx scripts/backfill-radar-articles.ts",
+    "cron:executor": "tsx scripts/cron/executor.ts"
   },
   "engines": {
     "node": ">=20.18.0"
