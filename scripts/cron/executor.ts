@@ -22,7 +22,13 @@ async function main() {
   const ruleArg = args.find(a => a.startsWith('--rule='))
   const ruleFilter = ruleArg ? ruleArg.split('=')[1] : undefined
   const maxArg = args.find(a => a.startsWith('--max='))
-  const maxOps = maxArg ? parseInt(maxArg.split('=')[1], 10) : 50
+  const raw = maxArg ? parseInt(maxArg.split('=')[1], 10) : 50
+  const maxOps = Number.isFinite(raw) && raw > 0 ? Math.min(raw, 100) : 50
+  if (!Number.isFinite(maxOps) || maxOps <= 0) {
+    console.error('[executor] Neplatný limit, končím')
+    process.exit(1)
+  }
+  console.log(`[executor] efektivní limit: ${maxOps} operací`)
 
   const killTimer = setTimeout(() => {
     console.error('[executor] TIMEOUT — exceeded 15 min, forcing exit')
