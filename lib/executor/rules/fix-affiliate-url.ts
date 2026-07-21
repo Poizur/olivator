@@ -97,7 +97,7 @@ const fixAffiliateUrl: ExecutorRule = {
             targetId: offerId,
             targetSlug: productSlug,
             fieldChanged: 'affiliate_url',
-            valueBefore: null ?? undefined,
+            valueBefore: undefined,
             valueAfter: affiliateUrl,
             verifiedAtSource: true,
             sourceUrl: productUrl,
