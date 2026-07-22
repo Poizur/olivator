@@ -1,4 +1,4 @@
-import type { Element } from 'cheerio'
+import type { Element } from 'domhandler'
 import type { ScanRule, Finding } from '../types'
 
 // Matches: "0 Kč", "0,00 Kč", "0.00 Kč", "0 €" — but NOT "100 Kč" etc.

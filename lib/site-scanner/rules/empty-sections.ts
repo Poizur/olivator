@@ -1,4 +1,4 @@
-import type { Element } from 'cheerio'
+import type { Element } from 'domhandler'
 import type { ScanRule, Finding } from '../types'
 
 // Min visible text length that means "section has content"

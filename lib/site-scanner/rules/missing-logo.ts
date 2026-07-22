@@ -1,4 +1,4 @@
-import type { Element } from 'cheerio'
+import type { Element } from 'domhandler'
 import type { ScanRule, Finding } from '../types'
 
 // Only check on pages where retailer logos are expected (product detail with price table)
