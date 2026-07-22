@@ -504,3 +504,38 @@ export async function sendBriefErrorNotification(info: {
   const sendResult = await sendViaResend(recipient, subject, html)
   await logNotification(recipient, subject, 'executive_brief_error', html, sendResult)
 }
+
+/** Send notification when Executor auto-triggered from a brief decision fails. */
+export async function sendExecutionFailedNotification(info: {
+  decisionId: string
+  rule: string
+  error: string
+}): Promise<void> {
+  const recipient = await getSetting<string>('notification_email')
+  if (!recipient) return
+
+  const subject = `[Olivator] Executor selhal — ${info.rule}`
+  const html = `<!DOCTYPE html>
+<html lang="cs"><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#fafafa">
+<div style="background:white;border-radius:12px;padding:32px;border:1px solid #e8e8ed">
+  <h1 style="font-size:20px;color:#c4711a;margin:0 0 16px">⚙️ Executor selhal</h1>
+  <p style="color:#6e6e73;font-size:14px;margin:0 0 16px">
+    Automatické spuštění pravidla <strong>${info.rule}</strong> selhalo po rozhodnutí ANO.
+  </p>
+  <div style="background:#fee;border-left:4px solid #c00;padding:12px 16px;border-radius:6px;font-size:13px;color:#600;margin-bottom:20px;word-break:break-all">
+    ${info.error}
+  </div>
+  <p style="font-size:13px;color:#6e6e73;margin:0 0 20px">
+    Decision ID: <code style="background:#f5f5f7;padding:2px 6px;border-radius:4px;font-size:12px">${info.decisionId}</code>
+  </p>
+  <div style="text-align:center">
+    <a href="https://olivator.cz/admin/brief" style="display:inline-block;background:#c4711a;color:white;text-decoration:none;padding:12px 28px;border-radius:20px;font-size:14px;font-weight:600">
+      Zkontrolovat brief →
+    </a>
+  </div>
+</div>
+</body></html>`.trim()
+
+  const sendResult = await sendViaResend(recipient, subject, html)
+  await logNotification(recipient, subject, 'executor_failed', html, sendResult)
+}

@@ -33,6 +33,7 @@ export interface BriefDecision {
   priority: 'high' | 'medium' | 'low'
   category: 'seo' | 'content' | 'affiliate' | 'product' | 'tech' | 'newsletter' | 'catalog' | 'growth'
   learning_applied: string | null   // kód lekce (L-001...) nebo null
+  executor_rule: 'fix_affiliate_url' | 'recalc_score' | null  // auto-spuštění po ANO
 }
 
 export interface BriefMetric {
@@ -359,7 +360,8 @@ Vygeneruj KOMPLETNÍ JSON brief (striktně valid JSON, ŽÁDNÉ markdown code bl
       "recommended_option": "ANO",
       "priority": "high",
       "category": "affiliate",
-      "learning_applied": "L-XXX nebo null"
+      "learning_applied": "L-XXX nebo null",
+      "executor_rule": "fix_affiliate_url"
     }
   ],
   "pamet": {
@@ -379,7 +381,8 @@ PRAVIDLA:
 - Pokud jsi použil lekci z LEKCE K POUŽITÍ sekce, uveď její kód v learning_applied.
 - options.label: použij VÝHRADNĚ přesně tyto tři řetězce: "ANO", "NE", "ODLOŽIT". Žádná jiná slova, žádné cizí jazyky.
 - recommended_option musí být jedno z: "ANO", "NE", "ODLOŽIT".
-- affiliate nabídky: rozlišuj "opravitelné Executorem" (retailer má eHUB tracking) vs. "bez affiliate programu". Celkové číslo bez affiliate neznamená ztracený revenue — většina jsou retaileři bez affiliate programu (viz L-010).`
+- affiliate nabídky: rozlišuj "opravitelné Executorem" (retailer má eHUB tracking) vs. "bez affiliate programu". Celkové číslo bez affiliate neznamená ztracený revenue — většina jsou retaileři bez affiliate programu (viz L-010).
+- executor_rule: pokud kategorie="affiliate" a chceš spustit opravu affiliate URL, uveď "fix_affiliate_url". Pokud kategorie="catalog" nebo "katalog" nebo "product" a chceš přepočítat skóre, uveď "recalc_score". Ve všech ostatních případech uveď null. NIKDY nevymýšlej jiné hodnoty — executor_rule smí být VÝHRADNĚ: "fix_affiliate_url", "recalc_score", nebo null.`
 }
 
 
@@ -552,6 +555,7 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
   const briefId = brief.id as string
 
   if (briefJson?.rozhodnuti?.length) {
+    const VALID_EXECUTOR_RULES = ['fix_affiliate_url', 'recalc_score']
     const rows = briefJson.rozhodnuti.map((d) => ({
       brief_id: briefId,
       decision_key: d.key,
@@ -561,6 +565,7 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
       recommended_option: d.recommended_option,
       priority: d.priority,
       category: d.category,
+      executor_rule: VALID_EXECUTOR_RULES.includes(d.executor_rule ?? '') ? d.executor_rule : null,
     }))
     await supabaseAdmin.from('weekly_decisions').upsert(rows, { onConflict: 'brief_id,decision_key' })
   }

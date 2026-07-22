@@ -210,6 +210,8 @@ export default async function BriefPage() {
                         decisionId={dbRow.id as string}
                         options={d.options}
                         currentChoice={dbRow.admin_choice as string | null}
+                        executorRule={(dbRow.executor_rule as string | null) ?? null}
+                        executedAt={(dbRow.executed_at as string | null) ?? null}
                       />
                     ) : (
                       <div className="text-[12px] text-text3 italic">Brief nebyl uložen do DB (dry-run?)</div>
@@ -219,6 +221,25 @@ export default async function BriefPage() {
               })}
             </div>
           </section>
+
+          {/* PROVEDENÉ AKCE — rozhodnutí kde executor proběhl */}
+          {(decisions ?? []).some((d) => d.executed_at) && (
+            <section>
+              <h2 className="text-[11px] font-bold text-text3 uppercase tracking-widest mb-3">Provedené akce</h2>
+              <div className="space-y-2">
+                {(decisions ?? [])
+                  .filter((d) => d.executed_at)
+                  .map((d) => (
+                    <div key={d.id as string} className="flex items-center gap-3 bg-olive4/30 border border-olive5 rounded-xl px-4 py-2.5 text-[12px]">
+                      <span className="text-olive">⚙️</span>
+                      <span className="font-medium text-text flex-1">{d.title as string}</span>
+                      <span className="text-text3 font-mono text-[11px]">{d.executor_rule as string}</span>
+                      <span className="text-text3">{new Date(d.executed_at as string).toLocaleString('cs-CZ')}</span>
+                    </div>
+                  ))}
+              </div>
+            </section>
+          )}
 
           {/* PAMĚŤ */}
           {(briefJson.pamet?.learnings_used?.length > 0 || briefJson.pamet?.patterns_noted?.length > 0) && (

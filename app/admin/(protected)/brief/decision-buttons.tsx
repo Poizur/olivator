@@ -8,10 +8,19 @@ interface Option {
   impact: string
 }
 
+interface ExecutorSummary {
+  applied: number
+  skipped: number
+  failed: number
+  totalOps: number
+}
+
 interface Props {
   decisionId: string
   options: Option[]
   currentChoice: string | null
+  executorRule: string | null
+  executedAt: string | null
 }
 
 const CHOICE_STYLE: Record<string, { bg: string; text: string; border: string }> = {
@@ -20,15 +29,22 @@ const CHOICE_STYLE: Record<string, { bg: string; text: string; border: string }>
   ODLOŽIT: { bg: 'bg-amber-50', text: 'text-amber-700 font-semibold', border: 'border-amber-300' },
 }
 
-export function DecisionButtons({ decisionId, options, currentChoice }: Props) {
+export function DecisionButtons({ decisionId, options, currentChoice, executorRule, executedAt }: Props) {
   const [chosen, setChosen] = useState<string | null>(currentChoice)
   const [loading, setLoading] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [executorState, setExecutorState] = useState<'idle' | 'running' | 'done' | 'failed'>(
+    executedAt ? 'done' : 'idle'
+  )
+  const [executorSummary, setExecutorSummary] = useState<ExecutorSummary | null>(null)
+  const [executorError, setExecutorError] = useState<string | null>(null)
 
   async function handleChoice(label: string) {
     if (chosen === label) return
     setLoading(label)
     setError(null)
+    if (label === 'ANO' && executorRule) setExecutorState('running')
+
     try {
       const res = await fetch('/api/admin/brief/decision', {
         method: 'PATCH',
@@ -36,9 +52,30 @@ export function DecisionButtons({ decisionId, options, currentChoice }: Props) {
         body: JSON.stringify({ decisionId, choice: label }),
       })
       if (!res.ok) throw new Error(await res.text())
+
+      const data = (await res.json()) as {
+        ok: boolean
+        executorTriggered?: boolean
+        executorReport?: ExecutorSummary
+        executorError?: string
+        dedupSkip?: boolean
+      }
       setChosen(label)
+
+      if (data.executorTriggered) {
+        if (data.executorError) {
+          setExecutorState('failed')
+          setExecutorError(data.executorError)
+        } else {
+          setExecutorState('done')
+          setExecutorSummary(data.executorReport ?? null)
+        }
+      } else if (label === 'ANO' && executorRule) {
+        setExecutorState('idle')
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Chyba')
+      setExecutorState('idle')
     } finally {
       setLoading(null)
     }
@@ -75,6 +112,32 @@ export function DecisionButtons({ decisionId, options, currentChoice }: Props) {
       {chosen && !loading && (
         <div className="text-[12px] text-text3">
           {options.find((o) => o.label === chosen)?.impact}
+        </div>
+      )}
+
+      {/* Executor feedback — viditelné jen pro ANO + pravidla s auto-akcí */}
+      {executorRule && chosen === 'ANO' && (
+        <div className="mt-1.5">
+          {executorState === 'running' && (
+            <span className="inline-flex items-center gap-1.5 text-[12px] text-text2">
+              <span className="inline-block animate-spin">⚙️</span> Spouštím executor...
+            </span>
+          )}
+          {executorState === 'done' && executorSummary && (
+            <span className="inline-flex items-center gap-1.5 text-[12px] text-olive">
+              ⚙️ {executorSummary.applied} opraveno
+              {executorSummary.failed > 0 && <span className="text-red-500">· {executorSummary.failed} selhalo</span>}
+              {executorSummary.skipped > 0 && <span className="text-text3">· {executorSummary.skipped} přeskočeno</span>}
+            </span>
+          )}
+          {executorState === 'done' && !executorSummary && executedAt && (
+            <span className="text-[12px] text-olive">
+              ⚙️ Executor proběhl {new Date(executedAt).toLocaleString('cs-CZ')}
+            </span>
+          )}
+          {executorState === 'failed' && (
+            <span className="text-[12px] text-red-600">⚠️ Executor selhal: {executorError}</span>
+          )}
         </div>
       )}
 
