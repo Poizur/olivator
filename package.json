@@ -27,7 +27,9 @@
     "cron:executive-brief": "tsx --env-file=.env.local scripts/cron/executive-brief.ts",
     "audit:coverage": "tsx scripts/coverage-check.ts",
     "backfill:radar-articles": "tsx scripts/backfill-radar-articles.ts",
-    "cron:executor": "tsx scripts/cron/executor.ts"
+    "cron:executor": "tsx scripts/cron/executor.ts",
+    "cron:recko-order-reminders": "tsx scripts/cron/recko-order-reminders.ts",
+    "cron:site-scanner": "tsx --env-file=.env.local scripts/cron/site-scanner.ts"
   },
   "engines": {
     "node": ">=20.18.0"

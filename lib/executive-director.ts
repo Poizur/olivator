@@ -75,6 +75,7 @@ export interface RawBriefData {
   git: object
   pendingDecisions: object
   learningStats: object
+  scanFindings: object
 }
 
 export interface GenerateBriefResult {
@@ -251,6 +252,22 @@ async function collectLearningStats(): Promise<object> {
   }
 }
 
+async function collectScanFindings(): Promise<object> {
+  const { data, error } = await supabaseAdmin
+    .from('site_scan_findings')
+    .select('finding_type, severity, url, detail')
+    .eq('status', 'open')
+    .order('created_at', { ascending: false })
+    .limit(10)
+  if (error) return { available: false, reason: error.message }
+  const findings = data ?? []
+  return {
+    total: findings.length,
+    high: findings.filter((f) => f.severity === 'high'),
+    medium: findings.filter((f) => f.severity === 'medium'),
+  }
+}
+
 // ── Prompt ────────────────────────────────────────────────────────────────────
 
 function buildPrompt(raw: RawBriefData, weekLabel: string, learningSummary: string): string {
@@ -261,6 +278,7 @@ function buildPrompt(raw: RawBriefData, weekLabel: string, learningSummary: stri
   const git = raw.git as Record<string, unknown>
   const pending = raw.pendingDecisions as Record<string, unknown>
   const ls = raw.learningStats as Record<string, unknown>
+  const scan = raw.scanFindings as Record<string, unknown>
   const scoreD = (catalog.scoreDistribution ?? {}) as Record<string, number>
   const affBreakdown = (affiliate.affiliateBreakdown ?? {}) as Record<string, number>
 
@@ -275,6 +293,10 @@ function buildPrompt(raw: RawBriefData, weekLabel: string, learningSummary: stri
   const lastCommits = (git.lastCommits as string[] ?? []).slice(0, 7).map((c) => `  - ${c}`).join('\n')
   const pendingItems = (pending.items as Array<{ title: string; priority: string; ageDays: number }> ?? [])
     .map((p) => `  - [${p.priority}, ${p.ageDays}d starý] ${p.title}`).join('\n')
+  const scanHigh = (scan.high as Array<{ finding_type: string; url: string; detail: string }> ?? [])
+    .map((f) => `  🔴 [${f.finding_type}] ${f.detail} — ${f.url.replace('https://olivator.cz', '')}`).join('\n')
+  const scanMedium = (scan.medium as Array<{ finding_type: string; url: string; detail: string }> ?? [])
+    .map((f) => `  🟡 [${f.finding_type}] ${f.detail} — ${f.url.replace('https://olivator.cz', '')}`).join('\n')
 
   return `Jsi AI Ředitel olivator.cz — největší srovnávač olivových olejů v ČR.
 Piš jako chytrý analytik se znalostí affiliate businessu. Jen fakta, žádné fráze.
@@ -314,6 +336,10 @@ Paměť lekcí: ${ls.totalApplications ?? 0} aplikací, ${ls.openPatternsAboveTh
 
 Poslední Git commity:
 ${lastCommits || '  (nedostupné)'}
+
+🔍 Co jsem našel na webu (Site Scanner, otevřené nálezy: ${scan.total ?? 0}):
+${scanHigh || '  (žádné high-severity nálezy)'}
+${scanMedium || '  (žádné medium-severity nálezy)'}
 
 ━━━ LEKCE K POUŽITÍ ━━━
 ${learningSummary || '(žádné relevantní lekce)'}
@@ -456,8 +482,8 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
   const { weekLabel, weekStart } = getWeekLabel()
   console.log(`[executive-director] Generuji brief ${weekLabel}${opts.dryRun ? ' (DRY-RUN)' : ''}${opts.testFailOpen ? ' (TEST-FAILOPEN)' : ''}...`)
 
-  // 8 zdrojů dat paralelně
-  const [gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats] = await Promise.all([
+  // 9 zdrojů dat paralelně
+  const [gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings] = await Promise.all([
     collectGsc().catch((e) => ({ error: (e as Error).message })),
     collectCatalog().catch((e) => ({ error: (e as Error).message })),
     collectAffiliate().catch((e) => ({ error: (e as Error).message })),
@@ -466,9 +492,10 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
     collectGit().catch((e) => ({ error: (e as Error).message })),
     collectPendingDecisions().catch((e) => ({ error: (e as Error).message })),
     collectLearningStats().catch((e) => ({ error: (e as Error).message })),
+    collectScanFindings().catch((e) => ({ error: (e as Error).message })),
   ])
 
-  const rawData: RawBriefData = { gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats }
+  const rawData: RawBriefData = { gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings }
   console.log('[executive-director] Data sesbírána')
 
   // Learning Memory Layer — inject relevantní lekce do promptu
