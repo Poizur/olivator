@@ -57,6 +57,7 @@ export interface BriefJson {
     learnings_used: string[]   // kódy lekcí (L-001...)
     patterns_noted: string[]   // nové patterny ke sledování
   }
+  systemTyden?: string  // 🤖 autonomní akce tohoto týdne — buildovány z agent_decisions
 }
 
 export interface TokenUsage {
@@ -77,6 +78,7 @@ export interface RawBriefData {
   learningStats: object
   scanFindings: object
   articleDrafts: object
+  autonomousActions: object
 }
 
 export interface GenerateBriefResult {
@@ -288,6 +290,111 @@ async function collectScanFindings(): Promise<object> {
     high: findings.filter((f) => f.severity === 'high'),
     medium: findings.filter((f) => f.severity === 'medium'),
   }
+}
+
+// ── Autonomní akce (agent_decisions posledních 7 dní) ─────────────────────────
+
+interface ActionHighlight {
+  agent: string
+  type: string
+  payload: Record<string, unknown>
+}
+
+async function collectAutonomousActions(): Promise<object> {
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const { data: actions, error } = await supabaseAdmin
+    .from('agent_decisions')
+    .select('agent_name, decision_type, payload, created_at')
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(500)
+  if (error || !actions?.length) return { total: 0, byAgent: {} as Record<string, Record<string, number>>, highlights: [] }
+
+  const byAgent: Record<string, Record<string, number>> = {}
+  const highlights: ActionHighlight[] = []
+
+  for (const a of actions) {
+    const agent = a.agent_name as string
+    const type = a.decision_type as string
+    if (!byAgent[agent]) byAgent[agent] = {}
+    byAgent[agent][type] = (byAgent[agent][type] ?? 0) + 1
+    if (highlights.length < 6 && (type === 'product_deactivated' || type === 'product_published' || type === 'product_reactivated')) {
+      highlights.push({ agent, type, payload: (a.payload ?? {}) as Record<string, unknown> })
+    }
+  }
+
+  return { total: actions.length, byAgent, highlights }
+}
+
+function buildSystemSection(autonomousActions: object): string {
+  const a = autonomousActions as {
+    total: number
+    byAgent: Record<string, Record<string, number>>
+    highlights: ActionHighlight[]
+  }
+  if (!a.total) return 'Tento týden žádné autonomní akce zaznamenány.'
+
+  const ag = a.byAgent ?? {}
+  const lines: string[] = []
+
+  const lrc = ag['link-rot-checker'] ?? {}
+  const lrcDeact = (lrc['offer_deactivated'] ?? 0) + (lrc['product_deactivated'] ?? 0)
+  const lrcReact = (lrc['offer_reactivated'] ?? 0) + (lrc['product_reactivated'] ?? 0)
+  if (lrcDeact + lrcReact > 0) {
+    const parts = []
+    if (lrcDeact > 0) parts.push(`${lrcDeact} deaktivací`)
+    if (lrcReact > 0) parts.push(`${lrcReact} reaktivací`)
+    lines.push(`Link-rot: ${parts.join(', ')}`)
+  }
+
+  const rep = ag['reprice'] ?? {}
+  const repriceChanges = rep['price_changed'] ?? 0
+  const repriceDeact = rep['offer_deactivated'] ?? 0
+  if (repriceChanges + repriceDeact > 0) {
+    const parts = []
+    if (repriceChanges > 0) parts.push(`${repriceChanges} změn cen`)
+    if (repriceDeact > 0) parts.push(`${repriceDeact} deaktivací po 404`)
+    lines.push(`Reprice: ${parts.join(', ')}`)
+  }
+
+  const audit = ag['auto-audit'] ?? {}
+  const auditPublish = audit['product_published'] ?? 0
+  const auditDeact = audit['product_deactivated'] ?? 0
+  if (auditPublish + auditDeact > 0) {
+    const parts = []
+    if (auditPublish > 0) parts.push(`${auditPublish} auto-publikováno`)
+    if (auditDeact > 0) parts.push(`${auditDeact} deaktivováno`)
+    lines.push(`Auto-audit: ${parts.join(', ')}`)
+  }
+
+  const disc = ag['discovery'] ?? {}
+  const discPublish = disc['product_published'] ?? 0
+  if (discPublish > 0) {
+    lines.push(`Discovery: ${discPublish} nových produktů auto-publikováno`)
+  }
+
+  const feed = ag['feed-sync'] ?? {}
+  const feedNew = feed['product_created'] ?? 0
+  if (feedNew > 0) {
+    lines.push(`Feed-sync: ${feedNew} nových draftů`)
+  }
+
+  if (lines.length === 0) return `${a.total} akcí zaznamenáno (žádné product-level změny).`
+
+  const highlights = (a.highlights ?? []).slice(0, 3)
+  let result = lines.join(' · ')
+  if (highlights.length > 0) {
+    const examples = highlights.map((h) => {
+      const p = h.payload
+      const slug = String(p.target_slug ?? p.product_slug ?? p.product_id ?? '').slice(0, 40)
+      if (h.type === 'product_deactivated') return `deakt: ${slug}`
+      if (h.type === 'product_published') return `pub: ${slug}`
+      if (h.type === 'product_reactivated') return `reak: ${slug}`
+      return slug
+    })
+    result += ` · Příklady: ${examples.join(', ')}`
+  }
+  return result
 }
 
 // ── Prompt ────────────────────────────────────────────────────────────────────
@@ -511,8 +618,8 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
   const { weekLabel, weekStart } = getWeekLabel()
   console.log(`[executive-director] Generuji brief ${weekLabel}${opts.dryRun ? ' (DRY-RUN)' : ''}${opts.testFailOpen ? ' (TEST-FAILOPEN)' : ''}...`)
 
-  // 10 zdrojů dat paralelně
-  const [gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts] = await Promise.all([
+  // 11 zdrojů dat paralelně
+  const [gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts, autonomousActions] = await Promise.all([
     collectGsc().catch((e) => ({ error: (e as Error).message })),
     collectCatalog().catch((e) => ({ error: (e as Error).message })),
     collectAffiliate().catch((e) => ({ error: (e as Error).message })),
@@ -523,9 +630,10 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
     collectLearningStats().catch((e) => ({ error: (e as Error).message })),
     collectScanFindings().catch((e) => ({ error: (e as Error).message })),
     collectArticleDrafts().catch((e) => ({ error: (e as Error).message })),
+    collectAutonomousActions().catch((e) => ({ error: (e as Error).message })),
   ])
 
-  const rawData: RawBriefData = { gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts }
+  const rawData: RawBriefData = { gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts, autonomousActions }
   console.log('[executive-director] Data sesbírána')
 
   // Learning Memory Layer — inject relevantní lekce do promptu
@@ -569,6 +677,11 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
     }
   }
 
+  // Připoj systemTyden sekci z agent_decisions (deterministická, ne AI)
+  if (briefJson) {
+    briefJson.systemTyden = buildSystemSection(rawData.autonomousActions)
+  }
+
   if (opts.dryRun) {
     console.log('\n════════════════════════════════════════')
     console.log('DRY-RUN: RAW DATA')
@@ -578,6 +691,10 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
     console.log('DRY-RUN: BRIEF JSON')
     console.log('════════════════════════════════════════')
     console.log(briefJson ? JSON.stringify(briefJson, null, 2) : '(AI generation failed — viz výše)')
+    console.log('\n════════════════════════════════════════')
+    console.log('🤖 SYSTÉM TENTO TÝDEN')
+    console.log('════════════════════════════════════════')
+    console.log(briefJson?.systemTyden ?? '(žádná data)')
     console.log('\n════════════════════════════════════════')
     console.log('DRY-RUN: TOKEN STATS')
     console.log('════════════════════════════════════════')

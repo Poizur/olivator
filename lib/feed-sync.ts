@@ -11,6 +11,7 @@
 // - draft user schválí v admin UI → status='active' → live na webu
 
 import { supabaseAdmin } from './supabase'
+import { logAgentAction } from './audit-log'
 import {
   isOliveOil,
   extractVolumeMl,
@@ -155,6 +156,18 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
       if (created) {
         result.productsCreated++
         newDraftIds.push(productId)
+        void logAgentAction({
+          agentName: 'feed-sync',
+          decisionType: 'product_created',
+          payload: {
+            product_id: productId,
+            target_slug: item.productName,
+            ean: item.ean || null,
+            retailer: retailer.slug,
+            after: 'draft',
+            reason: 'new_in_xml_feed',
+          },
+        })
       } else {
         result.productsExisting++
       }

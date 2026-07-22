@@ -29,6 +29,7 @@ import { scanLabReport, looksLikeLabReport } from './lab-report-agent'
 import { detectCertificationsInText } from './cert-detector'
 import { auditProduct, runPrePublishAudit } from './quality-rules'
 import { countryName } from './utils'
+import { logAgentAction } from './audit-log'
 
 export type CandidateStatus =
   | 'pending'
@@ -702,6 +703,19 @@ export async function publishCandidate(
         .from('products')
         .update({ status: 'active', updated_at: new Date().toISOString() })
         .eq('id', productId)
+      void logAgentAction({
+        agentName: 'discovery',
+        decisionType: 'product_published',
+        payload: {
+          product_id: productId,
+          target_slug: scraped.slug,
+          retailer: retailerSlug,
+          before: 'draft',
+          after: 'active',
+          reason: 'pre_publish_gate_passed',
+          score: score.total,
+        },
+      })
     } else {
       // Block: stay as draft, log reasons
       const reasons = gate.blockingErrors.map(e => `${e.ruleId}: ${e.message}`).join(' · ')

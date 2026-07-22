@@ -12,6 +12,7 @@
 // (řeší retailery bez affiliate programu — greekmarket, lozanocervenka atd.).
 
 import { supabaseAdmin } from './supabase'
+import { logAgentAction } from './audit-log'
 
 const REQUEST_TIMEOUT_MS = 12_000
 const POLITE_DELAY_MS = 800
@@ -155,6 +156,17 @@ export async function runLinkRotCheck(): Promise<LinkCheckResult> {
         result.reactivated++
         touchedProductIds.add(raw.product_id)
         console.log(`[link-check] reactivated ${product?.slug ?? raw.id}`)
+        void logAgentAction({
+          agentName: 'link-rot-checker',
+          decisionType: 'offer_reactivated',
+          payload: {
+            offer_id: raw.id,
+            target_slug: product?.slug ?? raw.id,
+            retailer: retailer?.name ?? 'unknown',
+            url,
+            reason: outcome.reason,
+          },
+        })
       }
 
       await supabaseAdmin.from('product_offers').update(update).eq('id', raw.id)
@@ -196,6 +208,19 @@ export async function runLinkRotCheck(): Promise<LinkCheckResult> {
           result.deactivated++
           touchedProductIds.add(raw.product_id)
           console.log(`[link-check] deactivated ${product?.slug ?? raw.id} after ${newFailCount} failures (${outcome.reason})`)
+          void logAgentAction({
+            agentName: 'link-rot-checker',
+            decisionType: 'offer_deactivated',
+            payload: {
+              offer_id: raw.id,
+              target_slug: product?.slug ?? raw.id,
+              retailer: retailer?.name ?? 'unknown',
+              url,
+              reason: outcome.reason,
+              status_code: outcome.statusCode,
+              fail_count: newFailCount,
+            },
+          })
         }
       } else {
         // 1.–2. selhání — varování, ale ještě nechceme
@@ -239,6 +264,17 @@ export async function runLinkRotCheck(): Promise<LinkCheckResult> {
         })
         .eq('id', productId)
       result.productsDeactivated++
+      void logAgentAction({
+        agentName: 'link-rot-checker',
+        decisionType: 'product_deactivated',
+        payload: {
+          target_slug: prod.name,
+          product_id: productId,
+          before: 'active',
+          after: 'inactive',
+          reason: 'all_offers_dead',
+        },
+      })
     } else if (hasLive && prod.status === 'inactive') {
       // Reaktivace — vyčistíme reason (URL zase fungují, audit log už neplatí).
       await supabaseAdmin
@@ -253,6 +289,17 @@ export async function runLinkRotCheck(): Promise<LinkCheckResult> {
         })
         .eq('id', productId)
       result.productsReactivated++
+      void logAgentAction({
+        agentName: 'link-rot-checker',
+        decisionType: 'product_reactivated',
+        payload: {
+          target_slug: prod.name,
+          product_id: productId,
+          before: 'inactive',
+          after: 'active',
+          reason: 'live_offer_found',
+        },
+      })
     }
   }
 

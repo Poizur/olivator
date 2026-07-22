@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase'
+import { logAgentAction } from '@/lib/audit-log'
 import { fetchPrice } from './price-fetcher'
 
 const MODE_A_RETAILERS = ['greekmarket', 'olivum', 'milujemekretu', 'olivarna']
@@ -149,6 +150,18 @@ export async function runReprice(opts: {
             updatePayload.in_stock = false
             stats.notFoundDeactivated++
             stats.notFoundUrls.pop() // bude deaktivován, nestačí jen logovat
+            void logAgentAction({
+              agentName: 'reprice',
+              decisionType: 'offer_deactivated',
+              payload: {
+                offer_id: offer.id,
+                target_slug: offer.product_slug,
+                retailer_slug: retailerSlug,
+                reason: '404_consecutive',
+                consecutive_404: newCount,
+                url: offer.product_url,
+              },
+            })
           }
           await supabaseAdmin.from('product_offers').update(updatePayload).eq('id', offer.id)
         }
@@ -210,6 +223,19 @@ export async function runReprice(opts: {
         stats.changed++
         rs.changed++
         console.log(`  CHANGE [${offer.product_slug}] ${oldPrice ?? 'null'} → ${newPrice} (${result.source})${stockChanged ? ' [stock changed]' : ''}`)
+        void logAgentAction({
+          agentName: 'reprice',
+          decisionType: 'price_changed',
+          payload: {
+            offer_id: offer.id,
+            target_slug: offer.product_slug,
+            retailer_slug: retailerSlug,
+            old_price: oldPrice,
+            new_price: newPrice,
+            direction: oldPrice !== null && newPrice < oldPrice ? 'down' : 'up',
+            source: result.source,
+          },
+        })
       } else {
         stats.matched++
         console.log(`  OK     [${offer.product_slug}] ${newPrice} = DB (${result.source})`)

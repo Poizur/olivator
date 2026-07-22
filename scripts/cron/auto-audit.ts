@@ -24,6 +24,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { logActivity, takeMetricSnapshot } from '@/lib/seo-activity'
 import { runJunkBrandCleanup } from '@/lib/junk-brand-detector'
 import { createCostTracker } from '@/lib/cost-tracker'
+import { logAgentAction } from '@/lib/audit-log'
 
 interface StepResult {
   name: string
@@ -126,7 +127,7 @@ async function quickQualityFixes(): Promise<StepResult> {
   for (const i of (issues ?? []) as Array<{ id: string; product_id: string }>) {
     attempted++
     // Publikuj produkt: draft → active
-    await supabaseAdmin.from('products').update({
+    const { error: publishErr } = await supabaseAdmin.from('products').update({
       status: 'active',
       status_changed_by: 'auto',
       status_changed_at: new Date().toISOString(),
@@ -141,6 +142,18 @@ async function quickQualityFixes(): Promise<StepResult> {
       resolved_at: new Date().toISOString(),
       resolution_note: 'Auto: published (draft → active, má offers)',
     }).eq('id', i.id)
+    if (!publishErr) {
+      void logAgentAction({
+        agentName: 'auto-audit',
+        decisionType: 'product_published',
+        payload: {
+          product_id: i.product_id,
+          before: 'draft',
+          after: 'active',
+          reason: 'draft_with_offers',
+        },
+      })
+    }
     fixed++
   }
 
@@ -166,6 +179,16 @@ async function quickQualityFixes(): Promise<StepResult> {
       resolved_at: new Date().toISOString(),
       resolution_note: 'Auto: product → inactive',
     }).eq('id', i.id)
+    void logAgentAction({
+      agentName: 'auto-audit',
+      decisionType: 'product_deactivated',
+      payload: {
+        product_id: i.product_id,
+        before: 'active',
+        after: 'inactive',
+        reason: 'no_offers',
+      },
+    })
     fixed++
   }
 
