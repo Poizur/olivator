@@ -1,3 +1,5 @@
+import type { CheerioAPI } from 'cheerio'
+
 export type FindingType =
   | 'broken_image'
   | 'zero_price'
@@ -23,5 +25,4 @@ export interface ScanRule {
   run(url: string, html: string, $: CheerioAPI): Promise<Finding[]>
 }
 
-// Re-export pro pohodlí pravidel
-export type { CheerioAPI } from 'cheerio'
+export type { CheerioAPI }
