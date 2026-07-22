@@ -76,6 +76,7 @@ export interface RawBriefData {
   pendingDecisions: object
   learningStats: object
   scanFindings: object
+  articleDrafts: object
 }
 
 export interface GenerateBriefResult {
@@ -190,6 +191,27 @@ async function collectNewsletter(): Promise<object> {
   }
 }
 
+async function collectArticleDrafts(): Promise<object> {
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const [pendingRes, recentRes] = await Promise.all([
+    supabaseAdmin.from('article_drafts').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
+    supabaseAdmin
+      .from('article_drafts')
+      .select('id, title, reviewer_severity, status, created_at')
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(5),
+  ])
+  return {
+    pendingCount: pendingRes.count ?? 0,
+    recent: (recentRes.data ?? []).map((d) => ({
+      title: d.title,
+      severity: d.reviewer_severity,
+      status: d.status,
+    })),
+  }
+}
+
 async function collectCronStatus(): Promise<object> {
   const { data: logs } = await supabaseAdmin
     .from('notification_log')
@@ -279,6 +301,7 @@ function buildPrompt(raw: RawBriefData, weekLabel: string, learningSummary: stri
   const pending = raw.pendingDecisions as Record<string, unknown>
   const ls = raw.learningStats as Record<string, unknown>
   const scan = raw.scanFindings as Record<string, unknown>
+  const artDrafts = raw.articleDrafts as { pendingCount?: number; recent?: Array<{ title: string; severity: string | null; status: string }> }
   const scoreD = (catalog.scoreDistribution ?? {}) as Record<string, number>
   const affBreakdown = (affiliate.affiliateBreakdown ?? {}) as Record<string, number>
 
@@ -297,6 +320,8 @@ function buildPrompt(raw: RawBriefData, weekLabel: string, learningSummary: stri
     .map((f) => `  🔴 [${f.finding_type}] ${f.detail} — ${f.url.replace('https://olivator.cz', '')}`).join('\n')
   const scanMedium = (scan.medium as Array<{ finding_type: string; url: string; detail: string }> ?? [])
     .map((f) => `  🟡 [${f.finding_type}] ${f.detail} — ${f.url.replace('https://olivator.cz', '')}`).join('\n')
+  const articleDraftsList = (artDrafts.recent ?? [])
+    .map((d) => `  - [${d.status}${d.severity ? ', AI:' + d.severity : ''}] "${d.title}"`).join('\n')
 
   return `Jsi AI Ředitel olivator.cz — největší srovnávač olivových olejů v ČR.
 Piš jako chytrý analytik se znalostí affiliate businessu. Jen fakta, žádné fráze.
@@ -328,6 +353,10 @@ Newsletter:
   Čeká na odeslání: ${newsletter.pendingDrafts} draft(ů)
   Poslední drafty:
 ${lastDrafts || '  (žádné)'}
+
+AI Article Drafty (čeká na review v /admin/article-drafts):
+  K revizi: ${artDrafts.pendingCount ?? 0}
+${articleDraftsList || '  (žádné nové)'}
 
 Nevyřízená rozhodnutí z minulých briefů: ${pending.count ?? 0}
 ${pendingItems ? pendingItems : '  (žádná)'}
@@ -482,8 +511,8 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
   const { weekLabel, weekStart } = getWeekLabel()
   console.log(`[executive-director] Generuji brief ${weekLabel}${opts.dryRun ? ' (DRY-RUN)' : ''}${opts.testFailOpen ? ' (TEST-FAILOPEN)' : ''}...`)
 
-  // 9 zdrojů dat paralelně
-  const [gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings] = await Promise.all([
+  // 10 zdrojů dat paralelně
+  const [gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts] = await Promise.all([
     collectGsc().catch((e) => ({ error: (e as Error).message })),
     collectCatalog().catch((e) => ({ error: (e as Error).message })),
     collectAffiliate().catch((e) => ({ error: (e as Error).message })),
@@ -493,9 +522,10 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
     collectPendingDecisions().catch((e) => ({ error: (e as Error).message })),
     collectLearningStats().catch((e) => ({ error: (e as Error).message })),
     collectScanFindings().catch((e) => ({ error: (e as Error).message })),
+    collectArticleDrafts().catch((e) => ({ error: (e as Error).message })),
   ])
 
-  const rawData: RawBriefData = { gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings }
+  const rawData: RawBriefData = { gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts }
   console.log('[executive-director] Data sesbírána')
 
   // Learning Memory Layer — inject relevantní lekce do promptu

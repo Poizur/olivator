@@ -29,7 +29,8 @@
     "backfill:radar-articles": "tsx scripts/backfill-radar-articles.ts",
     "cron:executor": "tsx scripts/cron/executor.ts",
     "cron:recko-order-reminders": "tsx scripts/cron/recko-order-reminders.ts",
-    "cron:site-scanner": "tsx --env-file=.env.local scripts/cron/site-scanner.ts"
+    "cron:site-scanner": "tsx --env-file=.env.local scripts/cron/site-scanner.ts",
+    "cron:article-publisher": "tsx scripts/cron/article-publisher.ts"
   },
   "engines": {
     "node": ">=20.18.0"
