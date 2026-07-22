@@ -54,9 +54,10 @@ async function getAiDrafts(): Promise<DraftRow[]> {
 export default async function AdminArticlesPage({
   searchParams,
 }: {
-  searchParams: { tab?: string }
+  searchParams: Promise<{ tab?: string }>
 }) {
-  const isDraftsTab = searchParams.tab === 'drafts'
+  const { tab } = await searchParams
+  const isDraftsTab = tab === 'drafts'
 
   const [articles, aiDrafts] = await Promise.all([
     getAllArticles(),

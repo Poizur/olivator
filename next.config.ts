@@ -7,6 +7,8 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
 const nextConfig: NextConfig = {
   async redirects() {
     return [
+      // GSC 404 — slug 2026 nikdy neexistoval v DB, statický obsah má slug 2025 — 2026-07-22
+      { source: '/zebricek/nejlepsi-olivovy-olej-2026', destination: '/zebricek/nejlepsi-olivovy-olej-2025', permanent: true },
       // Italská žebříčková kanibalizace — 2026-07-03
       { source: '/zebricek/nejlepsi-italsky-olej', destination: '/zebricek/nejlepsi-italsky-olivovy-olej', permanent: true },
       // Kanibalizace merge — 2026-06-01
