@@ -80,7 +80,23 @@ async function main() {
     }
 
     // 4. Ulož do article_drafts
-    // Nejprve načti opportunity_id pokud existuje
+    // Dedup: přeskoč pokud draft nebo aktivní článek se stejným slugem existuje
+    const [{ data: existingDraft }, { data: existingArticle }] = await Promise.all([
+      supabaseAdmin.from('article_drafts').select('id, status').eq('slug', draft.slug).maybeSingle(),
+      supabaseAdmin.from('articles').select('slug').eq('slug', draft.slug).maybeSingle(),
+    ])
+    if (existingDraft) {
+      console.log(`[article-publisher] SKIP — draft se slugem "${draft.slug}" již existuje (id=${existingDraft.id}, status=${existingDraft.status})`)
+      clearTimeout(killTimer)
+      process.exit(0)
+    }
+    if (existingArticle) {
+      console.log(`[article-publisher] SKIP — článek "${draft.slug}" je již publikovaný`)
+      clearTimeout(killTimer)
+      process.exit(0)
+    }
+
+    // Načti opportunity_id pokud existuje
     const { data: oppRow } = await supabaseAdmin
       .from('article_opportunities')
       .select('id')
