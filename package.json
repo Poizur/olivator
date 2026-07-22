@@ -31,7 +31,9 @@
     "cron:recko-order-reminders": "tsx scripts/cron/recko-order-reminders.ts",
     "cron:site-scanner": "tsx scripts/cron/site-scanner.ts",
     "cron:article-publisher": "tsx scripts/cron/article-publisher.ts",
-    "cron:reprice": "tsx scripts/cron/reprice.ts"
+    "cron:reprice": "tsx scripts/cron/reprice.ts",
+    "cron:lead-magnet-drip": "tsx scripts/cron/lead-magnet-drip.ts",
+    "gen:lead-magnet-pdf": "tsx scripts/generate-lead-magnet-pdf.ts"
   },
   "engines": {
     "node": ">=20.18.0"
@@ -60,6 +62,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.3"
+    "eslint-config-next": "16.2.3",
+    "playwright-core": "^1.61.1"
   }
 }

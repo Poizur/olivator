@@ -8,6 +8,8 @@ import { WelcomeD0DealsEmail } from '@/emails/welcome-d0-deals'
 import { enqueueWelcomeSeries, getWelcomeDeals } from '@/lib/welcome-series'
 import crypto from 'crypto'
 
+const SITE = 'https://olivator.cz'
+
 export const dynamic = 'force-dynamic'
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
@@ -66,6 +68,45 @@ function sanitizePreferences(input: unknown): typeof DEFAULT_PREFERENCES {
 
 function generateUnsubToken(): string {
   return crypto.randomBytes(32).toString('hex')
+}
+
+function generateConfirmToken(): string {
+  return crypto.randomBytes(32).toString('hex')
+}
+
+async function sendLeadMagnetConfirmEmail(email: string, token: string) {
+  const confirmUrl = `${SITE}/api/newsletter/confirm?token=${token}`
+  const html = `<!DOCTYPE html><html lang="cs">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f5f7;font-family:-apple-system,Segoe UI,Helvetica Neue,Arial,sans-serif;">
+<div style="max-width:560px;margin:32px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08);">
+  <div style="background:#2d6a4f;padding:28px 36px;"><div style="color:#fff;font-size:18px;font-weight:700;">olivátor.cz</div></div>
+  <div style="padding:36px;">
+    <h1 style="margin:0 0 14px;font-size:22px;font-weight:600;color:#1a1a1a;line-height:1.3;">Potvrďte svůj email</h1>
+    <p style="color:#3d3d3d;font-size:15px;line-height:1.7;margin:0 0 24px;">
+      Jeden krok vás dělí od průvodce <strong>Jak vybrat kvalitní olivový olej</strong>. Klikněte na tlačítko níže — pošleme vám PDF ihned.
+    </p>
+    <a href="${confirmUrl}" style="display:inline-block;background:#2d6a4f;color:#fff;text-decoration:none;padding:14px 32px;border-radius:6px;font-size:15px;font-weight:600;margin-bottom:28px;">
+      Potvrdit a stáhnout průvodce
+    </a>
+    <p style="color:#878779;font-size:13px;line-height:1.6;margin:0;">
+      Pokud jste o průvodce nežádali, tento email ignorujte. Nic se nestane.
+    </p>
+  </div>
+  <div style="padding:14px 36px;background:#f5f5f7;border-top:1px solid #e8e8ed;">
+    <p style="margin:0;font-size:12px;color:#878779;">olivátor.cz · Tento email vám přišel jako odpověď na váš zájem o průvodce olivovými oleji.</p>
+  </div>
+</div>
+</body></html>`
+
+  const text = `Potvrďte svůj email a stáhněte průvodce olivovými oleji:\n${confirmUrl}\n\nPokud jste o průvodce nežádali, tento email ignorujte.`
+
+  await sendTransactionalEmail({
+    to: email,
+    subject: 'Potvrďte email — průvodce olivovým olejem na vás čeká',
+    html,
+    text,
+  })
 }
 
 export async function POST(request: NextRequest) {
@@ -137,6 +178,29 @@ export async function POST(request: NextRequest) {
         .eq('email', email)
         .then(() => null, () => null)
     }
+
+    // ── Lead magnet: double opt-in flow ────────────────────────────────────
+    if (source === 'lead_magnet' && stored) {
+      const confirmToken = generateConfirmToken()
+      const consentText = 'Souhlasím se zasíláním průvodce olivovými oleji a navazující email série (4 emaily). Odhlásit se lze kdykoliv.'
+
+      await supabaseAdmin
+        .from('newsletter_signups')
+        .update({
+          confirmed: false,
+          confirmation_token: confirmToken,
+          consent_text: consentText,
+        })
+        .eq('email', email)
+        .then(() => null, (e) => console.warn('[newsletter] lead_magnet token update:', e))
+
+      await sendLeadMagnetConfirmEmail(email, confirmToken).catch(e =>
+        console.error('[newsletter] confirm email failed:', e.message)
+      )
+
+      return NextResponse.json({ ok: true, flow: 'double_opt_in' })
+    }
+    // ───────────────────────────────────────────────────────────────────────
 
     // Notifikace majiteli o novém odběrateli (best-effort)
     if (stored) {
