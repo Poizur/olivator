@@ -8,6 +8,7 @@ import { productSchema, breadcrumbSchema, faqSchema } from '@/lib/schema'
 import { generateProductFAQ } from '@/lib/product-faq'
 import { selectGeneralFAQs } from '@/lib/general-faq'
 import { ScoreSection } from '@/components/score-section'
+import { ScoreBreakdownSSR } from '@/components/score-breakdown-ssr'
 import { FlavorWheel } from '@/components/flavor-wheel'
 import { PriceTable } from '@/components/price-table'
 import { AffiliateLink } from '@/components/affiliate-link'
@@ -492,7 +493,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
         {/* Levý sloupec: Score + FlavorWheel */}
         <div>
-          <ScoreSection product={product} />
+          <ScoreSection product={product}>
+              {hasScore && product.scoreBreakdown && (
+                <ScoreBreakdownSSR product={product} />
+              )}
+            </ScoreSection>
           <FlavorWheel profile={product.flavorProfile} />
         </div>
 

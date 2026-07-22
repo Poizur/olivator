@@ -5,7 +5,7 @@ import { getRankings, getRankingBySlug as getStaticRankingBySlug } from '@/lib/s
 import { getActiveRankings, getRankingBySlug as getDbRankingBySlug } from '@/lib/rankings-db'
 import { getProductsBySlugs, getCheapestOffer } from '@/lib/data'
 import { ListCard } from '@/components/list-card'
-import { breadcrumbSchema } from '@/lib/schema'
+import { breadcrumbSchema, faqSchema } from '@/lib/schema'
 
 export async function generateStaticParams() {
   // DB-first → fallback static. Generuje slugy pro pre-build.
@@ -88,6 +88,22 @@ export default async function RankingDetailPage({ params }: { params: Promise<{ 
     { name: ranking.title, url: `/zebricek/${ranking.slug}` },
   ])
 
+  // FAQPage — 3 otázky generické pro všechny žebříčky.
+  const faqSchemaData = faqSchema([
+    {
+      question: `Jak vybíráte nejlepší olivový olej pro ${ranking.title.toLowerCase()}?`,
+      answer: 'Hodnotíme každý olej podle Olivator Score — objektivní metriky postavené na kyselosti (35 %), certifikacích jako DOP a BIO (25 %), obsahu polyfenolů (25 %) a poměru cena/kvalita (15 %). Žebříček řadí oleje od nejvyššího skóre, ne od nejvyšší ceny ani od provize.',
+    },
+    {
+      question: 'Co je Olivator Score a jak ho počítáte?',
+      answer: 'Olivator Score je číslo od 0 do 100. Každý olej dostane body za kyselost (čím nižší, tím lépe — váha 35 %), certifikace jako DOP nebo BIO (25 %), obsah polyfenolů v mg/kg (25 %) a hodnotu za cenu (15 %). Celá metodika je na olivator.cz/metodika.',
+    },
+    {
+      question: 'Jak často aktualizujete ceny a pořadí v žebříčku?',
+      answer: 'Ceny aktualizujeme u XML partnerů každý den, u ostatních prodejců třikrát týdně. Olivator Score a pořadí v žebříčku se přepočítá automaticky při každé změně dat produktu.',
+    },
+  ])
+
   // ItemList — žebříček = explicitní ranking. Google může zobrazit jako
   // carousel rich result. Position 1-N = poradí v žebříčku.
   const validOffers = offers.filter((o): o is NonNullable<typeof o> => o != null)
@@ -127,6 +143,10 @@ export default async function RankingDetailPage({ params }: { params: Promise<{ 
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchemaData) }}
+      />
 
       <div className="text-xs text-text3 mb-7">
         <Link href="/" className="text-olive">Olivator</Link>
@@ -143,6 +163,19 @@ export default async function RankingDetailPage({ params }: { params: Promise<{ 
         </h1>
         {ranking.description && (
           <p className="text-[15px] text-text2 font-light">{ranking.description}</p>
+        )}
+        {products.length > 0 && products[0].olivatorScore != null && (
+          <p className="text-[15px] text-text mt-3 leading-relaxed">
+            {'Aktuálně nejlepší volbou je '}
+            <a href={`/olej/${products[0].slug}`} className="text-olive font-medium hover:underline">
+              {products[0].name}
+            </a>
+            {` (Score ${products[0].olivatorScore}/100)`}
+            {offers[0] != null && (
+              <>{` — od ${Math.round(offers[0].price)} Kč u ${offers[0].retailer.name}`}</>
+            )}
+            {'.'}
+          </p>
         )}
       </div>
 
