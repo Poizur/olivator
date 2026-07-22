@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 
 // Client-side nav rendering pro admin sidebar.
 // Důvod: server-side `headers()` čte pathname z middleware ale neobnoví se
@@ -19,6 +20,8 @@ export type AdminNavLink = {
 export type AdminNavSection = {
   group?: string
   items: AdminNavLink[]
+  collapsible?: boolean
+  defaultCollapsed?: boolean
 }
 
 function isActive(pathname: string, href: string): boolean {
@@ -29,6 +32,15 @@ function isActive(pathname: string, href: string): boolean {
 export function AdminSidebarNav({ sections }: { sections: AdminNavSection[] }) {
   const pathname = usePathname() ?? ''
 
+  // collapsed state pro collapsible sekce, klíčováno názvem skupiny
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {}
+    for (const s of sections) {
+      if (s.collapsible && s.group) init[s.group] = s.defaultCollapsed ?? false
+    }
+    return init
+  })
+
   // Najdi nej-specifický match (delší href vyhrává — /admin/products/123 → /admin/products)
   const all = sections.flatMap((g) => g.items.flatMap((i) => [i, ...(i.subItems ?? [])]))
   const activeMatch = all
@@ -37,13 +49,39 @@ export function AdminSidebarNav({ sections }: { sections: AdminNavSection[] }) {
 
   return (
     <>
-      {sections.map((section, i) => (
+      {sections.map((section, i) => {
+        const sectionHasActive = section.items.some((item) => isActive(pathname, item.href))
+        // Auto-expand pokud je aktivní stránka v téhle sekci
+        const isCollapsed = section.collapsible && section.group
+          ? ((collapsedGroups[section.group] ?? false) && !sectionHasActive)
+          : false
+        const toggle = () => {
+          if (section.collapsible && section.group) {
+            setCollapsedGroups((prev) => ({ ...prev, [section.group!]: !prev[section.group!] }))
+          }
+        }
+        return (
         <div key={i} className={section.group ? 'mt-5 first:mt-0' : ''}>
           {section.group && (
-            <div className="text-[10px] font-semibold tracking-widest uppercase text-text3 px-2.5 mb-1.5">
-              {section.group}
-            </div>
+            section.collapsible ? (
+              <button
+                onClick={toggle}
+                className="w-full flex items-center justify-between px-2.5 mb-1.5 group"
+              >
+                <div className="text-[10px] font-semibold tracking-widest uppercase text-text3 group-hover:text-text2 transition-colors">
+                  {section.group}
+                </div>
+                <span className={`text-text3 text-[9px] transition-transform duration-150 ${isCollapsed ? '' : 'rotate-180'}`}>
+                  ▾
+                </span>
+              </button>
+            ) : (
+              <div className="text-[10px] font-semibold tracking-widest uppercase text-text3 px-2.5 mb-1.5">
+                {section.group}
+              </div>
+            )
           )}
+          {!isCollapsed && (
           <ul className="space-y-0.5">
             {section.items.map((item) => {
               const active = activeMatch?.href === item.href
@@ -113,8 +151,10 @@ export function AdminSidebarNav({ sections }: { sections: AdminNavSection[] }) {
               )
             })}
           </ul>
+          )}
         </div>
-      ))}
+        )
+      })}
     </>
   )
 }

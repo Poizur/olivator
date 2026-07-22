@@ -14,14 +14,14 @@ import { AdminBarLogout } from './admin-bar-logout'
 import { AdminSidebarNav, type AdminNavSection } from './admin-sidebar-nav'
 
 async function getBadges(): Promise<Record<string, { value: number; tone: 'amber' | 'red' | 'olive' }>> {
-  const [drafts, pendingDiscovery, qualityIssues, draftBrands, seoPending] = await Promise.all([
+  const [drafts, pendingDiscovery, qualityIssues, draftBrands, seoPending, aiDrafts] = await Promise.all([
     supabaseAdmin.from('products').select('*', { count: 'exact', head: true }).eq('status', 'draft'),
     supabaseAdmin.from('discovery_candidates').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
     supabaseAdmin.from('products').select('*', { count: 'exact', head: true }).lt('completeness_score', 50),
-    // Auto-vytvořené brand stubs (status='draft') — admin musí doplnit obsah
     supabaseAdmin.from('brands').select('*', { count: 'exact', head: true }).eq('status', 'draft'),
-    // SEO úkoly co čekají na práci (pending nebo in_progress)
     supabaseAdmin.from('seo_tasks').select('*', { count: 'exact', head: true }).in('status', ['pending', 'in_progress']),
+    // AI-generované drafty čekající na schválení (article_drafts tabulka)
+    supabaseAdmin.from('article_drafts').select('*', { count: 'exact', head: true }).eq('status', 'draft'),
   ])
 
   const badges: Record<string, { value: number; tone: 'amber' | 'red' | 'olive' }> = {}
@@ -30,6 +30,7 @@ async function getBadges(): Promise<Record<string, { value: number; tone: 'amber
   if ((qualityIssues.count ?? 0) > 0) badges['/admin/quality'] = { value: qualityIssues.count!, tone: 'red' }
   if ((draftBrands.count ?? 0) > 0) badges['/admin/brands'] = { value: draftBrands.count!, tone: 'amber' }
   if ((seoPending.count ?? 0) > 0) badges['/admin/seo'] = { value: seoPending.count!, tone: 'olive' }
+  if ((aiDrafts.count ?? 0) > 0) badges['/admin/articles'] = { value: aiDrafts.count!, tone: 'amber' }
   return badges
 }
 
@@ -37,63 +38,29 @@ export async function AdminSidebar() {
   const badges = await getBadges()
 
   const NAV: AdminNavSection[] = [
+    // ─── Hlavní menu — denní rutina majitele ────────────────────────────────
     {
       items: [
         { href: '/admin', label: 'Přehled' },
-      ],
-    },
-    {
-      group: 'Katalog',
-      items: [
         {
           href: '/admin/products',
           label: 'Produkty',
           badge: badges['/admin/products']?.value,
           badgeTone: badges['/admin/products']?.tone,
         },
-        { href: '/admin/regions', label: 'Regiony' },
         {
           href: '/admin/brands',
           label: 'Značky',
           badge: badges['/admin/brands']?.value,
           badgeTone: badges['/admin/brands']?.tone,
         },
-        { href: '/admin/cultivars', label: 'Odrůdy' },
-        { href: '/admin/recipes', label: 'Recepty' },
-        { href: '/admin/articles', label: 'Články (průvodci)' },
-      ],
-    },
-    {
-      group: 'Discovery',
-      items: [
         {
           href: '/admin/discovery',
           label: 'Návrhy',
           badge: badges['/admin/discovery']?.value,
           badgeTone: badges['/admin/discovery']?.tone,
         },
-        { href: '/admin/discovery/sources', label: 'Zdroje' },
-        { href: '/admin/bulk-jobs', label: 'Historie běhů' },
-        {
-          href: '/admin/quality',
-          label: 'Kvalita dat',
-          badge: badges['/admin/quality']?.value,
-          badgeTone: badges['/admin/quality']?.tone,
-        },
-      ],
-    },
-    {
-      group: 'Obchod',
-      items: [
         { href: '/admin/retailers', label: 'Prodejci' },
-      ],
-    },
-    {
-      group: 'Obsah',
-      items: [
-        { href: '/admin/faq', label: 'FAQ' },
-        { href: '/admin/article-drafts', label: 'AI Article Drafty' },
-        { href: '/admin/novinky', label: 'Novinky' },
         {
           href: '/admin/newsletter',
           label: 'Newsletter',
@@ -106,36 +73,48 @@ export async function AdminSidebar() {
             { href: '/admin/newsletter/settings', label: 'Nastavení' },
           ],
         },
-        { href: '/admin/manager', label: 'Manager Agent' },
+        {
+          href: '/admin/articles',
+          label: 'Články',
+          badge: badges['/admin/articles']?.value,
+          badgeTone: badges['/admin/articles']?.tone,
+        },
         { href: '/admin/brief', label: '📋 AI Ředitel' },
+        { href: '/admin/learnings', label: 'Learnings' },
+        { href: '/admin/nastaveni', label: 'Nastavení' },
       ],
     },
+    // ─── Nástroje — collapsed, přístupné ale ne v denní rutině ─────────────
     {
-      group: 'Strategie',
+      group: '🔧 Nástroje',
+      collapsible: true,
+      defaultCollapsed: true,
       items: [
+        { href: '/admin/regions', label: 'Regiony' },
+        { href: '/admin/cultivars', label: 'Odrůdy' },
+        { href: '/admin/recipes', label: 'Recepty' },
+        { href: '/admin/faq', label: 'FAQ' },
+        { href: '/admin/novinky', label: 'Novinky' },
+        { href: '/admin/discovery/sources', label: 'Zdroje' },
+        { href: '/admin/bulk-jobs', label: 'Historie běhů' },
+        {
+          href: '/admin/quality',
+          label: 'Kvalita dat',
+          badge: badges['/admin/quality']?.value,
+          badgeTone: badges['/admin/quality']?.tone,
+        },
+        { href: '/admin/manager', label: 'Manager Agent' },
         { href: '/admin/content-strategy', label: 'Obsahová strategie' },
         { href: '/admin/content-calendar', label: 'Editoriální kalendář' },
         { href: '/admin/keyword-mapping', label: 'Keyword Mapping' },
-      ],
-    },
-    {
-      group: 'Analytika',
-      items: [
         { href: '/admin/analytics', label: 'Affiliate clicks' },
         { href: '/admin/gsc', label: 'GSC Dashboard' },
-      ],
-    },
-    {
-      group: 'Systém',
-      items: [
         {
           href: '/admin/seo',
           label: 'SEO Plán',
           badge: badges['/admin/seo']?.value,
           badgeTone: badges['/admin/seo']?.tone,
         },
-        { href: '/admin/nastaveni', label: 'Nastavení' },
-        { href: '/admin/learnings', label: 'Learnings' },
       ],
     },
   ]
