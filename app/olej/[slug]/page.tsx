@@ -15,7 +15,7 @@ import { AffiliateLink } from '@/components/affiliate-link'
 import { ProductGallery } from '@/components/product-gallery'
 import { RetailerCard } from '@/components/retailer-card'
 import { PriceSparkline } from '@/components/price-sparkline'
-import { PriceAlertButton } from '@/components/price-alert-button'
+import { PriceWatchButton } from '@/components/price-watch-button'
 import { ProductActions } from './product-actions'
 import { ScoreBadge } from '@/components/score-badge'
 import { StickyBuyBar } from '@/components/sticky-buy-bar'
@@ -476,10 +476,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 Koupit u {cheapest.retailer.name} →
               </AffiliateLink>
               <div className="text-center mb-2">
-                <PriceAlertButton
+                <PriceWatchButton
                   productId={product.id}
                   productName={product.name}
-                  currentPrice={cheapest.price}
                 />
               </div>
             </div>
