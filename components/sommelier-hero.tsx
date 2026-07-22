@@ -240,13 +240,13 @@ export function SommelierHero({
 
               {/* Suggestion chips */}
               {!hasConversation && (
-                <div className="flex flex-wrap gap-2 mt-3">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 mt-3">
                   {SUGGESTIONS.map((s) => (
                     <button
                       key={s}
                       onClick={() => send(s)}
                       disabled={loading}
-                      className="text-[12px] font-semibold text-white/90 bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 rounded-full px-3.5 py-1.5 transition-colors"
+                      className="text-[12px] font-semibold text-white/90 bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 rounded-full px-3.5 py-1.5 transition-colors text-left last:col-span-2 sm:last:col-span-1"
                     >
                       {s}
                     </button>
