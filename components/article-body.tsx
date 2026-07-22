@@ -8,8 +8,9 @@
 
 import Link from 'next/link'
 import type { ArticleProductData } from '@/lib/template-vars'
-import { PRODUCT_CARD_MARKER, PRODUCT_MISSING_MARKER } from '@/lib/template-vars'
+import { PRODUCT_CARD_MARKER, PRODUCT_MISSING_MARKER, LEAD_MAGNET_MARKER } from '@/lib/template-vars'
 import { ArticleProductCard } from '@/components/article/article-product-card'
+import { LeadMagnetCta } from '@/components/lead-magnet-cta'
 
 interface Props {
   body: string
@@ -36,6 +37,7 @@ type Block =
   | { type: 'blockquote'; text: string }
   | { type: 'product-card'; slug: string }
   | { type: 'product-missing'; slug: string }
+  | { type: 'lead-magnet' }
 
 function parseBlocks(body: string): Block[] {
   const lines = body.split('\n')
@@ -47,6 +49,13 @@ function parseBlocks(body: string): Block[] {
 
     // Skip empty
     if (!line.trim()) {
+      i++
+      continue
+    }
+
+    // Lead magnet CTA
+    if (line.trim() === LEAD_MAGNET_MARKER) {
+      blocks.push({ type: 'lead-magnet' })
       i++
       continue
     }
@@ -285,5 +294,7 @@ function renderBlock(b: Block, key: number, productMap?: Map<string, ArticleProd
       // Slug neexistoval v DB při resolve — viditelné jen v admin previewu přes log.
       // Na public webu tichý fallback (prázdný div). Validátor to zachytí při publish.
       return <div key={key} />
+    case 'lead-magnet':
+      return <LeadMagnetCta key={key} compact />
   }
 }

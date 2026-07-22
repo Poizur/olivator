@@ -48,6 +48,9 @@ export interface ArticleProductData {
 export const PRODUCT_CARD_MARKER = '__PC:'
 export const PRODUCT_MISSING_MARKER = '__PM:'
 
+// Lead magnet CTA marker — {{leadmagnet}} → __LM__ → <LeadMagnetCta compact />
+export const LEAD_MAGNET_MARKER = '__LM__'
+
 /** Najde všechny {{product:slug}} tokeny, fetchne z DB a vrátí:
  *  - processedBody: body s markery namísto tokenů
  *  - productMap: slug → data pro ArticleBody renderer
@@ -60,15 +63,18 @@ export async function resolveProductTokens(body: string): Promise<{
 }> {
   const productMap = new Map<string, ArticleProductData>()
 
-  if (!body.includes('{{product:')) {
-    return { processedBody: body, productMap }
+  // Lead magnet CTA token
+  const bodyWithLm = body.replace(/\{\{leadmagnet\}\}/g, LEAD_MAGNET_MARKER)
+
+  if (!bodyWithLm.includes('{{product:')) {
+    return { processedBody: bodyWithLm, productMap }
   }
 
   // Collect unique slugs
   const slugSet = new Set<string>()
   const tokenRe = /\{\{product:([\w-]+)\}\}/g
   let m: RegExpExecArray | null
-  while ((m = tokenRe.exec(body)) !== null) {
+  while ((m = tokenRe.exec(bodyWithLm)) !== null) {
     slugSet.add(m[1])
   }
   const slugs = [...slugSet]
@@ -128,7 +134,7 @@ export async function resolveProductTokens(body: string): Promise<{
   }
 
   // Replace tokens with markers
-  const processedBody = body.replace(/\{\{product:([\w-]+)\}\}/g, (_, slug) => {
+  const processedBody = bodyWithLm.replace(/\{\{product:([\w-]+)\}\}/g, (_, slug) => {
     if (productMap.has(slug)) {
       return `${PRODUCT_CARD_MARKER}${slug}__`
     }
