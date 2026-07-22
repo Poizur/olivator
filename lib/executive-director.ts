@@ -151,11 +151,26 @@ async function collectAffiliate(): Promise<object> {
     topRetailers = topRetailerIds.map((id) => ({ name: retailers?.find((r) => r.id === id)?.name ?? id, clicks: retailerCounts[id] }))
   }
 
-  const { count: noAffiliateCount } = await supabaseAdmin
-    .from('product_offers').select('id', { count: 'exact', head: true })
-    .or('affiliate_url.is.null,affiliate_url.eq.').eq('in_stock', true)
+  // 3-way breakdown — viz L-010: nelze házet dohromady fixable + no-program
+  const { data: noAffOffers } = await supabaseAdmin
+    .from('product_offers')
+    .select('retailer_id, retailers!inner(base_tracking_url)')
+    .or('affiliate_url.is.null,affiliate_url.eq.')
+    .eq('in_stock', true)
 
-  return { totalClicks: totalClicks ?? 0, topProducts, topRetailers, offersWithoutAffiliate: noAffiliateCount ?? 0 }
+  const fixable = (noAffOffers ?? []).filter(o => {
+    const ret = o.retailers as unknown as { base_tracking_url: string | null }
+    return !!ret?.base_tracking_url
+  }).length
+  const noProgram = (noAffOffers ?? []).length - fixable
+
+  return {
+    totalClicks: totalClicks ?? 0,
+    topProducts,
+    topRetailers,
+    offersWithoutAffiliate: (noAffOffers ?? []).length,
+    affiliateBreakdown: { fixable, noProgram },
+  }
 }
 
 async function collectNewsletter(): Promise<object> {
@@ -246,6 +261,7 @@ function buildPrompt(raw: RawBriefData, weekLabel: string, learningSummary: stri
   const pending = raw.pendingDecisions as Record<string, unknown>
   const ls = raw.learningStats as Record<string, unknown>
   const scoreD = (catalog.scoreDistribution ?? {}) as Record<string, number>
+  const affBreakdown = (affiliate.affiliateBreakdown ?? {}) as Record<string, number>
 
   const topPages = (gsc.topPages as Array<{ keys: string[]; clicks: number }> ?? [])
     .map((p) => `  - ${p.keys[0]?.split('/').slice(-1)[0] ?? '?'}: ${p.clicks} kliků`).join('\n')
@@ -275,7 +291,10 @@ Katalog:
 
 Affiliate:
   Kliků tento týden: ${affiliate.totalClicks}
-  Nabídky BEZ affiliate URL: ${affiliate.offersWithoutAffiliate} (z aktivních, in-stock)
+  Nabídky BEZ affiliate URL: ${affiliate.offersWithoutAffiliate} celkem
+    → Opravitelné Executorem (retailer má eHUB tracking): ${affBreakdown.fixable ?? 0}
+    → Bez affiliate programu (nelze monetizovat bez nové dohody): ${affBreakdown.noProgram ?? 0}
+  DŮLEŽITÉ: jen "opravitelné" = ztracený revenue k okamžité akci. "Bez programu" = nutno navázat partnerství s retailerem.
   Top produkty:
 ${topProducts || '  (žádné kliky)'}
   Top retaileři:
@@ -335,7 +354,7 @@ Vygeneruj KOMPLETNÍ JSON brief (striktně valid JSON, ŽÁDNÉ markdown code bl
       "options": [
         {"label": "ANO", "description": "Přesně co se udělá", "impact": "Měřitelný dopad"},
         {"label": "NE", "description": "Co se nestane / alternativa", "impact": "Co promarníme"},
-        {"label": "POZDĚJI", "description": "Podmínky pro odložení", "impact": "Risk čekání"}
+        {"label": "ODLOŽIT", "description": "Podmínky pro odložení", "impact": "Risk čekání"}
       ],
       "recommended_option": "ANO",
       "priority": "high",
@@ -357,8 +376,13 @@ PRAVIDLA:
 - nasel: přesně 3 body, jen nejpalčivější — žádná nízko-prioritní pozorování
 - posun: přesně 3 odrážky (•), každá max 1 věta
 - rozhodnuti: přesně 5, seřaď high → medium → low, každé s ROI a čas
-- Pokud jsi použil lekci z LEKCE K POUŽITÍ sekce, uveď její kód v learning_applied.`
+- Pokud jsi použil lekci z LEKCE K POUŽITÍ sekce, uveď její kód v learning_applied.
+- options.label: použij VÝHRADNĚ přesně tyto tři řetězce: "ANO", "NE", "ODLOŽIT". Žádná jiná slova, žádné cizí jazyky.
+- recommended_option musí být jedno z: "ANO", "NE", "ODLOŽIT".
+- affiliate nabídky: rozlišuj "opravitelné Executorem" (retailer má eHUB tracking) vs. "bez affiliate programu". Celkové číslo bez affiliate neznamená ztracený revenue — většina jsou retaileři bez affiliate programu (viz L-010).`
 }
+
+
 
 // ── AI generation + token tracking ───────────────────────────────────────────
 
@@ -449,8 +473,8 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
   let relevantLearningIds: string[] = []
   try {
     const learnings = await getRelevantLearnings({
-      keywords: ['newsletter', 'affiliate', 'seo', 'content', 'scraper', 'token'],
-      limit: 6,
+      keywords: ['newsletter', 'affiliate', 'affiliate-url', 'metrics', 'seo', 'content', 'scraper', 'token'],
+      limit: 7,
     })
     relevantLearningIds = learnings.map((l) => l.id)
     learningSummary = learnings.length > 0 ? formatLearningsForPrompt(learnings) : ''
