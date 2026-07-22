@@ -171,42 +171,56 @@ export async function composeWeeklyDraft(): Promise<ComposedDraft> {
   const sentDrafts = (recentDrafts ?? [])
     .filter((d) => d.status === 'sent' || d.status === 'approved' || d.status === 'archived')
     .slice(0, 4)
-  const sentProductIds = sentDrafts.flatMap((d) => {
+  const sentOilIds = sentDrafts.flatMap((d) => {
     const b = (d.blocks ?? {}) as Record<string, unknown>
     const pid = (b.oilOfWeek as { productId?: string } | null)?.productId
     return pid ? [pid] : []
   })
+  // Cultivar LRU pro deals zahrnuje i produkty z posledních deals bloků (3 drafty)
+  const sentDealIds = sentDrafts.slice(0, 3).flatMap((d) => {
+    const b = (d.blocks ?? {}) as Record<string, unknown>
+    return ((b.deals ?? []) as Array<{ productId?: string }>)
+      .map((deal) => deal.productId)
+      .filter(Boolean) as string[]
+  })
 
   let recentBrandSlugs: string[] = []
   let recentCultivarSlugs: string[] = []
-  if (sentProductIds.length > 0) {
-    const brandProductIds = sentProductIds.slice(0, 2)   // brand: posledních 2 drafty
-    const cultivarProductIds = sentProductIds.slice(0, 3) // cultivar: posledních 3 drafty
-    const [brandRows, cultivarRows] = await Promise.all([
+  let dealCultivarSlugs: string[] = []
+  if (sentOilIds.length > 0 || sentDealIds.length > 0) {
+    const brandProductIds = sentOilIds.slice(0, 2)     // brand: posledních 2 oleje týdne
+    const oilCultivarIds = sentOilIds.slice(0, 3)      // cultivar pro oil pick: posledních 3 oleje týdne
+    const dealCultivarIds = [...new Set(sentDealIds)]  // cultivar pro deals: posledních 3 drafty × N deals
+    const [brandRows, oilCultivarRows, dealCultivarRows] = await Promise.all([
       supabaseAdmin
         .from('products')
         .select('brand_slug')
         .in('id', brandProductIds)
         .not('brand_slug', 'is', null),
-      supabaseAdmin
-        .from('product_cultivars')
-        .select('cultivar_slug')
-        .in('product_id', cultivarProductIds),
+      oilCultivarIds.length > 0
+        ? supabaseAdmin.from('product_cultivars').select('cultivar_slug').in('product_id', oilCultivarIds)
+        : Promise.resolve({ data: [] }),
+      dealCultivarIds.length > 0
+        ? supabaseAdmin.from('product_cultivars').select('cultivar_slug').in('product_id', dealCultivarIds)
+        : Promise.resolve({ data: [] }),
     ])
     recentBrandSlugs = (brandRows.data ?? []).map((p) => p.brand_slug as string).filter(Boolean)
-    recentCultivarSlugs = (cultivarRows.data ?? []).map((c) => c.cultivar_slug as string).filter(Boolean)
-    if (recentBrandSlugs.length > 0 || recentCultivarSlugs.length > 0) {
-      console.log(`[composer] T-18 LRU exclusion — brands: [${recentBrandSlugs.join(', ')}], cultivars: [${recentCultivarSlugs.join(', ')}]`)
+    recentCultivarSlugs = (oilCultivarRows.data ?? []).map((c) => c.cultivar_slug as string).filter(Boolean)
+    dealCultivarSlugs = (dealCultivarRows.data ?? []).map((c) => c.cultivar_slug as string).filter(Boolean)
+    const allExcluded = [...new Set([...recentCultivarSlugs, ...dealCultivarSlugs])]
+    if (recentBrandSlugs.length > 0 || allExcluded.length > 0) {
+      console.log(`[composer] T-18 LRU exclusion — brands: [${recentBrandSlugs.join(', ')}], oil_cultivars: [${recentCultivarSlugs.join(', ')}], deal_cultivars: [${dealCultivarSlugs.join(', ')}]`)
     }
   }
 
   // 2. Pick blocks (parallel)
   // Deals threshold 5 % — pro malou DB s krátkou price history. Až bude
   // dostatek dat, nastav vyšší (10-15 %) v admin/newsletter/settings.
+  const dealExcludeCultivars = [...new Set([...recentCultivarSlugs, ...dealCultivarSlugs])]
   const [oilOfWeek, tipProduct, deals, newArrival, recipe, fact] = await Promise.all([
     pickOilOfTheWeek(recentlyFeaturedIds, pinnedSlug || undefined, recentBrandSlugs, recentCultivarSlugs),
     tipSlug ? pickTipProduct(tipSlug, tipMessage) : Promise.resolve(null),
-    pickDeals(5, 5, [], recentBrandSlugs, recentCultivarSlugs),
+    pickDeals(5, 5, [], recentBrandSlugs, dealExcludeCultivars),
     pickNewArrival(),
     pickRecipe(),
     pickFact(),

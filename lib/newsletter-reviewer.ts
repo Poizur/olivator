@@ -63,10 +63,12 @@ ${histLines}
 
 PRAVIDLA — zkontroluj všechna, reportuj pouze ta která jsou porušena:
 
-1. TOP_PRODUCT_REPEAT: stejný produkt (slug nebo velmi podobný název) jako olej týdne v 2 nebo více z posledních 4 vydání → severity: "warn"
-2. CULTIVAR_REPEAT: stejná odrůda olivy (Picual, Koroneiki, Arbequina, Coratina, Manaki, atd.) jako olej týdne v 3 nebo více z posledních 4 vydání. Odrůdu detekuj ze slug nebo názvu → severity: "warn"
+DŮLEŽITÉ: Pravidla 1 a 2 se vztahují VÝHRADNĚ na blok "Olej týdne". Přítomnost odrůdy v sekci Deals se pro tato pravidla IGNORUJE. Pokud je odrůda Manaki v deals ale Olej týdne je Premium Gold DOP (Koroneiki), pravidla 1 a 2 se NEAPLIKUJÍ.
+
+1. TOP_PRODUCT_REPEAT: stejný produkt (slug nebo velmi podobný název) jako AKTUÁLNÍ olej týdne byl OLEJEM TÝDNE v 2 nebo více z posledních 4 vydání → severity: "warn"
+2. CULTIVAR_REPEAT: stejná odrůda jako AKTUÁLNÍ olej týdne byla OLEJEM TÝDNE (nikoliv v deals) v 3 nebo více z posledních 4 vydání. Odrůdu detekuj ze slug nebo názvu AKTUÁLNÍHO oleje týdne, pak ji hledej v polích "Olej týdne" v historii → severity: "warn"
 3. SUBJECT_FORMULA: předmět nového draftu zapadá do stejné textové formule jako 3 nebo více z posledních 5 vydání (typicky "[číslo] nových olejů." nebo "Picual [cokoliv]") → severity: "warn"
-4. DEALS_REPEAT: stejný produkt (jméno nebo slug) v deals jako v 2 nebo více z posledních 5 vydání → severity: "warn"
+4. DEALS_REPEAT: stejný produkt (jméno nebo slug) v deals nového draftu jako v deals 2 nebo více z posledních 5 vydání → severity: "warn"
 5. DEALS_EMPTY: deals blok nového draftu je prázdný (0 produktů) → severity: "info"
 
 Pokud pravidlo NENÍ porušeno, NEPŘIDÁVEJ ho do issues.
