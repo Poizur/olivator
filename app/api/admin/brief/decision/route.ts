@@ -16,7 +16,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'decisionId and choice are required' }, { status: 400 })
   }
 
-  const { error } = await supabaseAdmin
+  const { data: decision, error } = await supabaseAdmin
     .from('weekly_decisions')
     .update({
       admin_choice: body.choice,
@@ -24,8 +24,26 @@ export async function PATCH(req: NextRequest) {
       decided_at: new Date().toISOString(),
     })
     .eq('id', body.decisionId)
+    .select('brief_id')
+    .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Pokud jsou všechna rozhodnutí v briefu vyřešená, přepni brief na 'reviewed'
+  if (decision?.brief_id) {
+    const { count } = await supabaseAdmin
+      .from('weekly_decisions')
+      .select('*', { count: 'exact', head: true })
+      .eq('brief_id', decision.brief_id)
+      .is('admin_choice', null)
+
+    if (count === 0) {
+      await supabaseAdmin
+        .from('weekly_briefs')
+        .update({ status: 'reviewed', reviewed_at: new Date().toISOString() })
+        .eq('id', decision.brief_id)
+    }
+  }
 
   return NextResponse.json({ ok: true })
 }

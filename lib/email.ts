@@ -462,3 +462,45 @@ export async function sendBriefNotification(info: {
   const sendResult = await sendViaResend(recipient, subject, html)
   await logNotification(recipient, subject, 'executive_brief', html, sendResult)
 }
+
+/** Notifikace při selhání generace executive briefu (fail-open). */
+export async function sendBriefErrorNotification(info: {
+  weekLabel: string
+  error: string
+}): Promise<void> {
+  const recipient = await getSetting<string>('notification_email')
+  if (!recipient) return
+
+  const subject = `⚠️ Olivator Brief SELHAL — ${info.weekLabel}`
+  const html = `<!DOCTYPE html>
+<html lang="cs"><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#fafafa">
+<div style="background:white;border-radius:12px;padding:32px;border:1px solid #e8e8ed">
+  <h1 style="font-size:20px;color:#c4711a;margin:0 0 8px">⚠️ Brief ${info.weekLabel} se nepodařilo vygenerovat</h1>
+  <p style="color:#6e6e73;font-size:14px;margin:0 0 20px">AI generace briefu selhala. Žádná rozhodnutí tento týden nebudou automaticky navržena.</p>
+
+  <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:16px;margin-bottom:20px;font-size:13px;color:#856404">
+    <strong>Chyba:</strong> ${info.error}
+  </div>
+
+  <p style="font-size:14px;color:#1d1d1f;margin:0 0 16px"><strong>Co dělat:</strong></p>
+  <ol style="font-size:14px;color:#6e6e73;padding-left:20px;margin:0 0 24px">
+    <li>Zkontroluj <a href="https://olivator.cz/admin/brief" style="color:#2d6a4f">admin/brief</a> — brief s chybou je uložen jako draft</li>
+    <li>Pravděpodobně přetížení Claude API (529) — zkus znovu za hodinu</li>
+    <li>Nebo počkej na příští týden — autonomní cron to zopakuje</li>
+  </ol>
+
+  <div style="text-align:center">
+    <a href="https://olivator.cz/admin/brief" style="display:inline-block;background:#c4711a;color:white;text-decoration:none;padding:12px 28px;border-radius:20px;font-size:14px;font-weight:600">
+      Zkontrolovat brief →
+    </a>
+  </div>
+
+  <p style="font-size:11px;color:#aeaeb2;margin-top:28px;border-top:1px solid #e8e8ed;padding-top:16px">
+    Generováno automaticky cron:executive-brief (${info.weekLabel}).
+  </p>
+</div>
+</body></html>`.trim()
+
+  const sendResult = await sendViaResend(recipient, subject, html)
+  await logNotification(recipient, subject, 'executive_brief_error', html, sendResult)
+}

@@ -5,7 +5,8 @@
  * Dry-run: npm run cron:executive-brief -- --dry-run
  */
 import { generateExecutiveBrief } from '@/lib/executive-director'
-import { sendBriefNotification } from '@/lib/email'
+import { sendBriefNotification, sendBriefErrorNotification } from '@/lib/email'
+import { supabaseAdmin } from '@/lib/supabase'
 
 const MAX_RUNTIME_MS = 10 * 60 * 1000
 const DRY_RUN = process.argv.includes('--dry-run')
@@ -35,12 +36,41 @@ async function main() {
     if (result.error) console.warn(`  warning: ${result.error}`)
 
     if (!DRY_RUN && result.briefId !== 'dry-run') {
-      try {
-        await sendBriefNotification({ briefId: result.briefId, weekLabel: result.weekLabel, decisionCount: result.decisionCount })
-        console.log('[cron:executive-brief] email notification sent')
-      } catch (err) {
-        console.warn('[cron:executive-brief] email failed (non-fatal):', err)
+      if (result.briefJson) {
+        // Úspěšný brief — standardní notifikace
+        try {
+          await sendBriefNotification({ briefId: result.briefId, weekLabel: result.weekLabel, decisionCount: result.decisionCount })
+          console.log('[cron:executive-brief] email notification sent')
+        } catch (err) {
+          console.warn('[cron:executive-brief] email failed (non-fatal):', err)
+        }
+      } else {
+        // Selhání AI generace — error notifikace + log do agent_decisions
+        const errorMsg = result.error ?? 'AI generation failed'
+        console.warn(`[cron:executive-brief] brief generation failed: ${errorMsg}`)
+        try {
+          await sendBriefErrorNotification({ weekLabel: result.weekLabel, error: errorMsg })
+          console.log('[cron:executive-brief] error notification sent')
+        } catch (err) {
+          console.warn('[cron:executive-brief] error notification failed (non-fatal):', err)
+        }
+        try {
+          await supabaseAdmin.from('agent_decisions').insert({
+            agent_name: 'executive-director',
+            decision_type: 'generation_failed',
+            payload: { error: errorMsg, week_label: result.weekLabel },
+          })
+        } catch {
+          // agent_decisions log selhal — nesmí shodit cron
+        }
       }
+    }
+
+    if (TEST_FAILOPEN && result.briefId === 'dry-run') {
+      console.log('\n[cron:executive-brief] TEST-FAILOPEN výsledek:')
+      console.log('  → v reálném běhu by byl odeslán sendBriefErrorNotification()')
+      console.log(`  → week_label: ${result.weekLabel}`)
+      console.log('  → agent_decisions: generation_failed záznam')
     }
 
     clearTimeout(killTimer)

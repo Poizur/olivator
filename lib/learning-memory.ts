@@ -131,19 +131,22 @@ export async function observePattern(opts: {
   // Upsert — pokud pattern existuje, přidáme výskyt
   const { data: existing } = await supabaseAdmin
     .from('patterns_observed')
-    .select('id, occurrences')
+    .select('id, occurrences, example_contexts')
     .eq('signature', signature)
     .eq('status', 'open')
     .single()
 
   if (existing) {
     const newCount = (existing.occurrences as number) + 1
+    const prev = existing.example_contexts
+    const prevArray = Array.isArray(prev) ? prev : (prev ? [prev] : [])
+    const updatedContexts = [...prevArray.slice(-4), exampleContext]
     await supabaseAdmin
       .from('patterns_observed')
       .update({
         occurrences: newCount,
         last_seen: new Date().toISOString(),
-        example_contexts: exampleContext,
+        example_contexts: updatedContexts,
       })
       .eq('id', existing.id)
     return { occurrences: newCount, shouldCreateLearning: newCount >= 3 }
