@@ -8,6 +8,7 @@ export type FindingType =
   | 'repeated_product'
   | 'missing_logo'
   | 'http_404'
+  | 'stale_prices'
 
 export type Severity = 'high' | 'medium' | 'low'
 

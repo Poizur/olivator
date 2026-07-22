@@ -8,6 +8,7 @@ import { emptySectionsRule } from './rules/empty-sections'
 import { repeatedProductsRule } from './rules/repeated-products'
 import { missingLogoRule } from './rules/missing-logo'
 import { make404Finding } from './rules/http-404'
+import { checkStalePrices } from './rules/stale-prices'
 import type { Finding } from './types'
 
 export type { Finding }
@@ -96,8 +97,18 @@ export async function runSiteScanner(opts: { dryRun?: boolean } = {}): Promise<S
 
   console.log(`[scanner] Run ${scanRunId} — ${urls.length} URLs, dryRun=${dryRun}`)
 
+  // DB-based checks (neváží se na konkrétní URL)
+  const dbFindings = await checkStalePrices().catch((e: Error) => {
+    console.warn('[scanner] checkStalePrices failed (non-fatal):', e.message)
+    return [] as Finding[]
+  })
+  if (dbFindings.length > 0) {
+    console.log(`[scanner] DB checks: ${dbFindings.length} nálezů`)
+    dbFindings.forEach((f) => console.log(`  [${f.severity}] ${f.findingType}: ${f.detail}`))
+  }
+
   let urlsFailed = 0
-  const allFindings: Finding[] = []
+  const allFindings: Finding[] = [...dbFindings]
 
   for (const url of urls) {
     const page = await fetchPage(url)
