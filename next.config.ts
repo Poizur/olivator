@@ -21,6 +21,8 @@ const nextConfig: NextConfig = {
       { source: '/olej/gaea-fresh-extra-virgin', destination: '/srovnavac',                                     permanent: true },
       { source: '/olej/frantoio-franci-igp',     destination: '/srovnavac',                                     permanent: true },
       { source: '/znacka/vanocni',               destination: '/srovnavac',                                     permanent: true },
+      // Motakis POSKOZEN outlet SKU (status=inactive 2026-07-23) → plech (aktivní produkt)
+      { source: '/olej/motakis-kreta-extra-panensky-olivovy-olej-5-l', destination: '/olej/motakis-kreta-extra-panensky-olivovy-olej-5-l-plech', permanent: true },
     ]
   },
   images: {

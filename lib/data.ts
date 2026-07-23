@@ -1508,7 +1508,6 @@ export async function getBestsellers(opts: { limit?: number } = {}): Promise<Arr
 
   // Motakis ručně pin na začátek — reálně nejprodávanější 5L v ČR
   const PINNED = new Set([
-    'motakis-kreta-extra-panensky-olivovy-olej-5-l',
     'motakis-kreta-extra-panensky-olivovy-olej-5-l-plech',
   ])
 
