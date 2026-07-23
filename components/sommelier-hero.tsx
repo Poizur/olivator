@@ -32,9 +32,9 @@ const SUGGESTIONS = [
 ]
 
 function extractSlugs(text: string): string[] {
-  const matches = text.match(/\/olej\/([\w-]+)/g) ?? []
-  const slugs = matches.map((m) => m.replace('/olej/', ''))
-  return [...new Set(slugs)]
+  const olej = (text.match(/\/olej\/([\w-]+)/g) ?? []).map((m) => m.replace('/olej/', ''))
+  const go = [...text.matchAll(/\/go\/[\w-]+\/([\w-]+)(?:\?[^\s\n]*)?/g)].map((m) => m[1])
+  return [...new Set([...olej, ...go])]
 }
 
 /**
@@ -46,6 +46,7 @@ function renderInlineMarkdown(text: string): React.ReactNode[] {
     .replace(/\[\]\([^)]*\)/g, '')
     .replace(/\(\/olej\/[\w-]+\)/g, '')
     .replace(/\/olej\/[\w-]+/g, '')
+    .replace(/\/go\/[\w-]+\/[\w-]+(?:\?[^\s\n]*)?\n?/g, '')
     .replace(/\(link\)/g, '')
     .replace(/\s+\.\s*$/g, '.')
     .replace(/\s+,/g, ',')
@@ -131,6 +132,19 @@ export function SommelierHero({
     }
   }, [messages])
 
+  function getOrCreateHeroSessionId(): string {
+    try {
+      const key = 'olik_session_id'
+      const existing = sessionStorage.getItem(key)
+      if (existing) return existing
+      const id = crypto.randomUUID()
+      sessionStorage.setItem(key, id)
+      return id
+    } catch {
+      return 'anon'
+    }
+  }
+
   async function send(text?: string) {
     const msg = (text ?? input).trim()
     if (!msg || loading) return
@@ -144,7 +158,11 @@ export function SommelierHero({
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({
+          messages: newMessages,
+          session_id: getOrCreateHeroSessionId(),
+          source_page: typeof window !== 'undefined' ? window.location.pathname : undefined,
+        }),
       })
       const data = (await res.json()) as { reply?: string; error?: string }
       setMessages((prev) => [

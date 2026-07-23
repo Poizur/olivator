@@ -1,7 +1,8 @@
-// Analytics hub — affiliate clicks deep dive.
+// Analytics hub — affiliate clicks deep dive + Olík AI sommelier stats.
 //
-// Data source: tabulka `affiliate_clicks` — každý záznam je 1 klik na
+// Affiliate data: tabulka `affiliate_clicks` — každý záznam je 1 klik na
 // /go/[retailer]/[slug] redirect endpoint. Anonymní (IP hashována).
+// Olík data: tabulka `olik_conversations` — anonymní log dotazů na AI sommelier.
 
 import Link from 'next/link'
 import { ArrowDown, ArrowUp } from 'lucide-react'
@@ -336,6 +337,88 @@ async function getClickAnalytics(rangeDays: number): Promise<{
   }
 }
 
+interface OlikStats {
+  totalConversations: number
+  totalAffiliateClicks: number
+  recentQueries: Array<{ query: string; recommended: string[]; ts: string }>
+  weekBrief: string
+}
+
+const OLIK_TOPIC_KEYWORDS: Array<[string, string]> = [
+  ['polyfenol', 'polyfenoly'],
+  ['lehk', 'lehké oleje'],
+  ['řeck', 'řecké oleje'],
+  ['italsk', 'italské oleje'],
+  ['bio', 'BIO oleje'],
+  ['dárek', 'dárky'],
+  ['smažen', 'smažení'],
+  ['salát', 'saláty'],
+  ['levn', 'levné oleje'],
+  ['dop', 'DOP certifikace'],
+  ['zdraví', 'zdraví / výživa'],
+]
+
+function detectOlikTopic(query: string): string | null {
+  const lower = query.toLowerCase()
+  for (const [kw, label] of OLIK_TOPIC_KEYWORDS) {
+    if (lower.includes(kw)) return label
+  }
+  return null
+}
+
+async function getOlikStats(rangeDays: number): Promise<OlikStats> {
+  const since = new Date(Date.now() - rangeDays * 86400000).toISOString()
+  const weekSince = new Date(Date.now() - 7 * 86400000).toISOString()
+
+  const [{ data: conversations }, { count: olikClicks }] = await Promise.all([
+    supabaseAdmin
+      .from('olik_conversations')
+      .select('query, recommended_slugs, created_at')
+      .gte('created_at', since)
+      .order('created_at', { ascending: false }),
+    supabaseAdmin
+      .from('affiliate_clicks')
+      .select('*', { count: 'exact', head: true })
+      .eq('source_type', 'olik')
+      .gte('clicked_at', since),
+  ])
+
+  const convs = conversations ?? []
+  const recentQueries = convs.slice(0, 8).map((c) => ({
+    query: (c.query as string) ?? '',
+    recommended: (c.recommended_slugs as string[]) ?? [],
+    ts: c.created_at as string,
+  }))
+
+  // Týdenní brief — témata za posledních 7 dní
+  const weekConvs = convs.filter((c) => (c.created_at as string) >= weekSince)
+  const topicCounts = new Map<string, number>()
+  for (const c of weekConvs) {
+    const topic = detectOlikTopic(c.query as string)
+    if (topic) topicCounts.set(topic, (topicCounts.get(topic) ?? 0) + 1)
+  }
+  const topTopics = [...topicCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([label]) => label)
+
+  let weekBrief: string
+  if (weekConvs.length === 0) {
+    weekBrief = 'Za poslední týden žádné dotazy na Olíka.'
+  } else if (topTopics.length === 0) {
+    weekBrief = `Olík tento týden: ${weekConvs.length} dotazů.`
+  } else {
+    weekBrief = `Olík tento týden: ${weekConvs.length} dotazů. Nejčastěji se ptali na ${topTopics.join(', ')}.`
+  }
+
+  return {
+    totalConversations: convs.length,
+    totalAffiliateClicks: olikClicks ?? 0,
+    recentQueries,
+    weekBrief,
+  }
+}
+
 const SOURCE_TYPE_LABELS: Record<string, string> = {
   product:   'Produktová karta (/olej/)',
   zebricek:  'Žebříček (/zebricek/)',
@@ -355,7 +438,10 @@ export default async function AnalyticsPage({
   const { range } = await searchParams
   const rangeDays = range === '7' ? 7 : range === '90' ? 90 : 30
 
-  const data = await getClickAnalytics(rangeDays)
+  const [data, olik] = await Promise.all([
+    getClickAnalytics(rangeDays),
+    getOlikStats(rangeDays),
+  ])
   const maxBar = Math.max(1, ...data.byDay.map((d) => d.count))
   const totalEstCommission = data.topProducts.reduce((s, p) => s + p.estCommission, 0)
   const hasSourceTypeData = data.bySourceType.some((s) => s.type !== 'unknown')
@@ -626,6 +712,73 @@ export default async function AnalyticsPage({
             </ul>
           )}
         </div>
+      </div>
+
+      {/* Olík — AI sommelier stats */}
+      <div className="bg-white border border-off2 rounded-xl p-5 mb-3">
+        <div className="flex items-start justify-between mb-4 flex-wrap gap-3">
+          <div>
+            <h2 className="text-[14px] font-medium text-text flex items-center gap-2">
+              <span>Olík — AI sommelier</span>
+              <span className="text-[11px] text-text3 font-normal bg-off rounded-full px-2 py-0.5">
+                olik_conversations
+              </span>
+            </h2>
+            <p className="text-[11px] text-text3 mt-0.5">
+              Anonymní dotazy na AI rádce. Kliky přes doporučení jsou trackované jako source_type=olik.
+            </p>
+          </div>
+        </div>
+
+        {/* Brief */}
+        <div className="bg-olive/5 border border-olive/15 rounded-lg px-4 py-3 mb-4 text-[13px] text-text2 leading-relaxed">
+          {olik.weekBrief}
+        </div>
+
+        {/* KPI strip */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <KpiCard
+            label={`Dotazů (${rangeDays}d)`}
+            value={olik.totalConversations.toString()}
+            sub="anonymní session záznamy"
+          />
+          <KpiCard
+            label="Affiliate kliky z Olíka"
+            value={olik.totalAffiliateClicks.toString()}
+            sub={`source_type=olik za ${rangeDays}d`}
+          />
+        </div>
+
+        {/* Recent queries */}
+        <h3 className="text-[12px] font-medium text-text2 uppercase tracking-wider mb-2">
+          Posledních {olik.recentQueries.length} dotazů
+        </h3>
+        {olik.recentQueries.length === 0 ? (
+          <p className="text-[12px] text-text3 italic py-2">
+            Zatím žádné dotazy v tomto období.{' '}
+            <span className="text-text3">Tabulka olik_conversations se začne plnit po nasazení migrace.</span>
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {olik.recentQueries.map((q, i) => (
+              <li key={i} className="flex items-start gap-3 text-[12px]">
+                <span className="text-text3 tabular-nums w-5 text-right shrink-0 mt-0.5">
+                  {i + 1}.
+                </span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-text">{q.query || '(prázdný dotaz)'}</span>
+                  {q.recommended.length > 0 && (
+                    <span className="text-text3 ml-2">
+                      → {q.recommended.slice(0, 2).join(', ')}
+                      {q.recommended.length > 2 && ` +${q.recommended.length - 2}`}
+                    </span>
+                  )}
+                </div>
+                <span className="text-text3 shrink-0">{fmtRelative(q.ts)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Recent feed */}

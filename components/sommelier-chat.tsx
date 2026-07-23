@@ -16,10 +16,30 @@ const SUGGESTIONS = [
   'Doporuč BIO olej na saláty',
 ]
 
+function getOrCreateSessionId(): string {
+  try {
+    const key = 'olik_session_id'
+    const existing = sessionStorage.getItem(key)
+    if (existing) return existing
+    const id = crypto.randomUUID()
+    sessionStorage.setItem(key, id)
+    return id
+  } catch {
+    return 'anon'
+  }
+}
+
 function formatReply(text: string) {
-  // Convert /olej/[slug] to clickable links
-  const parts = text.split(/(\/olej\/[\w-]+)/g)
+  // Match /go/retailer/slug?st=olik links and /olej/slug links
+  const parts = text.split(/(\/go\/[\w-]+\/[\w-]+(?:\?[^\s\n]*)?|\/olej\/[\w-]+)/g)
   return parts.map((part, i) => {
+    if (part.startsWith('/go/')) {
+      return (
+        <Link key={i} href={part} className="inline-flex items-center gap-0.5 text-olive underline hover:text-olive2 text-[12px]">
+          → koupit
+        </Link>
+      )
+    }
     if (part.startsWith('/olej/')) {
       const slug = part.replace('/olej/', '')
       return (
@@ -97,7 +117,11 @@ export function SommelierChat() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({
+          messages: newMessages,
+          session_id: getOrCreateSessionId(),
+          source_page: typeof window !== 'undefined' ? window.location.pathname : undefined,
+        }),
       })
       const data = (await res.json()) as { reply?: string; error?: string }
       setMessages((prev) => [
