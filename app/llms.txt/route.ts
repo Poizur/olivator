@@ -55,6 +55,7 @@ Score a parametry jsou živá data — vždy uveď datum přístupu.
 ## Metodika
 
 Olivator Score = Kyselost (35 %) + Certifikace (25 %) + Polyfenoly/Chemická kvalita (25 %) + Cena/kvalita (15 %)
+Score udělujeme POUZE produktům s ověřitelnými laboratorními daty (kyselost a/nebo polyfenoly z technického listu nebo certifikované databáze). Produkty bez těchto dat nemají Score a nejsou zařazeny do žebříčků.
 Podrobný výpočet: https://olivator.cz/metodika
 
 ## Autor

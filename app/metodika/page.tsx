@@ -656,6 +656,14 @@ export default function MetodikaPage() {
                     q: 'Funguje Score i pro ochucené oleje s lanýžem nebo chilli?',
                     a: 'Ne. Ochucené oleje (aromatizované) hodnotíme jinou metrikou — EVOO škála by nebyla férová. Na produktové kartě jsou označeny jako "Aromatizovaný".',
                   },
+                  {
+                    q: 'Proč některé oleje v katalogu nemají Score?',
+                    a: 'Score udělujeme pouze produktům s ověřitelnými laboratorními daty — minimálně kyselostí nebo polyfenoly z technického listu, etikety nebo certifikované databáze. Oleje bez těchto dat najdete ve srovnávači s označením "čekáme na analytická data". Do žebříčků zařazujeme výhradně oleje s ověřitelnými daty.',
+                  },
+                  {
+                    q: 'Jsem výrobce nebo prodejce — mohu dodat analytická data?',
+                    a: 'Ano a velmi to uvítáme. Stačí poslat technický list (PDF nebo link) s kyselostí a polyfenoly na kontakt@olivator.cz. Data ověříme, doplníme do systému a ohodnotíme olej do 48 hodin. Žádné poplatky.',
+                  },
                 ].map((item, i) => (
                   <details key={i} className="group border border-off2 rounded-xl overflow-hidden">
                     <summary className="flex items-center justify-between px-5 py-4 cursor-pointer list-none">

@@ -69,19 +69,36 @@ export function ScoreSection({ product, children }: { product: Product; children
   }
 
   if (!hasScore) {
-    const missing: string[] = []
-    if (product.acidity == null) missing.push('kyselost')
-    if (product.polyphenols == null) missing.push('polyfenoly')
-    if (product.certifications.length === 0) missing.push('certifikace')
     return (
       <div className="bg-off rounded-xl p-5 mb-5">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-[13px] font-medium text-text">Olivator Score</h2>
-          <span className="text-[14px] font-medium text-text3">Připravujeme</span>
+          <span className="text-[14px] font-medium text-text3">čekáme na data</span>
         </div>
         <p className="text-[12px] text-text2 leading-relaxed mt-2">
-          Hodnocení {missing.length > 0 ? `tohoto oleje připravujeme — chybí ${missing.join(', ')}.` : 'tohoto oleje připravujeme.'}
-          {' '}Doplníme jakmile získáme lab data od výrobce.
+          Score udělujeme pouze produktům s ověřitelnými laboratorními daty (kyselost, polyfenoly).
+        </p>
+        {(product.acidity != null || product.polyphenols != null) && (
+          <div className="flex gap-1.5 flex-wrap mt-2">
+            {product.acidity != null && (
+              <span className="text-[10px] text-olive-dark bg-olive-bg px-2 py-0.5 rounded-full border border-olive-border">
+                Kyselost {product.acidity} % ✓
+              </span>
+            )}
+            {product.polyphenols != null && (
+              <span className="text-[10px] text-olive-dark bg-olive-bg px-2 py-0.5 rounded-full border border-olive-border">
+                Polyfenoly {product.polyphenols} mg/kg ✓
+              </span>
+            )}
+          </div>
+        )}
+        <p className="text-[11px] text-text3 leading-relaxed mt-3">
+          <span className="font-medium text-text2">Jste výrobce nebo prodejce?</span>{' '}
+          Pošlete technický list na{' '}
+          <a href="mailto:kontakt@olivator.cz" className="text-olive underline underline-offset-2 hover:text-olive2 transition-colors">
+            kontakt@olivator.cz
+          </a>
+          {' '}— hodnocení doplníme do 48 h.
         </p>
       </div>
     )

@@ -371,8 +371,24 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 Score {product.olivatorScore}
               </div>
             ) : (
-              <div className="bg-text3 text-white text-[11px] font-medium px-3 py-1.5 rounded-full shadow-md" title="Hodnocení připravujeme — chybí lab data">
-                Hodnocení připravujeme
+              <div className="flex flex-col items-start gap-1">
+                <div className="bg-off2 text-text2 text-[11px] font-medium px-3 py-1.5 rounded-full border border-off2" title="Score udělujeme pouze produktům s ověřitelnými laboratorními daty (kyselost, polyfenoly)">
+                  Score: čekáme na analytická data
+                </div>
+                {(product.acidity != null || product.polyphenols != null) && (
+                  <div className="flex gap-1.5 flex-wrap">
+                    {product.acidity != null && (
+                      <span className="text-[10px] text-olive-dark bg-olive-bg px-2 py-0.5 rounded-full border border-olive-border">
+                        Kyselost {product.acidity} % ✓
+                      </span>
+                    )}
+                    {product.polyphenols != null && (
+                      <span className="text-[10px] text-olive-dark bg-olive-bg px-2 py-0.5 rounded-full border border-olive-border">
+                        Polyfenoly {product.polyphenols} mg/kg ✓
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             )
           }
@@ -876,11 +892,20 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                       }
                     />
                   ) : (
-                    <FactRow
-                      label="Score"
-                      value="—"
-                      note="hodnocení připravujeme, chybí lab data"
-                    />
+                    <>
+                      <FactRow
+                        label="Score"
+                        value="—"
+                        note="čekáme na analytická data (kyselost, polyfenoly)"
+                      />
+                      <div className="px-4 py-3 bg-off/50 border-t border-off2 text-[12px] text-text2 leading-relaxed">
+                        <span className="font-medium text-text">Jste výrobce nebo prodejce tohoto oleje?</span>
+                        {' '}Dodejte technický list s kyselostí a polyfenoly a doplníme hodnocení.{' '}
+                        <a href="mailto:kontakt@olivator.cz" className="text-olive underline underline-offset-2 hover:text-olive2 transition-colors">
+                          kontakt@olivator.cz
+                        </a>
+                      </div>
+                    </>
                   )}
                   {product.certifications.length > 0 && (
                     <FactRow
