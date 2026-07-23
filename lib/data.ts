@@ -352,6 +352,72 @@ export async function getCheapestOffer(productId: string): Promise<ProductOffer 
   return offers[0] ?? null
 }
 
+export interface AlternativeProduct {
+  name: string
+  slug: string
+  olivatorScore: number | null
+  volumeMl: number | null
+  price: number | null
+  retailerName: string | null
+}
+
+/**
+ * Najde nejbližší dostupnou alternativu pro vyprodaný produkt.
+ * Kritéria: stejný brand token (první uppercase slovo 3+ znaků v názvu),
+ * aktivní, in_stock=true. Řazení: nejbližší objem → nejvyšší Score.
+ */
+export async function getAlternativeProduct(
+  currentProductId: string,
+  productName: string,
+  volumeMl: number | null
+): Promise<AlternativeProduct | null> {
+  const brandMatch = productName.match(/\b([A-ZÁÉÍÓÚŮÝČĎĚŇŘŠŤŽ][A-ZÁÉÍÓÚŮÝČĎĚŇŘŠŤŽ]{2,})\b/)
+  if (!brandMatch) return null
+  const brandToken = brandMatch[1].toLowerCase()
+
+  const { data } = await supabaseAdmin
+    .from('product_offers')
+    .select(`price, product_id, retailers(name), products!inner(id, name, slug, olivator_score, volume_ml, status)`)
+    .eq('in_stock', true)
+    .neq('product_id', currentProductId)
+    .limit(500)
+
+  if (!data) return null
+
+  type Row = {
+    price: number
+    product_id: string
+    retailers: { name: string } | null
+    products: { id: string; name: string; slug: string; olivator_score: number | null; volume_ml: number | null; status: string }
+  }
+
+  const matching = (data as unknown as Row[]).filter(r =>
+    r.products.status === 'active' &&
+    r.products.name.toLowerCase().includes(brandToken)
+  )
+  if (matching.length === 0) return null
+
+  const sorted = [...matching].sort((a, b) => {
+    const aVol = a.products.volume_ml ?? 0
+    const bVol = b.products.volume_ml ?? 0
+    const refVol = volumeMl ?? 0
+    const aDist = Math.abs(aVol - refVol)
+    const bDist = Math.abs(bVol - refVol)
+    if (aDist !== bDist) return aDist - bDist
+    return ((b.products.olivator_score) ?? 0) - ((a.products.olivator_score) ?? 0)
+  })
+
+  const best = sorted[0]
+  return {
+    name: best.products.name,
+    slug: best.products.slug,
+    olivatorScore: best.products.olivator_score,
+    volumeMl: best.products.volume_ml,
+    price: best.price,
+    retailerName: best.retailers?.name ?? null,
+  }
+}
+
 // Aggregate stats for homepage and listings
 export interface SiteStats {
   totalProducts: number

@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { getProducts, getProductBySlug, getProductByOldSlug, getOffersForProduct, getProductGallery, getProductCustomFAQs, getActiveGeneralFAQs, getVariantProducts, getProductEntityLinks, getRetailerPhotosLite } from '@/lib/data'
+import { getProducts, getProductBySlug, getProductByOldSlug, getOffersForProduct, getProductGallery, getProductCustomFAQs, getActiveGeneralFAQs, getVariantProducts, getProductEntityLinks, getRetailerPhotosLite, getAlternativeProduct } from '@/lib/data'
 import { extractBrandSlug, extractRegionSlug } from '@/lib/entity-extractor'
 import { countryName, countryFlag, typeLabel, certLabel, formatPrice, formatPricePer100ml, regionGenitive } from '@/lib/utils'
 import { productSchema, breadcrumbSchema, faqSchema } from '@/lib/schema'
@@ -139,6 +139,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     })(),
   ])
   const cheapest = offers[0]
+  const cheapestInStock = offers.find(o => o.inStock !== false) ?? null
+  const allSoldOut = offers.length > 0 && cheapestInStock === null
+  const alternative = allSoldOut
+    ? await getAlternativeProduct(product.id, product.name, product.volumeMl)
+    : null
   const hasScore = product.type !== 'flavored' && product.olivatorScore != null && product.olivatorScore > 0
   // Aliasy z VariantGroups — page kód níže dlouho používal `variants` array.
   // Po splitu Fáze UI (2026-05): sameOil = identický olej v jiných objemech,
@@ -466,38 +471,98 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           {/* Cena + CTA — viditelné hned bez scrollu */}
           {cheapest && (
             <div className="mb-4">
-              <div className="flex items-baseline gap-2 mb-1">
-                <span className="text-[32px] font-bold text-text tabular-nums leading-none">
-                  {formatPrice(cheapest.price)}
-                </span>
-                {product.volumeMl && (
-                  <span className="text-[13px] text-text3">
-                    {formatPricePer100ml(cheapest.price, product.volumeMl)}
-                  </span>
-                )}
-              </div>
-              <div className="text-[12px] text-text3 mb-4">
-                Nejnižší cena · u {cheapest.retailer.name}
-              </div>
-              <AffiliateLink
-                data={{
-                  productSlug: product.slug,
-                  productName: product.name,
-                  retailerSlug: cheapest.retailer.slug,
-                  retailerName: cheapest.retailer.name,
-                  price: cheapest.price,
-                  source: 'product_page',
-                }}
-                className="block w-full bg-olive text-white border-none rounded-xl py-3.5 text-[15px] font-medium cursor-pointer text-center transition-colors hover:bg-olive-dark mb-2.5"
-              >
-                Koupit u {cheapest.retailer.name} →
-              </AffiliateLink>
-              <div className="text-center mb-2">
-                <PriceWatchButton
-                  productId={product.id}
-                  productName={product.name}
-                />
-              </div>
+              {allSoldOut ? (
+                /* Všichni prodejci vyprodáni */
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[32px] font-bold text-text3 tabular-nums leading-none line-through">
+                      {formatPrice(cheapest.price)}
+                    </span>
+                    <span className="text-[13px] bg-off text-text3 px-2 py-0.5 rounded-lg font-medium">
+                      Vyprodáno
+                    </span>
+                  </div>
+                  <div className="text-[12px] text-text3 mb-4">
+                    Naposledy dostupné u {cheapest.retailer.name}
+                  </div>
+                  <div className="block w-full text-center py-3.5 text-[15px] font-medium text-text3 bg-off rounded-xl mb-3">
+                    Momentálně vyprodáno u všech prodejců
+                  </div>
+                  <div className="mb-3">
+                    <PriceWatchButton
+                      productId={product.id}
+                      productName={product.name}
+                    />
+                  </div>
+                  {alternative && (
+                    <Link
+                      href={`/olej/${alternative.slug}`}
+                      className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border border-olive bg-olive-bg hover:border-olive-dark transition-colors"
+                    >
+                      <div>
+                        <div className="text-[11px] text-olive-dark font-semibold uppercase tracking-wider mb-0.5">
+                          Podobný produkt skladem
+                        </div>
+                        <div className="text-[13px] font-medium text-text leading-snug">
+                          {alternative.name}
+                        </div>
+                        {alternative.olivatorScore && (
+                          <div className="text-[11px] text-text3 mt-0.5">
+                            Score {alternative.olivatorScore}
+                            {alternative.volumeMl ? ` · ${alternative.volumeMl} ml` : ''}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        {alternative.price && (
+                          <div className="text-[15px] font-semibold text-text tabular-nums">
+                            {formatPrice(alternative.price)}
+                          </div>
+                        )}
+                        <div className="text-[12px] text-olive font-medium mt-0.5">
+                          Zobrazit →
+                        </div>
+                      </div>
+                    </Link>
+                  )}
+                </div>
+              ) : (
+                /* Normální stav — alespoň 1 in-stock nabídka */
+                <>
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <span className="text-[32px] font-bold text-text tabular-nums leading-none">
+                      {formatPrice(cheapestInStock!.price)}
+                    </span>
+                    {product.volumeMl && (
+                      <span className="text-[13px] text-text3">
+                        {formatPricePer100ml(cheapestInStock!.price, product.volumeMl)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-[12px] text-text3 mb-4">
+                    Nejnižší cena · u {cheapestInStock!.retailer.name}
+                  </div>
+                  <AffiliateLink
+                    data={{
+                      productSlug: product.slug,
+                      productName: product.name,
+                      retailerSlug: cheapestInStock!.retailer.slug,
+                      retailerName: cheapestInStock!.retailer.name,
+                      price: cheapestInStock!.price,
+                      source: 'product_page',
+                    }}
+                    className="block w-full bg-olive text-white border-none rounded-xl py-3.5 text-[15px] font-medium cursor-pointer text-center transition-colors hover:bg-olive-dark mb-2.5"
+                  >
+                    Koupit u {cheapestInStock!.retailer.name} →
+                  </AffiliateLink>
+                  <div className="text-center mb-2">
+                    <PriceWatchButton
+                      productId={product.id}
+                      productName={product.name}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -1167,9 +1232,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         <StickyBuyBar
           productSlug={product.slug}
           productName={product.name}
+          productId={product.id}
           retailerSlug={cheapest.retailer.slug}
           retailerName={cheapest.retailer.name}
           price={cheapest.price}
+          inStock={!allSoldOut}
           scoreBadge={{ value: product.olivatorScore ?? null, type: product.type ?? null }}
         />
       )}

@@ -7,23 +7,28 @@
 
 import { useEffect, useState } from 'react'
 import { AffiliateLink } from './affiliate-link'
+import { PriceWatchButton } from './price-watch-button'
 import { formatPrice } from '@/lib/utils'
 
 interface Props {
   productSlug: string
   productName: string
+  productId: string
   retailerSlug: string
   retailerName: string
   price: number
+  inStock?: boolean
   scoreBadge?: { value: number | null; type: string | null }
 }
 
 export function StickyBuyBar({
   productSlug,
   productName,
+  productId,
   retailerSlug,
   retailerName,
   price,
+  inStock = true,
   scoreBadge,
 }: Props) {
   const [visible, setVisible] = useState(false)
@@ -58,19 +63,31 @@ export function StickyBuyBar({
           visible ? 'translate-y-0' : 'translate-y-full'
         }`}
       >
-        <div className="flex flex-col leading-tight min-w-0">
-          <span className="text-[10px] uppercase tracking-wider text-text3 font-semibold">
-            {showScore ? `Score ${scoreBadge!.value} · Nejlevněji` : 'Nejlevněji'}
-          </span>
-          <span className="text-[17px] font-bold text-text tabular-nums">{formatPrice(price)}</span>
-          <span className="text-[10px] text-text3 truncate">u {retailerName}</span>
-        </div>
-        <AffiliateLink
-          data={affData}
-          className="shrink-0 inline-flex items-center gap-1.5 bg-olive text-white rounded-full px-5 py-3 text-[14px] font-semibold hover:bg-olive-dark transition-colors whitespace-nowrap"
-        >
-          Koupit →
-        </AffiliateLink>
+        {inStock ? (
+          <>
+            <div className="flex flex-col leading-tight min-w-0">
+              <span className="text-[10px] uppercase tracking-wider text-text3 font-semibold">
+                {showScore ? `Score ${scoreBadge!.value} · Nejlevněji` : 'Nejlevněji'}
+              </span>
+              <span className="text-[17px] font-bold text-text tabular-nums">{formatPrice(price)}</span>
+              <span className="text-[10px] text-text3 truncate">u {retailerName}</span>
+            </div>
+            <AffiliateLink
+              data={affData}
+              className="shrink-0 inline-flex items-center gap-1.5 bg-olive text-white rounded-full px-5 py-3 text-[14px] font-semibold hover:bg-olive-dark transition-colors whitespace-nowrap"
+            >
+              Koupit →
+            </AffiliateLink>
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col leading-tight min-w-0">
+              <span className="text-[10px] uppercase tracking-wider text-text3 font-semibold">Vyprodáno</span>
+              <span className="text-[14px] font-medium text-text2">u všech prodejců</span>
+            </div>
+            <PriceWatchButton productId={productId} productName={productName} />
+          </>
+        )}
       </div>
 
       {/* ── Desktop (lg+): floating pill ── */}
@@ -80,29 +97,39 @@ export function StickyBuyBar({
           visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3 pointer-events-none'
         }`}
       >
-        {showScore && (
-          <div className="flex items-center gap-1.5 pl-3 pr-2 py-1 bg-[var(--terra)]/10 rounded-full">
-            <svg width="11" height="11" fill="var(--terra)" viewBox="0 0 24 24">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-            </svg>
-            <span className="text-[12px] font-bold text-[var(--terra)] tabular-nums">
-              {scoreBadge!.value}
-            </span>
-          </div>
+        {inStock ? (
+          <>
+            {showScore && (
+              <div className="flex items-center gap-1.5 pl-3 pr-2 py-1 bg-[var(--terra)]/10 rounded-full">
+                <svg width="11" height="11" fill="var(--terra)" viewBox="0 0 24 24">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                </svg>
+                <span className="text-[12px] font-bold text-[var(--terra)] tabular-nums">
+                  {scoreBadge!.value}
+                </span>
+              </div>
+            )}
+            <div className="flex flex-col leading-tight px-2">
+              <span className="text-[10px] uppercase tracking-wider text-text3 font-semibold">Nejlevněji</span>
+              <span className="text-[15px] font-bold text-text tabular-nums">{formatPrice(price)}</span>
+            </div>
+            <AffiliateLink
+              data={affData}
+              className="inline-flex items-center gap-1.5 bg-olive text-white rounded-full px-5 py-2.5 text-[13px] font-semibold hover:bg-olive-dark transition-colors whitespace-nowrap"
+            >
+              Koupit u {retailerName}
+              <span className="text-[11px]">→</span>
+            </AffiliateLink>
+          </>
+        ) : (
+          <>
+            <div className="flex flex-col leading-tight px-3">
+              <span className="text-[10px] uppercase tracking-wider text-text3 font-semibold">Vyprodáno</span>
+              <span className="text-[13px] font-medium text-text2">u všech prodejců</span>
+            </div>
+            <PriceWatchButton productId={productId} productName={productName} />
+          </>
         )}
-        <div className="flex flex-col leading-tight px-2">
-          <span className="text-[10px] uppercase tracking-wider text-text3 font-semibold">
-            Nejlevněji
-          </span>
-          <span className="text-[15px] font-bold text-text tabular-nums">{formatPrice(price)}</span>
-        </div>
-        <AffiliateLink
-          data={affData}
-          className="inline-flex items-center gap-1.5 bg-olive text-white rounded-full px-5 py-2.5 text-[13px] font-semibold hover:bg-olive-dark transition-colors whitespace-nowrap"
-        >
-          Koupit u {retailerName}
-          <span className="text-[11px]">→</span>
-        </AffiliateLink>
       </div>
     </>
   )

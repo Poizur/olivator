@@ -25,54 +25,84 @@ export function PriceTable({ offers, volumeMl, productSlug, productName }: Price
       <h2 className="text-[11px] font-semibold tracking-wider uppercase text-text3 mb-2.5">
         Kde koupit nejlevněji
       </h2>
-      {offers.map((offer, i) => (
-        <AffiliateLink
-          key={offer.id}
-          data={{
-            productSlug,
-            productName,
-            retailerSlug: offer.retailer.slug,
-            retailerName: offer.retailer.name,
-            price: offer.price,
-            source: 'product_page',
-          }}
-          className={`flex items-center justify-between px-3.5 py-3 rounded-xl border mb-2 cursor-pointer transition-all ${
-            i === 0
-              ? 'border-olive bg-olive-bg hover:border-olive-dark'
-              : 'border-off2 hover:border-olive-border hover:bg-olive-bg'
-          }`}
-        >
-          <div>
-            <div className="text-[13px] font-medium text-text">
-              {offer.retailer.name}
-              {i === 0 && (
-                <span className="text-[10px] bg-olive text-white px-[7px] py-0.5 rounded-full font-semibold ml-1.5">
-                  Nejlevněji
-                </span>
+      {offers.map((offer, i) => {
+        const inStock = offer.inStock !== false
+        const isFirstInStock = inStock && offers.slice(0, i).every(o => !o.inStock)
+
+        const inner = (
+          <>
+            <div>
+              <div className={`text-[13px] font-medium ${inStock ? 'text-text' : 'text-text3'}`}>
+                {offer.retailer.name}
+                {inStock && isFirstInStock && (
+                  <span className="text-[10px] bg-olive text-white px-[7px] py-0.5 rounded-full font-semibold ml-1.5">
+                    Nejlevněji
+                  </span>
+                )}
+                {!inStock && (
+                  <span className="text-[10px] bg-off text-text3 px-[7px] py-0.5 rounded-full font-medium ml-1.5">
+                    Vyprodáno
+                  </span>
+                )}
+              </div>
+              {inStock && offer.retailer.rating != null && offer.retailer.rating > 0 && (
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="text-[11px] text-terra" aria-label={`Hodnocení ${offer.retailer.rating} z 5`}>
+                    {renderStars(offer.retailer.rating)}
+                  </span>
+                  <span className="text-[10px] text-text3">
+                    {offer.retailer.rating.toFixed(1)}
+                    {offer.retailer.ratingCount ? ` (${offer.retailer.ratingCount.toLocaleString('cs-CZ')} hodnocení)` : ''}
+                  </span>
+                </div>
+              )}
+              {inStock && isFirstInStock && offer.retailer.rating == null && (
+                <div className="text-[11px] text-olive-light mt-0.5">Doručení dnes</div>
               )}
             </div>
-            {/* Star rating — trust signal under retailer name */}
-            {offer.retailer.rating != null && offer.retailer.rating > 0 && (
-              <div className="flex items-center gap-1 mt-0.5">
-                <span className="text-[11px] text-terra" aria-label={`Hodnocení ${offer.retailer.rating} z 5`}>
-                  {renderStars(offer.retailer.rating)}
-                </span>
-                <span className="text-[10px] text-text3">
-                  {offer.retailer.rating.toFixed(1)}
-                  {offer.retailer.ratingCount ? ` (${offer.retailer.ratingCount.toLocaleString('cs-CZ')} hodnocení)` : ''}
-                </span>
+            <div className="text-right">
+              <div className={`text-base font-semibold tabular-nums ${inStock ? 'text-text' : 'text-text3 line-through'}`}>
+                {formatPrice(offer.price)}
               </div>
-            )}
-            {i === 0 && offer.retailer.rating == null && (
-              <div className="text-[11px] text-olive-light mt-0.5">Doručení dnes</div>
-            )}
-          </div>
-          <div className="text-right">
-            <div className="text-base font-semibold text-text tabular-nums">{formatPrice(offer.price)}</div>
-            <div className="text-[11px] text-text3 tabular-nums whitespace-nowrap">{formatPricePer100ml(offer.price, volumeMl)}</div>
-          </div>
-        </AffiliateLink>
-      ))}
+              <div className="text-[11px] text-text3 tabular-nums whitespace-nowrap">
+                {formatPricePer100ml(offer.price, volumeMl)}
+              </div>
+            </div>
+          </>
+        )
+
+        if (!inStock) {
+          return (
+            <div
+              key={offer.id}
+              className="flex items-center justify-between px-3.5 py-3 rounded-xl border mb-2 border-off2 opacity-60"
+            >
+              {inner}
+            </div>
+          )
+        }
+
+        return (
+          <AffiliateLink
+            key={offer.id}
+            data={{
+              productSlug,
+              productName,
+              retailerSlug: offer.retailer.slug,
+              retailerName: offer.retailer.name,
+              price: offer.price,
+              source: 'product_page',
+            }}
+            className={`flex items-center justify-between px-3.5 py-3 rounded-xl border mb-2 cursor-pointer transition-all ${
+              isFirstInStock
+                ? 'border-olive bg-olive-bg hover:border-olive-dark'
+                : 'border-off2 hover:border-olive-border hover:bg-olive-bg'
+            }`}
+          >
+            {inner}
+          </AffiliateLink>
+        )
+      })}
     </div>
   )
 }

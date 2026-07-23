@@ -100,15 +100,24 @@ export function ListCard({ product, offer, rank, compact = false }: ListCardProp
                 {/* Direct affiliate link — preventDefault na parent Link, klik vede
                     rovnou na /go/[retailer]/[slug] (loguje + redirect na affil URL).
                     Bez toho by uživatel musel přes detail stranku → 1 klik navíc. */}
-                <a
-                  href={`/go/${offer.retailer.slug}/${product.slug}`}
-                  target="_blank"
-                  rel="nofollow noopener sponsored"
-                  onClick={(e) => e.stopPropagation()}
-                  className="bg-olive text-white rounded-full px-4 py-2 text-[12px] font-medium hover:bg-olive2 transition-colors"
-                >
-                  Koupit
-                </a>
+                {offer.inStock !== false ? (
+                  <a
+                    href={`/go/${offer.retailer.slug}/${product.slug}`}
+                    target="_blank"
+                    rel="nofollow noopener sponsored"
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-olive text-white rounded-full px-4 py-2 text-[12px] font-medium hover:bg-olive2 transition-colors"
+                  >
+                    Koupit
+                  </a>
+                ) : (
+                  <span
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-off text-text3 rounded-full px-4 py-2 text-[12px] font-medium"
+                  >
+                    Vyprodáno
+                  </span>
+                )}
               </div>
             </div>
           )}
@@ -200,7 +209,7 @@ export function ListCard({ product, offer, rank, compact = false }: ListCardProp
           )}
 
           {/* Direct affiliate — viz mobile branche výš */}
-          {offer ? (
+          {offer && offer.inStock !== false ? (
             <a
               href={`/go/${offer.retailer.slug}/${product.slug}`}
               target="_blank"
@@ -210,6 +219,13 @@ export function ListCard({ product, offer, rank, compact = false }: ListCardProp
             >
               Koupit
             </a>
+          ) : offer ? (
+            <span
+              onClick={(e) => e.stopPropagation()}
+              className="bg-off text-text3 border-none rounded-full px-4 py-2 text-xs font-medium shrink-0"
+            >
+              Vyprodáno
+            </span>
           ) : (
             <span className="bg-off2 text-text3 border-none rounded-full px-4 py-2 text-xs font-medium shrink-0">
               —
