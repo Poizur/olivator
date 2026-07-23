@@ -19,6 +19,8 @@ interface ClickRow {
   ip_hash: string | null
   user_agent: string | null
   referrer: string | null
+  source_type: string | null
+  price_at_click: number | null
 }
 
 interface TopProduct {
@@ -106,12 +108,14 @@ async function getClickAnalytics(rangeDays: number): Promise<{
   }>
   byReferrer: Array<{ source: string; count: number }>
   byDevice: Array<{ device: string; count: number }>
+  bySourceType: Array<{ type: string; count: number; pct: number }>
+  basketValue: number
 }> {
   const start = startOfDay(new Date(Date.now() - (rangeDays - 1) * 86400000))
 
   const { data: rows } = await supabaseAdmin
     .from('affiliate_clicks')
-    .select('id, clicked_at, product_id, retailer_id, session_id, ip_hash, user_agent, referrer')
+    .select('id, clicked_at, product_id, retailer_id, session_id, ip_hash, user_agent, referrer, source_type, price_at_click')
     .gte('clicked_at', start.toISOString())
     .order('clicked_at', { ascending: false })
 
@@ -305,6 +309,19 @@ async function getClickAnalytics(rangeDays: number): Promise<{
     .map(([device, count]) => ({ device, count }))
     .sort((a, b) => b.count - a.count)
 
+  // Source type breakdown (nový sloupec od migrace 20260723)
+  const sourceTypeCounts = new Map<string, number>()
+  for (const c of clicks) {
+    const t = c.source_type ?? 'unknown'
+    sourceTypeCounts.set(t, (sourceTypeCounts.get(t) ?? 0) + 1)
+  }
+  const bySourceType = [...sourceTypeCounts.entries()]
+    .map(([type, count]) => ({ type, count, pct: total > 0 ? Math.round((count / total) * 100) : 0 }))
+    .sort((a, b) => b.count - a.count)
+
+  // Odhadovaná hodnota košíků: suma price_at_click (NULL = 0)
+  const basketValue = clicks.reduce((sum, c) => sum + (c.price_at_click ?? 0), 0)
+
   return {
     total,
     uniqueIPs,
@@ -314,7 +331,20 @@ async function getClickAnalytics(rangeDays: number): Promise<{
     recent,
     byReferrer,
     byDevice,
+    bySourceType,
+    basketValue,
   }
+}
+
+const SOURCE_TYPE_LABELS: Record<string, string> = {
+  product:   'Produktová karta (/olej/)',
+  zebricek:  'Žebříček (/zebricek/)',
+  srovnavac: 'Srovnávač (/srovnavac)',
+  slevy:     'Slevy (/slevy)',
+  clanek:    'Článek / recept',
+  email:     'Newsletter (utm_medium=email)',
+  homepage:  'Homepage (/)',
+  unknown:   'Neznámý (historické kliky / přímá URL)',
 }
 
 export default async function AnalyticsPage({
@@ -328,6 +358,7 @@ export default async function AnalyticsPage({
   const data = await getClickAnalytics(rangeDays)
   const maxBar = Math.max(1, ...data.byDay.map((d) => d.count))
   const totalEstCommission = data.topProducts.reduce((s, p) => s + p.estCommission, 0)
+  const hasSourceTypeData = data.bySourceType.some((s) => s.type !== 'unknown')
 
   return (
     <div>
@@ -384,7 +415,11 @@ export default async function AnalyticsPage({
           value={data.topProducts[0]?.clicks?.toString() ?? '—'}
           sub={data.topProducts[0]?.name ?? 'kliků'}
         />
-        <KpiCard label="Odhad provize" value={fmtCZK(totalEstCommission)} sub="z top 10 produktů" />
+        <KpiCard
+          label="Odh. hodnota košíků"
+          value={data.basketValue > 0 ? fmtCZK(data.basketValue) : fmtCZK(totalEstCommission)}
+          sub={data.basketValue > 0 ? `suma cen v moment kliku (${rangeDays}d)` : `odhad z provizí (${rangeDays}d)`}
+        />
       </div>
 
       {/* Time series chart */}
@@ -510,6 +545,37 @@ export default async function AnalyticsPage({
             </ul>
           )}
         </div>
+      </div>
+
+      {/* Source type breakdown */}
+      <div className="bg-white border border-off2 rounded-xl p-5 mb-3">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h2 className="text-[14px] font-medium text-text">Zdroje kliků (source_type)</h2>
+            <p className="text-[11px] text-text3 mt-0.5">
+              {hasSourceTypeData
+                ? 'Odvozeno z URL stránky odkud klik přišel. Email detekován z utm_medium=email.'
+                : 'Data se začnou plnit po nasazení migrace 20260723. Historické kliky mají type = unknown.'}
+            </p>
+          </div>
+        </div>
+        {data.bySourceType.length === 0 ? (
+          <p className="text-[12px] text-text3 italic">Žádné kliky.</p>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-x-8 gap-y-2.5">
+            {data.bySourceType.map(({ type, count, pct }) => (
+              <div key={type}>
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[13px] text-text">{SOURCE_TYPE_LABELS[type] ?? type}</span>
+                  <span className="text-[12px] tabular-nums text-text2">{count} ({pct} %)</span>
+                </div>
+                <div className="h-1.5 bg-off2 rounded-full overflow-hidden">
+                  <div className="h-full bg-olive rounded-full" style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Referrers + Devices */}

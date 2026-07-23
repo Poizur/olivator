@@ -3,6 +3,27 @@ import { createHash } from 'node:crypto'
 import { supabaseAdmin } from '@/lib/supabase'
 
 /**
+ * Odvodí typ stránky z URL cesty refereru.
+ * utm_medium=email má prioritu (newslettery nemají interní referer).
+ */
+function deriveSourceType(sourcePage: string | null, utmMedium?: string): string {
+  if (utmMedium === 'email') return 'email'
+  if (!sourcePage) return 'unknown'
+  try {
+    const path = new URL(sourcePage).pathname
+    if (path === '/' || path === '') return 'homepage'
+    if (path.startsWith('/olej/')) return 'product'
+    if (path.startsWith('/zebricek')) return 'zebricek'
+    if (path.startsWith('/srovnavac')) return 'srovnavac'
+    if (path.startsWith('/slevy')) return 'slevy'
+    if (path.startsWith('/pruvodce/') || path.startsWith('/recept/')) return 'clanek'
+  } catch {
+    // neparsovatelná URL → unknown
+  }
+  return 'unknown'
+}
+
+/**
  * Validuje URL: pouze http/https + (volitelně) doménový allowlist.
  * Vrací parsed URL nebo null.
  */
@@ -91,7 +112,7 @@ export async function GET(
 
   const { data: offer, error: oErr } = await supabaseAdmin
     .from('product_offers')
-    .select('affiliate_url, product_url')
+    .select('affiliate_url, product_url, price')
     .eq('product_id', product.id)
     .eq('retailer_id', retailer.id)
     .maybeSingle()
@@ -129,6 +150,11 @@ export async function GET(
     utm_content:  reqUrl.searchParams.get('utm_content')  ?? undefined,
   }
 
+  // Odvoď source_page + source_type z refereru nebo explicitního ?sp= parametru
+  const spParam = reqUrl.searchParams.get('sp')
+  const sourcePage = spParam ?? (referrer || null)
+  const sourceType = deriveSourceType(sourcePage, utm.utm_medium)
+
   const { error: clickErr } = await supabaseAdmin.from('affiliate_clicks').insert({
     product_id: product.id,
     retailer_id: retailer.id,
@@ -136,6 +162,9 @@ export async function GET(
     user_agent: userAgent,
     referrer,
     market: 'CZ',
+    source_page: sourcePage,
+    source_type: sourceType,
+    price_at_click: (offer.price as number | null) ?? null,
     ...utm,
   })
   if (clickErr) console.error('[affiliate] Log failed:', clickErr.message)

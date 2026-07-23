@@ -134,13 +134,16 @@ async function collectCatalog(): Promise<object> {
 async function collectAffiliate(): Promise<object> {
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
   const { data: clicks, count: totalClicks } = await supabaseAdmin
-    .from('affiliate_clicks').select('product_id, retailer_id', { count: 'exact' }).gte('clicked_at', since)
+    .from('affiliate_clicks').select('product_id, retailer_id, source_type', { count: 'exact' }).gte('clicked_at', since)
 
   const productCounts: Record<string, number> = {}
   const retailerCounts: Record<string, number> = {}
+  const sourceTypeCounts: Record<string, number> = {}
   for (const c of clicks ?? []) {
     if (c.product_id) productCounts[c.product_id] = (productCounts[c.product_id] ?? 0) + 1
     if (c.retailer_id) retailerCounts[c.retailer_id] = (retailerCounts[c.retailer_id] ?? 0) + 1
+    const st = (c.source_type as string | null) ?? 'unknown'
+    sourceTypeCounts[st] = (sourceTypeCounts[st] ?? 0) + 1
   }
 
   const topProductIds = Object.entries(productCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id]) => id)
@@ -157,6 +160,13 @@ async function collectAffiliate(): Promise<object> {
     topRetailers = topRetailerIds.map((id) => ({ name: retailers?.find((r) => r.id === id)?.name ?? id, clicks: retailerCounts[id] }))
   }
 
+  // Source type breakdown pro brief — seřazeno sestupně, bez unknown pokud máme reálná data
+  const total = totalClicks ?? 0
+  const sourceBreakdownForBrief = Object.entries(sourceTypeCounts)
+    .sort((a, b) => b[1] - a[1])
+    .filter(([type]) => type !== 'unknown' || Object.keys(sourceTypeCounts).length === 1)
+    .map(([type, count]) => ({ type, count, pct: total > 0 ? Math.round((count / total) * 100) : 0 }))
+
   // 3-way breakdown — viz L-010: nelze házet dohromady fixable + no-program
   const { data: noAffOffers } = await supabaseAdmin
     .from('product_offers')
@@ -171,11 +181,12 @@ async function collectAffiliate(): Promise<object> {
   const noProgram = (noAffOffers ?? []).length - fixable
 
   return {
-    totalClicks: totalClicks ?? 0,
+    totalClicks: total,
     topProducts,
     topRetailers,
     offersWithoutAffiliate: (noAffOffers ?? []).length,
     affiliateBreakdown: { fixable, noProgram },
+    sourceBreakdown: sourceBreakdownForBrief,
   }
 }
 
@@ -419,6 +430,10 @@ function buildPrompt(raw: RawBriefData, weekLabel: string, learningSummary: stri
     .slice(0, 5).map((p) => `  - ${p.slug}: ${p.clicks} kliků`).join('\n')
   const topRetailers = (affiliate.topRetailers as Array<{ name: string; clicks: number }> ?? [])
     .slice(0, 4).map((r) => `  - ${r.name}: ${r.clicks} kliků`).join('\n')
+  const sourceBreakdownItems = (affiliate.sourceBreakdown as Array<{ type: string; count: number; pct: number }> ?? [])
+  const sourceBreakdownStr = sourceBreakdownItems.length > 0 && sourceBreakdownItems.some((s) => s.type !== 'unknown')
+    ? sourceBreakdownItems.map((s) => `  - ${s.type}: ${s.pct} % (${s.count} kliků)`).join('\n')
+    : '  (data dostupná od migrace 20260723 — historické kliky nemají source_type)'
   const lastDrafts = (newsletter.lastDrafts as Array<{ status: string; subject: string; reviewerSeverity?: string }> ?? [])
     .map((d) => `  - [${d.status}${d.reviewerSeverity ? ', AI:' + d.reviewerSeverity : ''}] "${d.subject}"`).join('\n')
   const lastCommits = (git.lastCommits as string[] ?? []).slice(0, 7).map((c) => `  - ${c}`).join('\n')
@@ -481,6 +496,8 @@ Affiliate:
 ${topProducts || '  (žádné kliky)'}
   Top retaileři:
 ${topRetailers || '  (žádné kliky)'}
+  Zdroje kliků (kde na webu se kliká nejčastěji — 'product' = produktová karta, 'zebricek' = žebříček, 'clanek' = článek/recept, 'email' = newsletter):
+${sourceBreakdownStr}
 
 Newsletter:
   Odběratelé (confirmed): ${newsletter.subscribers}
