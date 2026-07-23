@@ -103,7 +103,7 @@ export default async function Home() {
         <div className="max-w-[1280px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
             { icon: '🔬', title: 'Lab data', body: 'Polyfenoly, kyselost, peroxidy' },
-            { icon: '🚫', title: 'Žádná reklama', body: 'Třídění podle kvality, ne provize' },
+            { icon: '🚫', title: 'Žádná placená umístění', body: 'Provize z prodejů — transparentně' },
             { icon: '📊', title: 'Nezávislé Score', body: '4 čísla, 100 bodů' },
             { icon: '🔄', title: 'Aktualizace 2× denně', body: 'Ceny + dostupnost' },
           ].map((item) => (

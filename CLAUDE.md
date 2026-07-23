@@ -33,7 +33,7 @@ Majitel (Architekt) určuje směr — systém běží sám. Majitel nekóduje, n
 **Jedinečná hodnota:**
 - Olivator Score — vlastní objektivní metrika (jediná v ČR)
 - Nulová přímá konkurence
-- Reálné ceny ze 18+ prodejců aktualizované každých 24h
+- Reálné ceny ze 33+ prodejců aktualizované každých 24h
 - AI přirozené vyhledávání (natural language search)
 - AI Sommelier — chat s expertem (Fáze 2)
 

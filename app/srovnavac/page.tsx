@@ -2,12 +2,13 @@ import { Suspense } from 'react'
 import { getProductsWithOffers, getSiteStats } from '@/lib/data'
 import { ListingContent } from './listing-content'
 
-export const metadata = {
-  title: 'Srovnávač olivových olejů — kvalita, ceny, Score | Olivátor',
-  description: 'Porovnejte 450+ olivových olejů. Olivator Score hodnotí kyselost, polyfenoly a certifikace. Aktuální ceny ze 18 prodejců včetně Tesco, Billa, Kaufland a Albert.',
-  // Explicit canonical — query string varianty (?origin=GR&type=evoo) by jinak
-  // mohly být brány jako duplicate content. Konsoliduje page authority.
-  alternates: { canonical: 'https://olivator.cz/srovnavac' },
+export async function generateMetadata() {
+  const stats = await getSiteStats()
+  return {
+    title: 'Srovnávač olivových olejů — kvalita, ceny, Score | Olivátor',
+    description: `Porovnejte ${stats.totalProducts}+ olivových olejů. Olivator Score hodnotí kyselost, polyfenoly a certifikace. Aktuální ceny z ${stats.activeRetailers} prodejců včetně Tesco, Billa, Kaufland a Albert.`,
+    alternates: { canonical: 'https://olivator.cz/srovnavac' },
+  }
 }
 
 // force-dynamic: stránka renderována na request (ne SSG).

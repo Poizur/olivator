@@ -204,7 +204,7 @@ export function SommelierHero({
                   </div>
                   <div className="flex items-center gap-4 text-[11px] text-white/45">
                     <span className="inline-flex items-center gap-1"><span className="text-olive4">✓</span> Nezávislé hodnocení</span>
-                    <span className="inline-flex items-center gap-1"><span className="text-olive4">✓</span> Žádná reklama</span>
+                    <span className="inline-flex items-center gap-1"><span className="text-olive4">✓</span> Žádná placená umístění</span>
                     <span className="inline-flex items-center gap-1"><span className="text-olive4">✓</span> 24h aktualizace</span>
                   </div>
                 </div>

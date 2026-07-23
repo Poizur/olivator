@@ -306,7 +306,7 @@ export default async function MetodikaPage() {
               jenom data z EU databází, lab reportů a reálných cen.
             </p>
             <div className="flex flex-wrap gap-2">
-              {['✓ Nezávislé hodnocení', '✓ Reálná data', '✓ Žádná reklama'].map(t => (
+              {['✓ Nezávislé hodnocení', '✓ Reálná data', '✓ Žádná placená umístění'].map(t => (
                 <span key={t} className="text-xs text-white bg-white/15 px-3 py-1.5 rounded-full font-medium backdrop-blur-sm">
                   {t}
                 </span>

@@ -6,13 +6,14 @@ import { getArticles, getArticleBySlug as getStaticArticle } from '@/lib/static-
 import { supabaseAdmin } from '@/lib/supabase'
 import { ArticleBody } from '@/components/article-body'
 import { resolveTemplateVars, resolveProductTokens } from '@/lib/template-vars'
-import { getProductsWithOffers } from '@/lib/data'
+import { getProductsWithOffers, getSiteStats } from '@/lib/data'
 import { diverseTopProducts } from '@/lib/product-selection'
 import { formatPrice } from '@/lib/utils'
 import { ProductImage } from '@/components/product-image'
 import { breadcrumbSchema } from '@/lib/schema'
 import { AuthorByline } from '@/components/article/author-byline'
 import { OlikAuthorBox } from '@/components/article/olik-author-box'
+import { AffiliateDisclosure } from '@/components/article/affiliate-disclosure'
 import { LeadMagnetCta } from '@/components/lead-magnet-cta'
 
 // force-dynamic: obsah článků se mění v DB — vždy fetchuj čerstvá data.
@@ -132,9 +133,10 @@ export default async function ArticleDetailPage({
   const resolvedBody = processedBody ? await resolveTemplateVars(processedBody, 'markdown') : ''
 
   // Sidebar data — top oleje + related články (DB) + recepty
-  const [allProducts, dbArticles] = await Promise.all([
+  const [allProducts, dbArticles, siteStats] = await Promise.all([
     getProductsWithOffers(),
     getActiveArticles(),
+    getSiteStats(),
   ])
   const topProducts = diverseTopProducts(
     allProducts.filter((p) => p.olivatorScore != null),
@@ -322,6 +324,8 @@ export default async function ArticleDetailPage({
             </div>
           )}
 
+          {productMap.size > 0 && <AffiliateDisclosure />}
+
           <LeadMagnetCta variant="compact" source="leadmagnet_article" />
 
           <OlikAuthorBox />
@@ -330,7 +334,7 @@ export default async function ArticleDetailPage({
           <div className="bg-off/60 border border-off2 rounded-[var(--radius-card)] p-5 mt-10">
             <p className="text-[13px] text-text2 leading-relaxed">
               <strong className="text-text">Olivátor</strong> je největší srovnávač olivových
-              olejů v ČR. Sledujeme reálné ceny u 18 prodejců a hodnotíme oleje podle
+              olejů v ČR. Sledujeme reálné ceny u {siteStats.activeRetailers} prodejců a hodnotíme oleje podle
               objektivního Olivator Score.{' '}
               <Link href="/metodika" className="text-olive border-b border-olive-border">
                 Jak hodnotíme →
