@@ -343,7 +343,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         {' › '}
         <Link href="/srovnavac" className="text-olive cursor-pointer">Katalog</Link>
         {' › '}
-        {product.name}
+        <span className="md:hidden">{product.nameShort}</span>
+        <span className="hidden md:inline">{product.name}</span>
       </div>
 
       {/* ── HERO: obrázek + základní info ──────────────────────────── */}

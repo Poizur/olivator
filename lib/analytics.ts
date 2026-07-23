@@ -12,7 +12,7 @@ export interface AffiliateClickEvent {
   retailerSlug: string
   retailerName: string
   price: number
-  source: 'product_page' | 'listing_card' | 'homepage_card' | 'ranking' | 'recipe' | 'comparator'
+  source: 'product_page' | 'listing_card' | 'homepage_card' | 'ranking' | 'recipe' | 'comparator' | 'zebricek' | 'clanek' | 'slevy' | 'srovnavac'
 }
 
 export function trackAffiliateClick(data: AffiliateClickEvent) {

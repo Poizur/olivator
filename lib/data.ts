@@ -278,12 +278,11 @@ export const getProductsWithOffers = cache(async (): Promise<Array<Product & { c
   if (error) throw error
 
   const productIdSet = new Set(ids)
-  const offersByProduct = new Map<string, ProductOffer>()
+  const allOffersByProduct = new Map<string, ProductOffer[]>()
   for (const row of (data ?? []) as Record<string, unknown>[]) {
     const pid = row.product_id as string
-    if (!productIdSet.has(pid)) continue // skip offers for non-active products
-    if (offersByProduct.has(pid)) continue // already have cheapest
-    offersByProduct.set(pid, {
+    if (!productIdSet.has(pid)) continue
+    const offer: ProductOffer = {
       id: row.id as string,
       productId: pid,
       retailerId: row.retailer_id as string,
@@ -294,11 +293,37 @@ export const getProductsWithOffers = cache(async (): Promise<Array<Product & { c
       productUrl: (row.product_url as string) ?? '',
       affiliateUrl: (row.affiliate_url as string) ?? '',
       commissionPct: Number(row.commission_pct ?? 0),
-    })
+    }
+    const bucket = allOffersByProduct.get(pid) ?? []
+    bucket.push(offer)
+    allOffersByProduct.set(pid, bucket)
+  }
+
+  // Pick best offer with affiliate priority (sortOffersAffiliate), then first
+  const offersByProduct = new Map<string, ProductOffer>()
+  for (const [pid, bucket] of allOffersByProduct) {
+    offersByProduct.set(pid, sortOffersAffiliate(bucket)[0])
   }
 
   return products.map(p => ({ ...p, cheapestOffer: offersByProduct.get(p.id) ?? null }))
 })
+
+// Affiliate-priority sort: pokud má affiliate nabídka cenu do 5 % nad nejlevnější,
+// dostane přednost před non-affiliate. Ceny všech nabídek zůstávají viditelné.
+// Viz CLAUDE.md sekce 9: "Preferuj vyšší komisi při srovnatelné ceně (±5%)".
+export function sortOffersAffiliate(offers: ProductOffer[]): ProductOffer[] {
+  if (offers.length <= 1) return offers
+  const cheapestPrice = Math.min(...offers.map(o => o.price))
+  return [...offers].sort((a, b) => {
+    const aAff = !!a.affiliateUrl
+    const bAff = !!b.affiliateUrl
+    const aIn5 = aAff && a.price <= cheapestPrice * 1.05
+    const bIn5 = bAff && b.price <= cheapestPrice * 1.05
+    if (aIn5 && !bIn5) return -1
+    if (bIn5 && !aIn5) return 1
+    return a.price - b.price
+  })
+}
 
 export async function getOffersForProduct(productId: string): Promise<ProductOffer[]> {
   const { data, error } = await supabaseAdmin
@@ -307,7 +332,7 @@ export async function getOffersForProduct(productId: string): Promise<ProductOff
     .eq('product_id', productId)
     .order('price', { ascending: true })
   if (error) throw error
-  return (data ?? []).map((row: Record<string, unknown>) => ({
+  const mapped = (data ?? []).map((row: Record<string, unknown>) => ({
     id: row.id as string,
     productId: row.product_id as string,
     retailerId: row.retailer_id as string,
@@ -319,6 +344,7 @@ export async function getOffersForProduct(productId: string): Promise<ProductOff
     affiliateUrl: (row.affiliate_url as string) ?? '',
     commissionPct: Number(row.commission_pct ?? 0),
   }))
+  return sortOffersAffiliate(mapped)
 }
 
 export async function getCheapestOffer(productId: string): Promise<ProductOffer | null> {

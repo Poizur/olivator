@@ -17,8 +17,19 @@ interface AffiliateLinkProps {
  * Does NOT use Next.js <Link> because /go is an external redirect
  * route, not an SPA navigation.
  */
+// Mapuje GA4 source hodnoty na DB source_type hodnoty pro ?st= parametr.
+const SOURCE_DB: Record<string, string> = {
+  product_page: 'product',
+  listing_card: 'srovnavac',
+  homepage_card: 'homepage',
+  ranking: 'zebricek',
+  recipe: 'clanek',
+  comparator: 'comparator',
+}
+
 export function AffiliateLink({ data, className, children }: AffiliateLinkProps) {
-  const href = `/go/${data.retailerSlug}/${data.productSlug}`
+  const st = SOURCE_DB[data.source] ?? data.source
+  const href = `/go/${data.retailerSlug}/${data.productSlug}?st=${encodeURIComponent(st)}`
 
   return (
     <a

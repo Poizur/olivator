@@ -150,10 +150,12 @@ export async function GET(
     utm_content:  reqUrl.searchParams.get('utm_content')  ?? undefined,
   }
 
-  // Odvoď source_page + source_type z refereru nebo explicitního ?sp= parametru
+  // Odvoď source_page + source_type.
+  // Priorita: ?st= (explicitní typ z AffiliateLink) > ?sp= (URL stránky) > Referer header.
+  const stParam = reqUrl.searchParams.get('st')
   const spParam = reqUrl.searchParams.get('sp')
   const sourcePage = spParam ?? (referrer || null)
-  const sourceType = deriveSourceType(sourcePage, utm.utm_medium)
+  const sourceType = stParam ?? deriveSourceType(sourcePage, utm.utm_medium)
 
   const { error: clickErr } = await supabaseAdmin.from('affiliate_clicks').insert({
     product_id: product.id,
