@@ -34,7 +34,8 @@
     "cron:reprice": "tsx scripts/cron/reprice.ts",
     "cron:lead-magnet-drip": "tsx scripts/cron/lead-magnet-drip.ts",
     "gen:lead-magnet-pdf": "tsx scripts/generate-lead-magnet-pdf.ts",
-    "cron:price-watch": "tsx scripts/cron/price-watch-notify.ts"
+    "cron:price-watch": "tsx scripts/cron/price-watch-notify.ts",
+    "cron:price-index": "tsx scripts/cron/price-index.ts"
   },
   "engines": {
     "node": ">=20.18.0"

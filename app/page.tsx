@@ -178,6 +178,7 @@ export default async function Home() {
                 product={p}
                 rank={i + 1}
                 badge={badgesByProduct.get(p.id) ?? null}
+                variant="large"
               />
             ))}
           </div>

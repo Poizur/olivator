@@ -46,6 +46,7 @@ export function BestsellersSection({ products, totalCount }: Props) {
               rank={i + 1}
               badge={{ label: '🔥 Bestseller', hint: 'Nejprodávanější — reálná popularita', tone: 'terra' }}
               sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 200px"
+              variant="large"
             />
           ))}
         </div>

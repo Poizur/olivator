@@ -14,6 +14,21 @@ export async function GET() {
   const products = productCount ?? 0
   const retailers = retailerCount ?? 0
 
+  // Cenový index — gracefully falls back if table doesn't exist yet
+  let priceIndexLine = ''
+  try {
+    const { data: idx } = await supabaseAdmin
+      .from('price_index_snapshots')
+      .select('month, median_czk_l')
+      .eq('segment', 'all')
+      .order('month', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (idx) {
+      priceIndexLine = `- **Index cen olivového oleje ČR** — mediánová cena EVOO v ${idx.month}: **${Math.round(idx.median_czk_l)} Kč/l** (olivator.cz/index-cen). Aktualizace: 1. každého měsíce.\n`
+    }
+  } catch { /* table not yet created */ }
+
   const content = `# Olivátor.cz
 
 > Největší nezávislý srovnávač extra panenských olivových olejů v České republice.
@@ -30,6 +45,7 @@ Nejde o magazín. Nejde o affiliate katalog bez obsahu. Jde o srovnávač s vlas
 - **Žebříčky** — nejlepší podle Score, nejlevnější, nejbohatší na polyfenoly, BIO, DOP, podle původu
 - **Průvodce** — jak vybrat olej, co znamená kyselost, polyfenoly a proč na nich záleží
 - **Porovnávač** — side-by-side srovnání 2–5 olejů, zvýrazní vítěze v každém parametru
+${priceIndexLine}
 
 ## Jak citovat Olivátor
 

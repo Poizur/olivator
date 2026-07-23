@@ -27,6 +27,7 @@ interface Props {
   rank: number
   badge?: ProductBadge | null
   sizes?: string
+  variant?: 'default' | 'large'
 }
 
 export function TopProductCard({
@@ -34,14 +35,21 @@ export function TopProductCard({
   rank,
   badge,
   sizes = '(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 200px',
+  variant = 'default',
 }: Props) {
+  const isLarge = variant === 'large'
+
   return (
     <Link
       href={`/olej/${product.slug}`}
-      className="group bg-white border border-off2 rounded-lg overflow-hidden flex flex-col transition-all hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)] hover:-translate-y-0.5 hover:border-olive-mid"
+      className={`group bg-white border border-off2 overflow-hidden flex flex-col transition-all hover:-translate-y-0.5 ${
+        isLarge
+          ? 'rounded-[var(--radius-card)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.12)]'
+          : 'rounded-lg hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)] hover:border-olive-mid'
+      }`}
     >
-      {/* Image — fixní výška jako v mockupu, světlé pozadí */}
-      <div className="relative h-[110px] bg-white overflow-hidden">
+      {/* Image */}
+      <div className={`relative bg-white overflow-hidden ${isLarge ? 'aspect-[4/5]' : 'h-[110px]'}`}>
         {/* Badge vlevo nahoře */}
         {badge ? (
           <span
@@ -56,19 +64,19 @@ export function TopProductCard({
           </span>
         )}
 
-        {/* Score vpravo nahoře — menší */}
-        <span className="absolute top-1.5 right-1.5 z-10">
+        {/* Score vpravo nahoře */}
+        <span className={`absolute top-1.5 right-1.5 z-10 ${isLarge ? 'shadow-md rounded-full' : ''}`}>
           <ScoreBadge score={product.olivatorScore} type={product.type} size="small" />
         </span>
 
-        {/* Produkt obrázek — top-[22px] = odsazení pod badge */}
-        <div className="absolute inset-x-0 bottom-0 top-[22px] transition-transform duration-300 group-hover:scale-[1.04]">
-          <ProductImage product={product} fallbackSize="text-[52px]" sizes={sizes} />
+        {/* Produkt obrázek */}
+        <div className={`absolute inset-0 transition-transform duration-300 ${isLarge ? 'group-hover:scale-105' : 'top-[22px] group-hover:scale-[1.04]'}`}>
+          <ProductImage product={product} fallbackSize={isLarge ? 'text-[60px]' : 'text-[52px]'} sizes={sizes} />
         </div>
       </div>
 
       {/* Text */}
-      <div className="p-2.5 flex-1 flex flex-col">
+      <div className={`flex-1 flex flex-col ${isLarge ? 'p-2' : 'p-2.5'}`}>
         {/* Původ + vlajka */}
         <div className="text-[10px] text-text3 mb-0.5 leading-tight truncate">
           {countryFlag(product.originCountry)}
@@ -78,7 +86,7 @@ export function TopProductCard({
         </div>
 
         {/* Název produktu */}
-        <div className="text-[12px] font-medium text-text leading-snug line-clamp-2 flex-1 mb-1.5">
+        <div className={`font-medium text-text leading-snug line-clamp-2 flex-1 mb-1.5 ${isLarge ? 'text-[10px] font-semibold min-h-[2.4em]' : 'text-[12px]'}`}>
           {product.name}
         </div>
 
