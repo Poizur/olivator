@@ -79,6 +79,7 @@ export interface RawBriefData {
   scanFindings: object
   articleDrafts: object
   autonomousActions: object
+  priceWatch: object
 }
 
 export interface GenerateBriefResult {
@@ -499,6 +500,20 @@ Paměť lekcí: ${ls.totalApplications ?? 0} aplikací, ${ls.openPatternsAboveTh
 Poslední Git commity:
 ${lastCommits || '  (nedostupné)'}
 
+🔔 Hlídání cen (Price Watch):
+${(() => {
+  const pw = raw.priceWatch as { totalActive?: number; newThisWeek?: number; notificationsThisWeek?: number; topWatched?: Array<{ name: string; watches: number }> }
+  const total = pw.totalActive ?? 0
+  const newW = pw.newThisWeek ?? 0
+  const notif = pw.notificationsThisWeek ?? 0
+  const top = (pw.topWatched ?? [])
+  if (total === 0) return '  Zatím žádná aktivní hlídání.'
+  const topStr = top.length > 0
+    ? top.map(t => `${t.name} (${t.watches}×)`).join(', ')
+    : '(žádné)'
+  return `  Celkem aktivních hlídání: ${total} | Nová tento týden: ${newW} | Notifikace odesláno: ${notif}\n  Nejhlídanější: ${topStr}`
+})()}
+
 🔍 Co jsem našel na webu (Site Scanner, otevřené nálezy: ${scan.total ?? 0}):
 ${scanHigh || '  (žádné high-severity nálezy)'}
 ${scanMedium || '  (žádné medium-severity nálezy)'}
@@ -623,6 +638,59 @@ async function generateBriefJson(
   }
 }
 
+// ── Price Watch statistiky ────────────────────────────────────────────────────
+async function collectPriceWatch(): Promise<object> {
+  const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  const [totalRes, newRes, notifiedRes, topRes] = await Promise.all([
+    // Celkem aktivních a potvrzených hlídání
+    supabaseAdmin
+      .from('price_watches')
+      .select('*', { count: 'exact', head: true })
+      .eq('active', true)
+      .eq('confirmed', true),
+    // Nová hlídání za posledních 7 dní
+    supabaseAdmin
+      .from('price_watches')
+      .select('*', { count: 'exact', head: true })
+      .eq('confirmed', true)
+      .gte('created_at', since7d),
+    // Notifikace odeslané za posledních 7 dní (last_notified_at updatováno)
+    supabaseAdmin
+      .from('price_watches')
+      .select('*', { count: 'exact', head: true })
+      .gte('last_notified_at', since7d),
+    // Top 3 nejhlídanější produkty
+    supabaseAdmin
+      .from('price_watches')
+      .select('product_id, products(name, slug)')
+      .eq('active', true)
+      .eq('confirmed', true)
+      .limit(200),
+  ])
+
+  // Agregace top produktů
+  const watchCounts = new Map<string, { name: string; slug: string; count: number }>()
+  for (const row of (topRes.data ?? []) as unknown as Array<{ product_id: string; products: { name: string; slug: string } | null }>) {
+    if (!row.products) continue
+    const key = row.product_id
+    const entry = watchCounts.get(key) ?? { name: row.products.name, slug: row.products.slug, count: 0 }
+    entry.count++
+    watchCounts.set(key, entry)
+  }
+  const topWatched = Array.from(watchCounts.values())
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3)
+    .map(w => ({ name: w.name, slug: w.slug, watches: w.count }))
+
+  return {
+    totalActive: totalRes.count ?? 0,
+    newThisWeek: newRes.count ?? 0,
+    notificationsThisWeek: notifiedRes.count ?? 0,
+    topWatched,
+  }
+}
+
 // ── Orchestrátor ──────────────────────────────────────────────────────────────
 
 function getWeekLabel(): { weekLabel: string; weekStart: Date } {
@@ -644,8 +712,8 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
   const { weekLabel, weekStart } = getWeekLabel()
   console.log(`[executive-director] Generuji brief ${weekLabel}${opts.dryRun ? ' (DRY-RUN)' : ''}${opts.testFailOpen ? ' (TEST-FAILOPEN)' : ''}...`)
 
-  // 11 zdrojů dat paralelně
-  const [gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts, autonomousActions] = await Promise.all([
+  // 12 zdrojů dat paralelně
+  const [gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts, autonomousActions, priceWatch] = await Promise.all([
     collectGsc().catch((e) => ({ error: (e as Error).message })),
     collectCatalog().catch((e) => ({ error: (e as Error).message })),
     collectAffiliate().catch((e) => ({ error: (e as Error).message })),
@@ -657,9 +725,10 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
     collectScanFindings().catch((e) => ({ error: (e as Error).message })),
     collectArticleDrafts().catch((e) => ({ error: (e as Error).message })),
     collectAutonomousActions().catch((e) => ({ error: (e as Error).message })),
+    collectPriceWatch().catch((e) => ({ error: (e as Error).message })),
   ])
 
-  const rawData: RawBriefData = { gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts, autonomousActions }
+  const rawData: RawBriefData = { gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts, autonomousActions, priceWatch }
   console.log('[executive-director] Data sesbírána')
 
   // Learning Memory Layer — inject relevantní lekce do promptu

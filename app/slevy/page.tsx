@@ -2,7 +2,9 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
 import { NewsletterSignup } from '@/components/newsletter-signup'
+import { PriceWatchButton } from '@/components/price-watch-button'
 import { getSlevyDeals, type SlevyDeal } from '@/lib/welcome-series'
+import { getWeeklyPriceDrops, type WeeklyPriceDrop } from '@/lib/price-drops'
 import { countryFlag } from '@/lib/utils'
 
 export const revalidate = 600
@@ -48,6 +50,57 @@ const FAQ_ITEMS = [
 function formatPer100ml(price: number, volumeMl: number | null): string | null {
   if (!volumeMl) return null
   return `${Math.round((price / volumeMl) * 100)} Kč / 100 ml`
+}
+
+function WeeklyDropCard({ drop }: { drop: WeeklyPriceDrop }) {
+  const per100ml = formatPer100ml(drop.priceNow, drop.volumeMl)
+
+  return (
+    <div className="bg-white border border-olive-border rounded-[var(--radius-card)] overflow-hidden hover:border-olive-light hover:shadow-[0_4px_16px_rgba(0,0,0,.06)] transition-all">
+      <Link href={`/olej/${drop.slug}`} className="flex gap-4 p-4 group">
+        <div className="shrink-0 w-16 h-16 rounded-lg bg-off overflow-hidden flex items-center justify-center relative">
+          {drop.imageUrl ? (
+            <Image src={drop.imageUrl} alt={drop.name} fill sizes="64px" className="object-contain" />
+          ) : (
+            <span className="text-2xl">🫒</span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[13px] font-semibold text-text leading-snug line-clamp-2 group-hover:text-olive transition-colors">
+            {drop.originCountry ? `${countryFlag(drop.originCountry)} ` : ''}{drop.name}
+          </p>
+          {drop.volumeMl && (
+            <p className="text-[10px] text-text3 mt-0.5">{drop.volumeMl} ml</p>
+          )}
+          <div className="flex items-center gap-2 mt-1.5">
+            <span className="text-[10px] font-bold bg-[#e8f5e9] text-[#2d6a4f] px-2 py-0.5 rounded-full">
+              🆕 -{drop.dropPct}&nbsp;%
+            </span>
+            {drop.olivatorScore != null && (
+              <span className="text-[10px] bg-olive4 text-[#1b4332] px-2 py-0.5 rounded-full">
+                Score {drop.olivatorScore}
+              </span>
+            )}
+          </div>
+          <div className="flex items-baseline gap-2 mt-1.5">
+            <span className="text-[16px] font-bold text-text">{drop.priceNow} Kč</span>
+            <span className="text-[11px] text-text3 line-through">{drop.priceBefore} Kč</span>
+            {per100ml && <span className="text-[11px] text-text3">{per100ml}</span>}
+          </div>
+        </div>
+      </Link>
+      <div className="px-4 pb-4 flex items-center gap-3">
+        <Link
+          href={`${drop.ctaUrl}?${UTM}&utm_content=weekly_drop`}
+          className="flex-1 flex items-center justify-between bg-olive hover:bg-olive2 text-white text-[12px] font-semibold px-4 py-2.5 rounded-full transition-colors"
+        >
+          <span>Koupit u {drop.retailerName}</span>
+          <span>→</span>
+        </Link>
+        <PriceWatchButton productId={drop.productId} productName={drop.name} />
+      </div>
+    </div>
+  )
 }
 
 function DealCard({ deal, rank }: { deal: SlevyDeal; rank: number }) {
@@ -113,21 +166,26 @@ function DealCard({ deal, rank }: { deal: SlevyDeal; rank: number }) {
       </Link>
 
       {/* CTA row */}
-      <div className="px-4 pb-4">
+      <div className="px-4 pb-4 flex items-center gap-3">
         <Link
           href={`${deal.ctaUrl}?${UTM}&utm_content=deal_${rank}`}
-          className="flex items-center justify-between w-full bg-olive hover:bg-olive2 text-white text-[12px] font-semibold px-4 py-2.5 rounded-full transition-colors"
+          className="flex-1 flex items-center justify-between bg-olive hover:bg-olive2 text-white text-[12px] font-semibold px-4 py-2.5 rounded-full transition-colors"
         >
           <span>Koupit u {deal.retailerName}</span>
           <span>→</span>
         </Link>
+        <PriceWatchButton productId={deal.productId} productName={deal.name} />
       </div>
     </div>
   )
 }
 
 export default async function SlevyPage() {
-  const { deals, stats } = await getSlevyDeals(20)
+  const [{ deals, stats }, weeklyResult] = await Promise.all([
+    getSlevyDeals(20),
+    getWeeklyPriceDrops(6),
+  ])
+  const weeklyDrops = weeklyResult.drops
 
   const byRetailer = deals.reduce<Record<string, { name: string; deals: SlevyDeal[] }>>((acc, d) => {
     if (!acc[d.retailerSlug]) acc[d.retailerSlug] = { name: d.retailerName, deals: [] }
@@ -203,6 +261,27 @@ export default async function SlevyPage() {
             </div>
           </div>
         </section>
+
+        {/* ── Nové poklesy tento týden (jen když existují) ── */}
+        {weeklyDrops.length > 0 && (
+          <section className="mb-10">
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="text-[18px] font-bold text-text">🆕 Nové poklesy tento týden</h2>
+              <span className="text-[11px] bg-[#e8f5e9] text-[#2d6a4f] px-2.5 py-1 rounded-full font-medium">
+                {weeklyDrops.length} {weeklyDrops.length === 1 ? 'produkt' : weeklyDrops.length <= 4 ? 'produkty' : 'produktů'}
+              </span>
+            </div>
+            <p className="text-[13px] text-text3 mb-5">
+              Ceny které klesly za posledních 7 dní — čerstvé poklesy, ne historická maxima.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {weeklyDrops.map(drop => (
+                <WeeklyDropCard key={`${drop.productId}|${drop.retailerSlug}`} drop={drop} />
+              ))}
+            </div>
+            <div className="border-b border-off2 mt-10" />
+          </section>
+        )}
 
         {/* ── Top deals grid ── */}
         <section className="mb-14">
