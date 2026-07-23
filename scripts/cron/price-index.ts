@@ -99,6 +99,22 @@ async function main() {
     console.warn('⚠️  agent_decisions log selhal (nekritické):', (e as Error).message)
   }
 
+  // Okamžitě invaliduj ISR cache /index-cen — ať nová data naskočí bez čekání na 24h TTL
+  try {
+    const r = await fetch('https://olivator.cz/api/admin/revalidate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-cron-secret': process.env.CRON_SECRET ?? '',
+      },
+      body: JSON.stringify({ path: '/index-cen' }),
+    })
+    if (r.ok) console.log('✓ ISR revalidace /index-cen spuštěna')
+    else console.warn(`⚠️  ISR revalidace: HTTP ${r.status}`)
+  } catch (e) {
+    console.warn('⚠️  ISR revalidace selhala (nekritické):', (e as Error).message)
+  }
+
   console.log('\n✓ Hotovo\n')
 }
 

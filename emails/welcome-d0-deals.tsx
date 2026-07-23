@@ -324,7 +324,7 @@ export function WelcomeD0DealsEmail({
             <tr>
               <td style={{ padding: '4px 0' }}>
                 <Link
-                  href={`${SITE}/zebricek/nejlepsi?${UTM}&utm_content=zebricek`}
+                  href={`${SITE}/zebricek?${UTM}&utm_content=zebricek`}
                   className="text-[13px] text-olive font-medium"
                 >
                   → Žebříček nejlepších olejů

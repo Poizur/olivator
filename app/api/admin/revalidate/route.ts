@@ -6,7 +6,9 @@ import { revalidatePath } from 'next/cache'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 
 export async function POST(req: NextRequest) {
-  if (!(await isAdminAuthenticated())) {
+  const cronSecret = process.env.CRON_SECRET
+  const hasCronAuth = cronSecret && req.headers.get('x-cron-secret') === cronSecret
+  if (!hasCronAuth && !(await isAdminAuthenticated())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const { path } = await req.json().catch(() => ({})) as { path?: string }
