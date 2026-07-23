@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useMemo, useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { FilterPanel, type FilterCounts } from '@/components/filter-panel'
+import { LeadMagnetCta } from '@/components/lead-magnet-cta'
 import { TopProductCard } from '@/components/home/top-product-card'
 import { countryName, certLabel, formatPrice } from '@/lib/utils'
 import { classifyIntensity, INTENSITY_LABELS, type Intensity } from '@/lib/intensity-classifier'
@@ -471,6 +472,13 @@ export function ListingContent({
                     Vymazat všechny filtry
                   </button>
                 )}
+              </div>
+            )}
+
+            {/* Lead magnet CTA — zobrazit jen na první stránce bez aktivních filtrů */}
+            {safePage === 1 && !hasActiveFilters && filtered.length > 0 && (
+              <div className="mt-6">
+                <LeadMagnetCta variant="sidebar" source="leadmagnet_srovnavac" />
               </div>
             )}
 

@@ -13,6 +13,7 @@ import { ProductImage } from '@/components/product-image'
 import { breadcrumbSchema } from '@/lib/schema'
 import { AuthorByline } from '@/components/article/author-byline'
 import { OlikAuthorBox } from '@/components/article/olik-author-box'
+import { LeadMagnetCta } from '@/components/lead-magnet-cta'
 
 // force-dynamic: obsah článků se mění v DB — vždy fetchuj čerstvá data.
 // ISR by mohlo servírovat zastaralý obsah až 1 hodinu po DB editaci.
@@ -320,6 +321,8 @@ export default async function ArticleDetailPage({
               </p>
             </div>
           )}
+
+          <LeadMagnetCta variant="compact" source="leadmagnet_article" />
 
           <OlikAuthorBox />
 

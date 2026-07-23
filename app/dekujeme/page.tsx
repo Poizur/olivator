@@ -13,6 +13,7 @@ export default function DekujemePage({
   searchParams: { source?: string }
 }) {
   const isLeadMagnet = searchParams.source === 'lead_magnet'
+  const isNewsletter = !isLeadMagnet && !!searchParams.source
 
   return (
     <main style={{ minHeight: '100vh', background: '#fafaf8', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
@@ -40,6 +41,24 @@ export default function DekujemePage({
 
         {!isLeadMagnet && (
           <div style={{ height: 36 }} />
+        )}
+
+        {/* Cross-promo pro newsletter source → nabídni průvodce */}
+        {isNewsletter && (
+          <div style={{ background: '#f8fcfa', border: '1.5px solid #c8ddcf', borderRadius: 10, padding: '20px 24px', margin: '0 0 28px', textAlign: 'left' }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a', margin: '0 0 4px' }}>
+              📖 Stáhněte si průvodce výběrem olivového oleje — zdarma
+            </p>
+            <p style={{ fontSize: 12, color: '#6e6e73', margin: '0 0 12px', lineHeight: 1.5 }}>
+              5 stránek: kyselost, polyfenoly, jak číst etiketu, nákupní checklist. Jiná cesta ke stejné hodnotě.
+            </p>
+            <Link
+              href="/pruvodce/jak-vybrat-olivovy-olej"
+              style={{ fontSize: 13, fontWeight: 600, color: '#2d6a4f', textDecoration: 'none', borderBottom: '1.5px solid #c8ddcf' }}
+            >
+              Číst průvodce →
+            </Link>
+          </div>
         )}
 
         {/* Divider */}

@@ -19,6 +19,7 @@ import { BestsellersSection } from '@/components/home/bestsellers-section'
 import { FeaturedBrandsSection } from '@/components/home/featured-brands-section'
 import { TopProductCard } from '@/components/home/top-product-card'
 import { FlavorSelector } from '@/components/flavor-selector'
+import { LeadMagnetCta } from '@/components/lead-magnet-cta'
 
 export const metadata = {
   title: 'Olivový olej — srovnávač Olivátor | Score, ceny, recenze',
@@ -383,6 +384,13 @@ export default async function Home() {
           </div>
         </section>
       )}
+
+      {/* ─── PRŮVODCE LEAD MAGNET ────────────────────────────────────────── */}
+      <section className="px-6 md:px-10 py-6 border-t border-off2">
+        <div className="max-w-[1280px] mx-auto">
+          <LeadMagnetCta variant="banner" source="leadmagnet_homepage" />
+        </div>
+      </section>
 
       {/* ─── VELKÁ BALENÍ — seřazeno od nejlevnějšího za litr ───────────── */}
       {largePacks.length >= 3 && (

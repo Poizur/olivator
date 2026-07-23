@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { Metadata } from 'next'
 import { NewsletterSignup } from '@/components/newsletter-signup'
+import { LeadMagnetCta } from '@/components/lead-magnet-cta'
 import { PriceWatchButton } from '@/components/price-watch-button'
 import { getSlevyDeals, type SlevyDeal } from '@/lib/welcome-series'
 import { getWeeklyPriceDrops, type WeeklyPriceDrop } from '@/lib/price-drops'
@@ -261,6 +262,11 @@ export default async function SlevyPage() {
             </div>
           </div>
         </section>
+
+        {/* ── Newsletter strip — nad kartami ── */}
+        <div className="mb-8">
+          <LeadMagnetCta variant="strip" source="newsletter_slevy" />
+        </div>
 
         {/* ── Nové poklesy tento týden (jen když existují) ── */}
         {weeklyDrops.length > 0 && (
