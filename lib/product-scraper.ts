@@ -191,21 +191,29 @@ function inferBrand(name: string | null): string | null {
   return extractBrand(name) || null
 }
 
+// L-027: ≤/max/do/limit v okolí klíčového slova = EU spec text, NE naměřená hodnota.
+// Extrakce vrátí null místo 0.8 nebo jiné limitní hodnoty.
+const ACIDITY_SPEC_RE = /(?:≤|[<]|max\.?\s*|méně\s+než\s*|do\s+|pod\s+|limit\s*)/i
+
 export function extractAcidity(text: string | null): number | null {
   if (!text) return null
-  // Patterns to handle (in order of specificity):
-  //   "acidita: 0,3%"             → 0.3
-  //   "kyselost 0.2 %"            → 0.2
-  //   "Acidita: max. ≤ 0,39%"    → 0.39 (upper bound, conservative)
-  //   "Acidita: ≤ 0,5%"           → 0.5
-  //   "Acidita: < 0,3%"           → 0.3
-  //   "Acidita: do 0,5%"          → 0.5
-  //   "Acidita: 0,32 - 0,8%"      → 0.32 (range, take low = naměřená)
-  //   "Acidita 0,32-0,8%"          → 0.32
-  const re = /(?:acidita|kyselost|acidity)[:\s]*(?:max\.?\s*)?(?:[≤<]\s*|do\s+)?(\d+[,.]?\d*)\s*(?:%|\s*-\s*\d+[,.]?\d*\s*%)/i
+  // Two-pass: first find keyword + candidate number, then reject spec-text context.
+  //   "acidita: 0,3%"             → 0.3  (measured, OK)
+  //   "kyselost 0.2 %"            → 0.2  (measured, OK)
+  //   "Acidita: 0,32 - 0,8%"      → 0.32 (range low end = measured)
+  //   "Acidita: ≤ 0,8%"           → null (EU spec limit — L-027)
+  //   "Acidita: max. 0,8%"        → null (EU spec limit — L-027)
+  //   "Acidita: do 0,8%"          → null (EU spec limit — L-027)
+  //   "Acidita: < 0,3%"           → null (spec upper bound — L-027)
+  const re = /(?:acidita|kyselost|acidity)[:\s]{0,3}(.{0,25}\d+[,.]?\d*\s*%)/i
   const m = text.match(re)
   if (!m) return null
-  return parseFloat(m[1].replace(',', '.'))
+  const fragment = m[1]
+  // Reject if spec-text indicator appears before the number
+  if (ACIDITY_SPEC_RE.test(fragment)) return null
+  const numM = fragment.match(/(\d+[,.]?\d*)/)
+  if (!numM) return null
+  return parseFloat(numM[1].replace(',', '.'))
 }
 
 // Words inside the polyphenol match that signal it's a regulatory/typical/EU
@@ -428,8 +436,11 @@ function mapParameterTableToFields(table: Record<string, string>): {
   const oleicAcidPct = parseValueWithPrefix(
     valueOf('kyselina olejov', 'olejová kyselina', 'oleic') ?? ''
   )
-  // Acidity from table (range "0,49% až ≤ 0,8%" → take 0,49)
-  const acidityFromTable = parseValueWithPrefix(valueOf('acidita', 'kyselost') ?? '')
+  // Acidity from table — L-027 guard: reject if ≤/max/do prefix (EU spec text, not measured)
+  const acidityRaw = valueOf('acidita', 'kyselost') ?? ''
+  const acidityFromTable = ACIDITY_SPEC_RE.test(acidityRaw.slice(0, 15))
+    ? null
+    : parseValueWithPrefix(acidityRaw)
   // Peroxide
   const peroxideFromTable = parseValueWithPrefix(
     valueOf('peroxidov', 'peroxid') ?? ''
