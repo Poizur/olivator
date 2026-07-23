@@ -2,6 +2,9 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ScoreCalculator } from '@/components/score-calculator'
 import { MetodikaToc } from '@/components/metodika-toc'
+import { supabaseAdmin } from '@/lib/supabase'
+
+export const revalidate = 3600
 
 export const metadata: Metadata = {
   title: 'Olivator Score — Jak hodnotíme olivový olej | Olivator',
@@ -177,13 +180,26 @@ const COLOR_DOT: Record<string, string> = {
   red: 'bg-red-500',
 }
 
-const TOP_PRODUCTS = [
-  { slug: 'picual-5-l-extra-panensky-nefiltrovany-olivovy-olej-bag-in-box', name: 'Picual 5 l Bag-In-Box', score: 95 },
-  { slug: 'olivovy-olej-extra-panensky-callejas-coupage-5l', name: 'CALLEJAS coupage 5L', score: 94 },
-  { slug: 'bio-extra-panensky-olivovy-olej-elixir-500-ml', name: 'BIO Elixír 500 ml', score: 92 },
-  { slug: 'picual-2-l-extra-panensky-nefiltrovany-olivovy-olej', name: 'Picual 2 l', score: 91 },
-  { slug: 'extra-panensky-olivovy-olej-sitia-pdo-0-2-critida-4-l-design', name: 'SITIA PDO 4 l', score: 89 },
-]
+async function getPageData() {
+  const [topRes, retailerRes] = await Promise.all([
+    supabaseAdmin
+      .from('products')
+      .select('slug, name, olivator_score')
+      .eq('status', 'active')
+      .not('olivator_score', 'is', null)
+      .gt('olivator_score', 0)
+      .order('olivator_score', { ascending: false })
+      .limit(5),
+    supabaseAdmin
+      .from('retailers')
+      .select('*', { count: 'exact', head: true })
+      .eq('is_active', true),
+  ])
+  return {
+    topProducts: (topRes.data ?? []) as { slug: string; name: string; olivator_score: number }[],
+    retailerCount: retailerRes.count ?? 33,
+  }
+}
 
 const SCORE_BRACKETS = [
   { range: '90–100', label: 'Top tier', emoji: '🏆', note: 'Top 5 % katalogu', bg: '#fef3c7', border: '#fde68a', text: '#92400e' },
@@ -194,25 +210,77 @@ const SCORE_BRACKETS = [
   { range: 'Pod 50', label: 'Slabší', emoji: '🔴', note: 'Nízká kvalita nebo chybí data', bg: '#fef2f2', border: '#fecaca', text: '#dc2626' },
 ]
 
-const schemaOrg = {
-  '@context': 'https://schema.org',
-  '@type': 'Article',
-  headline: 'Olivator Score — Jak hodnotíme olivový olej',
-  description: 'Transparentní metodika Olivator Score. Vážený průměr 4 měřitelných složek: kyselost, certifikace, polyfenoly, hodnota.',
-  author: { '@type': 'Organization', name: 'Olivator', url: 'https://olivator.cz' },
-  publisher: { '@type': 'Organization', name: 'Olivator', url: 'https://olivator.cz' },
-  datePublished: '2026-05-01',
-  dateModified: '2026-05-12',
-  url: 'https://olivator.cz/metodika',
-  image: 'https://images.unsplash.com/photo-1751440033950-71236e893284?crop=entropy&cs=tinysrgb&w=1200',
-}
+const FAQ_ITEMS = [
+  {
+    q: 'Proč nemají polyfenoly 100 % váhu, když jsou nejzdravější?',
+    a: 'Polyfenoly jsou klíčové, ale nejsou jediné. Olej s 800 mg/kg polyfenolů ale kyselostí 0,7 % a bez certifikací je objektivně horší než olej s 400 mg/kg, kyselostí 0,15 % a DOP+BIO certifikací. Score měří celkovou kvalitu, ne jeden parametr.',
+  },
+  {
+    q: 'Co když výrobce neuvádí polyfenoly na etiketě?',
+    a: 'Polyfenolová složka (25 %) dostane 0 bodů, ale Score se přepočítá proporcionálně z dostupných dat — kyselost, certifikace a cena. Výsledné číslo je validní pro to, co víme, ale neodráží zdravotní profil oleje. Aktivně oslovujeme výrobce a prosíme je o technické listy.',
+  },
+  {
+    q: 'Jak často se Score mění?',
+    a: 'Cena a výpočet hodnoty se aktualizují u XML partnerů denně, u ostatních prodejců 3× týdně. Kyselost a polyfenoly zůstávají stejné dokud nepřijde nový lab report. Certifikace kontrolujeme 1× měsíčně přes EU registry.',
+  },
+  {
+    q: 'Mohu Score získat 100/100?',
+    a: 'Teoreticky ano. V praxi to znamená: kyselost pod 0,2 %, DOP+BIO+NYIOOC Gold certifikace, polyfenoly nad 500 mg/kg a zároveň cena pod 50 Kč/100 ml. Takový olej zatím v ČR trhu neexistuje — nejlepší naše oleje dosahují 90–95.',
+  },
+  {
+    q: 'Co dělat když najdu chybu v datech?',
+    a: 'Napiš na info@olivator.cz s odkazem na produkt a chybný údaj. Chybu opravíme do 24 hodin.',
+  },
+  {
+    q: 'Funguje Score i pro ochucené oleje s lanýžem nebo chilli?',
+    a: 'Ne. Ochucené oleje (aromatizované) hodnotíme jinou metrikou — EVOO škála by nebyla férová. Na produktové kartě jsou označeny jako "Aromatizovaný".',
+  },
+  {
+    q: 'Proč některé oleje v katalogu nemají Score?',
+    a: 'Score vyžaduje dostatečnou kombinaci dat — potřebujeme pokrýt alespoň 50 % celkové váhy složek (kyselost 35 %, certifikace 25 %, polyfenoly 25 %, cena 15 %). Například kyselost + certifikace (60 %) nebo kyselost + cena (50 %) stačí; samotná kyselost (35 %) nestačí. Oleje s nedostatkem dat jsou označeny "čekáme na analytická data" a do žebříčků nejsou zařazeny.',
+  },
+  {
+    q: 'Jsem výrobce nebo prodejce — mohu dodat analytická data?',
+    a: 'Ano a velmi to uvítáme. Stačí poslat technický list (PDF nebo link) s kyselostí a polyfenoly na kontakt@olivator.cz. Data ověříme, doplníme do systému a ohodnotíme olej do 48 hodin. Žádné poplatky.',
+  },
+]
 
-export default function MetodikaPage() {
+export default async function MetodikaPage() {
+  const { topProducts, retailerCount } = await getPageData()
+  const dateModified = new Date().toISOString().slice(0, 10)
+
+  const schemaOrg = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: 'Olivator Score — Jak hodnotíme olivový olej',
+    description: 'Transparentní metodika Olivator Score. Vážený průměr 4 měřitelných složek: kyselost, certifikace, polyfenoly, hodnota.',
+    author: { '@type': 'Organization', name: 'Olivator', url: 'https://olivator.cz' },
+    publisher: { '@type': 'Organization', name: 'Olivator', url: 'https://olivator.cz' },
+    datePublished: '2026-05-01',
+    dateModified,
+    url: 'https://olivator.cz/metodika',
+    image: 'https://images.unsplash.com/photo-1751440033950-71236e893284?crop=entropy&cs=tinysrgb&w=1200',
+  }
+
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: FAQ_ITEMS.map(item => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  }
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaOrg) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
 
       {/* Hero */}
@@ -312,18 +380,18 @@ export default function MetodikaPage() {
                   Oleje s nejvyšším Score v katalogu
                 </div>
                 <div className="space-y-2">
-                  {TOP_PRODUCTS.map(p => (
+                  {topProducts.map(p => (
                     <Link
                       key={p.slug}
                       href={`/olej/${p.slug}`}
                       className="flex items-center justify-between py-1.5 group"
                     >
-                      <span className="text-[13px] text-text2 group-hover:text-olive transition-colors">{p.name}</span>
+                      <span className="text-[13px] text-text2 group-hover:text-olive transition-colors truncate pr-2">{p.name}</span>
                       <span
-                        className="text-[13px] font-bold rounded-full px-2 py-0.5 text-white ml-3 shrink-0"
-                        style={{ background: p.score >= 90 ? '#b5860d' : '#2d6a4f' }}
+                        className="text-[13px] font-bold rounded-full px-2 py-0.5 text-white shrink-0"
+                        style={{ background: p.olivator_score >= 90 ? '#b5860d' : '#2d6a4f' }}
                       >
-                        {p.score}
+                        {p.olivator_score}
                       </span>
                     </Link>
                   ))}
@@ -533,7 +601,7 @@ export default function MetodikaPage() {
                   { title: 'Etiketa produktu', body: 'Kyselost, harvest year, BIO/DOP značky — primární zdroj. Foto ze stránky výrobce nebo prodejce.', freq: 'Dle dostupnosti' },
                   { title: 'Lab reporty výrobce', body: 'Polyfenoly, peroxidové číslo, oleic acid — z dokumentů výrobce nebo NYIOOC databáze.', freq: 'Při novém produktu' },
                   { title: 'EU databáze', body: 'DOP/CHOP a CHZO ověřujeme přes EU eAmbrosia Register. BIO přes certifikační orgán na etiketě.', freq: 'Audit 1× měsíčně' },
-                  { title: 'Ceny u prodejců', body: 'Scraper 18+ prodejců v ČR. Cena za 100 ml jako srovnávací benchmark.', freq: 'Každých 24 h' },
+                  { title: 'Ceny u prodejců', body: `Scraper ${retailerCount} prodejců v ČR. Cena za 100 ml jako srovnávací benchmark.`, freq: 'XML partneři denně, ostatní 3× týdně' },
                 ].map(d => (
                   <div key={d.title} className="bg-off rounded-xl p-4">
                     <div className="flex items-baseline justify-between gap-2 mb-1.5">
@@ -631,40 +699,7 @@ export default function MetodikaPage() {
                 Časté otázky
               </h2>
               <div className="space-y-2">
-                {[
-                  {
-                    q: 'Proč nemají polyfenoly 100 % váhu, když jsou nejzdravější?',
-                    a: 'Polyfenoly jsou klíčové, ale nejsou jediné. Olej s 800 mg/kg polyfenolů ale kyselostí 0,7 % a bez certifikací je objektivně horší než olej s 400 mg/kg, kyselostí 0,15 % a DOP+BIO certifikací. Score měří celkovou kvalitu, ne jeden parametr.',
-                  },
-                  {
-                    q: 'Co když výrobce neuvádí polyfenoly na etiketě?',
-                    a: 'Hledáme lab report na webu výrobce nebo v NYIOOC databázi. Pokud data nenajdeme, složka Polyfenoly nese 0 bodů — Score takového oleje proto nemůže přesáhnout ~75/100. Aktivně oslovujeme výrobce a prosíme je o data.',
-                  },
-                  {
-                    q: 'Jak často se Score mění?',
-                    a: 'Cena a výpočet hodnoty se aktualizují každých 24 h (scraper). Kyselost a polyfenoly zůstávají stejné dokud nepřijde nový lab report. Certifikace kontrolujeme 1× měsíčně přes EU registry.',
-                  },
-                  {
-                    q: 'Mohu Score získat 100/100?',
-                    a: 'Teoreticky ano. V praxi to znamená: kyselost pod 0,2 %, DOP+BIO+NYIOOC Gold certifikace, polyfenoly nad 500 mg/kg a zároveň cena pod 50 Kč/100 ml. Takový olej zatím v ČR trhu neexistuje — nejlepší naše oleje dosahují 90–95.',
-                  },
-                  {
-                    q: 'Co dělat když najdu chybu v datech?',
-                    a: 'Napiš na info@olivator.cz s odkazem na produkt a chybný údaj. Chybu opravíme do 24 hodin a poděkujeme ti v changelog.',
-                  },
-                  {
-                    q: 'Funguje Score i pro ochucené oleje s lanýžem nebo chilli?',
-                    a: 'Ne. Ochucené oleje (aromatizované) hodnotíme jinou metrikou — EVOO škála by nebyla férová. Na produktové kartě jsou označeny jako "Aromatizovaný".',
-                  },
-                  {
-                    q: 'Proč některé oleje v katalogu nemají Score?',
-                    a: 'Score udělujeme pouze produktům s ověřitelnými laboratorními daty — minimálně kyselostí nebo polyfenoly z technického listu, etikety nebo certifikované databáze. Oleje bez těchto dat najdete ve srovnávači s označením "čekáme na analytická data". Do žebříčků zařazujeme výhradně oleje s ověřitelnými daty.',
-                  },
-                  {
-                    q: 'Jsem výrobce nebo prodejce — mohu dodat analytická data?',
-                    a: 'Ano a velmi to uvítáme. Stačí poslat technický list (PDF nebo link) s kyselostí a polyfenoly na kontakt@olivator.cz. Data ověříme, doplníme do systému a ohodnotíme olej do 48 hodin. Žádné poplatky.',
-                  },
-                ].map((item, i) => (
+                {FAQ_ITEMS.map((item, i) => (
                   <details key={i} className="group border border-off2 rounded-xl overflow-hidden">
                     <summary className="flex items-center justify-between px-5 py-4 cursor-pointer list-none">
                       <span className="text-[14px] font-medium text-text pr-4">{item.q}</span>
