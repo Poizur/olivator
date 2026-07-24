@@ -12,19 +12,19 @@ export const metadata: Metadata = {
     default: 'Olivator — Jediný datový srovnávač olivových olejů v ČR',
     template: '%s | Olivator',
   },
-  description: 'Objektivní Olivator Score, aktuální ceny ze 18 prodejců a expertní průvodce olivovými oleji.',
+  description: 'Objektivní Olivator Score, aktuální ceny ze 13 prodejců a expertní průvodce olivovými oleji.',
   openGraph: {
     type: 'website',
     locale: 'cs_CZ',
     url: 'https://olivator.cz',
     siteName: 'Olivator',
     title: 'Olivator — Jediný datový srovnávač olivových olejů v ČR',
-    description: 'Objektivní Olivator Score, aktuální ceny ze 18 prodejců a expertní průvodce olivovými oleji.',
+    description: 'Objektivní Olivator Score, aktuální ceny ze 13 prodejců a expertní průvodce olivovými oleji.',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Olivator — Jediný datový srovnávač olivových olejů v ČR',
-    description: 'Objektivní Olivator Score, aktuální ceny ze 18 prodejců a expertní průvodce olivovými oleji.',
+    description: 'Objektivní Olivator Score, aktuální ceny ze 13 prodejců a expertní průvodce olivovými oleji.',
   },
   robots: {
     index: true,

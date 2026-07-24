@@ -233,7 +233,7 @@ export default async function NejprodavanejiPage() {
               ))}
             </div>
             <span className="text-[12px] text-text3 whitespace-nowrap hidden sm:block">
-              Top {bestsellers.length} · Data z 18+ prodejců
+              Top {bestsellers.length} · Data z 13+ prodejců
             </span>
           </div>
         </section>

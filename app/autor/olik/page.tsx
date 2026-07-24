@@ -10,7 +10,7 @@ export const revalidate = 3600
 export const metadata: Metadata = {
   title: 'Olík — Hlavní degustátor Olivátoru | Olivator',
   description:
-    'Olík nesnáší dvě věci: marketingové bláboly a olej s kyselostí nad 0,5 %. Píše o olivovém oleji ze 18 prodejců v ČR.',
+    'Olík nesnáší dvě věci: marketingové bláboly a olej s kyselostí nad 0,5 %. Píše o olivovém oleji ze 13 prodejců v ČR.',
   alternates: { canonical: 'https://olivator.cz/autor/olik' },
   openGraph: {
     type: 'profile',
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 const OLIK_STATIC = {
   name: 'Olík',
   bioShort:
-    'Olík nesnáší dvě věci: marketingové bláboly a olej s kyselostí nad 0,5 %. Píše o olivovém oleji ze 18 prodejců v ČR. Olivator Score je jeho dílo.',
+    'Olík nesnáší dvě věci: marketingové bláboly a olej s kyselostí nad 0,5 %. Píše o olivovém oleji ze 13 prodejců v ČR. Olivator Score je jeho dílo.',
   bioFull: `Hlavní degustátor a kritický nos Olivátoru.
 
 Olík nesnáší dvě věci: marketingové bláboly a olej s kyselostí nad 0,5 %. Ostatní mu nevadí.

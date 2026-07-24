@@ -4,6 +4,7 @@
 import Link from 'next/link'
 import { countryName, countryFlag } from '@/lib/utils'
 import { TopProductCard, type ProductWithOffer } from '@/components/home/top-product-card'
+import { ClaimTooltip } from '@/components/ui/claim-tooltip'
 import { diverseTopProducts } from '@/lib/product-selection'
 
 interface Props {
@@ -84,6 +85,7 @@ export function TopByCountry({ products }: Props) {
                     <div>
                       <h3 className="font-[family-name:var(--font-display)] text-2xl md:text-[28px] font-normal text-text leading-tight">
                         Nejlepší {countryAdjectivePlural(code)} oleje
+                        <ClaimTooltip tip="Řazeno podle Olivator Score — kombinace kyselosti, certifikací, polyfenolů a ceny/kvality. Metodika →" href="/metodika" />
                       </h3>
                       <span className="text-[12px] text-text3">
                         {total} produktů v databázi

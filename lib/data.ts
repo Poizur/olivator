@@ -1623,5 +1623,35 @@ export async function getBestsellers(opts: { limit?: number } = {}): Promise<Arr
     .slice(0, limit)
 }
 
+// ── 5L savings vs 0.5L — for dynamic claim on bulk page and homepage ──
+export async function get5LSavingsPct(): Promise<{ savingPct: number; avg5LPpl: number; avg05LPpl: number }> {
+  const { data: data5L } = await supabaseAdmin
+    .from('products')
+    .select('volume_ml, product_offers(price)')
+    .eq('status', 'active')
+    .eq('type', 'evoo')
+    .gte('volume_ml', 4500)
+    .lte('volume_ml', 5500)
+  const { data: data05L } = await supabaseAdmin
+    .from('products')
+    .select('volume_ml, product_offers(price)')
+    .eq('status', 'active')
+    .eq('type', 'evoo')
+    .gte('volume_ml', 400)
+    .lte('volume_ml', 600)
+  const ppl = (rows: typeof data5L) =>
+    (rows ?? []).flatMap((p: any) =>
+      (p.product_offers as Array<{ price: number }>).map((o) => o.price / (p.volume_ml / 1000))
+    )
+  const avg = (arr: number[]) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0
+  const avg5L = avg(ppl(data5L))
+  const avg05L = avg(ppl(data05L))
+  return {
+    savingPct: avg05L > 0 ? Math.round((1 - avg5L / avg05L) * 100) : 44,
+    avg5LPpl: Math.round(avg5L),
+    avg05LPpl: Math.round(avg05L),
+  }
+}
+
 // ── Articles, Rankings — still from static data (no CMS yet) ──────────
 export { ARTICLES, RANKINGS, getArticles, getArticleBySlug, getRankings, getRankingBySlug } from './static-content'

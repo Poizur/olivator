@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { get5LProducts } from '@/lib/data'
+import { get5LProducts, get5LSavingsPct } from '@/lib/data'
+import { ClaimTooltip } from '@/components/ui/claim-tooltip'
 import { NewsletterSignup } from '@/components/newsletter-signup'
 import { SavingsCalculator } from './savings-calculator'
 import { BulkProductTabs } from './bulk-product-tabs'
@@ -10,7 +11,7 @@ export const revalidate = 3600
 export const metadata: Metadata = {
   title: 'Olivový olej 5L — velké balení od 118 Kč/litr | Olivator',
   description:
-    '51 prověřených olivových olejů v 5L balení od 118 Kč/litr. Ušetřete až 44 % oproti malým lahvím. Nezávislé hodnocení, reálné ceny ze 30+ prodejen.',
+    'Olivový olej 5L — velká balení od 118 Kč/litr. Průměrně výrazně nižší cena za litr než malé lahve. Nezávislé hodnocení, reálné ceny ze 13 prodejců.',
   alternates: { canonical: 'https://olivator.cz/olivovy-olej-5l' },
   openGraph: {
     type: 'website',
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
     url: 'https://olivator.cz/olivovy-olej-5l',
     siteName: 'Olivator',
     title: 'Olivový olej 5L — velké balení od 118 Kč/litr',
-    description: '51 prověřených 5L olejů, nejlevnější nabídky, kalkulačka úspor.',
+    description: 'Prověřené 5L olivové oleje, nejlevnější nabídky, kalkulačka úspor.',
   },
 }
 
@@ -50,8 +51,9 @@ const FAQ_ITEMS = [
 ]
 
 export default async function BulkOilPage() {
-  const products = await get5LProducts()
+  const [products, savings] = await Promise.all([get5LProducts(), get5LSavingsPct()])
   const total = products.length
+  const { savingPct, avg5LPpl, avg05LPpl } = savings
 
   // Seřadit od nejlevnějšího po nejdražší (cena/litr)
   const calcPpl = (p: typeof products[0]) =>
@@ -116,7 +118,7 @@ export default async function BulkOilPage() {
             </h1>
             <p className="text-[16px] text-text2 max-w-[520px] leading-relaxed mb-7">
               {total} prověřených olejů v 5L balení. Od {minPpl} Kč/litr.
-              Nezávislé Olivator Score, reálné ceny ze srovnání 30+ prodejen.
+              Nezávislé Olivator Score, reálné ceny ze srovnání 13 prodejců.
             </p>
 
             <a
@@ -130,7 +132,6 @@ export default async function BulkOilPage() {
               {[
                 { v: `${total}`, l: 'produktů v katalogu' },
                 { v: `od ${minPpl} Kč`, l: 'cena za litr' },
-                { v: '−44 %', l: 'průměrná úspora vs 0,5L' },
                 { v: '3 země', l: 'Řecko, Španělsko, Itálie' },
               ].map(s => (
                 <div key={s.l} className="flex items-center gap-2 bg-off border border-off2 rounded-full px-4 py-1.5">
@@ -138,6 +139,11 @@ export default async function BulkOilPage() {
                   <span className="text-[12px] text-text3">{s.l}</span>
                 </div>
               ))}
+              <div className="flex items-center gap-2 bg-off border border-off2 rounded-full px-4 py-1.5">
+                <span className="text-[15px] font-bold text-text tabular-nums">−{savingPct} %</span>
+                <span className="text-[12px] text-text3">průměrná úspora vs 0,5L</span>
+                <ClaimTooltip tip={`Průměrná cena za litr: 5L balení ${avg5LPpl} Kč/l vs balení 0,5L ${avg05LPpl} Kč/l. Počítáno z aktuálních nabídek v katalogu.`} />
+              </div>
             </div>
           </div>
 
@@ -152,8 +158,8 @@ export default async function BulkOilPage() {
           {[
             {
               icon: '💰',
-              title: 'Průměrná úspora −44 %',
-              text: '140 Kč/litr u 5L vs 250 Kč u 0,5L. Při 1,5L/měs to je přes 1 900 Kč ročně.',
+              title: `Průměrná úspora −${savingPct} %`,
+              text: `${avg5LPpl} Kč/litr u 5L vs ${avg05LPpl} Kč u 0,5L v průměru. Při 1,5L/měs to jsou tisíce ročně.`,
             },
             {
               icon: '📦',
@@ -275,7 +281,7 @@ export default async function BulkOilPage() {
                   {[
                     { label: 'Cena balení', v05: '~125 Kč', v1: '~230 Kč', v5: '~700 Kč', highlight: false },
                     { label: 'Cena / litr', v05: '250 Kč', v1: '230 Kč', v5: '140 Kč', highlight: true },
-                    { label: 'Úspora vs 0,5L', v05: '—', v1: '−8 %', v5: '−44 %', highlight: true },
+                    { label: 'Úspora vs 0,5L', v05: '—', v1: '~−8 %', v5: `průměrně −${savingPct} %`, highlight: true },
                     { label: 'Vydrží (4 osoby)', v05: '1–2 týdny', v1: '3–4 týdny', v5: '3–5 měsíců', highlight: false },
                     { label: 'Ekologie obalů', v05: '❌', v1: '⚠️', v5: '✅', highlight: false },
                   ].map(row => (

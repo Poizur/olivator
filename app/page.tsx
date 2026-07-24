@@ -79,6 +79,17 @@ export default async function Home() {
     }
   }
 
+  // Průměrná úspora 5L vs 0.5L balení (pro dynamický claim v sekci 5L)
+  const pricesPerLiter5L = allProducts
+    .filter((p) => p.cheapestOffer != null && p.volumeMl >= 4500 && p.volumeMl <= 5500 && p.type === 'evoo')
+    .map((p) => p.cheapestOffer!.price / (p.volumeMl / 1000))
+  const pricesPerLiter05L = allProducts
+    .filter((p) => p.cheapestOffer != null && p.volumeMl >= 400 && p.volumeMl <= 600 && p.type === 'evoo')
+    .map((p) => p.cheapestOffer!.price / (p.volumeMl / 1000))
+  const avg5LPpl = pricesPerLiter5L.length ? pricesPerLiter5L.reduce((a, b) => a + b, 0) / pricesPerLiter5L.length : 0
+  const avg05LPpl = pricesPerLiter05L.length ? pricesPerLiter05L.reduce((a, b) => a + b, 0) / pricesPerLiter05L.length : 0
+  const savingPct5L = avg05LPpl > 0 ? Math.round((1 - avg5LPpl / avg05LPpl) * 100) : 44
+
   // Velká balení ≥ 1500 ml — seřazená od nejlevnějšího za litr
   const largePacks = allProducts
     .filter((p) => p.cheapestOffer != null && p.volumeMl >= 1500)
@@ -163,10 +174,11 @@ export default async function Home() {
                 — Tucet nejlepších
               </div>
               <h2 className="font-[family-name:var(--font-display)] text-[30px] font-medium text-text leading-[1.1]">
-                Dvanáct olejů, na které <em className="italic text-olive-light">sázíme</em>.
+                Dvanáct olejů s nejvyšším <em className="italic text-olive-light">Score</em>.
+                <ClaimTooltip tip="12 produktů s nejvyšším Olivator Score v katalogu. Score počítáme z deklarovaných parametrů výrobce. Metodika →" href="/metodika" />
               </h2>
               <p className="text-[14px] text-text2 mt-[6px] max-w-[460px]">
-                Nejvyšší Score napříč katalogem. Aktualizováno denně podle nových cen.
+                Nejvyšší Score napříč katalogem. Ceny aktualizovány denně.
               </p>
             </div>
             <Link
@@ -218,8 +230,9 @@ export default async function Home() {
                     — Velká balení
                   </div>
                   <h2 className="font-[family-name:var(--font-display)] text-[30px] font-medium text-white leading-[1.1]">
-                    Olivový olej 5L — <em className="italic text-olive-bright">ušetřete až 44 %</em>
+                    Olivový olej 5L — <em className="italic text-olive-bright">průměrně −{savingPct5L} %</em>
                     <span className="text-[16px] font-normal text-white/75 ml-3">Od {minPerLiter} Kč/litr</span>
+                    <ClaimTooltip tip={`Průměrná cena za litr u 5L balení (${Math.round(avg5LPpl)} Kč/l) vs průměr balení 0,5L (${Math.round(avg05LPpl)} Kč/l) v aktuálních nabídkách.`} />
                   </h2>
                 </div>
                 <Link

@@ -20,7 +20,7 @@ export function OlikAuthorBox() {
           </h4>
           <p className="text-[13px] text-text2 leading-relaxed">
             Olík nesnáší dvě věci: marketingové bláboly a olej s kyselostí nad 0,5 %. Píše
-            o olivovém oleji ze 18 prodejců v ČR. Olivator Score je jeho dílo.
+            o olivovém oleji ze 13 prodejců v ČR. Olivator Score je jeho dílo.
           </p>
           <div className="mt-3 flex gap-4">
             <Link

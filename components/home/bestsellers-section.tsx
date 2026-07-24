@@ -26,7 +26,7 @@ export function BestsellersSection({ products, totalCount }: Props) {
               <ClaimTooltip tip="Řazeno podle prokliků na nabídky prodejců z Olivátoru za 30 dní. Skutečné prodeje e-shopů neznáme." />
             </div>
             <h2 className="font-[family-name:var(--font-display)] text-[30px] font-medium text-text leading-[1.1]">
-              Co Češi <em className="italic text-olive-light">reálně kupují</em>.
+              Co se z Olivátoru kupuje <em className="italic text-olive-light">nejčastěji</em>.
             </h2>
             <p className="text-[14px] text-text2 mt-[6px]">
               Nejpopulárnější oleje napříč značkami — bez ohledu na Score.

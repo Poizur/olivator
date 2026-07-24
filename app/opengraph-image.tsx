@@ -69,7 +69,7 @@ export default async function OGImage() {
               maxWidth: '900px',
             }}
           >
-            Objektivní Olivator Score &middot; Reálné ceny ze 18 prodejců &middot; Aktualizováno denně
+            Objektivní Olivator Score &middot; Reálné ceny ze 13 prodejců &middot; Aktualizováno denně
           </div>
         </div>
 
