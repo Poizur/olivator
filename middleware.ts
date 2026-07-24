@@ -3,6 +3,51 @@ import { NextRequest, NextResponse } from 'next/server'
 const COOKIE_NAME = 'olivator_admin'
 const COOKIE_MAX_AGE_MS = 60 * 60 * 24 * 7 * 1000
 
+// ── MAINTENANCE MODE ───────────────────────────────────────────────────────
+// Nastavit MAINTENANCE_MODE=true na Railway → 503 pro všechny stránky kromě
+// /admin/* a /api/health. Reverze: nastavit na false nebo smazat proměnnou.
+
+const MAINTENANCE_HTML = `<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Olivátor — plánovaná údržba</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#f5f5f7;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;color:#1d1d1f;padding:24px;text-align:center}
+.card{background:#fff;border-radius:16px;padding:48px 40px;max-width:460px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,.07)}
+.logo{font-size:22px;font-weight:700;color:#2d6a4f;letter-spacing:-.02em;margin-bottom:32px}
+.icon{font-size:48px;margin-bottom:20px}
+h1{font-size:22px;font-weight:600;line-height:1.3;margin-bottom:12px;color:#1d1d1f}
+p{font-size:15px;color:#6e6e73;line-height:1.6;margin-bottom:8px}
+.contact{margin-top:28px;padding-top:24px;border-top:1px solid #e8e8ed;font-size:13px;color:#aeaeb2}
+.contact a{color:#2d6a4f;text-decoration:none}
+.contact a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">olivátor.cz</div>
+  <div class="icon">🔧</div>
+  <h1>Probíhá plánovaná údržba</h1>
+  <p>Vrátíme se co nejdřív — obvykle do několika hodin.</p>
+  <p>Děkujeme za trpělivost.</p>
+  <div class="contact">
+    Dotazy: <a href="mailto:info@makyoutdoors.com">info@makyoutdoors.com</a>
+  </div>
+</div>
+</body>
+</html>`
+
+function isMaintenanceExempt(pathname: string): boolean {
+  return (
+    pathname.startsWith('/admin') ||
+    pathname === '/api/health' ||
+    pathname.startsWith('/api/admin/login')
+  )
+}
+
 // Constant-time string compare (Web-Crypto compatible)
 function safeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false
@@ -48,6 +93,18 @@ export async function middleware(request: NextRequest) {
   // root layout) can read it without prop drilling. Set on every request.
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-pathname', pathname)
+
+  // Maintenance mode — MAINTENANCE_MODE=true → 503 pro veřejnost
+  if (process.env.MAINTENANCE_MODE === 'true' && !isMaintenanceExempt(pathname)) {
+    return new NextResponse(MAINTENANCE_HTML, {
+      status: 503,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Retry-After': '86400',
+        'Cache-Control': 'no-store',
+      },
+    })
+  }
 
   // Admin route protection
   if (pathname.startsWith('/admin') && pathname !== '/admin/login' && !pathname.startsWith('/api/admin/login')) {

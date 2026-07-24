@@ -138,6 +138,11 @@ async function buildEmail(num: number, unsubUrl: string): Promise<{ subject: str
 }
 
 async function main() {
+  if (process.env.EMAILS_PAUSED === 'true') {
+    console.log('[cron:lead-magnet-drip] EMAILS_PAUSED=true — přeskakuji (údržba)')
+    process.exit(0)
+  }
+
   const now = new Date().toISOString()
 
   const { data: pending, error } = await supabaseAdmin

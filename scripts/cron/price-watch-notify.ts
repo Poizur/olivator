@@ -103,6 +103,11 @@ async function sendEmail(
 }
 
 async function run() {
+  if (process.env.EMAILS_PAUSED === 'true') {
+    console.log('[price-watch-notify] EMAILS_PAUSED=true — přeskakuji (údržba)')
+    process.exit(0)
+  }
+
   console.log(`[price-watch-notify] Start${DRY_RUN ? ' (DRY RUN)' : ''} ${new Date().toISOString()}`)
 
   const antiSpamCutoff = new Date(Date.now() - ANTI_SPAM_DAYS * 24 * 60 * 60 * 1000).toISOString()

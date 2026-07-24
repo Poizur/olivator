@@ -13,6 +13,11 @@ async function main() {
   const startedAt = Date.now()
   console.log('[cron:newsletter-send] start', new Date().toISOString())
 
+  if (process.env.EMAILS_PAUSED === 'true') {
+    console.log('[cron:newsletter-send] EMAILS_PAUSED=true — přeskakuji (údržba)')
+    process.exit(0)
+  }
+
   const killTimer = setTimeout(() => {
     console.error('[cron:newsletter-send] TIMEOUT — exceeded 10 min, forcing exit')
     process.exit(2)
