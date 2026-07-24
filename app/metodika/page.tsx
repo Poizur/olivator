@@ -815,9 +815,11 @@ export default async function MetodikaPage() {
                   </div>
                 </div>
                 <div className="text-center text-[12px] text-text3 border-t border-off2 pt-3">
-                  {Math.abs(independenceCheck.affiliateAvg - independenceCheck.noAffiliateAvg) <= 5
-                    ? '✓ Rozdíl do 5 bodů — affiliate status nekoreluje se Score přiřazením'
-                    : `⚠ Rozdíl ${Math.abs(independenceCheck.affiliateAvg - independenceCheck.noAffiliateAvg)} bodů — prověřujeme příčinu`
+                  {independenceCheck.noAffiliateCount < 5
+                    ? `✓ Téměř všechny aktivní produkty mají affiliate URL — srovnání není statisticky relevantní (${independenceCheck.noAffiliateCount} bez affiliate)`
+                    : independenceCheck.affiliateAvg > independenceCheck.noAffiliateAvg + 5
+                    ? `⚠ Affiliate produkty skórují výše o ${independenceCheck.affiliateAvg - independenceCheck.noAffiliateAvg} bodů — prověřujeme`
+                    : '✓ Affiliate status nekoreluje s vyšším Score — bias nezjištěn'
                   }
                   {' · '}Ověřeno: {independenceCheck.checkedAt}
                 </div>
