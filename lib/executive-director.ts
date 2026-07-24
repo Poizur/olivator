@@ -447,7 +447,7 @@ function buildPrompt(raw: RawBriefData, weekLabel: string, learningSummary: stri
   const articleDraftsList = (artDrafts.recent ?? [])
     .map((d) => `  - [${d.status}${d.severity ? ', AI:' + d.severity : ''}] "${d.title}"`).join('\n')
 
-  return `Jsi AI Ředitel olivator.cz — největší srovnávač olivových olejů v ČR.
+  return `Jsi AI Ředitel olivator.cz — jediný datový srovnávač olivových olejů v ČR.
 Piš jako chytrý analytik se znalostí affiliate businessu. Jen fakta, žádné fráze.
 
 ━━━ KOMUNIKAČNÍ PRAVIDLA (POVINNÉ — porušení = špatný brief) ━━━

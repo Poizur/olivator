@@ -159,8 +159,8 @@ export default async function MediakitPage() {
               <div className="text-[10px] uppercase tracking-wider text-text3 font-medium mb-1">
                 E-mail (preferováno)
               </div>
-              <a href="mailto:redakce@olivator.cz" className="text-[15px] text-olive hover:text-olive-dark">
-                redakce@olivator.cz
+              <a href="mailto:info@makyoutdoors.com" className="text-[15px] text-olive hover:text-olive-dark">
+                info@makyoutdoors.com
               </a>
             </div>
             <div>

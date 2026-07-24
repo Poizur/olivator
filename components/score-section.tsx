@@ -95,8 +95,8 @@ export function ScoreSection({ product, children }: { product: Product; children
         <p className="text-[11px] text-text3 leading-relaxed mt-3">
           <span className="font-medium text-text2">Jste výrobce nebo prodejce?</span>{' '}
           Pošlete technický list na{' '}
-          <a href="mailto:kontakt@olivator.cz" className="text-olive underline underline-offset-2 hover:text-olive2 transition-colors">
-            kontakt@olivator.cz
+          <a href="mailto:info@makyoutdoors.com" className="text-olive underline underline-offset-2 hover:text-olive2 transition-colors">
+            info@makyoutdoors.com
           </a>
           {' '}— hodnocení doplníme do 48 h.
         </p>

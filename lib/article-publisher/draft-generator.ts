@@ -117,7 +117,7 @@ YMYL PRAVIDLA (POVINNÉ — toto je zdravotní téma):
 5. Hedguj výroky: "naznačují", "studie ukazují že", "může přispívat k"
 ` : ''
 
-  const prompt = `Jsi hlavní editor Olivator.cz — největší srovnávač olivových olejů v ČR. Piš přirozenou češtinou, aktivním hlasem.
+  const prompt = `Jsi hlavní editor Olivator.cz — jediný datový srovnávač olivových olejů v ČR. Piš přirozenou češtinou, aktivním hlasem.
 
 RELEVANTNÍ LEKCE Z PAMĚTI (respektuj je):
 ${learnings || '(žádné)'}

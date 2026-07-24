@@ -98,7 +98,7 @@ export function PriceWatchButton({ productId, productName }: Props) {
         />
         <span className="text-[11px] text-text3 leading-snug">
           Souhlasím se zasíláním cenových upozornění na zadaný email.{' '}
-          <a href="/zasady-ochrany-soukromi" className="text-olive underline" target="_blank" rel="noopener">
+          <a href="/ochrana-osobnich-udaju" className="text-olive underline" target="_blank" rel="noopener">
             Zásady ochrany soukromí
           </a>
           .

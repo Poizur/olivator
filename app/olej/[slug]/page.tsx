@@ -995,8 +995,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                       <div className="px-4 py-3 bg-off/50 border-t border-off2 text-[12px] text-text2 leading-relaxed">
                         <span className="font-medium text-text">Jste výrobce nebo prodejce tohoto oleje?</span>
                         {' '}Dodejte technický list s kyselostí a polyfenoly a doplníme hodnocení.{' '}
-                        <a href="mailto:kontakt@olivator.cz" className="text-olive underline underline-offset-2 hover:text-olive2 transition-colors">
-                          kontakt@olivator.cz
+                        <a href="mailto:info@makyoutdoors.com" className="text-olive underline underline-offset-2 hover:text-olive2 transition-colors">
+                          info@makyoutdoors.com
                         </a>
                       </div>
                     </>
