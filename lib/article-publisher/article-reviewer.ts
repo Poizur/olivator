@@ -33,10 +33,12 @@ ${bodyMarkdown.slice(0, 3000)}${bodyMarkdown.length > 3000 ? '\n[...zkráceno...
 KONTROLNÍ SEZNAM:
 1. Obsahuje vymyšlené produkty? (jména bez {{product:slug}} tokenu = červená vlajka)
 2. Obsahuje vymyšlené studie nebo konkrétní čísla bez zdroje?
-3. Pro zdravotní tvrzení: jsou kauzální výroky hedgované (naznačují, může přispívat)?
+3. Pro zdravotní tvrzení: jsou kauzální výroky hedgované (naznačují, může přispívat)? EFSA schválené: "přispívá k ochraně LDL cholesterolu" (při ≥250 mg/kg). Zakázáno: "léčí", "chrání před rakovinou/cukrovkou/infarktem", "zaručeně pomáhá"
 4. Je minimálně 300 slov?
 5. Jsou affiliate CTA přirozené (ne "KLIKNI ZDE!")?
 6. Existují {{product:slug}} tokeny (alespoň 1)?
+7. Jmenuje karanténní/neaktivní retailery jako místo k nákupu? (Olivum, Gaea.cz, Olivovyolej.cz, GreekMarket, Jamonárna, Milujeme Krétu, Nestonej, Ellada, Olivarna, Lozano Červenka, Zdrave-oleje, Zdravoslav, Aktin, Cerfis, Delishop, Topdelikatesy, Vinotéka Praha)
+8. Obsahuje tvrzení o fyzickém testování? ("testovali jsme", "degustovali jsme", "laboratorně ověřeno", "náš tým ochutnal") — Olivator neprovádí fyzické testy
 
 ODPOVĚZ VÝHRADNĚ V TOMTO FORMÁTU (žádný jiný text):
 SEVERITY: ok|warn|block
@@ -44,8 +46,8 @@ VERDICT: jednověté shrnutí co je OK nebo co konkrétně vadí
 ISSUES: seznam problémů oddělen středníky, nebo "Žádné"
 
 PRAVIDLA:
-- block: vymyšlené produkty/studie, nezdravotní kauzální tvrzení bez opory, < 150 slov
-- warn: chybí {{product:}} token, slabé hedgování zdravotních tvrzení, < 500 slov
+- block: vymyšlené produkty/studie; zdravotní slib mimo EFSA znění (léčí/chrání před/zaručeně + nemoc); jmenuje karanténní retailer jako nákupní místo; tvrdí fyzické testování/degustaci; < 150 slov
+- warn: chybí {{product:}} token; slabé hedgování zdravotních tvrzení; < 500 slov
 - ok: splňuje vše výše`
 
   const response = await callClaude({

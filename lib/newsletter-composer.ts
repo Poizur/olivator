@@ -83,6 +83,12 @@ VYTVOŘ:
 
 Tón: chytrý kamarád sommelier (Wirecutter + Wine Folly). Žádné "objevte!", "neuvěříte!". Faktická, konkrétní, lehce literární čeština.
 
+CONTENT RULES (povinné):
+- Nezmiňovat neaktivní retailery: Olivum, Gaea.cz, GreekMarket, Jamonárna, Olivovyolej.cz, Milujeme Krétu, Nestonej, Ellada, Olivarna — nejsou affiliate partneři
+- Žádné zdravotní sliby: zakázáno "léčí", "chrání před rakovinou/infarktem/cukrovkou", "zaručeně" + nemoc
+- Žádné tvrzení o fyzickém testování (Olivator neprovádí degustace ani laboratorní testy)
+- Nezmiňovat konkrétní ceny v textu — ceny se denně mění
+
 Vrať jako čistý JSON (žádný markdown):
 {"subject": "...", "preheader": "...", "hook": "..."}`
 

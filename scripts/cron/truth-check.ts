@@ -168,8 +168,101 @@ async function main() {
     }
   }
 
-  // ── 5. REPORT ─────────────────────────────────────────────────────────
-  console.log(`\n[truth-check] Celkem nálezů: ${findings.length}`)
+  // ── 5. DEAD INTERNAL LINKS — článek → inactive/missing produkt ────────
+  // Kontrola /olej/SLUG odkazů na inactive produkty (ne jen chybějící)
+  const inactiveLinkedSlugs: Array<{ articleSlug: string; linkedSlug: string; productStatus: string }> = []
+  for (let i = 0; i < slugArray.length; i += 50) {
+    const batch = slugArray.slice(i, i + 50)
+    const { data: batchProducts } = await supabase
+      .from('products')
+      .select('slug, status')
+      .in('slug', batch)
+    for (const p of batchProducts ?? []) {
+      if ((p as { slug: string; status: string }).status !== 'active') {
+        const refs = (articles ?? []).filter(a => (a.body_markdown ?? '').includes(`/olej/${(p as { slug: string }).slug}`)).map(a => a.slug)
+        for (const articleSlug of refs) {
+          inactiveLinkedSlugs.push({ articleSlug, linkedSlug: (p as { slug: string }).slug, productStatus: (p as { slug: string; status: string }).status })
+          flag({
+            severity: 'HIGH',
+            id: 'DEAD_INTERNAL_LINK',
+            desc: `Odkaz /olej/${(p as { slug: string }).slug} vede na ${(p as { slug: string; status: string }).status} produkt`,
+            expected: `Produkt active`,
+            found: `status=${(p as { slug: string; status: string }).status}`,
+            where: `articles.slug = '${articleSlug}'`,
+          })
+        }
+      }
+    }
+  }
+
+  // ── 6. AFFILIATE CORRELATION — Score avg: affiliate vs non-affiliate ───
+  // Kontrola nezávislosti: Score produktů s eHUB affiliate vs bez
+  const { data: withAffiliate } = await supabase
+    .from('products')
+    .select('olivator_score')
+    .eq('status', 'active')
+    .not('olivator_score', 'is', null)
+    .in('id', supabase.from('product_offers').select('product_id').not('retailers.base_tracking_url', 'is', null) as any)
+    .limit(200)
+
+  const { data: allActive } = await supabase
+    .from('products')
+    .select('olivator_score, id')
+    .eq('status', 'active')
+    .not('olivator_score', 'is', null)
+    .limit(200)
+
+  if (allActive && allActive.length > 0) {
+    // Affiliate retailer IDs (eHUB — mají base_tracking_url)
+    const { data: ehubRetailers } = await supabase
+      .from('retailers')
+      .select('id')
+      .not('base_tracking_url', 'is', null)
+      .eq('is_active', true)
+
+    const ehubIds = new Set((ehubRetailers ?? []).map((r: { id: string }) => r.id))
+
+    const { data: ehubOffers } = await supabase
+      .from('product_offers')
+      .select('product_id, retailer_id')
+      .in('retailer_id', [...ehubIds])
+
+    const affiliateProductIds = new Set((ehubOffers ?? []).map((o: { product_id: string }) => o.product_id))
+
+    const affScores = (allActive ?? []).filter(p => affiliateProductIds.has((p as { id: string }).id) && (p as { olivator_score: number }).olivator_score != null).map(p => (p as { olivator_score: number }).olivator_score)
+    const nonAffScores = (allActive ?? []).filter(p => !affiliateProductIds.has((p as { id: string }).id) && (p as { olivator_score: number }).olivator_score != null).map(p => (p as { olivator_score: number }).olivator_score)
+
+    if (affScores.length > 0 && nonAffScores.length > 0) {
+      const avgAff = affScores.reduce((a, b) => a + b, 0) / affScores.length
+      const avgNonAff = nonAffScores.reduce((a, b) => a + b, 0) / nonAffScores.length
+      const diff = Math.abs(avgAff - avgNonAff)
+
+      console.log(`\n[truth-check] Korelační check: affiliate avg Score=${avgAff.toFixed(1)} (n=${affScores.length}), non-affiliate avg Score=${avgNonAff.toFixed(1)} (n=${nonAffScores.length}), diff=${diff.toFixed(1)}`)
+
+      await supabase.from('agent_decisions').insert({
+        agent: 'truth-check',
+        decision_type: 'affiliate_correlation',
+        input: { affiliateCount: affScores.length, nonAffiliateCount: nonAffScores.length },
+        output: { avgAffiliateScore: +avgAff.toFixed(1), avgNonAffiliateScore: +avgNonAff.toFixed(1), diff: +diff.toFixed(1), independent: diff < 5 },
+        reasoning: `Korelační check nezávislosti: diff=${diff.toFixed(1)} bodů (< 5 = OK)`,
+        confidence: 1.0,
+      }).catch(() => {/* non-fatal */})
+
+      if (diff > 10) {
+        flag({
+          severity: 'HIGH',
+          id: 'SCORE_BIAS',
+          desc: `Score affiliate produktů je o ${diff.toFixed(1)} bodů vyšší než non-affiliate`,
+          expected: `Rozdíl < 5 bodů`,
+          found: `affiliate avg=${avgAff.toFixed(1)}, non-affiliate avg=${avgNonAff.toFixed(1)}`,
+          where: `products.olivator_score global`,
+        })
+      }
+    }
+  }
+
+  // ── 7. REPORT ─────────────────────────────────────────────────────────
+  console.log(`\n[truth-check] Celkem nálezů: ${findings.length} (dead links: ${inactiveLinkedSlugs.length})`)
   const critical = findings.filter(f => f.severity === 'CRITICAL').length
   const high = findings.filter(f => f.severity === 'HIGH').length
   console.log(`  🔴 Kritické: ${critical} | 🟠 Vysoké: ${high} | Ostatní: ${findings.length - critical - high}`)
