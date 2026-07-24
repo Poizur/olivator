@@ -8,14 +8,14 @@ import { breadcrumbSchema } from '@/lib/schema'
 export const revalidate = 3600
 
 export const metadata: Metadata = {
-  title: 'Olík — Hlavní degustátor Olivátoru | Olivator',
+  title: 'Olík — datový průvodce Olivátoru | Olivator',
   description:
     'Olík nesnáší dvě věci: marketingové bláboly a olej s kyselostí nad 0,5 %. Píše o olivovém oleji ze 13 prodejců v ČR.',
   alternates: { canonical: 'https://olivator.cz/autor/olik' },
   openGraph: {
     type: 'profile',
     url: 'https://olivator.cz/autor/olik',
-    title: 'Olík — Hlavní degustátor Olivátoru',
+    title: 'Olík — datový průvodce Olivátoru',
     description:
       'Olík nesnáší dvě věci: marketingové bláboly a olej s kyselostí nad 0,5 %. Olivator Score je jeho dílo.',
     images: [{ url: 'https://olivator.cz/olik.png', width: 400, height: 400, alt: 'Olík' }],
@@ -26,20 +26,18 @@ const OLIK_STATIC = {
   name: 'Olík',
   bioShort:
     'Olík nesnáší dvě věci: marketingové bláboly a olej s kyselostí nad 0,5 %. Píše o olivovém oleji ze 13 prodejců v ČR. Olivator Score je jeho dílo.',
-  bioFull: `Hlavní degustátor a kritický nos Olivátoru.
+  bioFull: `Datový průvodce Olivátoru. Číslům věří víc než marketingovým sloganům.
 
 Olík nesnáší dvě věci: marketingové bláboly a olej s kyselostí nad 0,5 %. Ostatní mu nevadí.
 
-Za poslední dva roky ochutnal 847 olejů (počítá si je). Navštívil 12 olivových hájů od Alentejo po Krétu. Pamatuje si chuť každého z nich. Jeho fotografická paměť ale končí u jmen prodejců.
+Olivator Score vznikl z prosté frustrace: nikdo v ČR nesrovnával oleje podle dat. Jen podle dojmů, obalů a toho, jestli na etiketě bylo napsáno „Toskánsko". Olík to změnil — vzal certifikáty výrobců, kyselost z protokolů, polyfenoly tam kde byly dostupné, a postavil skóre, které lze přepočítat.
 
-Olivator Score vymyslel ve 3 ráno po pátém ochutnání řeckého DOP. Ráno si myslel, že je geniální. Po dvou letech testů se ukázalo, že měl pravdu.
-
-Žádný výrobce mu neplatí. Naopak: čím dráž olej stojí, tím víc ho štve, když nestojí za nic.`,
+Žádný výrobce mu neplatí. Naopak: čím dráž olej stojí, tím víc ho štve, když data neodpovídají ceně.`,
   schemaMetadata: {
     '@context': 'https://schema.org',
     '@type': 'Person',
     name: 'Olík',
-    jobTitle: 'Hlavní degustátor a kritický nos Olivátoru',
+    jobTitle: 'datový průvodce Olivátoru',
     url: 'https://olivator.cz/autor/olik',
     image: 'https://olivator.cz/olik.png',
     worksFor: { '@type': 'Organization', name: 'Olivátor', url: 'https://olivator.cz' },
@@ -128,7 +126,7 @@ export default async function OlikAuthorPage() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-[10px] font-bold tracking-widest uppercase text-olive mb-2">
-            Hlavní degustátor
+            datový průvodce
           </div>
           <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-text mb-3">
             Olík

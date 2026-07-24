@@ -194,7 +194,7 @@ Pro každodenní použití doporučujeme řecký olej z Kréty s DOP — **dobr�
 `.trim(),
 
   'nejlepsi-olivovy-olej-2025': `
-Hledáte **nejlepší olivový olej** dostupný v České republice? Tady je nezávislý žebříček 2026 — testujeme 100+ olejů u 19 e-shopů, hodnotíme dle objektivních lab parametrů, ne marketingu.
+Hledáte **nejlepší olivový olej** dostupný v České republice? Tady je nezávislý žebříček 2026 — srovnáváme 100+ olejů u 19+ e-shopů podle deklarovaných dat výrobců, ne marketingu.
 
 Žebříček aktualizujeme týdně. Cena se mění, čerstvost taky — proto nedoporučujeme jen "značku roku", ale strukturovaný výběr podle vašeho účelu (denní vaření, dárek, zdravotní benefit) a rozpočtu.
 
@@ -242,7 +242,7 @@ Krétské oleje obecně dominují nízkou kyselostí (suché léto, brzká skliz
 
 ### 3. Intini Coratina Alberobello 500 ml — Score 62
 
-Italská [Apulie](/oblast/apulie), italský DOP, kyselost 0,16 % (téměř nedosažitelná hodnota), polyfenoly 623 mg/kg. **Coratina** [odrůda](/odruda/coratina) je tvrdě pálivá v hrdle — to je dobrá zpráva, pálení = oleocanthal = protizánětlivý fenol.
+Italská [Apulie](/oblast/apulie), italský DOP, kyselost 0,16 % (deklarovaná výrobcem), polyfenoly 623 mg/kg. **Coratina** [odrůda](/odruda/coratina) je tvrdě pálivá v hrdle — to je dobrá zpráva, pálení = oleocanthal = protizánětlivý fenol.
 
 Pro fanoušky: zkuste **lžičku zmrazenou** s plátkem citronu, jak dělají v Apulii. Pro běžné vaření může být moc intenzivní.
 
@@ -311,7 +311,7 @@ Top regiony: [Apulie](/oblast/apulie) (60 % italské produkce, DOP Bitonto, Cima
 [**EVOLIA PLATINUM 2012 mg/kg**](/olej/evolia-platinum) — to je rekord v české distribuci. Většina kvalitních olejů má 200–500 mg/kg, "high phenolic" třída začíná u 750 mg/kg.
 
 ### Nejnižší kyselost
-**Intini Coratina 0,16 %** — laboratorně téměř nedosažitelná hodnota. Indikuje brzkou sklizeň (před plnou zralostí) a precizní lisování do 4 hodin po sklízení.
+**Intini Coratina 0,16 %** — deklarovaná výrobcem, téměř nedosažitelná hodnota. Indikuje brzkou sklizeň (před plnou zralostí) a precizní lisování do 4 hodin po sklízení.
 
 ### Nejlepší BIO
 [**Plakias BIO Premium**](/oblast/kreta) — krétský BIO bez DOP. Kyselost 0,3 %, čistá EU BIO certifikace.
