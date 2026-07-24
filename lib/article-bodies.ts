@@ -200,7 +200,7 @@ Hledáte **nejlepší olivový olej** dostupný v České republice? Tady je nez
 
 ## Jak Olivator Score hodnotí
 
-**Olivator Score** je vážený index od 0 do 100, který sjednocuje 4 měřitelné parametry. Bez subjektivních chuťových testů, bez sponzorů, bez zaplacených pozic.
+**Olivator Score** je vážený index od 0 do 100, který sjednocuje 4 měřitelné parametry. Bez subjektivních chuťových testů, bez zaplacených pozic — jen deklarovaná data výrobců.
 
 | Komponenta | Váha | Co měří |
 |---|---|---|

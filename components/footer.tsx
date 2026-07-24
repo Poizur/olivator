@@ -32,7 +32,7 @@ export function Footer() {
               olivátor
             </div>
             <p className="text-[12px] text-white/55 leading-relaxed max-w-[240px]">
-              Jediný datový srovnávač olivových olejů v ČR. Bez reklam, bez sponzorů — jen data, transparentní metodika a 4 tvrdá čísla.
+              Jediný datový srovnávač olivových olejů v ČR. Žádné placené pozice — jen deklarovaná data výrobců, veřejná metodika a transparentní Score.
             </p>
           </div>
 
