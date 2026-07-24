@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
-import { GoogleAnalytics } from '@next/third-parties/google'
 import { CompareProvider } from '@/lib/compare-context'
 import { WishlistProvider } from '@/lib/wishlist-context'
 import { LayoutChrome } from '@/components/layout-chrome'
+import { CookieConsentBanner } from '@/components/cookie-consent-banner'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -58,7 +58,7 @@ export default function RootLayout({
         <WishlistProvider>
           <CompareProvider>
             <LayoutChrome hasGa={Boolean(gaId)}>{children}</LayoutChrome>
-            {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
+            <CookieConsentBanner gaId={gaId} />
           </CompareProvider>
         </WishlistProvider>
       </body>

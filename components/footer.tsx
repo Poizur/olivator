@@ -91,10 +91,22 @@ export function Footer() {
           </div>
         </div>
 
+        {/* ── Legal links ── */}
+        <div className="py-3 flex flex-wrap gap-x-4 gap-y-1 border-b border-white/10 text-[11px] text-white/45">
+          <Link href="/ochrana-osobnich-udaju" className="hover:text-white/70 transition-colors">Ochrana osobních údajů</Link>
+          <Link href="/podminky-uziti" className="hover:text-white/70 transition-colors">Podmínky užití</Link>
+          <Link href="/cookies" className="hover:text-white/70 transition-colors">Cookies</Link>
+          <Link href="/editorial-policy" className="hover:text-white/70 transition-colors">Redakční zásady</Link>
+        </div>
+
         {/* ── Copyright ── */}
-        <div className="py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 text-[11px] text-white/35">
+        <div className="py-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 text-[11px] text-white/35">
           <div>© {new Date().getFullYear()} Olivátor — Největší srovnávač olivových olejů v ČR</div>
-          <div>Aktualizace 2× denně · data z prodejců</div>
+          <div className="text-right">
+            <span>Provozovatel: Maky Outdoors s.r.o., IČO 09520074, Brno</span>
+            <span className="mx-2 text-white/20">·</span>
+            <span>Aktualizace denně · data z prodejců</span>
+          </div>
         </div>
 
       </div>

@@ -219,8 +219,11 @@ export function NewsletterSignup({ source = 'footer', variant = 'inline' }: Prop
           </button>
         </div>
         {status === 'error' && <div className="text-[11px] text-red-300">⚠ {errorMsg}</div>}
-        <div className="text-[10px] text-white/50">
-          Hned po přihlášení dostaneš aktuální slevy. Pak každý čtvrtek v 8:00.
+        <div className="text-[10px] text-white/50 leading-relaxed">
+          Hned po přihlášení dostaneš aktuální slevy. Pak každý čtvrtek v 8:00.{' '}
+          Přihlášením souhlasíš se zpracováním e-mailu dle{' '}
+          <a href="/ochrana-osobnich-udaju" className="underline decoration-dotted text-white/65">zásad ochrany osobních údajů</a>.
+          Odhlásit 1 klikem.
         </div>
       </form>
     )
@@ -253,6 +256,11 @@ export function NewsletterSignup({ source = 'footer', variant = 'inline' }: Prop
       {status === 'error' && (
         <div className="text-[11px] text-red-600">⚠ {errorMsg}</div>
       )}
+      <div className="text-[10px] text-text3 leading-relaxed mt-1">
+        Přihlášením souhlasíš se zpracováním e-mailu dle{' '}
+        <a href="/ochrana-osobnich-udaju" className="text-olive underline decoration-dotted">zásad OOU</a>.
+        Odhlásit 1 klikem.
+      </div>
     </form>
   )
 }

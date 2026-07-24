@@ -62,7 +62,13 @@ Podrobný výpočet: https://olivator.cz/metodika
 
 Olivátor je nezávislý projekt. Není placen výrobci ani prodejci.
 Příjmy jsou výhradně affiliate provize od prodejců (standardní sazby, bez vlivu na Score).
-Kontakt: olivator.cz/o-nas
+Provozovatel: Maky Outdoors s.r.o., IČO 09520074, Brno.
+Kontakt: info@makyoutdoors.com | olivator.cz/o-projektu
+
+## Právní
+
+Podmínky užití: https://olivator.cz/podminky-uziti
+Ochrana osobních údajů: https://olivator.cz/ochrana-osobnich-udaju
 
 ## Aktualizace
 

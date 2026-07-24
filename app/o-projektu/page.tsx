@@ -57,8 +57,7 @@ export default function OProjektuPage() {
         </p>
         <p className="text-[15px] text-text2 leading-relaxed">
           Spolupracujeme s afiliate sítěmi <strong>Dognet, Heureka Affiliate</strong>{' '}
-          a&nbsp;<strong>CJ Affiliate</strong>, plus máme přímé dohody s vybranými
-          specializovanými e-shopy.
+          a&nbsp;<strong>CJ Affiliate</strong>.
         </p>
       </section>
 
@@ -110,7 +109,35 @@ export default function OProjektuPage() {
         </p>
       </section>
 
-      <section className="prose prose-sm max-w-none">
+      <section className="prose prose-sm max-w-none mb-12">
+        <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-3">
+          Provozovatel
+        </h2>
+        <div className="bg-off rounded-xl px-5 py-4 border border-off2 text-[15px] text-text2 space-y-0.5">
+          <div><strong className="text-text">Maky Outdoors s.r.o.</strong></div>
+          <div>IČO: 09520074</div>
+          <div>Sídlo: Lidická 700/19, 602&nbsp;00 Brno</div>
+        </div>
+      </section>
+
+      <section id="opravy" className="mb-12 scroll-mt-24 bg-off rounded-xl px-5 py-5 border border-off2">
+        <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-3">
+          Jste výrobce nebo prodejce?
+        </h2>
+        <p className="text-[15px] text-text2 leading-relaxed mb-3">
+          Nesouhlasíte s údajem o svém produktu? Máte novější technický list nebo chcete opravit parametry?
+          Dejte nám vědět — <strong className="text-text">doložené opravy provedeme do 48 hodin</strong>,
+          na žádost obsah odstraníme.
+        </p>
+        <a
+          href="mailto:info@makyoutdoors.com"
+          className="inline-flex items-center gap-2 bg-olive text-white text-[14px] font-medium px-5 py-2.5 rounded-full hover:bg-[#1b4332] transition-colors no-underline"
+        >
+          info@makyoutdoors.com
+        </a>
+      </section>
+
+      <section id="kontakt" className="prose prose-sm max-w-none scroll-mt-24">
         <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-3">
           Kontakt
         </h2>
@@ -123,6 +150,11 @@ export default function OProjektuPage() {
             info@makyoutdoors.com
           </a>
         </p>
+        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-[13px] not-prose">
+          <a href="/ochrana-osobnich-udaju" className="text-olive underline decoration-dotted">Ochrana osobních údajů</a>
+          <a href="/podminky-uziti" className="text-olive underline decoration-dotted">Podmínky užití</a>
+          <a href="/cookies" className="text-olive underline decoration-dotted">Cookies</a>
+        </div>
       </section>
     </div>
   )

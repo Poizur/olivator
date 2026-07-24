@@ -30,6 +30,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/o-projektu`, lastModified: buildTime, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${baseUrl}/editorial-policy`, lastModified: buildTime, changeFrequency: 'yearly', priority: 0.4 },
     { url: `${baseUrl}/pro-novinare`, lastModified: buildTime, changeFrequency: 'monthly', priority: 0.4 },
+    { url: `${baseUrl}/ochrana-osobnich-udaju`, lastModified: buildTime, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${baseUrl}/podminky-uziti`, lastModified: buildTime, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${baseUrl}/cookies`, lastModified: buildTime, changeFrequency: 'yearly', priority: 0.3 },
   ]
 
   const [productsRes, regions, brands, cultivars] = await Promise.all([

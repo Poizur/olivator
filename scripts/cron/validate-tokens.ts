@@ -16,7 +16,14 @@ const TOKEN_RE = /\{\{product:([\w-]+)\}\}/g
 const YMYL_CATEGORIES = new Set(['zdravi', 'kosmetika'])
 
 // Domény a výrazy zakázané ve výstupu — ochrana po právním úklidu 2026-07-24
-const BANNED_PHRASES = ['olivum', 'lab testy', 'lab test', 'info@olivator.cz']
+const BANNED_PHRASES = ['olivum', 'lab testy', 'lab test', 'info@olivator.cz', 'přímé dohody']
+
+// Právní stránky musí existovat — kontrola 1× denně
+const REQUIRED_LEGAL_PAGES = [
+  '/ochrana-osobnich-udaju',
+  '/podminky-uziti',
+  '/cookies',
+]
 
 // Kontext safety patternys (150 znaků před/za tokenem)
 const SPECIFIC_NUMBER_RE = /\d+\s*(mg\/kg|%)/i
@@ -194,6 +201,31 @@ async function main() {
           agent_name: 'token-validator',
           decision_type: 'banned_phrase_found',
           payload: { violations: bannedFound },
+        })
+      } catch { /* non-fatal */ }
+    }
+
+    // Ověř že právní stránky existují (HTTP 200)
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://olivator.cz'
+    const missingLegalPages: string[] = []
+    for (const path of REQUIRED_LEGAL_PAGES) {
+      try {
+        const res = await fetch(`${baseUrl}${path}`, { method: 'HEAD', signal: AbortSignal.timeout(8000) })
+        if (res.status !== 200) {
+          missingLegalPages.push(`${path} (HTTP ${res.status})`)
+          console.warn(`[validate-tokens] LEGAL PAGE MISSING: ${path} → HTTP ${res.status}`)
+        }
+      } catch (err) {
+        missingLegalPages.push(`${path} (fetch error)`)
+        console.warn(`[validate-tokens] LEGAL PAGE CHECK FAILED: ${path}`, err)
+      }
+    }
+    if (missingLegalPages.length > 0) {
+      try {
+        await supabaseAdmin.from('agent_decisions').insert({
+          agent_name: 'token-validator',
+          decision_type: 'legal_page_missing',
+          payload: { missing: missingLegalPages },
         })
       } catch { /* non-fatal */ }
     }

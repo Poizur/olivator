@@ -76,7 +76,10 @@ export function LeadMagnetCta({ title, description, compact = false, variant = '
           </button>
         </div>
         {errorMsg && <span className="text-[11px] text-red-300 w-full">⚠ {errorMsg}</span>}
-        <span className="text-[10px] text-white/35 w-full">Bez spamu. Odhlásit 1 klikem.</span>
+        <span className="text-[10px] text-white/35 w-full">
+          Bez spamu. Odhlásit 1 klikem.{' '}
+          <a href="/ochrana-osobnich-udaju" className="underline decoration-dotted text-white/45">Zásady OOU.</a>
+        </span>
       </form>
     )
   }
@@ -89,21 +92,27 @@ export function LeadMagnetCta({ title, description, compact = false, variant = '
       </div>
     )
     return (
-      <div className="bg-[#d8f3dc] border border-[#b7e4c7] rounded-[var(--radius-card)] px-5 py-3.5 flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="flex-1 min-w-0">
-          <span className="text-[14px] font-semibold text-[#1b4332]">🔔 Nové slevy vám pošleme emailem</span>
-          <span className="text-[13px] text-[#2d6a4f] ml-1.5 hidden sm:inline">— každý čtvrtek + mimořádné akce</span>
+      <div>
+        <div className="bg-[#d8f3dc] border border-[#b7e4c7] rounded-[var(--radius-card)] px-5 py-3.5 flex flex-col sm:flex-row sm:items-center gap-3">
+          <div className="flex-1 min-w-0">
+            <span className="text-[14px] font-semibold text-[#1b4332]">🔔 Nové slevy vám pošleme emailem</span>
+            <span className="text-[13px] text-[#2d6a4f] ml-1.5 hidden sm:inline">— každý čtvrtek + mimořádné akce</span>
+          </div>
+          <form onSubmit={handleSubmit} className="flex gap-2 shrink-0">
+            <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="tvuj@email.cz" disabled={state === 'loading'}
+              className="px-3 py-2 bg-white border border-[#b7e4c7] rounded-full text-[13px] text-text placeholder:text-text3 focus:outline-none focus:border-[#40916c] w-[180px]" />
+            <button type="submit" disabled={state === 'loading'}
+              className="bg-[#2d6a4f] text-white rounded-full px-4 py-2 text-[13px] font-semibold hover:bg-[#1b4332] disabled:opacity-40 transition-colors whitespace-nowrap">
+              {state === 'loading' ? '…' : 'Odebírat'}
+            </button>
+            {errorMsg && <span className="text-[11px] text-red-600 self-center">⚠ {errorMsg}</span>}
+          </form>
         </div>
-        <form onSubmit={handleSubmit} className="flex gap-2 shrink-0">
-          <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="tvuj@email.cz" disabled={state === 'loading'}
-            className="px-3 py-2 bg-white border border-[#b7e4c7] rounded-full text-[13px] text-text placeholder:text-text3 focus:outline-none focus:border-[#40916c] w-[180px]" />
-          <button type="submit" disabled={state === 'loading'}
-            className="bg-[#2d6a4f] text-white rounded-full px-4 py-2 text-[13px] font-semibold hover:bg-[#1b4332] disabled:opacity-40 transition-colors whitespace-nowrap">
-            {state === 'loading' ? '…' : 'Odebírat'}
-          </button>
-          {errorMsg && <span className="text-[11px] text-red-600 self-center">⚠ {errorMsg}</span>}
-        </form>
+        <p className="text-[10px] text-[#40916c] mt-1">
+          Bez spamu. Odhlásit 1 klikem.{' '}
+          <a href="/ochrana-osobnich-udaju" className="underline decoration-dotted">Zásady OOU.</a>
+        </p>
       </div>
     )
   }
@@ -131,7 +140,10 @@ export function LeadMagnetCta({ title, description, compact = false, variant = '
           </button>
           {errorMsg && <span className="text-[11px] text-red-600">⚠ {errorMsg}</span>}
         </form>
-        <p className="text-[10px] text-[#40916c] mt-2">Bez spamu. Odhlásit 1 klikem.</p>
+        <p className="text-[10px] text-[#40916c] mt-2">
+          Bez spamu. Odhlásit 1 klikem.{' '}
+          <a href="/ochrana-osobnich-udaju" className="underline decoration-dotted">Zásady OOU.</a>
+        </p>
       </div>
     )
   }
@@ -164,6 +176,10 @@ export function LeadMagnetCta({ title, description, compact = false, variant = '
             {state === 'loading' ? 'Posílám…' : 'Stáhnout zdarma →'}
           </button>
           {errorMsg && <span className="text-[11px] text-red-600 w-full">⚠ {errorMsg}</span>}
+          <span className="text-[10px] text-[#40916c] w-full">
+            Bez spamu. Odhlásit 1 klikem.{' '}
+            <a href="/ochrana-osobnich-udaju" className="underline decoration-dotted">Zásady OOU.</a>
+          </span>
         </form>
       </div>
     )
