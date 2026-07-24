@@ -1,75 +1,66 @@
-// Flavor match: returns count of products matching given flavor sliders + price.
+// Flavor match: returns count of products matching flavor_labels chips + optional price.
 // Used by FlavorSelector for live "X olejů odpovídá" feedback.
 //
-// POST body: { fruity?: number; bitter?: number; spicy?: number; mild?: number; maxPrice?: number }
-// Returns: { count, slugs: string[] }
+// POST body: { labels?: string[], maxPrice?: number | null }
+// Returns: { count, slugs: string[], totalWithLabels: number }
 
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 
 interface FlavorQuery {
-  fruity?: number
-  bitter?: number
-  spicy?: number
-  mild?: number
-  maxPrice?: number
+  labels?: string[]
+  maxPrice?: number | null
 }
-
-const FLAVOR_DIMS = ['fruity', 'bitter', 'spicy', 'mild'] as const
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as FlavorQuery
+  const labels = (body.labels ?? []).filter(Boolean)
 
-  const { data: products } = await supabaseAdmin
+  // Base query: active products with offers
+  let productQuery = supabaseAdmin
     .from('products')
-    .select('slug, flavor_profile, olivator_score')
+    .select('slug, olivator_score, flavor_labels')
     .eq('status', 'active')
 
-  // Match score: how close is product flavor to query flavor?
-  // For each requested dimension, compute distance |product[dim] - query[dim]|
-  // Total score = average distance. Lower = better match. Tolerance: ≤25.
-  const matches = (products ?? [])
-    .map((p) => {
-      const profile = (p.flavor_profile as Record<string, number>) ?? {}
-      let totalDist = 0
-      let dimensions = 0
-      for (const dim of FLAVOR_DIMS) {
-        const target = body[dim]
-        if (target == null) continue
-        const actual = profile[dim] ?? 50
-        totalDist += Math.abs(actual - target)
-        dimensions++
-      }
-      const avgDist = dimensions > 0 ? totalDist / dimensions : 0
-      return { slug: p.slug, score: p.olivator_score, dist: avgDist }
-    })
-    .filter((m) => m.dist <= 25)
+  if (labels.length > 0) {
+    // Postgres array overlap (&&): product must have at least one of the requested labels
+    productQuery = productQuery.overlaps('flavor_labels', labels)
+  }
+
+  const { data: products } = await productQuery
+
+  let slugs = (products ?? []).map((p) => p.slug as string)
 
   // Optional price filter
-  let filteredSlugs: string[] = matches.map((m) => m.slug)
-
-  if (body.maxPrice != null && filteredSlugs.length > 0) {
+  if (body.maxPrice != null && slugs.length > 0) {
     const { data: offers } = await supabaseAdmin
       .from('product_offers')
       .select('product_id, price, products!inner(slug)')
       .lte('price', body.maxPrice)
-      .in('products.slug', filteredSlugs)
+      .in('products.slug', slugs)
 
     const cheapBySlug = new Set<string>()
     for (const o of offers ?? []) {
-      const products = (o as { products: { slug: string } | { slug: string }[] }).products
-      const slug = Array.isArray(products) ? products[0]?.slug : products?.slug
+      const prod = (o as { products: { slug: string } | { slug: string }[] }).products
+      const slug = Array.isArray(prod) ? prod[0]?.slug : prod?.slug
       if (slug) cheapBySlug.add(slug)
     }
-    filteredSlugs = filteredSlugs.filter((s) => cheapBySlug.has(s))
+    slugs = slugs.filter((s) => cheapBySlug.has(s))
   }
 
-  // Sort by score desc, return top 12 slugs
-  const topSlugs = matches
-    .filter((m) => filteredSlugs.includes(m.slug))
-    .sort((a, b) => b.score - a.score || a.dist - b.dist)
+  // Return top 12 by score
+  const sorted = (products ?? [])
+    .filter((p) => slugs.includes(p.slug as string))
+    .sort((a, b) => ((b.olivator_score as number) ?? 0) - ((a.olivator_score as number) ?? 0))
     .slice(0, 12)
-    .map((m) => m.slug)
+    .map((p) => p.slug as string)
 
-  return NextResponse.json({ count: filteredSlugs.length, slugs: topSlugs })
+  // How many active products have any flavor_labels (for descriptive text)
+  const { count: totalWithLabels } = await supabaseAdmin
+    .from('products')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'active')
+    .not('flavor_labels', 'eq', '{}')
+
+  return NextResponse.json({ count: slugs.length, slugs: sorted, totalWithLabels: totalWithLabels ?? 0 })
 }
