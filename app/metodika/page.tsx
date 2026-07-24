@@ -229,7 +229,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Co dělat když najdu chybu v datech?',
-    a: 'Napiš na info@olivator.cz s odkazem na produkt a chybný údaj. Chybu opravíme do 24 hodin.',
+    a: 'Napiš na info@makyoutdoors.com s odkazem na produkt a chybný údaj. Chybu opravíme do 24 hodin.',
   },
   {
     q: 'Funguje Score i pro ochucené oleje s lanýžem nebo chilli?',

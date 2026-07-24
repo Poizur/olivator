@@ -84,10 +84,10 @@ export default function OProjektuPage() {
           fotku odstranit, doplnit, nebo upravit informace o vašem produktu,
           napište na{' '}
           <a
-            href="mailto:info@olivator.cz"
+            href="mailto:info@makyoutdoors.com"
             className="text-olive hover:text-olive-dark underline decoration-dotted"
           >
-            info@olivator.cz
+            info@makyoutdoors.com
           </a>{' '}
           a&nbsp;ihned vyřídíme. Našim cílem je férová spolupráce — vy nám dáte
           fotku a data, my vám pošleme platící zákazníky.
@@ -117,10 +117,10 @@ export default function OProjektuPage() {
         <p className="text-[15px] text-text2 leading-relaxed">
           Olivator.cz &middot;{' '}
           <a
-            href="mailto:info@olivator.cz"
+            href="mailto:info@makyoutdoors.com"
             className="text-olive hover:text-olive-dark underline decoration-dotted"
           >
-            info@olivator.cz
+            info@makyoutdoors.com
           </a>
         </p>
       </section>

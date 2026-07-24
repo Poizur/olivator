@@ -16,7 +16,7 @@ const TOKEN_RE = /\{\{product:([\w-]+)\}\}/g
 const YMYL_CATEGORIES = new Set(['zdravi', 'kosmetika'])
 
 // Domény a výrazy zakázané ve výstupu — ochrana po právním úklidu 2026-07-24
-const BANNED_PHRASES = ['olivum', 'lab testy', 'lab test']
+const BANNED_PHRASES = ['olivum', 'lab testy', 'lab test', 'info@olivator.cz']
 
 // Kontext safety patternys (150 znaků před/za tokenem)
 const SPECIFIC_NUMBER_RE = /\d+\s*(mg\/kg|%)/i

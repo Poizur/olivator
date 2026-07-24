@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
       return new NextResponse(
         renderHtml({
           title: 'Odkaz nenalezen',
-          message: 'Tento odhlašovací odkaz neexistuje nebo už byl použit. Pokud stále dostáváš emaily, kontaktuj nás na info@olivator.cz.',
+          message: 'Tento odhlašovací odkaz neexistuje nebo už byl použit. Pokud stále dostáváš emaily, kontaktuj nás na info@makyoutdoors.com.',
           variant: 'error',
         }),
         { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
       return new NextResponse(
         renderHtml({
           title: 'Něco selhalo',
-          message: 'Nepodařilo se odhlásit. Zkus to prosím znovu nebo nám napiš na info@olivator.cz.',
+          message: 'Nepodařilo se odhlásit. Zkus to prosím znovu nebo nám napiš na info@makyoutdoors.com.',
           variant: 'error',
         }),
         { status: 500, headers: { 'Content-Type': 'text/html; charset=utf-8' } }

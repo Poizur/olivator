@@ -333,7 +333,7 @@ export async function sendManagerReport(report: ManagerReport): Promise<void> {
   </div>
 
   <p style="font-size:11px;color:#aeaeb2;margin-top:32px;border-top:1px solid #e8e8ed;padding-top:16px">
-    Generováno automaticky. Odpovědi a otázky → info@olivator.cz.
+    Generováno automaticky. Odpovědi a otázky → info@makyoutdoors.com.
   </p>
 </div>
 </body></html>`.trim()
