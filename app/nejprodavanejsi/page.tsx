@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { getBestsellers } from '@/lib/data'
+import { getBestsellers, getSiteStats } from '@/lib/data'
 import { formatPrice, formatPricePer100ml, countryFlag, countryName } from '@/lib/utils'
 import { NewsletterSignup } from '@/components/newsletter-signup'
 import { ProductImage } from '@/components/product-image'
@@ -143,7 +143,10 @@ function BestsellerCard({ product, rank }: { product: BestsellerItem; rank: numb
 }
 
 export default async function NejprodavanejiPage() {
-  const bestsellers = await getBestsellers({ limit: 10 })
+  const [bestsellers, stats] = await Promise.all([
+    getBestsellers({ limit: 10 }),
+    getSiteStats(),
+  ])
 
   const itemListSchema =
     bestsellers.length > 0
@@ -297,7 +300,7 @@ export default async function NejprodavanejiPage() {
               className="group bg-white border border-off2 hover:border-olive-light rounded-2xl p-6 flex items-center justify-between transition-all hover:-translate-y-0.5 hover:shadow-md"
             >
               <div>
-                <p className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1">500+ produktů</p>
+                <p className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-1">{stats.activeProducts}+ produktů</p>
                 <p className="text-[20px] font-bold text-text group-hover:text-olive transition-colors">Celý katalog →</p>
                 <p className="text-[13px] text-text2 mt-0.5">Filtry, srovnání, detaily</p>
               </div>
