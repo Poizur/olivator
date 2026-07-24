@@ -50,12 +50,12 @@ function trackImpression(type: 'floater' | 'peek_shown' | 'peek_clicked', page: 
   }).catch(() => {})
 }
 
-function formatReply(text: string) {
-  const parts = text.split(/(\/go\/[\w-]+\/[\w-]+(?:\?[^\s\n]*)?|\/olej\/[\w-]+)/g)
+function inlineParts(text: string, keyPrefix: string) {
+  const parts = text.split(/(\/go\/[\w-]+\/[\w-]+(?:\?[^\s\n]*)?|\/olej\/[\w-]+|\*\*[^*]+\*\*)/g)
   return parts.map((part, i) => {
     if (part.startsWith('/go/')) {
       return (
-        <Link key={i} href={part} className="inline-flex items-center gap-0.5 text-olive underline hover:text-olive2 text-[12px]">
+        <Link key={`${keyPrefix}-${i}`} href={part} className="inline-flex items-center gap-0.5 text-olive underline hover:text-olive2 text-[12px]">
           → koupit
         </Link>
       )
@@ -63,12 +63,32 @@ function formatReply(text: string) {
     if (part.startsWith('/olej/')) {
       const slug = part.replace('/olej/', '')
       return (
-        <Link key={i} href={part} className="text-olive underline hover:text-olive2">
+        <Link key={`${keyPrefix}-${i}`} href={part} className="text-olive underline hover:text-olive2">
           {slug}
         </Link>
       )
     }
-    return <span key={i}>{part}</span>
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={`${keyPrefix}-${i}`}>{part.slice(2, -2)}</strong>
+    }
+    return <span key={`${keyPrefix}-${i}`}>{part}</span>
+  })
+}
+
+function formatReply(text: string) {
+  const lines = text.split('\n')
+  return lines.map((line, i) => {
+    const key = String(i)
+    if (/^\d+\./.test(line)) {
+      return <p key={key} className="font-medium mt-2 first:mt-0">{inlineParts(line.replace(/^\d+\.\s*/, ''), key)}</p>
+    }
+    if (line.startsWith('- ')) {
+      return <p key={key} className="ml-2 text-[12px] text-text2">{inlineParts(line.slice(2), key)}</p>
+    }
+    if (line.trim() === '') {
+      return <div key={key} className="h-1" />
+    }
+    return <p key={key}>{inlineParts(line, key)}</p>
   })
 }
 
@@ -89,7 +109,9 @@ export function SommelierChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const floaterRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
   const peekRef = useRef<HTMLDivElement>(null)
+  const touchStartY = useRef<number | null>(null)
   const floaterImpressionFired = useRef(false)
   const peekAutoRetractTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const peekInitTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -216,6 +238,19 @@ export function SommelierChat() {
     onScroll()
     return () => window.removeEventListener('scroll', onScroll)
   }, [pathname])
+
+  // Close panel on tap outside
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (!open) return
+    function dismiss(e: PointerEvent) {
+      if (panelRef.current?.contains(e.target as Node)) return
+      if (floaterRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
+    document.addEventListener('pointerdown', dismiss)
+    return () => document.removeEventListener('pointerdown', dismiss)
+  }, [open])
 
   useEffect(() => {
     if (open && messages.length === 0) {
@@ -356,17 +391,32 @@ export function SommelierChat() {
       {/* CHAT PANEL */}
       {open && (
         <div
+          ref={panelRef}
           className="fixed bottom-24 right-6 z-[50] w-[340px] sm:w-[380px] bg-white border border-off2 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
           style={{ height: 'min(520px, calc(100vh - 120px))' }}
+          onTouchStart={(e) => { touchStartY.current = e.touches[0].clientY }}
+          onTouchEnd={(e) => {
+            if (touchStartY.current !== null && e.changedTouches[0].clientY - touchStartY.current > 60) {
+              setOpen(false)
+            }
+            touchStartY.current = null
+          }}
         >
           <div className="px-4 py-3 bg-olive text-white flex items-center gap-2.5 shrink-0">
             <div className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center overflow-hidden">
               <img src="/olik.png" alt="Olík" className="w-7 h-7 object-contain" />
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <div className="text-sm font-semibold">Olík</div>
               <div className="text-[10px] opacity-70">Průvodce výběrem oleje</div>
             </div>
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="Zavřít chat"
+              className="text-white/70 hover:text-white text-xl leading-none p-1 -mr-1 transition-colors"
+            >
+              ✕
+            </button>
           </div>
 
           <div className="flex-1 overflow-y-auto min-h-0 px-4 py-3 space-y-3">

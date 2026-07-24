@@ -24,7 +24,7 @@ interface ProductContext {
   polyphenols: number | null
   acidity: number | null
   certifications: string[]
-  flavorProfile: Record<string, number>
+  flavorLabels: string[]
   goLink: string
 }
 
@@ -95,14 +95,14 @@ function mapToProductContext(p: any): ProductContext | null {
     polyphenols: p.polyphenols as number | null,
     acidity: p.acidity ? Number(p.acidity) : null,
     certifications: (p.certifications as string[]) ?? [],
-    flavorProfile: ((p.flavor_profile as Record<string, number>) ?? {}),
+    flavorLabels: (p.flavor_labels as string[]) ?? [],
     goLink,
   }
 }
 
 const PRODUCT_SELECT = `
   name, slug, olivator_score, origin_country,
-  polyphenols, acidity, certifications, flavor_profile,
+  polyphenols, acidity, certifications, flavor_labels,
   product_offers ( price, in_stock, affiliate_url, commission_pct, retailers ( name, slug ) )
 `
 
@@ -142,26 +142,19 @@ async function searchByName(userQuery: string): Promise<ProductContext[]> {
   return (data ?? []).map(mapToProductContext).filter(Boolean) as ProductContext[]
 }
 
-function flavorSummary(fp: Record<string, number>): string {
-  const labels = {
-    spicy: 'palčivost',
-    bitter: 'hořkost',
-    herbal: 'travnatost',
-    fruity: 'ovocnost',
-    mild: 'jemnost',
-    nutty: 'oříšky',
-    buttery: 'máslovost',
-  } as const
-  const axes = Object.entries(labels) as Array<[keyof typeof labels, string]>
-  if (axes.every(([k]) => !fp[k])) return ''
-  const parts = axes.filter(([k]) => (fp[k] ?? 0) >= 40).map(([k, v]) => `${v} ${fp[k]}`)
-  return parts.join(', ')
+function flavorLabelsSummary(labels: string[]): string {
+  if (!labels || labels.length === 0) return ''
+  const CZ: Record<string, string> = {
+    ovocny: 'ovocný', bylinny: 'bylinný', horky: 'hořký',
+    palivy: 'pálivý', jemny: 'jemný', vyrazny: 'výrazný',
+  }
+  return labels.map((l) => CZ[l] ?? l).join(', ')
 }
 
 function buildSystemPrompt(products: ProductContext[], hasNameMatches: boolean): string {
   const catalog = products
     .map((p) => {
-      const flavor = flavorSummary(p.flavorProfile)
+      const flavor = flavorLabelsSummary(p.flavorLabels)
       return [
         `• ${p.name} (Score ${p.score}`,
         p.origin ? `, ${p.origin}` : '',
@@ -169,7 +162,7 @@ function buildSystemPrompt(products: ProductContext[], hasNameMatches: boolean):
         p.acidity != null ? `, kyselost ${p.acidity}%` : '',
         p.certifications.length > 0 ? `, ${p.certifications.join('/')}` : '',
         p.price ? `, ${Math.round(p.price)} Kč u ${p.retailer_name ?? '?'}` : '',
-        flavor ? ` | chuť: ${flavor}` : '',
+        flavor ? ` | chuť dle výrobce: ${flavor}` : '',
         `): ${p.goLink}`,
       ].join('')
     })
@@ -182,20 +175,19 @@ function buildSystemPrompt(products: ProductContext[], hasNameMatches: boolean):
   return `Jsi AI Sommelier Olivatoru — největšího srovnávače olivových olejů v ČR.
 Odpovídáš přirozenou češtinou, tón je přátelský ale odborný (jako znalý kamarád, ne obchodník).
 
-JAK INTERPRETOVAT CHUŤOVÝ PROFIL (každá osa 0-100):
-- "palčivost" = pálivost v krku (oleocanthal). VYSOKÁ palčivost = výrazný, ostrý olej. NÍZKÁ = hladký.
-- "hořkost" = hořkost (early harvest, polyfenoly). VYSOKÁ = intenzivní. NÍZKÁ = jemný.
-- "jemnost" = lehkost a hladkost. VYSOKÁ jemnost = lehký, mírný. NÍZKÁ = výrazný.
-- "travnatost", "ovocnost" = aromatika. Vysoká = výrazná vůně.
-- "máslovost", "oříšky" = krémovost a zralost.
+CHUŤOVÝ PROFIL PRODUKTŮ:
+Každý produkt může mít max. 6 chuťových štítků extrahovaných ze slovního popisu výrobce.
+Štítky: ovocný, bylinný, hořký, pálivý, jemný, výrazný.
+ZAKÁZÁNO: vymýšlet číselné hodnoty chuti nebo nestandardní osy ("sladká travnatost" apod.).
+Při popisu chuti VŽDY použij slova + uveď "dle popisu výrobce". Pokud produkt nemá štítky, neodhaduj chuť.
 
-KLÍČOVÉ MAPOVÁNÍ uživatelských požadavků:
-- "lehký" → hledej VYSOKOU jemnost (mild ≥ 60) + nízkou palčivost a hořkost
-- "výrazný/intenzivní" → vysoká palčivost a hořkost (≥ 60)
-- "ovocný/svěží" → vysoká ovocnost a travnatost
-- "do salátu" → spíš jemnější (mild 50+), fruity OK, low spicy
-- "na vaření/smažení" → low polyfenoly OK, jemnější profil
-- "polyfenoly/zdravý" → > 400 mg/kg polyfenoly + tolerance hořkosti
+MAPOVÁNÍ uživatelských požadavků na štítky:
+- "lehký/hladký/jemný" → hledej štítek "jemný", vyhni se "výrazný"/"hořký"/"pálivý"
+- "výrazný/intenzivní/ostrý" → štítek "výrazný" nebo "hořký"+"pálivý"
+- "ovocný/svěží/aromatický" → štítek "ovocný" nebo "bylinný"
+- "na saláty/ryby" → štítek "jemný" nebo "ovocný"
+- "na vaření/smažení" → bez požadavku na štítky, spíš střední Score
+- "polyfenoly/zdravý" → > 400 mg/kg polyfenoly
 
 PRAVIDLA:
 - Nikdy nevymýšlej produkty — používej POUZE níže uvedený katalog

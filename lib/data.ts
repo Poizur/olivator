@@ -23,6 +23,7 @@ interface ProductRow {
   harvest_year: number | null
   processing: string | null
   flavor_profile: Record<string, number>
+  flavor_labels: string[]
   certifications: string[]
   use_cases: string[]
   volume_ml: number | null
@@ -75,6 +76,7 @@ function mapProduct(row: ProductRow): Product {
       nutty: row.flavor_profile?.nutty ?? 0,
       buttery: row.flavor_profile?.buttery ?? 0,
     },
+    flavorLabels: (row.flavor_labels as string[]) ?? [],
     certifications: row.certifications ?? [],
     useCases: row.use_cases ?? [],
     volumeMl: row.volume_ml ?? 0,
@@ -167,7 +169,7 @@ function mapRetailer(row: Record<string, unknown>): Retailer {
 const PRODUCT_PUBLIC_COLUMNS =
   'id, ean, name, slug, name_short, origin_country, origin_region, type, ' +
   'acidity, polyphenols, oleocanthal, peroxide_value, oleic_acid_pct, ' +
-  'harvest_year, processing, flavor_profile, certifications, use_cases, ' +
+  'harvest_year, processing, flavor_profile, flavor_labels, certifications, use_cases, ' +
   'volume_ml, packaging, olivator_score, score_breakdown, ' +
   'description_short, description_long, meta_title, meta_description, ' +
   'status, image_url, image_source, source_url, brand_slug, ' +
@@ -178,7 +180,7 @@ const PRODUCT_PUBLIC_COLUMNS =
 const PRODUCT_LISTING_COLUMNS =
   'id, ean, name, slug, name_short, origin_country, origin_region, type, ' +
   'acidity, polyphenols, oleocanthal, ' +
-  'flavor_profile, certifications, use_cases, ' +
+  'flavor_profile, flavor_labels, certifications, use_cases, ' +
   'volume_ml, olivator_score, image_url, brand_slug'
 
 // Retailer subset pro offers join — vyloučeno: story (long text), xml_feed_*
@@ -447,6 +449,7 @@ export async function getAlternativeProduct(
 // Aggregate stats for homepage and listings
 export interface SiteStats {
   totalProducts: number
+  activeProducts: number
   activeRetailers: number
   totalBrands: number
   byOrigin: Record<string, number>
@@ -490,6 +493,7 @@ export const getSiteStats = cache(async (): Promise<SiteStats> => {
 
   return {
     totalProducts: products.length,
+    activeProducts: products.length,
     activeRetailers: count ?? 0,
     totalBrands,
     byOrigin,

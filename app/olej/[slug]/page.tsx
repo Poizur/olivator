@@ -9,7 +9,7 @@ import { generateProductFAQ } from '@/lib/product-faq'
 import { selectGeneralFAQs } from '@/lib/general-faq'
 import { ScoreSection } from '@/components/score-section'
 import { ScoreBreakdownSSR } from '@/components/score-breakdown-ssr'
-import { FlavorWheel } from '@/components/flavor-wheel'
+import { FlavorTags } from '@/components/flavor-tags'
 import { PriceTable } from '@/components/price-table'
 import { AffiliateLink } from '@/components/affiliate-link'
 import { ProductGallery } from '@/components/product-gallery'
@@ -596,7 +596,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 <ScoreBreakdownSSR product={product} />
               )}
             </ScoreSection>
-          <FlavorWheel profile={product.flavorProfile} />
+          <FlavorTags labels={product.flavorLabels} />
         </div>
 
         {/* Pravý sloupec: Specifikace + Ceník */}

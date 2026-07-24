@@ -29,14 +29,19 @@ const TYPE_LABELS: Record<string, string> = {
 
 const PAGE_SIZE = 30
 
-const FLAVOR_PRESETS = [
-  { label: 'Lehký a jemný', fruity: 60, bitter: 20, spicy: 20, mild: 75 },
-  { label: 'Ovocný a svěží', fruity: 80, bitter: 35, spicy: 30, mild: 50 },
-  { label: 'Hořký a palčivý', fruity: 50, bitter: 75, spicy: 70, mild: 25 },
-  { label: 'Univerzál', fruity: 50, bitter: 40, spicy: 35, mild: 60 },
+const FLAVOR_CHIPS = [
+  { key: 'jemny',   label: 'Jemný' },
+  { key: 'ovocny',  label: 'Ovocný' },
+  { key: 'bylinny', label: 'Bylinný' },
+  { key: 'horky',   label: 'Hořký' },
+  { key: 'palivy',  label: 'Pálivý' },
+  { key: 'vyrazny', label: 'Výrazný' },
 ]
 
-interface FlavorState { fruity: number; bitter: number; spicy: number; mild: number }
+const FLAVOR_LABEL_CZ: Record<string, string> = {
+  jemny: 'Jemný', ovocny: 'Ovocný', bylinny: 'Bylinný',
+  horky: 'Hořký', palivy: 'Pálivý', vyrazny: 'Výrazný',
+}
 
 export function ListingContent({
   products,
@@ -76,43 +81,24 @@ export function ListingContent({
     return () => clearTimeout(t)
   }, [searchInput]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Flavor sliders (local → debounced URL) ───────────────────────────────────
-  const hasFlavorInUrl = !!(
-    searchParams.get('fruity') || searchParams.get('bitter') ||
-    searchParams.get('spicy') || searchParams.get('mild')
-  )
-  const [flavorOpen, setFlavorOpen] = useState(() => hasFlavorInUrl)
-  const [flavorState, setFlavorState] = useState<FlavorState>(() => ({
-    fruity: Number(searchParams.get('fruity') ?? 60),
-    bitter: Number(searchParams.get('bitter') ?? 40),
-    spicy: Number(searchParams.get('spicy') ?? 35),
-    mild: Number(searchParams.get('mild') ?? 55),
-  }))
+  // ── Flavor chip filter (URL param: ?flavor=jemny,ovocny) ──────────────────────
+  const activeFlavorLabels = searchParams.get('flavor')?.split(',').filter(Boolean) ?? []
+  const [flavorOpen, setFlavorOpen] = useState(() => activeFlavorLabels.length > 0)
 
-  const flavorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  useEffect(() => {
-    if (!flavorOpen) return
-    if (flavorTimerRef.current) clearTimeout(flavorTimerRef.current)
-    flavorTimerRef.current = setTimeout(() => {
-      const params = new URLSearchParams(searchParams.toString())
-      params.set('fruity', String(flavorState.fruity))
-      params.set('bitter', String(flavorState.bitter))
-      params.set('spicy', String(flavorState.spicy))
-      params.set('mild', String(flavorState.mild))
-      params.delete('page')
-      router.replace(`/srovnavac?${params.toString()}`, { scroll: false })
-    }, 350)
-    return () => { if (flavorTimerRef.current) clearTimeout(flavorTimerRef.current) }
-  }, [flavorState, flavorOpen]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  function openFlavor() { setFlavorOpen(true) }
+  function toggleFlavorLabel(label: string) {
+    const params = new URLSearchParams(searchParams.toString())
+    const current = params.get('flavor')?.split(',').filter(Boolean) ?? []
+    const next = current.includes(label)
+      ? current.filter((l) => l !== label)
+      : [...current, label]
+    if (next.length > 0) params.set('flavor', next.join(','))
+    else params.delete('flavor')
+    params.delete('page')
+    router.push(`/srovnavac${params.toString() ? '?' + params.toString() : ''}`)
+  }
 
   function closeFlavor() {
     setFlavorOpen(false)
-    const params = new URLSearchParams(searchParams.toString())
-    params.delete('fruity'); params.delete('bitter'); params.delete('spicy'); params.delete('mild')
-    params.delete('page')
-    router.push(`/srovnavac${params.toString() ? '?' + params.toString() : ''}`)
   }
 
   // ── Param helpers ────────────────────────────────────────────────────────────
@@ -140,7 +126,6 @@ export function ListingContent({
   function clearAll() {
     setSearchInput('')
     setFlavorOpen(false)
-    setFlavorState({ fruity: 60, bitter: 40, spicy: 35, mild: 55 })
     router.push('/srovnavac')
   }
 
@@ -168,17 +153,11 @@ export function ListingContent({
       if (!isNaN(max)) list = list.filter((p) => p.cheapestOffer != null && p.cheapestOffer.price <= max)
     }
 
-    // Flavor distance filter (avg distance ≤ 28 across 4 dimensions)
-    if (flavorOpen) {
-      list = list.filter((p) => {
-        const fp = p.flavorProfile
-        const dims: Array<keyof FlavorState> = ['fruity', 'bitter', 'spicy', 'mild']
-        let totalDist = 0
-        for (const dim of dims) {
-          totalDist += Math.abs((fp[dim] ?? 50) - flavorState[dim])
-        }
-        return totalDist / 4 <= 28
-      })
+    // Flavor label filter — AND: produkt musí mít VŠECHNY vybrané štítky
+    if (activeFlavorLabels.length > 0) {
+      list = list.filter((p) =>
+        activeFlavorLabels.every((l) => p.flavorLabels.includes(l))
+      )
     }
 
     switch (sort) {
@@ -205,7 +184,7 @@ export function ListingContent({
         list.sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
     }
     return list
-  }, [products, search, activeTypes, activeOrigins, activeCerts, activeQuality, activeIntensity, sort, maxPrice, volume, flavorOpen, flavorState])
+  }, [products, search, activeTypes, activeOrigins, activeCerts, activeQuality, activeIntensity, sort, maxPrice, volume, activeFlavorLabels])
 
   // ── Pagination ───────────────────────────────────────────────────────────────
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
@@ -214,7 +193,8 @@ export function ListingContent({
 
   const hasActiveFilters =
     activeTypes.length > 0 || activeOrigins.length > 0 || activeCerts.length > 0 ||
-    activeQuality.length > 0 || !!activeIntensity || !!maxPrice || !!search.trim() || flavorOpen || volume === '5l'
+    activeQuality.length > 0 || !!activeIntensity || !!maxPrice || !!search.trim() ||
+    activeFlavorLabels.length > 0 || volume === '5l'
 
   return (
     <div className="px-4 md:px-8 py-6 md:py-8">
@@ -247,15 +227,15 @@ export function ListingContent({
 
           {/* Chuťový profil toggle */}
           <button
-            onClick={() => flavorOpen ? closeFlavor() : openFlavor()}
+            onClick={() => setFlavorOpen((o) => !o)}
             className={`text-[12px] rounded-md px-2.5 py-[7px] border transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-              flavorOpen
+              flavorOpen || activeFlavorLabels.length > 0
                 ? 'bg-olive text-white border-olive'
                 : 'bg-white text-text2 border-off2 hover:border-olive-border'
             }`}
           >
             <span>🎛</span> Chuťový profil
-            {flavorOpen && <span className="text-white/70">✓</span>}
+            {activeFlavorLabels.length > 0 && <span className="text-white/80 text-[10px]">({activeFlavorLabels.length})</span>}
           </button>
 
           {/* Price quick filter */}
@@ -322,6 +302,9 @@ export function ListingContent({
                 <h2 className="text-[15px] font-medium text-text leading-tight">
                   Vyber chuť, ne značku
                 </h2>
+                <p className="text-[11px] text-text3 mt-0.5">
+                  Porovnáváme podle chuťových štítků z popisů výrobců.
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[12px] text-text3">
@@ -336,55 +319,23 @@ export function ListingContent({
                 </button>
               </div>
             </div>
-
-            {/* Presets */}
-            <div className="flex flex-wrap gap-1.5 mb-4">
-              {FLAVOR_PRESETS.map((p) => (
-                <button
-                  key={p.label}
-                  onClick={() => setFlavorState({ fruity: p.fruity, bitter: p.bitter, spicy: p.spicy, mild: p.mild })}
-                  className="text-[11px] bg-off hover:bg-olive-bg hover:text-olive border border-off2 hover:border-olive-border rounded-full px-3 py-1 transition-colors"
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Sliders 2×2 */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-              <FlavorSlider label="Ovocnost" value={flavorState.fruity}
-                onChange={(v) => setFlavorState((s) => ({ ...s, fruity: v }))}
-                leftLabel="neutrální" rightLabel="ovocný" />
-              <FlavorSlider label="Hořkost" value={flavorState.bitter}
-                onChange={(v) => setFlavorState((s) => ({ ...s, bitter: v }))}
-                leftLabel="jemný" rightLabel="hořký" />
-              <FlavorSlider label="Palčivost" value={flavorState.spicy}
-                onChange={(v) => setFlavorState((s) => ({ ...s, spicy: v }))}
-                leftLabel="hladký" rightLabel="palčivý" />
-              <FlavorSlider label="Krémovost" value={flavorState.mild}
-                onChange={(v) => setFlavorState((s) => ({ ...s, mild: v }))}
-                leftLabel="výrazný" rightLabel="máslový" />
-            </div>
-
-            {/* Mini chuťový profil bar */}
-            <div className="mt-4 pt-3 border-t border-off flex items-center gap-3">
-              <span className="text-[11px] text-text3 shrink-0">Tvůj profil:</span>
-              {[
-                { label: 'Ovocný', value: flavorState.fruity },
-                { label: 'Hořký', value: flavorState.bitter },
-                { label: 'Palčivý', value: flavorState.spicy },
-                { label: 'Jemný', value: flavorState.mild },
-              ].map((d) => (
-                <div key={d.label} className="flex-1 min-w-0">
-                  <div className="h-1.5 bg-off rounded-full overflow-hidden mb-0.5">
-                    <div
-                      className="h-full bg-olive rounded-full transition-all duration-300"
-                      style={{ width: `${d.value}%` }}
-                    />
-                  </div>
-                  <div className="text-[10px] text-text3 truncate">{d.label}</div>
-                </div>
-              ))}
+            <div className="flex flex-wrap gap-2">
+              {FLAVOR_CHIPS.map(({ key, label }) => {
+                const active = activeFlavorLabels.includes(key)
+                return (
+                  <button
+                    key={key}
+                    onClick={() => toggleFlavorLabel(key)}
+                    className={`text-[12px] px-3 py-1.5 rounded-full border transition-colors ${
+                      active
+                        ? 'bg-olive text-white border-olive'
+                        : 'bg-white text-text2 border-off2 hover:border-olive/40 hover:text-olive'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}
@@ -401,9 +352,9 @@ export function ListingContent({
                 {search.trim() && (
                   <FilterChip label={`"${search.trim()}"`} onRemove={() => setSearchInput('')} />
                 )}
-                {flavorOpen && (
-                  <FilterChip label="Chuťový profil" onRemove={closeFlavor} />
-                )}
+                {activeFlavorLabels.map((l) => (
+                  <FilterChip key={`fl-${l}`} label={`Chuť: ${FLAVOR_LABEL_CZ[l] ?? l}`} onRemove={() => toggleFlavorLabel(l)} />
+                ))}
                 {activeTypes.map((t) => (
                   <FilterChip key={`t-${t}`} label={TYPE_LABELS[t] ?? t} onRemove={() => clearFilter('type', t)} />
                 ))}
@@ -495,41 +446,6 @@ export function ListingContent({
 
 // ── Sub-komponenty ─────────────────────────────────────────────────────────────
 
-function FlavorSlider({
-  label,
-  value,
-  onChange,
-  leftLabel,
-  rightLabel,
-}: {
-  label: string
-  value: number
-  onChange: (v: number) => void
-  leftLabel: string
-  rightLabel: string
-}) {
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[13px] font-medium text-text">{label}</span>
-        <span className="text-[12px] text-text3 tabular-nums">{value}</span>
-      </div>
-      <input
-        type="range"
-        min={0}
-        max={100}
-        step={5}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-olive cursor-pointer"
-      />
-      <div className="flex justify-between text-[10px] text-text3 mt-0.5">
-        <span>{leftLabel}</span>
-        <span>{rightLabel}</span>
-      </div>
-    </div>
-  )
-}
 
 function FilterChip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (

@@ -23,6 +23,7 @@ export interface Product {
   harvestYear: number | null
   processing: string
   flavorProfile: FlavorProfile
+  flavorLabels: string[]
   certifications: string[]
   useCases: string[]
   volumeMl: number
