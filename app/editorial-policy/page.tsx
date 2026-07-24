@@ -59,7 +59,7 @@ export default function EditorialPolicyPage() {
         </p>
         <ul className="text-[15px] text-text2 leading-relaxed mb-3 list-disc pl-5 space-y-1">
           <li>Tier 1 supermarkety (Rohlík, Košík, Tesco, Albert, Kaufland, Globus, Mall)</li>
-          <li>Specializované eshopy (olivio.cz, gaea.cz, olivovyolej.cz, zdravasila.cz)</li>
+          <li>Specializované eshopy (přes affiliate síť eHUB a veřejně dostupné zdrojové stránky)</li>
           <li>Heureka XML feedy a partnerské sítě</li>
           <li>Stránky výrobců (přes RSS / Open Food Facts API)</li>
         </ul>
@@ -153,8 +153,8 @@ export default function EditorialPolicyPage() {
         <p className="text-[15px] text-text2 leading-relaxed mb-3">
           Pokud najdeš na Olivátoru chybu — špatný parametr, neaktuální cenu,
           chybějící produkt — napiš nám na{' '}
-          <a href="mailto:redakce@olivator.cz" className="text-olive underline decoration-dotted">
-            redakce@olivator.cz
+          <a href="mailto:info@makyoutdoors.com" className="text-olive underline decoration-dotted">
+            info@makyoutdoors.com
           </a>
           . Opravu zaznamenáme do 48 hodin.
         </p>

@@ -56,8 +56,7 @@ export default function OProjektuPage() {
           provize.
         </p>
         <p className="text-[15px] text-text2 leading-relaxed">
-          Spolupracujeme s afiliate sítěmi <strong>Dognet, Heureka Affiliate</strong>{' '}
-          a&nbsp;<strong>CJ Affiliate</strong>.
+          Spolupracujeme s partnerskými e-shopy přes affiliate síť <strong>eHUB</strong>.
         </p>
       </section>
 
@@ -105,7 +104,7 @@ export default function OProjektuPage() {
         </p>
         <p className="text-[15px] text-text2 leading-relaxed">
           Pokud najdete chybu nebo zastaralou cenu, napište nám —
-          opravíme do 24&nbsp;hodin.
+          opravíme co nejdříve.
         </p>
       </section>
 

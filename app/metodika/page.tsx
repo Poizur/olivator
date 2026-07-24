@@ -229,7 +229,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Co dělat když najdu chybu v datech?',
-    a: 'Napiš na info@makyoutdoors.com s odkazem na produkt a chybný údaj. Chybu opravíme do 24 hodin.',
+    a: 'Napiš na info@makyoutdoors.com s odkazem na produkt a chybný údaj. Chybu opravíme co nejdříve.',
   },
   {
     q: 'Funguje Score i pro ochucené oleje s lanýžem nebo chilli?',
@@ -241,7 +241,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Jsem výrobce nebo prodejce — mohu dodat analytická data?',
-    a: 'Ano a velmi to uvítáme. Stačí poslat technický list (PDF nebo link) s kyselostí a polyfenoly na kontakt@olivator.cz. Data ověříme, doplníme do systému a ohodnotíme olej do 48 hodin. Žádné poplatky.',
+    a: 'Ano a velmi to uvítáme. Stačí poslat technický list (PDF nebo link) s kyselostí a polyfenoly na info@makyoutdoors.com. Data ověříme, doplníme do systému a ohodnotíme olej co nejdříve. Žádné poplatky.',
   },
 ]
 
