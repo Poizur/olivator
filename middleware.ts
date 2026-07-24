@@ -4,8 +4,8 @@ const COOKIE_NAME = 'olivator_admin'
 const COOKIE_MAX_AGE_MS = 60 * 60 * 24 * 7 * 1000
 
 // ── MAINTENANCE MODE ───────────────────────────────────────────────────────
-// Nastavit MAINTENANCE_MODE=true na Railway → 503 pro všechny stránky kromě
-// /admin/* a /api/health. Reverze: nastavit na false nebo smazat proměnnou.
+// Řídí se VÝHRADNĚ přes DB: app_settings WHERE key = 'maintenance_mode'.
+// Přepni v admin dashboardu nebo přes SQL: UPDATE app_settings SET value = false WHERE key = 'maintenance_mode';
 
 const MAINTENANCE_HTML = `<!DOCTYPE html>
 <html lang="cs">
@@ -54,9 +54,6 @@ function isMaintenanceExempt(pathname: string): boolean {
 let _maintenanceCache: { value: boolean; ts: number } | null = null
 
 async function isMaintenanceActive(): Promise<boolean> {
-  // env var override always wins (Railway-level emergency lockdown)
-  if (process.env.MAINTENANCE_MODE === 'true') return true
-
   const now = Date.now()
   if (_maintenanceCache && now - _maintenanceCache.ts < 30_000) {
     return _maintenanceCache.value
