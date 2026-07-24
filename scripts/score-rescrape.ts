@@ -24,7 +24,7 @@ const RETAILER_FILTER = process.argv.find(a => a.startsWith('--retailer='))?.spl
 
 const TARGET_RETAILERS = RETAILER_FILTER
   ? [RETAILER_FILTER]
-  : ['greekmarket', 'milujemekretu', 'olivarna']
+  : []  // karanténa 2026-07-24: greekmarket, milujemekretu, olivarna deaktivovány
 
 // Validační hranice
 const ACIDITY_MIN = 0.10
