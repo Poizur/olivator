@@ -1,5 +1,9 @@
 'use client'
 
+// PIPELINE PRAVIDLO: každý section header s tvrzením (číslo, superlativ, slib)
+// MUSÍ mít <ClaimTooltip tip="..." /> vysvětlující metodiku nebo zdroj dat.
+// Bez tooltipu nelze přidat claim do produkce. Platí pro všechny stránky.
+
 import { useRef, useState, useEffect, useId } from 'react'
 import Link from 'next/link'
 
