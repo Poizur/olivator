@@ -47,6 +47,8 @@ export function RetailerForm({ initial, initialPhotos = [] }: { initial?: Retail
   // XML feed (volitelný)
   const [xmlFeedUrl, setXmlFeedUrl] = useState(initial?.xmlFeedUrl ?? '')
   const [xmlFeedFormat, setXmlFeedFormat] = useState(initial?.xmlFeedFormat ?? '')
+  // Právní základ — povinný pro nové prodejce
+  const [legalBasis, setLegalBasis] = useState(initial?.legalBasis ?? '')
 
   // Auto-research (z domény eshopu)
   const [researching, setResearching] = useState(false)
@@ -127,6 +129,7 @@ export function RetailerForm({ initial, initialPhotos = [] }: { initial?: Retail
         logoUrl: logoUrl || null,
         xmlFeedUrl: xmlFeedUrl || null,
         xmlFeedFormat: xmlFeedFormat || null,
+        legalBasis: legalBasis || null,
       }
       const res = await fetch(
         isEdit ? `/api/admin/retailers/${initial!.id}` : '/api/admin/retailers',
@@ -494,6 +497,28 @@ export function RetailerForm({ initial, initialPhotos = [] }: { initial?: Retail
             initialPhotos={initialPhotos}
           />
         </AdminBlock>
+      )}
+
+      {/* Právní základ — povinný pro nové prodejce (pojistka L-031) */}
+      {!isEdit && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <div className="text-[11px] font-bold tracking-widest uppercase text-amber-700 mb-2">Právní základ (povinné)</div>
+          <p className="text-[12px] text-amber-800 mb-3">
+            Prodejce lze přidat výhradně s doloženým právním základem (L-031). Bez vyplnění nelze uložit.
+          </p>
+          <label className="block text-[12px] font-medium text-amber-900 mb-1">
+            Právní základ spolupráce *
+          </label>
+          <textarea
+            value={legalBasis}
+            onChange={e => setLegalBasis(e.target.value)}
+            required
+            rows={2}
+            placeholder="eHUB kampaň ID 12345 (2026-07-24) | písemný souhlas od jan@eshop.cz (2026-07-24) | vlastní žádost shopu (email ze dne...)"
+            className="w-full px-3 py-2 border border-amber-300 bg-white rounded-lg text-sm focus:outline-none focus:border-amber-500 resize-none"
+          />
+          <p className="text-[11px] text-amber-600 mt-1">Příklady: číslo eHUB kampaně, e-mail souhlasu, datum partnerské smlouvy.</p>
+        </div>
       )}
 
       {error && (

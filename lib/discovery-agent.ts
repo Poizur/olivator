@@ -234,20 +234,21 @@ export async function resolveRetailerForCandidate(
     return { slug: bySlug.slug as string, domain: normalized }
   }
 
-  // 4) Auto-create — Title Case the slug for display name
-  const name = slug.charAt(0).toUpperCase() + slug.slice(1)
-  await supabaseAdmin.from('retailers').upsert(
+  // 4) PROPOSE-ONLY (L-031): nový retailer NIKDY nevzniká automaticky.
+  //    Zapíšeme návrh do discovery_proposals a vyhodíme chybu aby volající věděl,
+  //    že žádný retailer nebyl vytvořen.
+  const proposalName = slug.charAt(0).toUpperCase() + slug.slice(1)
+  await supabaseAdmin.from('discovery_proposals').upsert(
     {
-      slug,
-      name,
+      shop_url: `https://${normalized}`,
+      shop_name: proposalName,
       domain: normalized,
-      is_active: true,
-      market: 'CZ',
+      source: 'discovery-agent:ensureRetailer',
+      status: 'pending',
     },
-    { onConflict: 'slug' }
-  )
-
-  return { slug, domain: normalized }
+    { onConflict: 'shop_url' }
+  ).then(() => null, () => null)
+  throw new Error(`PROPOSE_ONLY: nový retailer ${normalized} navržen do discovery_proposals, nevytvořen automaticky`)
 }
 
 /** Convert ScrapedProduct → product DB row + create offer + run AI pipeline.
@@ -884,68 +885,20 @@ export async function runDiscoveryAgent(): Promise<DiscoveryRunResult> {
         let resultingProductId: string | null = null
         let resultingOfferId: string | null = null
 
+        // PROPOSE-ONLY mode (L-031): discovery nikdy nepublikuje ani nevytváří offers.
+        // Vše jde do needs_review → discovery_candidates pro admin revizi.
         if (match.matchType === 'ean' && match.matchedProductId) {
-          // Existing product, new retailer → just add offer
-          try {
-            resultingOfferId = await addOfferToExisting(match.matchedProductId, scraped, cr.shopSlug)
-            finalStatus = 'auto_added_offer'
-            resultingProductId = match.matchedProductId
-            reasoning += ' → přidán nový offer'
-            result.autoAddedOffers++
-          } catch (err) {
-            finalStatus = 'failed'
-            reasoning += ` → failed: ${err instanceof Error ? err.message : 'unknown'}`
-            result.failed++
-          }
-        } else if (match.matchType === 'fuzzy_name' && match.matchConfidence >= 0.85) {
-          // High-confidence fuzzy match → admin should confirm before adding offer
           finalStatus = 'needs_review'
-          reasoning += ' → ručně potvrď jestli je to ten samý produkt'
+          reasoning += ' → EAN match — přidej offer ručně po ověření'
           result.needsReview++
         } else if (match.matchType === 'fuzzy_name') {
-          // Lower-confidence — flag for review
           finalStatus = 'needs_review'
+          reasoning += ' → fuzzy shoda — ověř ručně'
           result.needsReview++
         } else {
-          // Truly new
-          if (autoPublish && quality.quality === 'high') {
-            try {
-              resultingProductId = await publishCandidate(scraped, cr.shopSlug, cr.shopDomain)
-              // Verify final status — gate may have blocked publishing
-              const { data: finalProduct } = await supabaseAdmin
-                .from('products')
-                .select('status')
-                .eq('id', resultingProductId)
-                .maybeSingle()
-              if (finalProduct?.status === 'active') {
-                finalStatus = 'auto_published'
-                reasoning = `AUTO-PUBLISHED: ${quality.reasoning}`
-                result.autoPublished++
-              } else {
-                // Pre-publish gate blocked — needs admin review
-                const { data: blockingIssues } = await supabaseAdmin
-                  .from('quality_issues')
-                  .select('rule_id, message')
-                  .eq('product_id', resultingProductId)
-                  .eq('status', 'open')
-                  .eq('severity', 'error')
-                const reasons = (blockingIssues ?? [])
-                  .map(b => b.rule_id as string)
-                  .join(', ')
-                finalStatus = 'needs_review'
-                reasoning = `Pipeline doběhla, ale Quality gate blokoval publish: ${reasons || 'unknown errors'}. Otevři produkt → vyřeš issues → publikuj ručně.`
-                result.needsReview++
-              }
-            } catch (err) {
-              finalStatus = 'failed'
-              reasoning = `Failed during publish: ${err instanceof Error ? err.message : 'unknown'}`
-              result.failed++
-            }
-          } else {
-            finalStatus = 'needs_review'
-            reasoning = `Nový produkt — ${quality.reasoning} — čeká na schválení`
-            result.needsReview++
-          }
+          finalStatus = 'needs_review'
+          reasoning = `Nový produkt — ${quality.reasoning} — čeká na schválení`
+          result.needsReview++
         }
 
         // Persist candidate
@@ -982,6 +935,31 @@ export async function runDiscoveryAgent(): Promise<DiscoveryRunResult> {
         result.failed++
         console.warn(`[discovery] URL failed: ${url}`, err)
       }
+    }
+  }
+
+  // Aggreguj nálezy per shop → discovery_proposals (propose-only, L-031)
+  if (result.newCandidates > 0) {
+    const countsByDomain: Record<string, number> = {}
+    for (const cr of crawlResults) {
+      if (!cr.error && cr.urls.length > 0) {
+        countsByDomain[cr.shopDomain] = (countsByDomain[cr.shopDomain] ?? 0) + cr.urls.length
+      }
+    }
+    for (const [domain, count] of Object.entries(countsByDomain)) {
+      if (count === 0) continue
+      await supabaseAdmin.from('discovery_proposals').upsert(
+        {
+          shop_url: `https://${domain}`,
+          shop_name: null,
+          domain,
+          product_count_estimate: count,
+          source: 'cron:discovery',
+          status: 'pending',
+          notes: `${count} nových URL nalezeno (${new Date().toISOString().slice(0, 10)})`,
+        },
+        { onConflict: 'shop_url' }
+      ).then(() => null, () => null)
     }
   }
 

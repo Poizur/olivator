@@ -78,6 +78,9 @@ export interface Retailer {
   affiliateNetwork: string
   defaultCommissionPct: number
   isActive: boolean
+  retailerStatus?: 'active' | 'quarantine' | 'removed_legal'
+  retailerStatusNote?: string | null
+  legalBasis?: string | null
   market: string
   rating?: number | null
   ratingCount?: number | null

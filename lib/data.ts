@@ -109,15 +109,32 @@ function mapProduct(row: ProductRow): Product {
   }
 }
 
+// Slugy permanentně odstraněné z právních důvodů — žádný toggle, jen archiv.
+const REMOVED_LEGAL_SLUGS = new Set(['olivum'])
+
+export type RetailerStatus = 'active' | 'quarantine' | 'removed_legal'
+
+function deriveRetailerStatus(slug: string, isActive: boolean, dbStatus?: string): RetailerStatus {
+  if (dbStatus === 'active' || dbStatus === 'quarantine' || dbStatus === 'removed_legal') return dbStatus as RetailerStatus
+  if (isActive) return 'active'
+  if (REMOVED_LEGAL_SLUGS.has(slug)) return 'removed_legal'
+  return 'quarantine'
+}
+
 function mapRetailer(row: Record<string, unknown>): Retailer {
+  const slug = row.slug as string
+  const isActive = (row.is_active as boolean) ?? true
   return {
     id: row.id as string,
     name: row.name as string,
-    slug: row.slug as string,
+    slug,
     domain: (row.domain as string) ?? '',
     affiliateNetwork: (row.affiliate_network as string) ?? '',
     defaultCommissionPct: Number(row.default_commission_pct ?? 0),
-    isActive: (row.is_active as boolean) ?? true,
+    isActive,
+    retailerStatus: deriveRetailerStatus(slug, isActive, row.retailer_status as string | undefined),
+    retailerStatusNote: (row.retailer_status_note as string) ?? null,
+    legalBasis: (row.legal_basis as string) ?? null,
     market: (row.market as string) ?? 'CZ',
     rating: row.rating != null ? Number(row.rating) : null,
     ratingCount: row.rating_count != null ? Number(row.rating_count) : null,
@@ -586,6 +603,60 @@ export async function upsertRetailer(input: RetailerInput, id?: string) {
 export async function deleteRetailer(id: string) {
   const { error } = await supabaseAdmin.from('retailers').delete().eq('id', id)
   if (error) throw error
+}
+
+export interface DiscoveryProposal {
+  id: string
+  shopUrl: string
+  shopName: string | null
+  domain: string | null
+  productCountEstimate: number | null
+  source: string
+  status: 'pending' | 'contacted' | 'ignored' | 'added'
+  notes: string | null
+  createdAt: string
+  reviewedAt: string | null
+}
+
+export async function getDiscoveryProposals(status?: string): Promise<DiscoveryProposal[]> {
+  let q = supabaseAdmin
+    .from('discovery_proposals')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(200)
+  if (status) q = q.eq('status', status)
+  const { data, error } = await q
+  if (error) {
+    if (error.code === '42P01' || error.code === 'PGRST205') return []
+    throw error
+  }
+  return (data ?? []).map((r: Record<string, unknown>) => ({
+    id: r.id as string,
+    shopUrl: r.shop_url as string,
+    shopName: (r.shop_name as string) ?? null,
+    domain: (r.domain as string) ?? null,
+    productCountEstimate: r.product_count_estimate != null ? Number(r.product_count_estimate) : null,
+    source: (r.source as string) ?? 'cron:discovery',
+    status: (r.status as DiscoveryProposal['status']) ?? 'pending',
+    notes: (r.notes as string) ?? null,
+    createdAt: r.created_at as string,
+    reviewedAt: (r.reviewed_at as string) ?? null,
+  }))
+}
+
+export async function updateDiscoveryProposalStatus(
+  id: string,
+  status: 'contacted' | 'ignored' | 'added',
+  notes?: string
+) {
+  const { error } = await supabaseAdmin
+    .from('discovery_proposals')
+    .update({ status, notes: notes ?? null, reviewed_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) {
+    if (error.code === '42P01' || error.code === 'PGRST205') return
+    throw error
+  }
 }
 
 // Public RetailerCard zobrazuje 2 fotky pod logem (sklad / balení / lidé).
