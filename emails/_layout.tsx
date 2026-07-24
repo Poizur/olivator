@@ -130,6 +130,10 @@ export function NewsletterLayout({
             <Hr className="border-off2 my-6 mx-8" />
             <Section className="px-8 pb-8">
               <Text className="text-text3 text-[11px] leading-relaxed m-0">
+                Ceny se mohou měnit; rozhodná je cena u prodejce v okamžiku nákupu.
+                Olivátor může obdržet provizi z affiliate odkazů — na vaši cenu to vliv nemá.
+              </Text>
+              <Text className="text-text3 text-[11px] leading-relaxed m-0 mt-2">
                 Tento email vám přišel protože jste se přihlásili k odběru
                 novinek na <Link href={baseUrl} className="text-olive">
                   olivator.cz

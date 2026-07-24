@@ -53,7 +53,9 @@ export function FlavorWheel({ profile }: { profile: FlavorProfile }) {
     <div className="bg-off rounded-xl p-5 mt-5">
       <div className="flex items-center justify-between mb-3.5">
         <h2 className="text-[13px] font-semibold text-text">Chuťový profil</h2>
-        <span className="text-[11px] text-text3">7 chuťových os</span>
+        <span className="text-[11px] text-text3" title="Hodnoty jsou převzaty z popisu výrobce, nikoli z nezávislé degustace">
+          dle popisu výrobce
+        </span>
       </div>
       <div className="flex flex-col gap-2">
         {entries.map(([key, label]) => (

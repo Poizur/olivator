@@ -14,6 +14,7 @@ import { breadcrumbSchema } from '@/lib/schema'
 import { AuthorByline } from '@/components/article/author-byline'
 import { OlikAuthorBox } from '@/components/article/olik-author-box'
 import { AffiliateDisclosure } from '@/components/article/affiliate-disclosure'
+import { HealthDisclaimer, isHealthArticle } from '@/components/article/health-disclaimer'
 import { LeadMagnetCta } from '@/components/lead-magnet-cta'
 
 // force-dynamic: obsah článků se mění v DB — vždy fetchuj čerstvá data.
@@ -323,6 +324,8 @@ export default async function ArticleDetailPage({
               </p>
             </div>
           )}
+
+          {isHealthArticle(article.slug, article.title, article.category) && <HealthDisclaimer />}
 
           {productMap.size > 0 && <AffiliateDisclosure />}
 

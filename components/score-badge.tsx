@@ -7,6 +7,8 @@ interface ScoreBadgeProps {
   /** "small" 7×7 (~28px), "medium" default, "large" pro hero. */
   size?: 'small' | 'medium' | 'large'
   className?: string
+  /** Zobrazí podřádkový disclaimer pod badge (pro detail stránku produktu). */
+  withDisclaimer?: boolean
 }
 
 function bracketStyle(score: number): { background: string } {
@@ -18,7 +20,10 @@ function bracketStyle(score: number): { background: string } {
   return { background: '#dc2626' }                  // 🔴 red
 }
 
-export function ScoreBadge({ score, type, size = 'small', className = '' }: ScoreBadgeProps) {
+const DISCLAIMER_TOOLTIP =
+  'Vypočteno z veřejně deklarovaných parametrů — nejde o laboratorní test ani degustaci. Klikni pro metodiku.'
+
+export function ScoreBadge({ score, type, size = 'small', className = '', withDisclaimer = false }: ScoreBadgeProps) {
   const sizeClasses = {
     small: 'text-[10px] w-7 h-7',
     medium: 'text-[12px] w-9 h-9',
@@ -49,19 +54,35 @@ export function ScoreBadge({ score, type, size = 'small', className = '' }: Scor
     )
   }
 
-  return (
+  const bracketLabel =
+    score >= 90 ? 'Top tier (90+)' :
+    score >= 80 ? 'Vynikající (80–89)' :
+    score >= 70 ? 'Velmi dobré (70–79)' :
+    score >= 60 ? 'Dobré (60–69)' :
+    score >= 50 ? 'Průměrné (50–59)' : 'Slabší (<50)'
+
+  const badge = (
     <span
       className={baseClasses}
       style={bracketStyle(score)}
-      title={
-        score >= 90 ? 'Top tier (90+)' :
-        score >= 80 ? 'Vynikající (80–89)' :
-        score >= 70 ? 'Velmi dobré (70–79)' :
-        score >= 60 ? 'Dobré (60–69)' :
-        score >= 50 ? 'Průměrné (50–59)' : 'Slabší (<50)'
-      }
+      title={`${bracketLabel} · ${DISCLAIMER_TOOLTIP}`}
     >
       {score}
     </span>
+  )
+
+  if (!withDisclaimer) return badge
+
+  return (
+    <div className="flex flex-col items-start gap-1">
+      {badge}
+      <a
+        href="/metodika#je-neni"
+        className="text-[11px] text-text3 hover:text-olive leading-tight"
+        title={DISCLAIMER_TOOLTIP}
+      >
+        Vypočteno z deklarovaných parametrů →
+      </a>
+    </div>
   )
 }

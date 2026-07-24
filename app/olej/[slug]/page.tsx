@@ -378,11 +378,20 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                 Aroma
               </div>
             ) : product.olivatorScore != null && product.olivatorScore > 0 ? (
-              <div className="bg-terra text-white text-sm font-bold px-4 py-2 rounded-full flex items-center gap-1.5 shadow-md">
-                <svg width="13" height="13" fill="#fff" viewBox="0 0 24 24">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                </svg>
-                Score {product.olivatorScore}
+              <div className="flex flex-col items-start gap-1">
+                <div className="bg-terra text-white text-sm font-bold px-4 py-2 rounded-full flex items-center gap-1.5 shadow-md">
+                  <svg width="13" height="13" fill="#fff" viewBox="0 0 24 24">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                  Score {product.olivatorScore}
+                </div>
+                <a
+                  href="/metodika#je-neni"
+                  className="text-[11px] text-text3 hover:text-olive leading-tight"
+                  title="Vypočteno z veřejně deklarovaných parametrů — nejde o laboratorní test ani degustaci"
+                >
+                  Vypočteno z deklarovaných parametrů →
+                </a>
               </div>
             ) : (
               <div className="flex flex-col items-start gap-1">
