@@ -301,19 +301,34 @@ export function SommelierChat() {
             pointerEvents: peekState === 'showing' ? 'auto' : 'none',
           }}
         >
+          {/* -70px skryje nakreslený okraj displeje v obrázku za viewport hranu */}
           <picture>
             <source srcSet="/olik-peek.webp" type="image/webp" />
             <img
               src="/olik-peek.png"
               alt="Olík"
-              width={200}
-              height={133}
-              className="block"
+              className="block w-[196px] h-[130px] max-w-none shrink-0"
+              style={{ marginLeft: '-70px' }}
               draggable={false}
             />
           </picture>
           {productHint && (
-            <div className="ml-2 bg-white border border-olive/25 rounded-2xl shadow-lg px-3 py-2 text-[13px] font-medium text-olive whitespace-nowrap">
+            <div
+              className="relative ml-2 rounded-2xl px-3 py-2 text-[13px] font-medium text-olive whitespace-nowrap"
+              style={{
+                background: 'white',
+                filter: 'drop-shadow(0 2px 8px rgba(45,106,79,0.22))',
+              }}
+            >
+              <div
+                className="absolute right-full top-1/2 w-0 h-0 pointer-events-none"
+                style={{
+                  transform: 'translateY(-50%)',
+                  borderTop: '5px solid transparent',
+                  borderBottom: '5px solid transparent',
+                  borderRight: '7px solid white',
+                }}
+              />
               Znám {productName} — zeptej se mě 🫒
             </div>
           )}
