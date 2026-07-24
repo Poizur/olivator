@@ -80,6 +80,7 @@ export interface RawBriefData {
   articleDrafts: object
   autonomousActions: object
   priceWatch: object
+  olik: object
 }
 
 export interface GenerateBriefResult {
@@ -535,6 +536,29 @@ ${(() => {
 ${scanHigh || '  (žádné high-severity nálezy)'}
 ${scanMedium || '  (žádné medium-severity nálezy)'}
 
+🫒 Olík — AI Sommelier (posledních 7 dní):
+${(() => {
+  const o = raw.olik as {
+    totalConversations?: number
+    affiliateClicks?: number
+    noRecommendationCount?: number
+    topTopics?: string[]
+    conversionRate?: string
+    available?: boolean
+    reason?: string
+  }
+  if (o.available === false) return `  (nedostupné: ${o.reason})`
+  if (!o.totalConversations) return '  Olíka tento týden nikdo nepoužil.'
+  const topicsStr = o.topTopics?.length ? o.topTopics.join(', ') : '(různá témata)'
+  const noRec = o.noRecommendationCount ?? 0
+  const lines = [
+    `  Dotazů: ${o.totalConversations} | Kliků z Olíka: ${o.affiliateClicks} | Konverze: ${o.conversionRate}`,
+    `  Top témata: ${topicsStr}`,
+  ]
+  if (noRec > 0) lines.push(`  ⚠ Bez doporučení (mezera v katalogu): ${noRec} dotazů`)
+  return lines.join('\n')
+})()}
+
 ━━━ LEKCE K POUŽITÍ ━━━
 ${learningSummary || '(žádné relevantní lekce)'}
 
@@ -708,6 +732,79 @@ async function collectPriceWatch(): Promise<object> {
   }
 }
 
+// ── Olík AI Sommelier statistiky ─────────────────────────────────────────────
+
+const OLIK_TOPIC_KEYWORDS: Array<[string, string]> = [
+  ['polyfenol', 'polyfenoly'],
+  ['lehk', 'lehké oleje'],
+  ['řeck', 'řecké oleje'],
+  ['italsk', 'italské oleje'],
+  ['bio', 'BIO'],
+  ['dárek', 'dárky'],
+  ['smažen', 'smažení'],
+  ['salát', 'saláty'],
+  ['levn', 'levné'],
+  ['dop', 'DOP'],
+  ['chuť', 'chuťový profil'],
+  ['zdraví', 'zdraví'],
+]
+
+async function collectOlik(): Promise<object> {
+  const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+  try {
+    const [convRes, clickRes, noRecRes] = await Promise.all([
+      supabaseAdmin
+        .from('olik_conversations')
+        .select('query, recommended_slugs, no_recommendation, created_at')
+        .gte('created_at', since7d)
+        .order('created_at', { ascending: false }),
+      supabaseAdmin
+        .from('affiliate_clicks')
+        .select('*', { count: 'exact', head: true })
+        .eq('source_type', 'olik')
+        .gte('clicked_at', since7d),
+      supabaseAdmin
+        .from('olik_conversations')
+        .select('*', { count: 'exact', head: true })
+        .eq('no_recommendation', true)
+        .gte('created_at', since7d),
+    ])
+
+    const convs = convRes.data ?? []
+    const totalConversations = convs.length
+    const affiliateClicks = clickRes.count ?? 0
+    const noRecommendationCount = noRecRes.count ?? 0
+
+    const topicCounts = new Map<string, number>()
+    for (const c of convs) {
+      const q = ((c.query as string) ?? '').toLowerCase()
+      for (const [kw, label] of OLIK_TOPIC_KEYWORDS) {
+        if (q.includes(kw)) {
+          topicCounts.set(label, (topicCounts.get(label) ?? 0) + 1)
+        }
+      }
+    }
+    const topTopics = [...topicCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([label, count]) => `${label} (${count}×)`)
+
+    return {
+      totalConversations,
+      affiliateClicks,
+      noRecommendationCount,
+      topTopics,
+      conversionRate:
+        totalConversations > 0
+          ? `${((affiliateClicks / totalConversations) * 100).toFixed(1)}%`
+          : '0%',
+    }
+  } catch (err) {
+    return { available: false, reason: err instanceof Error ? err.message : 'Olik collect error' }
+  }
+}
+
 // ── Orchestrátor ──────────────────────────────────────────────────────────────
 
 function getWeekLabel(): { weekLabel: string; weekStart: Date } {
@@ -729,8 +826,8 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
   const { weekLabel, weekStart } = getWeekLabel()
   console.log(`[executive-director] Generuji brief ${weekLabel}${opts.dryRun ? ' (DRY-RUN)' : ''}${opts.testFailOpen ? ' (TEST-FAILOPEN)' : ''}...`)
 
-  // 12 zdrojů dat paralelně
-  const [gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts, autonomousActions, priceWatch] = await Promise.all([
+  // 13 zdrojů dat paralelně
+  const [gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts, autonomousActions, priceWatch, olik] = await Promise.all([
     collectGsc().catch((e) => ({ error: (e as Error).message })),
     collectCatalog().catch((e) => ({ error: (e as Error).message })),
     collectAffiliate().catch((e) => ({ error: (e as Error).message })),
@@ -743,9 +840,10 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
     collectArticleDrafts().catch((e) => ({ error: (e as Error).message })),
     collectAutonomousActions().catch((e) => ({ error: (e as Error).message })),
     collectPriceWatch().catch((e) => ({ error: (e as Error).message })),
+    collectOlik().catch((e) => ({ error: (e as Error).message })),
   ])
 
-  const rawData: RawBriefData = { gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts, autonomousActions, priceWatch }
+  const rawData: RawBriefData = { gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts, autonomousActions, priceWatch, olik }
   console.log('[executive-director] Data sesbírána')
 
   // Learning Memory Layer — inject relevantní lekce do promptu

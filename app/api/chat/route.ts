@@ -286,13 +286,15 @@ export async function POST(req: NextRequest) {
     const text = extractText(response)
 
     // Log do olik_conversations — fire-and-forget, neblokuje odpověď
+    const recommendedSlugs = extractRecommendedSlugs(text)
     supabaseAdmin
       .from('olik_conversations')
       .insert({
         session_id: session_id ?? null,
         query: maskPii(lastUserMsg),
         response_summary: text.slice(0, 300),
-        recommended_slugs: extractRecommendedSlugs(text),
+        recommended_slugs: recommendedSlugs,
+        no_recommendation: recommendedSlugs.length === 0,
         source_page: source_page?.slice(0, 200) ?? null,
         tokens_used: (response.usage?.input_tokens ?? 0) + (response.usage?.output_tokens ?? 0),
       })
