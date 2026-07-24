@@ -15,6 +15,9 @@ const TOKEN_RE = /\{\{product:([\w-]+)\}\}/g
 // Kategorie článků kde auto-heal zakázán (zdravotní/kosmetický obsah)
 const YMYL_CATEGORIES = new Set(['zdravi', 'kosmetika'])
 
+// Domény a výrazy zakázané ve výstupu — ochrana po právním úklidu 2026-07-24
+const BANNED_PHRASES = ['olivum', 'lab testy', 'lab test']
+
 // Kontext safety patternys (150 znaků před/za tokenem)
 const SPECIFIC_NUMBER_RE = /\d+\s*(mg\/kg|%)/i
 const SUPERLATIVE_RE = /\b(rekord|nejvyšší|unikátní|nejlepší|nejdražší|nejlevnější)\b/i
@@ -172,6 +175,27 @@ async function main() {
       console.log('[validate-tokens] žádné {{product:}} tokeny v aktivních článcích')
       clearTimeout(killTimer)
       process.exit(0)
+    }
+
+    // Kontrola zakázaných frází v aktivních článcích
+    const bannedFound: Array<{ article: string; phrase: string }> = []
+    for (const a of articles) {
+      const body = (a.body_markdown as string) ?? ''
+      for (const phrase of BANNED_PHRASES) {
+        if (body.toLowerCase().includes(phrase.toLowerCase())) {
+          bannedFound.push({ article: a.slug as string, phrase })
+          console.warn(`[validate-tokens] BANNED PHRASE "${phrase}" v článku: ${a.slug}`)
+        }
+      }
+    }
+    if (bannedFound.length > 0) {
+      try {
+        await supabaseAdmin.from('agent_decisions').insert({
+          agent_name: 'token-validator',
+          decision_type: 'banned_phrase_found',
+          payload: { violations: bannedFound },
+        })
+      } catch { /* non-fatal */ }
     }
 
     // Jeden dotaz pro stav všech referencovaných produktů

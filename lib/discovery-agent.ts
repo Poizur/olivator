@@ -15,6 +15,10 @@
 //   6. Generate AI content for new products that should be published
 
 import { supabaseAdmin } from './supabase'
+
+// Domény permanentně vyloučené z discovery — opt-out na žádost provozovatele.
+// Přidat sem, pokud retailer požádá o odstranění obsahu. NIKDY nemazat bez pokynu.
+const HARD_EXCLUDE_DOMAINS = ['olivum.cz']
 import { scrapeProductPage, validateOliveOilProduct, type ScrapedProduct } from './product-scraper'
 import { crawlShops, getKnownShopSlugs } from './shop-crawlers'
 import { getRetailerSlugsWithXmlFeed } from './feed-sync-runner'
@@ -801,6 +805,13 @@ export async function runDiscoveryAgent(): Promise<DiscoveryRunResult> {
   if (skippedXml.length > 0) {
     console.log(`[discovery] skip ${skippedXml.length} retailer(s) — XML feed je řeší: ${skippedXml.join(', ')}`)
   }
+
+  // HARD EXCLUDE — domény vyloučené na žádost provozovatele (opt-out, 2026-07-24)
+  enabledShops = enabledShops.filter(shop => {
+    const excluded = HARD_EXCLUDE_DOMAINS.some(domain => shop.includes(domain.replace('.cz', '').replace('.', '')))
+    if (excluded) console.log(`[discovery] HARD_EXCLUDE: ${shop}`)
+    return !excluded
+  })
 
   const dailyLimit = (await getSetting<number>('discovery_daily_limit')) ?? 5
   const autoPublish = (await getSetting<boolean>('discovery_auto_publish')) ?? false

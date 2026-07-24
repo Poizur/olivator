@@ -2,7 +2,8 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { logAgentAction } from '@/lib/audit-log'
 import { fetchPrice } from './price-fetcher'
 
-const MODE_A_RETAILERS = ['greekmarket', 'olivum', 'milujemekretu', 'olivarna']
+// olivum odstraněno 2026-07-24 na žádost provozovatele
+const MODE_A_RETAILERS = ['greekmarket', 'milujemekretu', 'olivarna']
 
 const ANOMALY_THRESHOLD = 0.30        // >30% změna = skip + log
 const CONSECUTIVE_404_THRESHOLD = 2   // 2× za sebou → in_stock=false

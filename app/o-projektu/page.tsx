@@ -67,12 +67,12 @@ export default function OProjektuPage() {
           Fotky produktů — odkud jsou
         </h2>
         <p className="text-[15px] text-text2 leading-relaxed mb-4">
-          Fotografie produktů přejímáme od <strong className="text-text">výrobců a partnerských e-shopů</strong>,
-          se kterými spolupracujeme v rámci affiliate programu. Hlavní fotky a
-          5&nbsp;galerijních snímků pro každý produkt hostujeme přímo u nás na
-          Supabase CDN s WebP optimalizací — kvůli rychlosti načítání a SEO.
-          Další ukázky &bdquo;v rezervě&ldquo; (kandidáti pro budoucí výběr) odkazujeme
-          přímo na zdrojové weby.
+          Fotografie produktů pocházejí od <strong className="text-text">výrobců
+          a partnerských e-shopů v rámci affiliate spolupráce</strong>.
+          Hostujeme je přímo u nás na Supabase CDN s WebP optimalizací —
+          kvůli rychlosti načítání a SEO.
+          U produktů mimo tato partnerství postupně přecházíme na materiály
+          poskytnuté výrobci.
         </p>
         <p className="text-[15px] text-text2 leading-relaxed mb-4">
           U každé fotografie zachováváme identifikaci původu (alt text, link na

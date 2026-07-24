@@ -29,7 +29,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Je kvalita 5L balení stejná jako u malých lahví?',
-    a: 'Ano. Velká plechovka nebo bag-in-box obsahuje stejný olej jako 0,5L lahev — liší se pouze obal. Všechny produkty v katalogu mají dostupné lab testy nebo certifikace.',
+    a: 'Ano. Velká plechovka nebo bag-in-box obsahuje stejný olej jako 0,5L lahev — liší se pouze obal. Všechny produkty v katalogu mají certifikace nebo transparentní parametry (kyselost, polyfenoly).',
   },
   {
     q: 'Kde 5L balení skladovat doma?',

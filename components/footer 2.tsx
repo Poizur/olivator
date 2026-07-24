@@ -1,16 +1,10 @@
 import Link from 'next/link'
 import { NewsletterSignup } from '@/components/newsletter-signup'
-import { LeadMagnetCta } from '@/components/lead-magnet-cta'
 
 export function Footer() {
   return (
     <footer className="bg-[#173404] text-white">
       <div className="max-w-[1280px] mx-auto px-6 md:px-10">
-
-        {/* ── Lead magnet slim row ── */}
-        <div className="py-4 border-b border-white/10">
-          <LeadMagnetCta variant="slim" source="leadmagnet_footer" />
-        </div>
 
         {/* ── Newsletter row ── */}
         <div className="flex flex-col md:flex-row md:items-center gap-6 py-8 border-b border-white/10">
