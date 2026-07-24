@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useCompare } from '@/lib/compare-context'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -10,10 +11,16 @@ interface Message {
 }
 
 const SUGGESTIONS = [
-  'Dárek pro tátu co rád vaří',
-  'Lehký řecký do 300 Kč',
-  'Co má nejvíc polyfenolů?',
-  'Doporuč BIO olej na saláty',
+  '🎁 Dárek pro tátu co rád vaří',
+  '🇬🇷 Lehký řecký do 300 Kč',
+  '🔬 Co má nejvíc polyfenolů?',
+  '💚 Doporuč BIO olej na saláty',
+]
+
+const PLACEHOLDER_TEXTS = [
+  'Napiš: lehký řecký do 300 Kč',
+  'Napiš: dárek pro tátu co rád vaří',
+  'Napiš: olej na smažení',
 ]
 
 function getOrCreateSessionId(): string {
@@ -54,15 +61,22 @@ function formatReply(text: string) {
 
 export function SommelierChat() {
   const pathname = usePathname()
+  const { items: compareItems } = useCompare()
+
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [hiddenByStickyBar, setHiddenByStickyBar] = useState(false)
+  const [placeholderIdx, setPlaceholderIdx] = useState(0)
+  const [productHint, setProductHint] = useState<{ name: string; nameShort: string | null } | null>(null)
+  const [badgeVisible, setBadgeVisible] = useState(false)
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const floaterRef = useRef<HTMLButtonElement>(null)
   const floaterImpressionFired = useRef(false)
+  const badgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Impression tracking — fires once when floater enters viewport
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -86,6 +100,41 @@ export function SommelierChat() {
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
+
+  // Rotating placeholder — cycles every 3.5s
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    const t = setInterval(() => setPlaceholderIdx((i) => (i + 1) % PLACEHOLDER_TEXTS.length), 3500)
+    return () => clearInterval(t)
+  }, [])
+
+  // Product context — fetch name_short when on /olej/* pages
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (!pathname.startsWith('/olej/')) {
+      setProductHint(null)
+      setBadgeVisible(false)
+      return
+    }
+    const slug = pathname.split('/olej/')[1]?.split('/')[0]?.split('?')[0]
+    if (!slug) return
+
+    fetch(`/api/product-hint/${slug}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { name: string; nameShort: string | null } | null) => {
+        setProductHint(data)
+        if (data) {
+          setBadgeVisible(true)
+          if (badgeTimerRef.current) clearTimeout(badgeTimerRef.current)
+          badgeTimerRef.current = setTimeout(() => setBadgeVisible(false), 3500)
+        }
+      })
+      .catch(() => {})
+
+    return () => {
+      if (badgeTimerRef.current) clearTimeout(badgeTimerRef.current)
+    }
+  }, [pathname])
 
   // Defense-in-depth: floating chat se na /admin nemá zobrazovat
   if (pathname.startsWith('/admin')) return null
@@ -129,6 +178,12 @@ export function SommelierChat() {
     if (open) setTimeout(() => inputRef.current?.focus(), 100)
   }, [open])
 
+  function handleOpen() {
+    setBadgeVisible(false)
+    if (badgeTimerRef.current) clearTimeout(badgeTimerRef.current)
+    setOpen((o) => !o)
+  }
+
   async function handleSend(text?: string) {
     const msg = (text ?? input).trim()
     if (!msg || loading) return
@@ -166,14 +221,46 @@ export function SommelierChat() {
     }
   }
 
+  // P2b: Produktové chipy — kontextové, když jsme na /olej/* stránce
+  const productName = productHint?.nameShort ?? productHint?.name?.split(' ').slice(0, 3).join(' ') ?? null
+  const activeSuggestions = productName
+    ? [
+        `Hodí se ${productName} na saláty?`,
+        `Na co je ${productName} nejlepší?`,
+        '🔬 Co má nejvíc polyfenolů?',
+        '🎁 Dárek pro tátu co rád vaří',
+      ]
+    : SUGGESTIONS
+
+  // P3: Compare bar aktivní → floater výš
+  const compareBarActive = compareItems.length > 0
+  const floaterBottom = compareBarActive ? 'bottom-24' : 'bottom-6'
+  const badgeBottom = compareBarActive ? 'bottom-[152px]' : 'bottom-[88px]'
+
   return (
     <>
+      {/* P2b: Badge "Znám tento olej" — zobrazí se na /olej/* a po 3.5s zmizí */}
+      {productHint && (
+        <button
+          onClick={handleOpen}
+          aria-label={`Zeptej se Olíka na ${productName ?? 'tento olej'}`}
+          className={`fixed right-[88px] z-[50] bg-white border border-olive/25 rounded-full pl-3 pr-3.5 py-2 shadow-md text-[12px] font-medium text-olive whitespace-nowrap transition-all duration-300 ${badgeBottom}`}
+          style={{
+            opacity: badgeVisible && !open ? 1 : 0,
+            transform: badgeVisible && !open ? 'translateX(0)' : 'translateX(6px)',
+            pointerEvents: badgeVisible && !open ? 'auto' : 'none',
+          }}
+        >
+          Znám tento olej — zeptej se 🫒
+        </button>
+      )}
+
       {/* Floating button — skryt na product page když sticky buy bar překrývá */}
       <button
         ref={floaterRef}
-        onClick={() => setOpen((o) => !o)}
+        onClick={handleOpen}
         aria-label="Olík — průvodce výběrem oleje"
-        className={`fixed bottom-6 right-6 z-[50] w-16 h-16 rounded-full bg-white text-olive shadow-lg hover:scale-105 transition-all flex items-center justify-center border-2 border-olive/20 lg:transition-[opacity,transform] ${
+        className={`fixed right-6 z-[50] w-16 h-16 rounded-full bg-white text-olive shadow-lg hover:scale-105 transition-all flex items-center justify-center border-2 border-olive/20 lg:transition-[opacity,transform] ${floaterBottom} ${
           hiddenByStickyBar ? 'lg:opacity-0 lg:pointer-events-none lg:scale-75' : 'opacity-100'
         }`}
         style={{ boxShadow: '0 4px 24px rgba(45,106,79,0.30)', transitionDuration: '200ms' }}
@@ -233,10 +320,10 @@ export function SommelierChat() {
               </div>
             )}
 
-            {/* Suggestion chips — only on first message */}
+            {/* Suggestion chips — only on first message, contextual on product pages */}
             {messages.length === 1 && !loading && (
               <div className="flex flex-wrap gap-1.5 pt-1">
-                {SUGGESTIONS.map((s) => (
+                {activeSuggestions.map((s) => (
                   <button
                     key={s}
                     onClick={() => handleSend(s)}
@@ -260,7 +347,7 @@ export function SommelierChat() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Zeptej se na cokoliv o oleji…"
+                placeholder={PLACEHOLDER_TEXTS[placeholderIdx]}
                 disabled={loading}
                 className="flex-1 text-sm bg-off rounded-full px-4 py-2 outline-none placeholder:text-text3 focus:ring-1 focus:ring-olive/30"
               />

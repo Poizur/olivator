@@ -288,7 +288,7 @@ export function SommelierHero({
                       key={s}
                       onClick={() => send(s)}
                       disabled={loading}
-                      className="text-[12px] font-semibold text-white/90 bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 rounded-full px-3.5 py-1.5 transition-colors text-left last:col-span-2 sm:last:col-span-1"
+                      className="text-[12px] font-semibold text-white/90 bg-white/15 hover:bg-white/25 border border-white/25 hover:border-white/45 rounded-full px-3.5 py-1.5 transition-colors text-left last:col-span-2 sm:last:col-span-1"
                     >
                       {s}
                     </button>
