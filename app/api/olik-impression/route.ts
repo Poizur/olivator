@@ -4,12 +4,13 @@ import { supabaseAdmin } from '@/lib/supabase'
 export async function POST(req: NextRequest) {
   try {
     const { type, page, session_id } = (await req.json()) as {
-      type: 'hero' | 'floater'
+      type: 'hero' | 'floater' | 'peek_shown' | 'peek_clicked'
       page?: string
       session_id?: string
     }
 
-    if (type !== 'hero' && type !== 'floater') {
+    const VALID_TYPES = ['hero', 'floater', 'peek_shown', 'peek_clicked']
+    if (!VALID_TYPES.includes(type)) {
       return NextResponse.json({ ok: false }, { status: 400 })
     }
 

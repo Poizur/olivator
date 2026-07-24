@@ -10,6 +10,8 @@ interface Message {
   content: string
 }
 
+type PeekState = 'idle' | 'showing' | 'retracting'
+
 const SUGGESTIONS = [
   '🎁 Dárek pro tátu co rád vaří',
   '🇬🇷 Lehký řecký do 300 Kč',
@@ -36,8 +38,19 @@ function getOrCreateSessionId(): string {
   }
 }
 
+function getSessionId(): string | undefined {
+  try { return sessionStorage.getItem('olik_session_id') ?? undefined } catch { return undefined }
+}
+
+function trackImpression(type: 'floater' | 'peek_shown' | 'peek_clicked', page: string) {
+  fetch('/api/olik-impression', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type, page, session_id: getSessionId() }),
+  }).catch(() => {})
+}
+
 function formatReply(text: string) {
-  // Match /go/retailer/slug?st=olik links and /olej/slug links
   const parts = text.split(/(\/go\/[\w-]+\/[\w-]+(?:\?[^\s\n]*)?|\/olej\/[\w-]+)/g)
   return parts.map((part, i) => {
     if (part.startsWith('/go/')) {
@@ -70,13 +83,32 @@ export function SommelierChat() {
   const [hiddenByStickyBar, setHiddenByStickyBar] = useState(false)
   const [placeholderIdx, setPlaceholderIdx] = useState(0)
   const [productHint, setProductHint] = useState<{ name: string; nameShort: string | null } | null>(null)
-  const [badgeVisible, setBadgeVisible] = useState(false)
+  const [peekState, setPeekState] = useState<PeekState>('idle')
+  const [floaterReady, setFloaterReady] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const floaterRef = useRef<HTMLButtonElement>(null)
+  const peekRef = useRef<HTMLDivElement>(null)
   const floaterImpressionFired = useRef(false)
-  const badgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const peekAutoRetractTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const peekInitTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Stable helper — only uses state setters (stable) and refs
+  function retractPeek(openChat = false) {
+    if (peekAutoRetractTimer.current) clearTimeout(peekAutoRetractTimer.current)
+    setPeekState('retracting')
+    document.body.classList.remove('olik-peeking')
+    window.dispatchEvent(new CustomEvent('olik:peek', { detail: { active: false } }))
+    if (openChat) {
+      setOpen(true)
+      setFloaterReady(true)
+    }
+    setTimeout(() => {
+      setPeekState('idle')
+      if (!openChat) setFloaterReady(true)
+    }, 400)
+  }
 
   // Impression tracking — fires once when floater enters viewport
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -87,12 +119,7 @@ export function SommelierChat() {
       ([entry]) => {
         if (entry.isIntersecting && !floaterImpressionFired.current) {
           floaterImpressionFired.current = true
-          const sid = (() => { try { const k = 'olik_session_id'; return sessionStorage.getItem(k) ?? undefined } catch { return undefined } })()
-          fetch('/api/olik-impression', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'floater', page: window.location.pathname, session_id: sid }),
-          }).catch(() => {})
+          trackImpression('floater', window.location.pathname)
         }
       },
       { threshold: 0.5 }
@@ -108,49 +135,83 @@ export function SommelierChat() {
     return () => clearInterval(t)
   }, [])
 
-  // Product context — fetch name_short when on /olej/* pages
+  // Product context + peek scheduling
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
+    setPeekState('idle')
+    setFloaterReady(false)
+    setProductHint(null)
+    document.body.classList.remove('olik-peeking')
+    if (peekInitTimer.current) clearTimeout(peekInitTimer.current)
+    if (peekAutoRetractTimer.current) clearTimeout(peekAutoRetractTimer.current)
+
     if (!pathname.startsWith('/olej/')) {
-      setProductHint(null)
-      setBadgeVisible(false)
+      setFloaterReady(true)
       return
     }
+
     const slug = pathname.split('/olej/')[1]?.split('/')[0]?.split('?')[0]
-    if (!slug) return
+    if (!slug) { setFloaterReady(true); return }
+
+    const peekKey = `olik_peek_${slug}`
+    const alreadyShown = (() => { try { return !!sessionStorage.getItem(peekKey) } catch { return false } })()
+    if (alreadyShown) setFloaterReady(true)
 
     fetch(`/api/product-hint/${slug}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data: { name: string; nameShort: string | null } | null) => {
         setProductHint(data)
-        if (data) {
-          setBadgeVisible(true)
-          if (badgeTimerRef.current) clearTimeout(badgeTimerRef.current)
-          badgeTimerRef.current = setTimeout(() => setBadgeVisible(false), 3500)
+
+        if (data && !alreadyShown) {
+          peekInitTimer.current = setTimeout(() => {
+            setPeekState('showing')
+            document.body.classList.add('olik-peeking')
+            window.dispatchEvent(new CustomEvent('olik:peek', { detail: { active: true } }))
+            try { sessionStorage.setItem(peekKey, '1') } catch {}
+            trackImpression('peek_shown', pathname)
+            peekAutoRetractTimer.current = setTimeout(() => retractPeek(), 4000)
+          }, 1500)
         }
       })
-      .catch(() => {})
+      .catch(() => setFloaterReady(true))
 
     return () => {
-      if (badgeTimerRef.current) clearTimeout(badgeTimerRef.current)
+      if (peekInitTimer.current) clearTimeout(peekInitTimer.current)
+      if (peekAutoRetractTimer.current) clearTimeout(peekAutoRetractTimer.current)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
 
-  // Defense-in-depth: floating chat se na /admin nemá zobrazovat
   if (pathname.startsWith('/admin')) return null
 
-  // Na product pages: schovej Olíka když je sticky buy bar viditelný (scrollY > 600).
-  // StickyBuyBar se zobrazuje na lg: desktop only — stejný breakpoint.
+  // Dismiss peek on scroll or tap outside (grace period 600ms po zobrazení)
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
-    const isProductPage = pathname.startsWith('/olej/')
-    if (!isProductPage) {
-      setHiddenByStickyBar(false)
-      return
+    if (peekState !== 'showing') return
+
+    let active = false
+    const grace = setTimeout(() => { active = true }, 600)
+
+    function dismiss(e: Event) {
+      if (!active) return
+      if (peekRef.current?.contains(e.target as Node)) return
+      retractPeek()
     }
-    function onScroll() {
-      setHiddenByStickyBar(window.scrollY > 600)
+
+    window.addEventListener('scroll', dismiss, { passive: true })
+    document.addEventListener('pointerdown', dismiss)
+    return () => {
+      clearTimeout(grace)
+      window.removeEventListener('scroll', dismiss)
+      document.removeEventListener('pointerdown', dismiss)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [peekState])
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (!pathname.startsWith('/olej/')) { setHiddenByStickyBar(false); return }
+    function onScroll() { setHiddenByStickyBar(window.scrollY > 600) }
     window.addEventListener('scroll', onScroll, { passive: true })
     onScroll()
     return () => window.removeEventListener('scroll', onScroll)
@@ -158,41 +219,33 @@ export function SommelierChat() {
 
   useEffect(() => {
     if (open && messages.length === 0) {
-      setMessages([
-        {
-          role: 'assistant',
-          content:
-            'Ahoj! Jsem Olík, průvodce Olivatoru. Poradím ti s výběrem olivového oleje — ať hledáš na saláty, vaření, dárek nebo chceš max polyfenoly. Na co se chceš zeptat?',
-        },
-      ])
+      setMessages([{
+        role: 'assistant',
+        content: 'Ahoj! Jsem Olík, průvodce Olivatoru. Poradím ti s výběrem olivového oleje — ať hledáš na saláty, vaření, dárek nebo chceš max polyfenoly. Na co se chceš zeptat?',
+      }])
     }
   }, [open, messages.length])
 
   useEffect(() => {
-    if (open) {
-      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
-    }
+    if (open) setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
   }, [messages, open])
 
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 100)
   }, [open])
 
-  function handleOpen() {
-    setBadgeVisible(false)
-    if (badgeTimerRef.current) clearTimeout(badgeTimerRef.current)
-    setOpen((o) => !o)
+  function handlePeekClick() {
+    trackImpression('peek_clicked', pathname)
+    retractPeek(true)
   }
 
   async function handleSend(text?: string) {
     const msg = (text ?? input).trim()
     if (!msg || loading) return
     setInput('')
-
     const newMessages: Message[] = [...messages, { role: 'user', content: msg }]
     setMessages(newMessages)
     setLoading(true)
-
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -204,24 +257,17 @@ export function SommelierChat() {
         }),
       })
       const data = (await res.json()) as { reply?: string; error?: string }
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: data.reply ?? data.error ?? 'Chyba — zkus to znovu.',
-        },
-      ])
+      setMessages((prev) => [...prev, {
+        role: 'assistant',
+        content: data.reply ?? data.error ?? 'Chyba — zkus to znovu.',
+      }])
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: 'Připojení selhalo — zkus to znovu.' },
-      ])
+      setMessages((prev) => [...prev, { role: 'assistant', content: 'Připojení selhalo — zkus to znovu.' }])
     } finally {
       setLoading(false)
     }
   }
 
-  // P2b: Produktové chipy — kontextové, když jsme na /olej/* stránce
   const productName = productHint?.nameShort ?? productHint?.name?.split(' ').slice(0, 3).join(' ') ?? null
   const activeSuggestions = productName
     ? [
@@ -232,53 +278,72 @@ export function SommelierChat() {
       ]
     : SUGGESTIONS
 
-  // P3: Compare bar aktivní → floater výš
   const compareBarActive = compareItems.length > 0
   const floaterBottom = compareBarActive ? 'bottom-24' : 'bottom-6'
-  const badgeBottom = compareBarActive ? 'bottom-[152px]' : 'bottom-[88px]'
+  const isProductPage = pathname.startsWith('/olej/')
 
   return (
     <>
-      {/* P2b: Badge "Znám tento olej" — zobrazí se na /olej/* a po 3.5s zmizí */}
-      {productHint && (
-        <button
-          onClick={handleOpen}
-          aria-label={`Zeptej se Olíka na ${productName ?? 'tento olej'}`}
-          className={`fixed right-[88px] z-[50] bg-white border border-olive/25 rounded-full pl-3 pr-3.5 py-2 shadow-md text-[12px] font-medium text-olive whitespace-nowrap transition-all duration-300 ${badgeBottom}`}
+      {/* PEEK — slide-in zleva, pouze na /olej/* */}
+      {isProductPage && (
+        <div
+          ref={peekRef}
+          role="button"
+          tabIndex={peekState === 'showing' ? 0 : -1}
+          aria-label={`Olík — zeptej se na ${productName ?? 'tento olej'}`}
+          onClick={handlePeekClick}
+          onKeyDown={(e) => e.key === 'Enter' && handlePeekClick()}
+          className="fixed left-0 z-[49] flex items-center cursor-pointer select-none"
           style={{
-            opacity: badgeVisible && !open ? 1 : 0,
-            transform: badgeVisible && !open ? 'translateX(0)' : 'translateX(6px)',
-            pointerEvents: badgeVisible && !open ? 'auto' : 'none',
+            bottom: '33vh',
+            transform: peekState === 'showing' ? 'translateX(0)' : 'translateX(-100%)',
+            transition: 'transform 350ms ease-out',
+            pointerEvents: peekState === 'showing' ? 'auto' : 'none',
           }}
         >
-          Znám tento olej — zeptej se 🫒
+          <picture>
+            <source srcSet="/olik-peek.webp" type="image/webp" />
+            <img
+              src="/olik-peek.png"
+              alt="Olík"
+              width={200}
+              height={133}
+              className="block"
+              draggable={false}
+            />
+          </picture>
+          {productHint && (
+            <div className="ml-2 bg-white border border-olive/25 rounded-2xl shadow-lg px-3 py-2 text-[13px] font-medium text-olive whitespace-nowrap">
+              Znám {productName} — zeptej se mě 🫒
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* FLOATER — zobrazí se po peek, nebo okamžitě na ostatních stránkách */}
+      {floaterReady && (
+        <button
+          ref={floaterRef}
+          onClick={() => setOpen((o) => !o)}
+          aria-label="Olík — průvodce výběrem oleje"
+          className={`fixed right-6 z-[50] w-16 h-16 rounded-full bg-white shadow-lg hover:scale-105 flex items-center justify-center border-2 border-olive/20 transition-all lg:transition-[opacity,transform] ${floaterBottom} ${
+            hiddenByStickyBar ? 'lg:opacity-0 lg:pointer-events-none lg:scale-75' : 'opacity-100'
+          }`}
+          style={{ boxShadow: '0 4px 24px rgba(45,106,79,0.30)', transitionDuration: '200ms' }}
+        >
+          {open
+            ? <span className="text-xl leading-none text-olive font-bold">✕</span>
+            : <img src="/olik.png" alt="Olík" className="w-14 h-14 object-contain" />
+          }
         </button>
       )}
 
-      {/* Floating button — skryt na product page když sticky buy bar překrývá */}
-      <button
-        ref={floaterRef}
-        onClick={handleOpen}
-        aria-label="Olík — průvodce výběrem oleje"
-        className={`fixed right-6 z-[50] w-16 h-16 rounded-full bg-white text-olive shadow-lg hover:scale-105 transition-all flex items-center justify-center border-2 border-olive/20 lg:transition-[opacity,transform] ${floaterBottom} ${
-          hiddenByStickyBar ? 'lg:opacity-0 lg:pointer-events-none lg:scale-75' : 'opacity-100'
-        }`}
-        style={{ boxShadow: '0 4px 24px rgba(45,106,79,0.30)', transitionDuration: '200ms' }}
-      >
-        {open ? (
-          <span className="text-xl leading-none text-olive font-bold">✕</span>
-        ) : (
-          <img src="/olik.png" alt="Olík" className="w-14 h-14 object-contain" />
-        )}
-      </button>
-
-      {/* Chat panel */}
+      {/* CHAT PANEL */}
       {open && (
         <div
           className="fixed bottom-24 right-6 z-[50] w-[340px] sm:w-[380px] bg-white border border-off2 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
           style={{ height: 'min(520px, calc(100vh - 120px))' }}
         >
-          {/* Header */}
           <div className="px-4 py-3 bg-olive text-white flex items-center gap-2.5 shrink-0">
             <div className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center overflow-hidden">
               <img src="/olik.png" alt="Olík" className="w-7 h-7 object-contain" />
@@ -289,20 +354,12 @@ export function SommelierChat() {
             </div>
           </div>
 
-          {/* Messages */}
           <div className="flex-1 overflow-y-auto min-h-0 px-4 py-3 space-y-3">
             {messages.map((m, i) => (
-              <div
-                key={i}
-                className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[85%] px-3 py-2 rounded-2xl text-[13px] leading-relaxed ${
-                    m.role === 'user'
-                      ? 'bg-olive text-white rounded-br-sm'
-                      : 'bg-off text-text rounded-bl-sm'
-                  }`}
-                >
+              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[85%] px-3 py-2 rounded-2xl text-[13px] leading-relaxed ${
+                  m.role === 'user' ? 'bg-olive text-white rounded-br-sm' : 'bg-off text-text rounded-bl-sm'
+                }`}>
                   {m.role === 'assistant' ? formatReply(m.content) : m.content}
                 </div>
               </div>
@@ -320,7 +377,6 @@ export function SommelierChat() {
               </div>
             )}
 
-            {/* Suggestion chips — only on first message, contextual on product pages */}
             {messages.length === 1 && !loading && (
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {activeSuggestions.map((s) => (
@@ -338,7 +394,6 @@ export function SommelierChat() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input */}
           <div className="px-3 pb-3 pt-2 border-t border-off shrink-0">
             <div className="flex gap-2 items-center">
               <input

@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import { ArrowLeftRight, Sparkles } from 'lucide-react'
 import { useCompare } from '@/lib/compare-context'
 import { trackCompareOpen } from '@/lib/analytics'
@@ -10,9 +11,19 @@ export function CompareBar() {
   const pathname = usePathname()
   const { items, removeItem, clearAll } = useCompare()
   const empty = 5 - items.length
+  const [olikPeeking, setOlikPeeking] = useState(false)
+
+  useEffect(() => {
+    function onPeek(e: Event) {
+      setOlikPeeking((e as CustomEvent<{ active: boolean }>).detail.active)
+    }
+    window.addEventListener('olik:peek', onPeek)
+    return () => window.removeEventListener('olik:peek', onPeek)
+  }, [])
 
   // Defense-in-depth: compare bar je veřejný UI, na /admin se nezobrazuje
   if (pathname.startsWith('/admin')) return null
+  if (olikPeeking) return null
   // Na srovnávači ani na bestseller stránce (jiný účel, pill by rušil)
   if (pathname.startsWith('/porovnani')) return null
   if (pathname.startsWith('/nejprodavanejsi')) return null
