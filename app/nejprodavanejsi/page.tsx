@@ -36,7 +36,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Proč je Motakis Kréta na prvním místě i přes nižší Score?',
-    a: 'Motakis je podle dat z českého maloobchodu reálně nejprodávanější 5L olej v ČR. Nižší Score (25–45) odráží chybějící lab data o kyselosti a polyfenolech — neznamená, že jde o špatný olej. Popularita ≠ Olivator Score.',
+    a: 'Motakis je podle dat z českého maloobchodu reálně nejprodávanější 5L olej v ČR. Nižší Score (25–45) odráží chybějící deklarovaná data o kyselosti a polyfenolech — neznamená, že jde o špatný olej. Popularita ≠ Olivator Score.',
   },
   {
     q: 'Jak poznám řecký vs. italský vs. španělský olej?',

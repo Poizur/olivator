@@ -114,7 +114,7 @@ export default async function Home() {
       <div className="bg-white border-b border-off2 px-6 md:px-10 py-5">
         <div className="max-w-[1280px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
-            { icon: '🔬', title: 'Lab data', body: 'Polyfenoly, kyselost, peroxidy', tip: 'Data bereme z technických listů a etikety výrobce. Neprovádíme vlastní laboratorní testy.' },
+            { icon: '🔬', title: 'Deklarovaná data', body: 'Polyfenoly, kyselost, peroxidy', tip: 'Kyselost a polyfenoly dle etiket a technických listů výrobců — sami neměříme.' },
             { icon: '🚫', title: 'Žádná placená umístění', body: 'Provize z prodejů — transparentně', tip: undefined },
             { icon: '📊', title: 'Nezávislé Score', body: '4 čísla, 100 bodů', tip: 'Score počítáme algoritmicky z deklarovaných dat (kyselost, polyfenoly, certifikace, cena). Nehodnotíme chuť ani neprovádíme vlastní degustaci.' },
             { icon: '🔄', title: 'Aktualizace 2× denně', body: 'Ceny + dostupnost', tip: 'Scraper prochází nabídky prodejců přibližně 2× denně. Skutečná dostupnost u prodejce se může krátce lišit.' },

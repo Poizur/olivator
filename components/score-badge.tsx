@@ -47,7 +47,7 @@ export function ScoreBadge({ score, type, size = 'small', className = '', withDi
     return (
       <span
         className={`font-bold bg-terra text-white rounded-full flex items-center justify-center tabular-nums ${sizeClasses} ${className}`}
-        title="Hodnocení připravujeme — chybí lab data"
+        title="Hodnocení připravujeme — chybí deklarovaná data výrobce"
       >
         —
       </span>
