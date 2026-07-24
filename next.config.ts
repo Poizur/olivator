@@ -23,6 +23,9 @@ const nextConfig: NextConfig = {
       { source: '/znacka/vanocni',               destination: '/srovnavac',                                     permanent: true },
       // Motakis POSKOZEN outlet SKU (status=inactive 2026-07-23) → plech (aktivní produkt)
       { source: '/olej/motakis-kreta-extra-panensky-olivovy-olej-5-l', destination: '/olej/motakis-kreta-extra-panensky-olivovy-olej-5-l-plech', permanent: true },
+      // Aliasy statických stránek — běžná varianta URL
+      { source: '/gdpr', destination: '/ochrana-osobnich-udaju', permanent: true },
+      { source: '/o-nas', destination: '/o-projektu', permanent: true },
     ]
   },
   images: {

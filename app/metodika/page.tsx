@@ -148,7 +148,7 @@ const COMPONENTS = [
     level3Sections: [
       {
         heading: 'Vzorec',
-        body: 'Hodnota = (Kyselost_body + Certifikace_body + Polyfenoly_body) / cena_za_100ml\n\nVýsledek se normalizuje na škálu 0–15.\n\nPříklad vysoké hodnoty: Picual BIO 500 ml za 249 Kč (Score 82) → cena 49,80 Kč/100ml → poměr 1,43 → 13/15 bodů.\n\nPříklad slabší hodnoty: Premium značka 250 ml za 599 Kč → 239 Kč/100ml → stejná kvalita, 6× dražší → 3/15 bodů.',
+        body: 'Hodnota = (Kyselost_body + Certifikace_body + Polyfenoly_body) / cena_za_100ml\n\nVýsledek se normalizuje na škálu 0–15.\n\nFiktivní příklad A: EVOO BIO 500 ml za 249 Kč (Score 82) → cena 49,80 Kč/100ml → poměr 1,43 → 13/15 bodů.\n\nFiktivní příklad B: Premium značka 250 ml za 599 Kč → 239 Kč/100ml → stejná kvalita, 6× dražší → 3/15 bodů.',
       },
       {
         heading: 'Co neměříme do hodnoty',

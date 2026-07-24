@@ -6,7 +6,7 @@ export async function generateMetadata() {
   const stats = await getSiteStats()
   return {
     title: 'Srovnávač olivových olejů — kvalita, ceny, Score | Olivátor',
-    description: `Porovnejte ${stats.totalProducts}+ olivových olejů. Olivator Score hodnotí kyselost, polyfenoly a certifikace. Aktuální ceny z ${stats.activeRetailers} prodejců včetně Tesco, Billa, Kaufland a Albert.`,
+    description: `Porovnejte ${stats.totalProducts}+ olivových olejů. Olivator Score hodnotí kyselost, polyfenoly a certifikace. Aktuální ceny z ${stats.activeRetailers} předních e-shopů a supermarketů.`,
     alternates: { canonical: 'https://olivator.cz/srovnavac' },
   }
 }

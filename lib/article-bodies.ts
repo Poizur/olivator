@@ -73,7 +73,7 @@ Cena nezaručuje kvalitu (jsou drahé špatné oleje), ale opravdu kvalitní ole
 
 ## Kde olej koupit
 
-Specializované e-shopy mají typicky čerstvější skladování a lepší rotaci než supermarkety. Olivator porovnává ceny napříč 15+ prodejci — najdeš stejný produkt často o 30 % levněji než v Tesco.
+Specializované e-shopy mají typicky čerstvější skladování a lepší rotaci než supermarkety. Olivator porovnává ceny napříč desítkami prodejců — stejný produkt bývá v specialty e-shopu výrazně levněji než v supermarketu.
 
 ## Tři quick-tips na závěr
 
@@ -106,7 +106,7 @@ To je důvod, proč 250 mg/kg je v naší [metodice Olivator Score](/metodika) p
 ## Co konkrétně dělají s tělem
 
 ### Kardiovaskulární zdraví
-PREDIMED studie (2018, ~7 500 účastníků) ukázala 30% pokles infarktu u skupiny s vysokou konzumací EVOO oproti nízko-tukové dietě. Mechanismus: oleocanthal blokuje COX enzymy podobně jako ibuprofen, snižuje zánět cév.
+PREDIMED studie (Estruch et al., NEJM 2013, ~7 500 účastníků) ukázala 30% pokles závažných kardiovaskulárních příhod u skupiny s vysokou konzumací EVOO oproti nízko-tukové dietě. Mechanismus: oleocanthal blokuje COX enzymy podobně jako ibuprofen, snižuje zánět cév.
 
 ### Mozek a kognitivní funkce
 Hydroxytyrosol prochází přes hematoencefalickou bariéru. Studie ukazují asociaci s nižším rizikem Alzheimerovy choroby u středomořské populace.
@@ -154,7 +154,7 @@ Produkce ~270 000 tun ročně, ale jen ~30 % je extra panenský. Většina itals
 Tendence k jemnější, máslovější chuti s ovocnými tóny — banán, jablko, mandle. Pálivost spíše střední. Vhodný pro lidi, kteří začínají s kvalitním olejem a hořkost je odrazuje.
 
 ### Italský
-Výrazněji hořký a pálivý, vegetativní (čerstvá tráva, artyčok, rajský list). Toskánské oleje (Frantoio, Leccino) jsou intenzivnější, apulské (Coratina) mají rekordní polyfenoly — často 600+ mg/kg.
+Výrazněji hořký a pálivý, vegetativní (čerstvá tráva, artyčok, rajský list). Toskánské oleje (Frantoio, Leccino) jsou intenzivnější, apulské (Coratina) mají vysoké polyfenoly — často 600+ mg/kg.
 
 ## Certifikace v praxi
 
@@ -170,7 +170,7 @@ Výrazněji hořký a pálivý, vegetativní (čerstvá tráva, artyčok, rajsk�
 
 ## Cena
 
-V průměru je řecký EVOO o **15–25 % levnější** než srovnatelný italský. Důvod: nižší marketingová prémie. Italian brand image (Toskánsko, Sicílie) si producenti nechávají platit.
+Řecký EVOO bývá **výrazně levnější** než srovnatelný italský. Důvod: nižší marketingová prémie. Italian brand image (Toskánsko, Sicílie) si producenti nechávají platit.
 
 Pokud porovnáváš stejnou kategorii (DOP, single estate, čerstvost), kvalita je srovnatelná. Cenový rozdíl je často brand premium, ne kvalita.
 
@@ -186,7 +186,7 @@ Pokud porovnáváš stejnou kategorii (DOP, single estate, čerstvost), kvalita 
 
 ## Olivator katalog
 
-Aktuálně máme v katalogu **45+ řeckých olejů** (převážně Sitia, Kalamata, Manaki) a **8+ italských** (Apulie, Toskánsko). Filtruj v [srovnávači](/srovnavac) podle původu, nebo se podívej na [top řecké](/zebricek/nejlepsi-recky-olej) a [top italské](/zebricek/nejlepsi-italsky-olej) žebříčky.
+V katalogu máme řecké oleje (převážně Sitia, Kalamata, Manaki) i italské (Apulie, Toskánsko). Aktuální počty a dostupnost najdeš přímo v [srovnávači](/srovnavac) — filtruj podle původu, nebo se podívej na [top řecké](/zebricek/nejlepsi-recky-olej) a [top italské](/zebricek/nejlepsi-italsky-olej) žebříčky.
 
 ## Závěr
 
@@ -291,7 +291,7 @@ Pro dárek nebo vlastní zvláštní použití (lžička denně, finishing dress
 
 ### Nejlepší řecký olivový olej
 
-[Řecko](/srovnavac?origin=gr) má v ČR **největší zastoupení** kvalitních olejů dostupných v ČR. Důvod: krátká logistika (Praha → Athény je 2× kratší než Praha → Andalusie), specializované e-shopy importují přímo od farem.
+[Řecko](/srovnavac?origin=gr) má **největší zastoupení** kvalitních olejů dostupných v ČR. Důvod: kratší logistika (Praha → Athény) a specializované e-shopy importující přímo od farem.
 
 Top regiony: [Kréta](/oblast/kreta) (DOP Sitia, Kolymvari), [Peloponés](/oblast/peloponnes) (Kalamata DOP, Olympia), [Zakynthos](/oblast/zakynthos).
 
