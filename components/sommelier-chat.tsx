@@ -61,6 +61,31 @@ export function SommelierChat() {
   const [hiddenByStickyBar, setHiddenByStickyBar] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const floaterRef = useRef<HTMLButtonElement>(null)
+  const floaterImpressionFired = useRef(false)
+
+  // Impression tracking — fires once when floater enters viewport
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    const el = floaterRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !floaterImpressionFired.current) {
+          floaterImpressionFired.current = true
+          const sid = (() => { try { const k = 'olik_session_id'; return sessionStorage.getItem(k) ?? undefined } catch { return undefined } })()
+          fetch('/api/olik-impression', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'floater', page: window.location.pathname, session_id: sid }),
+          }).catch(() => {})
+        }
+      },
+      { threshold: 0.5 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   // Defense-in-depth: floating chat se na /admin nemá zobrazovat
   if (pathname.startsWith('/admin')) return null
@@ -145,6 +170,7 @@ export function SommelierChat() {
     <>
       {/* Floating button — skryt na product page když sticky buy bar překrývá */}
       <button
+        ref={floaterRef}
         onClick={() => setOpen((o) => !o)}
         aria-label="Olík — průvodce výběrem oleje"
         className={`fixed bottom-6 right-6 z-[50] w-16 h-16 rounded-full bg-white text-olive shadow-lg hover:scale-105 transition-all flex items-center justify-center border-2 border-olive/20 lg:transition-[opacity,transform] ${

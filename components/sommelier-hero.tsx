@@ -125,6 +125,30 @@ export function SommelierHero({
   const [loading, setLoading] = useState(false)
   const resultsEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const heroRef = useRef<HTMLElement>(null)
+  const heroImpressionFired = useRef(false)
+
+  // Impression tracking — fires once when hero enters viewport (≥30% visible)
+  useEffect(() => {
+    const el = heroRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !heroImpressionFired.current) {
+          heroImpressionFired.current = true
+          const sid = (() => { try { const k = 'olik_session_id'; return sessionStorage.getItem(k) ?? undefined } catch { return undefined } })()
+          fetch('/api/olik-impression', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'hero', page: window.location.pathname, session_id: sid }),
+          }).catch(() => {})
+        }
+      },
+      { threshold: 0.3 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -190,7 +214,7 @@ export function SommelierHero({
   const hasConversation = messages.length > 0
 
   return (
-    <section className="relative overflow-hidden border-b border-olive2/30">
+    <section ref={heroRef} className="relative overflow-hidden border-b border-olive2/30">
       <div aria-hidden className="absolute inset-0 -z-10 bg-gradient-to-br from-[#3B6D11] to-[#27500A]" />
       <div aria-hidden className="absolute text-[300px] opacity-[0.05] -right-12 -top-20 -rotate-[15deg] leading-none select-none pointer-events-none -z-10">🫒</div>
 
