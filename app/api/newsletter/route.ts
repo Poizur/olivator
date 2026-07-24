@@ -227,7 +227,8 @@ export async function POST(request: NextRequest) {
       const unsubToken = (sub?.unsubscribe_token as string | null) ?? ''
       const unsubUrl = `https://olivator.cz/api/newsletter/unsubscribe?token=${unsubToken}`
       const { deals, topPickIndex, topPickReason, mode } = await getWelcomeDeals().catch(() => ({ deals: [], topPickIndex: 0, topPickReason: '', mode: 'tips' as const }))
-      const d0Props = { unsubscribeUrl: unsubUrl, deals, topPickIndex, topPickReason, mode }
+      const pdfUrl = source === 'footer_combined' ? 'https://olivator.cz/pruvodce-olivovy-olej.pdf' : undefined
+      const d0Props = { unsubscribeUrl: unsubUrl, deals, topPickIndex, topPickReason, mode, pdfUrl }
       const html = await render(React.createElement(WelcomeD0DealsEmail, d0Props))
       const text = await render(React.createElement(WelcomeD0DealsEmail, d0Props), { plainText: true })
       const subject = mode === 'deals'

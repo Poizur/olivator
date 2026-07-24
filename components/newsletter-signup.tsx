@@ -3,7 +3,7 @@
 import { useState } from 'react'
 
 interface Props {
-  source?: 'footer' | 'homepage' | 'product_page' | 'quiz_result' | 'exit_intent' | 'price_alert'
+  source?: 'footer' | 'footer_combined' | 'homepage' | 'product_page' | 'quiz_result' | 'exit_intent' | 'price_alert'
   variant?: 'inline' | 'hero' | 'dark'
 }
 
@@ -258,7 +258,7 @@ export function NewsletterSignup({ source = 'footer', variant = 'inline' }: Prop
       )}
       <div className="text-[10px] text-text3 leading-relaxed mt-1">
         Přihlášením souhlasíš se zpracováním e-mailu dle{' '}
-        <a href="/ochrana-osobnich-udaju" className="text-olive underline decoration-dotted">zásad OOU</a>.
+        <a href="/ochrana-osobnich-udaju" className="text-olive underline decoration-dotted">zásad ochrany osobních údajů</a>.
         Odhlásit 1 klikem.
       </div>
     </form>

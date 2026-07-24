@@ -1,18 +1,12 @@
 import Link from 'next/link'
 import { NewsletterSignup } from '@/components/newsletter-signup'
-import { LeadMagnetCta } from '@/components/lead-magnet-cta'
 
 export function Footer() {
   return (
     <footer className="bg-[#173404] text-white">
       <div className="max-w-[1280px] mx-auto px-6 md:px-10">
 
-        {/* ── Lead magnet slim row ── */}
-        <div className="py-4 border-b border-white/10">
-          <LeadMagnetCta variant="slim" source="leadmagnet_footer" />
-        </div>
-
-        {/* ── Newsletter row ── */}
+        {/* ── Newsletter + PDF — jeden sloučený blok ── */}
         <div className="flex flex-col md:flex-row md:items-center gap-6 py-8 border-b border-white/10">
           <div className="flex-1 min-w-0">
             <div className="text-[11px] font-medium tracking-[0.05em] uppercase text-olive3 mb-1.5">
@@ -22,11 +16,11 @@ export function Footer() {
               Olíkův týdenní digest
             </div>
             <p className="text-[13px] text-white/55">
-              Slevy, nové oleje a tipy každý čtvrtek v&nbsp;8:00.
+              Slevy, nové oleje a tipy každý čtvrtek — a průvodce výběrem oleje (PDF) jako dárek na uvítanou.
             </p>
           </div>
           <div className="w-full md:w-[380px] shrink-0">
-            <NewsletterSignup source="footer" variant="dark" />
+            <NewsletterSignup source="footer_combined" variant="dark" />
           </div>
         </div>
 

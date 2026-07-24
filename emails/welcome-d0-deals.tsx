@@ -25,6 +25,7 @@ interface Props {
   topPickIndex: number
   topPickReason: string
   mode: 'deals' | 'tips'
+  pdfUrl?: string
 }
 
 export function WelcomeD0DealsEmail({
@@ -33,6 +34,7 @@ export function WelcomeD0DealsEmail({
   topPickIndex,
   topPickReason,
   mode,
+  pdfUrl,
 }: Props) {
   const topPick = deals[topPickIndex] ?? deals[0]
   const isDealMode = mode === 'deals'
@@ -344,6 +346,52 @@ export function WelcomeD0DealsEmail({
           </tbody>
         </table>
       </Section>
+
+      {/* PDF průvodce — zobrazí se jen pokud je pdfUrl předáno */}
+      {pdfUrl && (
+        <Section className="mt-6 mb-2">
+          <table
+            width="100%"
+            cellPadding={0}
+            cellSpacing={0}
+            role="presentation"
+            style={{
+              background: '#f0fdf4',
+              border: '1px solid #bbf7d0',
+              borderRadius: '8px',
+              padding: '16px',
+            }}
+          >
+            <tbody>
+              <tr>
+                <td style={{ padding: '16px' }}>
+                  <Text style={{ fontSize: '12px', fontWeight: '600', color: '#166534', margin: '0 0 6px 0', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    🎁 Dárek na uvítanou
+                  </Text>
+                  <Text style={{ fontSize: '14px', color: '#1c1917', margin: '0 0 10px 0', lineHeight: '1.5' }}>
+                    Připravili jsme pro tebe <strong>průvodce výběrem olivového oleje</strong> — co je extra panenský, proč záleží na kyselosti a jak rozpoznat greenwashing.
+                  </Text>
+                  <Link
+                    href={pdfUrl}
+                    style={{
+                      display: 'inline-block',
+                      background: '#2d6a4f',
+                      color: '#ffffff',
+                      padding: '10px 20px',
+                      borderRadius: '20px',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    Stáhnout průvodce (PDF) →
+                  </Link>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </Section>
+      )}
 
       {/* Podpis */}
       <Section className="mt-6 mb-2">
