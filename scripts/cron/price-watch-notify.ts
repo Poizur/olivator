@@ -3,6 +3,7 @@
 // Notifikuje uživatele při poklesu ceny ≥5 % NEBO ≥20 Kč.
 // Anti-spam: max 1× za 7 dní na hlídání.
 import { supabaseAdmin } from '@/lib/supabase'
+import { getSetting } from '@/lib/settings'
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://olivator.cz'
 const RESEND_FROM = process.env.RESEND_FROM_EMAIL ?? 'Olivator <onboarding@resend.dev>'
@@ -103,8 +104,9 @@ async function sendEmail(
 }
 
 async function run() {
-  if (process.env.EMAILS_PAUSED === 'true') {
-    console.log('[price-watch-notify] EMAILS_PAUSED=true — přeskakuji (údržba)')
+  const emailsPaused = process.env.EMAILS_PAUSED === 'true' || await getSetting<boolean>('emails_paused').catch(() => false)
+  if (emailsPaused) {
+    console.log('[price-watch-notify] emails_paused — přeskakuji (údržba)')
     process.exit(0)
   }
 

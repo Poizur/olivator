@@ -13,8 +13,9 @@ async function main() {
   const startedAt = Date.now()
   console.log('[cron:newsletter-send] start', new Date().toISOString())
 
-  if (process.env.EMAILS_PAUSED === 'true') {
-    console.log('[cron:newsletter-send] EMAILS_PAUSED=true — přeskakuji (údržba)')
+  const emailsPaused = process.env.EMAILS_PAUSED === 'true' || await getSetting<boolean>('emails_paused').catch(() => false)
+  if (emailsPaused) {
+    console.log('[cron:newsletter-send] emails_paused — přeskakuji (údržba)')
     process.exit(0)
   }
 

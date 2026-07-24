@@ -7,6 +7,8 @@ import { ArrowUpRight, ArrowUp, ArrowDown, Plus } from 'lucide-react'
 import { getSiteStats, getAllRetailers } from '@/lib/data'
 import { supabaseAdmin } from '@/lib/supabase'
 import { BulkFetchImagesButton } from './bulk-fetch-images'
+import { MaintenanceToggle } from '@/components/admin/maintenance-toggle'
+import { getSetting } from '@/lib/settings'
 
 export const revalidate = 60
 export const dynamic = 'force-dynamic'
@@ -460,7 +462,7 @@ async function getNeedsAttention() {
 }
 
 export default async function AdminDashboardPage() {
-  const [stats, retailers, clickStats, newsletterStats, catalogHealth, activity, attention, seoProgress] = await Promise.all([
+  const [stats, retailers, clickStats, newsletterStats, catalogHealth, activity, attention, seoProgress, maintenanceEnabled] = await Promise.all([
     getSiteStats(),
     getAllRetailers(),
     getClickStats(),
@@ -469,6 +471,7 @@ export default async function AdminDashboardPage() {
     getActivityFeed(),
     getNeedsAttention(),
     getSeoProgress(),
+    getSetting<boolean>('maintenance_mode'),
   ])
 
   const clickDelta = delta(clickStats.last7d, clickStats.prev7d)
@@ -1197,6 +1200,11 @@ export default async function AdminDashboardPage() {
           </Link>
           <BulkFetchImagesButton />
         </div>
+      </div>
+
+      {/* Maintenance toggle */}
+      <div className="mt-8">
+        <MaintenanceToggle initialEnabled={!!maintenanceEnabled} />
       </div>
     </div>
   )

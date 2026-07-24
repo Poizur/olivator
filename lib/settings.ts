@@ -5,6 +5,8 @@
 import { supabaseAdmin } from './supabase'
 
 export type SettingKey =
+  | 'maintenance_mode'
+  | 'emails_paused'
   | 'notification_email'
   | 'discovery_daily_limit'
   | 'discovery_auto_publish'
@@ -34,6 +36,16 @@ interface SettingDef<T> {
 // Source of truth for all app settings + their defaults.
 // Adding a new setting → add here AND it shows up in admin UI automatically.
 export const SETTINGS: Record<SettingKey, SettingDef<unknown>> = {
+  maintenance_mode: {
+    key: 'maintenance_mode',
+    default: false,
+    description: 'Zapnout údržbový režim — web vrátí 503, emaily pozastaveny',
+  },
+  emails_paused: {
+    key: 'emails_paused',
+    default: false,
+    description: 'Pozastavit odesílání emailů (newsletter, drip, price-watch)',
+  },
   notification_email: {
     key: 'notification_email',
     default: 'italienasbavi@gmail.com',

@@ -44,8 +44,42 @@ function isMaintenanceExempt(pathname: string): boolean {
   return (
     pathname.startsWith('/admin') ||
     pathname === '/api/health' ||
-    pathname.startsWith('/api/admin/login')
+    pathname.startsWith('/api/admin')
   )
+}
+
+// Module-level cache — persists across requests on Railway's Node.js server.
+// Edge Runtime isolation note: on Railway (persistent server, not serverless),
+// module state IS shared between requests, so 30s TTL works as intended.
+let _maintenanceCache: { value: boolean; ts: number } | null = null
+
+async function isMaintenanceActive(): Promise<boolean> {
+  // env var override always wins (Railway-level emergency lockdown)
+  if (process.env.MAINTENANCE_MODE === 'true') return true
+
+  const now = Date.now()
+  if (_maintenanceCache && now - _maintenanceCache.ts < 30_000) {
+    return _maintenanceCache.value
+  }
+
+  try {
+    const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/app_settings?key=eq.maintenance_mode&select=value`
+    const res = await fetch(url, {
+      headers: {
+        apikey: process.env.SUPABASE_SERVICE_KEY ?? '',
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_KEY ?? ''}`,
+      },
+      cache: 'no-store',
+    })
+    const rows = (await res.json()) as Array<{ value: unknown }>
+    const value = rows?.[0]?.value === true
+    _maintenanceCache = { value, ts: now }
+    return value
+  } catch {
+    // If DB unreachable, default to NOT maintenance (fail open for availability)
+    _maintenanceCache = { value: false, ts: now }
+    return false
+  }
 }
 
 // Constant-time string compare (Web-Crypto compatible)
@@ -94,8 +128,8 @@ export async function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-pathname', pathname)
 
-  // Maintenance mode — MAINTENANCE_MODE=true → 503 pro veřejnost
-  if (process.env.MAINTENANCE_MODE === 'true' && !isMaintenanceExempt(pathname)) {
+  // Maintenance mode — env var NEBO DB flag → 503 pro veřejnost
+  if (!isMaintenanceExempt(pathname) && await isMaintenanceActive()) {
     return new NextResponse(MAINTENANCE_HTML, {
       status: 503,
       headers: {

@@ -12,6 +12,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase'
 import { sendTransactionalEmail } from '@/lib/newsletter-sender'
+import { getSetting } from '@/lib/settings'
 
 const SITE = 'https://olivator.cz'
 const DELAY_MS = 800
@@ -138,8 +139,9 @@ async function buildEmail(num: number, unsubUrl: string): Promise<{ subject: str
 }
 
 async function main() {
-  if (process.env.EMAILS_PAUSED === 'true') {
-    console.log('[cron:lead-magnet-drip] EMAILS_PAUSED=true — přeskakuji (údržba)')
+  const emailsPaused = process.env.EMAILS_PAUSED === 'true' || await getSetting<boolean>('emails_paused').catch(() => false)
+  if (emailsPaused) {
+    console.log('[cron:lead-magnet-drip] emails_paused — přeskakuji (údržba)')
     process.exit(0)
   }
 
