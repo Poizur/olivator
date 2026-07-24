@@ -224,7 +224,7 @@ export const getProducts = cache(async (): Promise<Product[]> => {
     .from('products')
     .select(PRODUCT_PUBLIC_COLUMNS)
     .eq('status', 'active')
-    .not('name', 'ilike', '%(poškozený obal)%')
+    .not('name', 'ilike', '%poškozený obal%')
     .not('name', 'ilike', '%outlet%')
     // nullsFirst: false → produkty bez score (flavored / data missing) jdou na konec
     // místo na začátek (Postgres default při DESC dává NULL první).
