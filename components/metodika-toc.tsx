@@ -11,6 +11,10 @@ const SECTIONS = [
   { id: 'data', label: 'Odkud bereme data' },
   { id: 'veda', label: 'Vědecké základy' },
   { id: 'nezmeri', label: 'Co Score neměří' },
+  { id: 'je-neni', label: 'Co máme a co nemáme' },
+  { id: 'nezavislost', label: 'Kontrola nezávislosti' },
+  { id: 'changelog', label: 'Changelog' },
+  { id: 'oprava', label: 'Oprava dat' },
   { id: 'faq', label: 'Časté otázky' },
 ]
 

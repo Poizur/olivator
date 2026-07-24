@@ -229,6 +229,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   })()
 
   // Transparent spec table — missing data shown as "— nezveřejněno" in italics
+  function sourceLabel(src: string | null | undefined): { text: string; color: string } | null {
+    if (!src || src === 'unknown') return { text: 'zdroj ověřujeme', color: '#aeaeb2' }
+    if (src === 'label' || src === 'tech_sheet') return { text: 'dle výrobce', color: '#2d6a4f' }
+    if (src === 'retailer_page') return { text: 'dle prodejce', color: '#c4711a' }
+    return null
+  }
   const specs = [
     { key: 'Typ', value: typeLabel(product.type), missing: false },
     {
@@ -242,11 +248,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       key: 'Kyselost',
       value: product.acidity != null ? `${product.acidity} %` : '— data chybí',
       missing: product.acidity == null,
+      source: product.acidity != null ? sourceLabel(product.aciditySource) : null,
     },
     {
       key: 'Polyfenoly',
       value: product.polyphenols != null ? `${product.polyphenols} mg/kg` : '— data chybí',
       missing: product.polyphenols == null,
+      source: product.polyphenols != null ? sourceLabel(product.polyphenolsSource) : null,
     },
     {
       key: 'Oleokantal',
@@ -603,8 +611,19 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                     <span className="text-[10px]">↗</span>
                   </Link>
                 ) : (
-                  <span className={`text-[13px] ${s.missing ? 'text-text3 italic' : 'font-medium text-text'}`}>
-                    {s.value}
+                  <span className="text-right">
+                    <span className={`text-[13px] ${s.missing ? 'text-text3 italic' : 'font-medium text-text'}`}>
+                      {s.value}
+                    </span>
+                    {'source' in s && s.source && (
+                      <span
+                        className="block text-[10px] mt-0.5"
+                        style={{ color: s.source.color }}
+                        title="Zdroj dat — klikni na /metodika pro vysvětlení"
+                      >
+                        {s.source.text}
+                      </span>
+                    )}
                   </span>
                 )}
               </div>

@@ -181,7 +181,7 @@ const COLOR_DOT: Record<string, string> = {
 }
 
 async function getPageData() {
-  const [topRes, retailerRes] = await Promise.all([
+  const [topRes, retailerRes, allProductsRes, affiliateOffersRes] = await Promise.all([
     supabaseAdmin
       .from('products')
       .select('slug, name, olivator_score')
@@ -194,10 +194,35 @@ async function getPageData() {
       .from('retailers')
       .select('*', { count: 'exact', head: true })
       .eq('is_active', true),
+    supabaseAdmin
+      .from('products')
+      .select('id, olivator_score')
+      .eq('status', 'active')
+      .not('olivator_score', 'is', null)
+      .gt('olivator_score', 0),
+    supabaseAdmin
+      .from('product_offers')
+      .select('product_id')
+      .not('affiliate_url', 'is', null),
   ])
+
+  const productsWithScore = (allProductsRes.data ?? []) as { id: string; olivator_score: number }[]
+  const affiliateIds = new Set((affiliateOffersRes.data ?? []).map((o: { product_id: string }) => o.product_id))
+  const withAffiliate = productsWithScore.filter(p => affiliateIds.has(p.id))
+  const withoutAffiliate = productsWithScore.filter(p => !affiliateIds.has(p.id))
+  const avg = (arr: { olivator_score: number }[]) =>
+    arr.length ? Math.round(arr.reduce((s, p) => s + p.olivator_score, 0) / arr.length) : 0
+
   return {
     topProducts: (topRes.data ?? []) as { slug: string; name: string; olivator_score: number }[],
     retailerCount: retailerRes.count ?? 33,
+    independenceCheck: {
+      affiliateAvg: avg(withAffiliate),
+      affiliateCount: withAffiliate.length,
+      noAffiliateAvg: avg(withoutAffiliate),
+      noAffiliateCount: withoutAffiliate.length,
+      checkedAt: new Date().toISOString().slice(0, 10),
+    },
   }
 }
 
@@ -246,7 +271,7 @@ const FAQ_ITEMS = [
 ]
 
 export default async function MetodikaPage() {
-  const { topProducts, retailerCount } = await getPageData()
+  const { topProducts, retailerCount, independenceCheck } = await getPageData()
   const dateModified = new Date().toISOString().slice(0, 10)
 
   const schemaOrg = {
@@ -690,6 +715,183 @@ export default async function MetodikaPage() {
                     <p className="text-[13px] text-text2 leading-relaxed">{item.body}</p>
                   </div>
                 ))}
+              </div>
+            </section>
+
+            {/* ── SEKCE 7b: JE / NENÍ blok ────────────────────── */}
+            <section id="je-neni" className="scroll-mt-20 mb-14">
+              <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-2">
+                Co máme a co nemáme
+              </h2>
+              <p className="text-[14px] text-text2 font-light mb-5">
+                Olivator zobrazuje výhradně ověřitelná data. Kde data chybí, říkáme to přímo.
+              </p>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="rounded-2xl border border-olive/30 bg-olive-bg/40 p-5">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-olive mb-4">
+                    ✓ Data která máme
+                  </div>
+                  <ul className="space-y-2.5">
+                    {[
+                      { label: 'Kyselost', note: 'z etikety nebo tech listu výrobce' },
+                      { label: 'DOP / PGI certifikace', note: 'ověřeno v EU eAmbrosia registru' },
+                      { label: 'BIO certifikace', note: 'ověřeno přes číslo certifikačního orgánu' },
+                      { label: 'NYIOOC ocenění', note: 'z veřejné databáze bestoliveoils.com' },
+                      { label: 'Ceny u prodejců', note: `scraper ${retailerCount} prodejců, XML nebo Playwright` },
+                      { label: 'Olivator Score', note: 'vypočítaný z výše uvedených složek' },
+                    ].map(item => (
+                      <li key={item.label} className="flex items-start gap-2.5">
+                        <span className="text-olive text-[14px] mt-0.5 shrink-0">✓</span>
+                        <div>
+                          <span className="text-[13px] font-medium text-text">{item.label}</span>
+                          <span className="text-[12px] text-text3 ml-1.5">{item.note}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="rounded-2xl border border-off2 bg-off p-5">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-text3 mb-4">
+                    ✗ Data která nemáme (a říkáme to)
+                  </div>
+                  <ul className="space-y-2.5">
+                    {[
+                      { label: 'Polyfenoly bez dokladu', note: 'zobrazujeme NULL, ne odhad' },
+                      { label: 'Rok sklizně', note: 'výrobci ho zřídka uvádí na etiketě' },
+                      { label: 'Senzorické hodnocení', note: 'nezávislý panel pro ČR neexistuje' },
+                      { label: 'Etika producenta', note: 'pouze kde je Fairtrade/Demeter certifikace' },
+                      { label: 'Lab report kyselosti', note: 'u neanotovaných produktů etiketa = primární zdroj' },
+                      { label: 'Fyzická dostupnost', note: 'zásoby u prodejce v reálném čase' },
+                    ].map(item => (
+                      <li key={item.label} className="flex items-start gap-2.5">
+                        <span className="text-text3 text-[14px] mt-0.5 shrink-0">✗</span>
+                        <div>
+                          <span className="text-[13px] font-medium text-text">{item.label}</span>
+                          <span className="text-[12px] text-text3 ml-1.5">{item.note}</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            {/* ── SEKCE 7c: Kontrola nezávislosti ─────────────── */}
+            <section id="nezavislost" className="scroll-mt-20 mb-14">
+              <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-2">
+                Kontrola nezávislosti
+              </h2>
+              <p className="text-[14px] text-text2 font-light mb-5">
+                Affiliate partnerství nesmí ovlivňovat Score. Každý měsíc porovnáváme průměrné
+                Score produktů s affiliate URL a bez — výsledek je živý z databáze.
+              </p>
+              <div className="bg-off rounded-2xl p-5 mb-4">
+                <div className="grid sm:grid-cols-3 gap-4 mb-4">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-olive mb-1">{independenceCheck.affiliateAvg}</div>
+                    <div className="text-[12px] text-text3">průměrné Score</div>
+                    <div className="text-[11px] font-medium text-text mt-1">s affiliate URL</div>
+                    <div className="text-[10px] text-text3">({independenceCheck.affiliateCount} produktů)</div>
+                  </div>
+                  <div className="text-center flex items-center justify-center">
+                    <div>
+                      <div className="text-2xl font-bold mb-1" style={{
+                        color: Math.abs(independenceCheck.affiliateAvg - independenceCheck.noAffiliateAvg) <= 5
+                          ? '#2d6a4f' : '#c4711a'
+                      }}>
+                        {independenceCheck.affiliateAvg === independenceCheck.noAffiliateAvg
+                          ? '= stejné'
+                          : `${independenceCheck.affiliateAvg > independenceCheck.noAffiliateAvg ? '+' : ''}${independenceCheck.affiliateAvg - independenceCheck.noAffiliateAvg}`
+                        }
+                      </div>
+                      <div className="text-[11px] text-text3">rozdíl</div>
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-text mb-1">{independenceCheck.noAffiliateAvg}</div>
+                    <div className="text-[12px] text-text3">průměrné Score</div>
+                    <div className="text-[11px] font-medium text-text mt-1">bez affiliate URL</div>
+                    <div className="text-[10px] text-text3">({independenceCheck.noAffiliateCount} produktů)</div>
+                  </div>
+                </div>
+                <div className="text-center text-[12px] text-text3 border-t border-off2 pt-3">
+                  {Math.abs(independenceCheck.affiliateAvg - independenceCheck.noAffiliateAvg) <= 5
+                    ? '✓ Rozdíl do 5 bodů — affiliate status nekoreluje se Score přiřazením'
+                    : `⚠ Rozdíl ${Math.abs(independenceCheck.affiliateAvg - independenceCheck.noAffiliateAvg)} bodů — prověřujeme příčinu`
+                  }
+                  {' · '}Ověřeno: {independenceCheck.checkedAt}
+                </div>
+              </div>
+              <p className="text-[13px] text-text3 leading-relaxed">
+                Score vychází výhradně z kyselosti, certifikací, polyfenolů a ceny — affiliate URL
+                do vzorce nevstupuje. Výrobci a prodejci nemohou zaplatit za vyšší Score.
+              </p>
+            </section>
+
+            {/* ── SEKCE 7d: Changelog metodiky ────────────────── */}
+            <section id="changelog" className="scroll-mt-20 mb-14">
+              <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-2">
+                Changelog metodiky
+              </h2>
+              <p className="text-[14px] text-text2 font-light mb-5">
+                Transparentní záznam změn — kdy a proč jsme upravili způsob výpočtu.
+              </p>
+              <div className="space-y-3">
+                {[
+                  {
+                    date: '2026-07-24',
+                    version: 'v1.3',
+                    change: 'Zdroj-tagy na produktové kartě — kyselost a polyfenoly nově zobrazují odkud data pochází (dle výrobce / dle prodejce / zdroj ověřujeme).',
+                  },
+                  {
+                    date: '2026-06-15',
+                    version: 'v1.2',
+                    change: 'Funkční bonus pro oleje s polyfenoly nad 1 500 mg/kg — +1 bod za každých 200 mg/kg nad tuto hranici, max +10 bodů.',
+                  },
+                  {
+                    date: '2026-05-28',
+                    version: 'v1.1',
+                    change: 'Spec-guard: polyfenoly bez doložených dat nastaveny na NULL místo interpolovaného odhadu. Ovlivněno ~30 % katalogu — Score rekalkulovány.',
+                  },
+                  {
+                    date: '2026-04-15',
+                    version: 'v1.0',
+                    change: 'Spuštění Olivator Score — vážený průměr 4 složek: kyselost (35 %), certifikace (25 %), polyfenoly (25 %), hodnota (15 %).',
+                  },
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-4 border-l-2 border-olive/20 pl-4">
+                    <div className="shrink-0 w-20">
+                      <div className="text-[10px] text-text3">{item.date}</div>
+                      <div className="text-[11px] font-semibold text-olive">{item.version}</div>
+                    </div>
+                    <p className="text-[13px] text-text2 leading-relaxed">{item.change}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* ── SEKCE 7e: Opt-out pro výrobce ───────────────── */}
+            <section id="oprava" className="scroll-mt-20 mb-14">
+              <div className="bg-olive-bg/50 border border-olive/20 rounded-2xl p-6">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-olive mb-3">
+                  Jste výrobce nebo prodejce?
+                </div>
+                <h3 className="text-[18px] font-medium text-text mb-2 leading-snug">
+                  Opravíme chybná data do 48 hodin
+                </h3>
+                <p className="text-[14px] text-text2 leading-relaxed mb-4">
+                  Máte technický list, lab report nebo novější analytická data? Pošlete odkaz nebo PDF —
+                  data ověříme a aktualizujeme. Bez poplatků.
+                </p>
+                <div className="flex flex-wrap gap-3 items-center">
+                  <a
+                    href="mailto:info@makyoutdoors.com?subject=Oprava dat — Olivator&body=Produkt: %0AChybný údaj: %0ASpravný údaj / zdroj: "
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-olive text-white text-[13px] font-medium rounded-full hover:bg-olive2 transition-colors"
+                  >
+                    Napsat e-mail →
+                  </a>
+                  <span className="text-[12px] text-text3">info@makyoutdoors.com · odpovídáme do 48 h</span>
+                </div>
               </div>
             </section>
 

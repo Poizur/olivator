@@ -44,6 +44,9 @@ interface ProductRow {
   source_url: string | null
   raw_description: string | null
   brand_slug: string | null
+  acidity_source: string | null
+  polyphenols_source: string | null
+  source_note: string | null
 }
 
 function mapProduct(row: ProductRow): Product {
@@ -100,6 +103,9 @@ function mapProduct(row: ProductRow): Product {
       ? (row.extracted_facts as Product['extractedFacts'])
       : [],
     brandSlug: row.brand_slug ?? null,
+    aciditySource: row.acidity_source ?? 'unknown',
+    polyphenolsSource: row.polyphenols_source ?? 'unknown',
+    sourceNote: row.source_note ?? null,
   }
 }
 
@@ -147,7 +153,8 @@ const PRODUCT_PUBLIC_COLUMNS =
   'harvest_year, processing, flavor_profile, certifications, use_cases, ' +
   'volume_ml, packaging, olivator_score, score_breakdown, ' +
   'description_short, description_long, meta_title, meta_description, ' +
-  'status, image_url, image_source, source_url, brand_slug'
+  'status, image_url, image_source, source_url, brand_slug, ' +
+  'acidity_source, polyphenols_source, source_note'
 
 // Subset pro listing karty (homepage, srovnavac, sidebar) — bez description_long
 // (zobrazuje se pouze na detail stránce). Ušetří ~10-20 KB / produkt × 71.

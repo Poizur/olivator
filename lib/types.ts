@@ -44,6 +44,12 @@ export interface Product {
   imageSource?: string | null
   extractedFacts?: ExtractedFact[]
   brandSlug?: string | null
+  /** Odkud pochází hodnota kyselosti: 'label'|'tech_sheet'|'retailer_page'|'unknown' */
+  aciditySource?: string | null
+  /** Odkud pochází hodnota polyfenolů: 'label'|'tech_sheet'|'retailer_page'|'unknown' */
+  polyphenolsSource?: string | null
+  /** Volný text — URL tech listu, jméno dokumentu */
+  sourceNote?: string | null
 }
 
 export interface FlavorProfile {
