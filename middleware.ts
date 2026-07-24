@@ -129,7 +129,12 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set('x-pathname', pathname)
 
   // Maintenance mode — env var NEBO DB flag → 503 pro veřejnost
-  if (!isMaintenanceExempt(pathname) && await isMaintenanceActive()) {
+  // Výjimka: přihlášený admin vidí web i při údržbě (preview úprav)
+  const adminCookie = request.cookies.get(COOKIE_NAME)
+  const secret = process.env.ADMIN_SECRET_KEY
+  const isAdminLoggedIn = secret ? await isValidSession(adminCookie?.value, secret) : false
+
+  if (!isMaintenanceExempt(pathname) && !isAdminLoggedIn && await isMaintenanceActive()) {
     return new NextResponse(MAINTENANCE_HTML, {
       status: 503,
       headers: {
