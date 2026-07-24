@@ -8,6 +8,7 @@ import { ProductImage } from './product-image'
 import { ScoreBadge } from './score-badge'
 import { formatPrice } from '@/lib/utils'
 import type { Product, ProductOffer } from '@/lib/types'
+import { ClaimTooltip } from '@/components/ui/claim-tooltip'
 
 type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
 
@@ -240,7 +241,10 @@ export function SommelierHero({
                   <div className="flex items-center gap-3 text-[12px] text-white/80">
                     <span><strong className="text-white font-semibold">{totalProducts}</strong> olejů</span>
                     <span className="text-white/40">·</span>
-                    <span><strong className="text-white font-semibold">{activeRetailers}</strong> prodejců</span>
+                    <span className="inline-flex items-center gap-0.5">
+                      <strong className="text-white font-semibold">{activeRetailers}</strong> prodejců
+                      <ClaimTooltip tip="Prodejci, u nichž pravidelně sledujeme ceny a dostupnost olivových olejů." />
+                    </span>
                     <span className="text-white/40">·</span>
                     <span><strong className="text-white font-semibold">{totalBrands}</strong> značek</span>
                   </div>

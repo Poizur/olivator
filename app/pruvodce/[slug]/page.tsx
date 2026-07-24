@@ -336,7 +336,7 @@ export default async function ArticleDetailPage({
           {/* Inline CTA — důvěryhodnost */}
           <div className="bg-off/60 border border-off2 rounded-[var(--radius-card)] p-5 mt-10">
             <p className="text-[13px] text-text2 leading-relaxed">
-              <strong className="text-text">Olivátor</strong> je největší srovnávač olivových
+              <strong className="text-text">Olivátor</strong> je jediný datový srovnávač olivových
               olejů v ČR. Sledujeme reálné ceny u {siteStats.activeRetailers} prodejců a hodnotíme oleje podle
               objektivního Olivator Score.{' '}
               <Link href="/metodika" className="text-olive border-b border-olive-border">

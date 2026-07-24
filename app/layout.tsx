@@ -9,7 +9,7 @@ import './globals.css'
 export const metadata: Metadata = {
   metadataBase: new URL('https://olivator.cz'),
   title: {
-    default: 'Olivator — Největší srovnávač olivových olejů v ČR',
+    default: 'Olivator — Jediný datový srovnávač olivových olejů v ČR',
     template: '%s | Olivator',
   },
   description: 'Objektivní Olivator Score, aktuální ceny ze 18 prodejců a expertní průvodce olivovými oleji.',
@@ -18,12 +18,12 @@ export const metadata: Metadata = {
     locale: 'cs_CZ',
     url: 'https://olivator.cz',
     siteName: 'Olivator',
-    title: 'Olivator — Největší srovnávač olivových olejů v ČR',
+    title: 'Olivator — Jediný datový srovnávač olivových olejů v ČR',
     description: 'Objektivní Olivator Score, aktuální ceny ze 18 prodejců a expertní průvodce olivovými oleji.',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Olivator — Největší srovnávač olivových olejů v ČR',
+    title: 'Olivator — Jediný datový srovnávač olivových olejů v ČR',
     description: 'Objektivní Olivator Score, aktuální ceny ze 18 prodejců a expertní průvodce olivovými oleji.',
   },
   robots: {

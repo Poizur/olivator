@@ -18,6 +18,7 @@ import { DealsNewsSection } from '@/components/home/deals-news-section'
 import { BestsellersSection } from '@/components/home/bestsellers-section'
 import { FeaturedBrandsSection } from '@/components/home/featured-brands-section'
 import { TopProductCard } from '@/components/home/top-product-card'
+import { ClaimTooltip } from '@/components/ui/claim-tooltip'
 import { FlavorSelector } from '@/components/flavor-selector'
 import { LeadMagnetCta } from '@/components/lead-magnet-cta'
 
@@ -102,15 +103,18 @@ export default async function Home() {
       <div className="bg-white border-b border-off2 px-6 md:px-10 py-5">
         <div className="max-w-[1280px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
-            { icon: '🔬', title: 'Lab data', body: 'Polyfenoly, kyselost, peroxidy' },
-            { icon: '🚫', title: 'Žádná placená umístění', body: 'Provize z prodejů — transparentně' },
-            { icon: '📊', title: 'Nezávislé Score', body: '4 čísla, 100 bodů' },
-            { icon: '🔄', title: 'Aktualizace 2× denně', body: 'Ceny + dostupnost' },
+            { icon: '🔬', title: 'Lab data', body: 'Polyfenoly, kyselost, peroxidy', tip: 'Data bereme z technických listů a etikety výrobce. Neprovádíme vlastní laboratorní testy.' },
+            { icon: '🚫', title: 'Žádná placená umístění', body: 'Provize z prodejů — transparentně', tip: undefined },
+            { icon: '📊', title: 'Nezávislé Score', body: '4 čísla, 100 bodů', tip: 'Score počítáme algoritmicky z deklarovaných dat (kyselost, polyfenoly, certifikace, cena). Nehodnotíme chuť ani neprovádíme vlastní degustaci.' },
+            { icon: '🔄', title: 'Aktualizace 2× denně', body: 'Ceny + dostupnost', tip: 'Scraper prochází nabídky prodejců přibližně 2× denně. Skutečná dostupnost u prodejce se může krátce lišit.' },
           ].map((item) => (
             <div key={item.title} className="flex items-center gap-3">
               <span className="text-2xl shrink-0">{item.icon}</span>
               <div>
-                <div className="text-[14px] font-medium text-text leading-tight">{item.title}</div>
+                <div className="text-[14px] font-medium text-text leading-tight flex items-center">
+                  {item.title}
+                  {item.tip && <ClaimTooltip tip={item.tip} />}
+                </div>
                 <div className="text-[12px] text-text2 leading-tight">{item.body}</div>
               </div>
             </div>

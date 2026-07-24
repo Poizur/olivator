@@ -3,7 +3,7 @@ import { ImageResponse } from 'next/og'
 export const runtime = 'edge'
 export const contentType = 'image/png'
 export const size = { width: 1200, height: 630 }
-export const alt = 'olivátor — největší srovnávač olivových olejů v ČR'
+export const alt = 'olivátor — jediný datový srovnávač olivových olejů v ČR'
 
 export default async function OGImage() {
   // Načteme logo jako data URL — ImageResponse nepodporuje relativní /public cesty

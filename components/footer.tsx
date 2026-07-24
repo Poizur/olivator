@@ -38,7 +38,7 @@ export function Footer() {
               olivátor
             </div>
             <p className="text-[12px] text-white/55 leading-relaxed max-w-[240px]">
-              Největší srovnávač olivových olejů v ČR. Bez reklam, bez sponzorů — jen data, transparentní metodika a 4 tvrdá čísla.
+              Jediný datový srovnávač olivových olejů v ČR. Bez reklam, bez sponzorů — jen data, transparentní metodika a 4 tvrdá čísla.
             </p>
           </div>
 
@@ -101,7 +101,7 @@ export function Footer() {
 
         {/* ── Copyright ── */}
         <div className="py-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 text-[11px] text-white/35">
-          <div>© {new Date().getFullYear()} Olivátor — Největší srovnávač olivových olejů v ČR</div>
+          <div>© {new Date().getFullYear()} Olivátor — Jediný datový srovnávač olivových olejů v ČR</div>
           <div className="text-right">
             <span>Provozovatel: Maky Outdoors s.r.o., IČO 09520074, Brno</span>
             <span className="mx-2 text-white/20">·</span>

@@ -95,7 +95,7 @@ export function NewsletterLayout({
                         style={{ width: '140px', height: 'auto', display: 'block' }}
                       />
                       <Text className="text-text3 text-[12px] m-0 mt-1 leading-tight">
-                        Největší srovnávač olivových olejů v ČR
+                        Jediný datový srovnávač olivových olejů v ČR
                       </Text>
                     </td>
                     <td valign="top" align="right" style={{ whiteSpace: 'nowrap' }}>

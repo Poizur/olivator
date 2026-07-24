@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Flame } from 'lucide-react'
 import { TopProductCard } from './top-product-card'
+import { ClaimTooltip } from '@/components/ui/claim-tooltip'
 import type { Product, ProductOffer } from '@/lib/types'
 
 type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
@@ -22,6 +23,7 @@ export function BestsellersSection({ products, totalCount }: Props) {
             <div className="text-[12px] font-medium tracking-[0.05em] uppercase text-terra mb-[6px] inline-flex items-center gap-1.5">
               <Flame size={11} strokeWidth={2.25} className="text-terra" />
               Bestsellery
+              <ClaimTooltip tip="Řazeno podle prokliků na nabídky prodejců z Olivátoru za 30 dní. Skutečné prodeje e-shopů neznáme." />
             </div>
             <h2 className="font-[family-name:var(--font-display)] text-[30px] font-medium text-text leading-[1.1]">
               Co Češi <em className="italic text-olive-light">reálně kupují</em>.
