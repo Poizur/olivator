@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react'
 interface PricePoint {
   date: string   // YYYY-MM-DD
   price: number
+  synthetic?: true  // today extension — not a real DB record
 }
 
 interface Props {
@@ -19,19 +20,16 @@ function formatCzk(n: number) {
   return n.toLocaleString('cs-CZ', { style: 'currency', currency: 'CZK', maximumFractionDigits: 0 })
 }
 
-/** "15. 3." */
 function fmtShort(dateStr: string) {
   const d = new Date(dateStr)
   return `${d.getDate()}. ${d.getMonth() + 1}.`
 }
 
-/** "15. 3. 2025" */
 function fmtLong(dateStr: string) {
   const d = new Date(dateStr)
   return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`
 }
 
-/** Vrátí max 4 rovnoměrně rozmístěné indexy (vždy první + poslední) */
 function pickLabelIndices(n: number): number[] {
   if (n <= 1) return [0]
   if (n <= 4) return Array.from({ length: n }, (_, i) => i)
@@ -44,12 +42,22 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
   const [range, setRange] = useState<RangeOption>(() => (data.length < 30 ? 0 : 30))
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
 
-  const filtered = useMemo(() => {
-    if (range === 0) return data
-    return data.slice(-range)
-  }, [data, range])
+  // Extend last known price to today if currentPrice exists and data is stale
+  const dataWithToday = useMemo(() => {
+    if (!currentPrice || data.length === 0) return data
+    const today = new Date().toISOString().slice(0, 10)
+    const last = data[data.length - 1]
+    // Only add synthetic point if last record is older than 1 day
+    if (last.date >= today) return data
+    return [...data, { date: today, price: currentPrice, synthetic: true }]
+  }, [data, currentPrice])
 
-  if (data.length < 2) {
+  const filtered = useMemo(() => {
+    if (range === 0) return dataWithToday
+    return dataWithToday.slice(-range)
+  }, [dataWithToday, range])
+
+  if (dataWithToday.length < 2) {
     return (
       <div className="mt-4 pt-4 border-t border-off">
         <p className="text-[11px] text-text3 italic text-center py-3">
@@ -74,19 +82,33 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
     PAD.left + (filtered.length === 1 ? 0 : (i / (filtered.length - 1)) * (W - PAD.left - PAD.right))
   )
   const ys = filtered.map((d) => PAD.top + ((maxP - d.price) / priceRange) * (H - PAD.top - PAD.bottom))
-  const polyline = xs.map((x, i) => `${x},${ys[i]}`).join(' ')
+
+  // Find index where synthetic data starts (for dashed extension line)
+  const synthStart = filtered.findIndex((d) => d.synthetic)
+
+  // Real segment polyline (solid)
+  const realEnd = synthStart >= 0 ? synthStart : filtered.length - 1
+  const polylineReal = xs.slice(0, realEnd + 1).map((x, i) => `${x},${ys[i]}`).join(' ')
+
+  // Extension segment (dashed) — from last real point to synthetic today
+  const polylineExt = synthStart >= 0
+    ? `${xs[synthStart - 1]},${ys[synthStart - 1]} ${xs[synthStart]},${ys[synthStart]}`
+    : null
+
   const fillPts = [
     `${xs[0]},${H}`,
-    ...xs.map((x, i) => `${x},${ys[i]}`),
-    `${xs[xs.length - 1]},${H}`,
+    ...xs.slice(0, realEnd + 1).map((x, i) => `${x},${ys[i]}`),
+    `${xs[realEnd]},${H}`,
   ].join(' ')
 
   const lastX = xs[xs.length - 1]
   const lastY = ys[ys.length - 1]
 
-  const firstPrice = filtered[0].price
-  const lastPrice = filtered[filtered.length - 1].price
-  const diff = lastPrice - firstPrice
+  // Trend uses only real data (exclude synthetic today)
+  const realFiltered = filtered.filter((d) => !d.synthetic)
+  const firstPrice = realFiltered[0]?.price ?? filtered[0].price
+  const lastRealPrice = realFiltered[realFiltered.length - 1]?.price ?? filtered[filtered.length - 1].price
+  const diff = lastRealPrice - firstPrice
   const trend = diff < -0.5 ? 'down' : diff > 0.5 ? 'up' : 'flat'
 
   const isAtMin = currentPrice !== null && currentPrice <= minP + 0.5
@@ -112,7 +134,6 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
 
   const labelIndices = pickLabelIndices(filtered.length)
 
-  // Aktuálně hoverovaný bod
   const hoverPt = hoverIdx !== null ? filtered[hoverIdx] : null
   const hoverX = hoverIdx !== null ? xs[hoverIdx] : null
   const hoverY = hoverIdx !== null ? ys[hoverIdx] : null
@@ -129,21 +150,10 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
     setHoverIdx(closest)
   }
 
-  // Tooltip: zabrání přetečení na krajích
-  function tooltipLeft(xPct: number) {
-    if (xPct < 15) return '0%'
-    if (xPct > 85) return 'auto'
-    return `${xPct}%`
-  }
-  function tooltipRight(xPct: number) {
-    if (xPct > 85) return '0%'
-    return 'auto'
-  }
-  function tooltipTransform(xPct: number) {
-    if (xPct < 15) return 'none'
-    if (xPct > 85) return 'none'
-    return 'translateX(-50%)'
-  }
+  // Tooltip x: percentage of container width, clamped to prevent overflow.
+  // Half-width estimate: 55px (largest tooltip ~"1 490 Kč\n24. 7. 2026").
+  // clamp(55px, xPct%, calc(100% - 55px)) keeps the center inside the container.
+  const xPct = hoverX !== null ? (hoverX / W) * 100 : 0
 
   return (
     <div className="mt-4 pt-4 border-t border-off">
@@ -185,27 +195,26 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
         </div>
       )}
 
-      {/* Chart wrapper — relative pro tooltip overlay */}
+      {/* Chart wrapper */}
       <div className="relative">
-        {/* Hover tooltip */}
-        {hoverPt && hoverX !== null && (() => {
-          const xPct = (hoverX / W) * 100
-          return (
-            <div
-              className="absolute -top-1 pointer-events-none z-10"
-              style={{
-                left: tooltipLeft(xPct),
-                right: tooltipRight(xPct),
-                transform: tooltipTransform(xPct),
-              }}
-            >
-              <div className="bg-text text-white text-[11px] rounded-lg px-2.5 py-1.5 shadow-lg whitespace-nowrap">
-                <div className="font-semibold tabular-nums">{formatCzk(hoverPt.price)}</div>
-                <div className="text-white/65 text-[10px]">{fmtLong(hoverPt.date)}</div>
+        {/* Hover tooltip — anchored to data point, clamped to prevent edge overflow */}
+        {hoverPt && hoverX !== null && (
+          <div
+            className="absolute -top-1 pointer-events-none z-10"
+            style={{
+              left: `clamp(55px, ${xPct.toFixed(2)}%, calc(100% - 55px))`,
+              transform: 'translateX(-50%)',
+            }}
+          >
+            <div className="bg-text text-white text-[11px] rounded-lg px-2.5 py-1.5 shadow-lg whitespace-nowrap">
+              <div className="font-semibold tabular-nums">{formatCzk(hoverPt.price)}</div>
+              <div className="text-white/65 text-[10px]">
+                {fmtLong(hoverPt.date)}
+                {hoverPt.synthetic && <span className="ml-1 opacity-60">aktuální</span>}
               </div>
             </div>
-          )
-        })()}
+          </div>
+        )}
 
         {/* SVG chart */}
         <svg
@@ -223,17 +232,35 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
             </linearGradient>
           </defs>
 
+          {/* Fill area under real data */}
           <polygon points={fillPts} fill="url(#sparkGrad)" />
-          <polyline
-            points={polyline}
-            fill="none"
-            stroke={lineColor}
-            strokeWidth="1.8"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
 
-          {/* Hover: svislá čára + zvýrazněný bod */}
+          {/* Solid line — real data */}
+          {realEnd >= 1 && (
+            <polyline
+              points={polylineReal}
+              fill="none"
+              stroke={lineColor}
+              strokeWidth="1.8"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          )}
+
+          {/* Dashed extension to today */}
+          {polylineExt && (
+            <polyline
+              points={polylineExt}
+              fill="none"
+              stroke={lineColor}
+              strokeWidth="1.4"
+              strokeDasharray="4 3"
+              strokeOpacity="0.5"
+              strokeLinecap="round"
+            />
+          )}
+
+          {/* Hover: vertical guide + highlighted point */}
           {hoverX !== null && hoverY !== null && (
             <>
               <line
@@ -241,33 +268,45 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
                 x2={hoverX} y2={H - PAD.bottom}
                 stroke={lineColor} strokeWidth="0.8" strokeDasharray="3 2" strokeOpacity="0.5"
               />
-              <circle cx={hoverX} cy={hoverY} r="4" fill={lineColor} stroke="white" strokeWidth="1.5" />
+              <circle
+                cx={hoverX} cy={hoverY} r="4"
+                fill={hoverPt?.synthetic ? 'white' : lineColor}
+                stroke={lineColor} strokeWidth="1.5"
+              />
             </>
           )}
 
-          {/* Výchozí koncový bod (když nehoverujeme) */}
+          {/* Default endpoint when not hovering */}
           {hoverIdx === null && (
-            <circle cx={lastX} cy={lastY} r="3.5" fill={lineColor} />
+            <circle
+              cx={lastX} cy={lastY} r="3.5"
+              fill={filtered[filtered.length - 1]?.synthetic ? 'white' : lineColor}
+              stroke={lineColor} strokeWidth="1.5"
+            />
           )}
         </svg>
 
-        {/* X-osa: datumové popisky */}
+        {/* X-axis date labels */}
         <div className="relative h-4 mt-0.5">
           {labelIndices.map((idx) => {
-            const xPct = filtered.length === 1 ? 50 : (xs[idx] / W) * 100
+            const xPctLabel = filtered.length === 1 ? 50 : (xs[idx] / W) * 100
             const isFirst = idx === 0
             const isLast = idx === filtered.length - 1
+            const isSynth = filtered[idx]?.synthetic
             return (
               <span
                 key={idx}
-                className="absolute text-[9px] text-text3 leading-none whitespace-nowrap"
+                className={`absolute text-[9px] leading-none whitespace-nowrap ${
+                  isSynth ? 'text-text3/50 italic' : 'text-text3'
+                }`}
                 style={{
-                  left: isFirst ? 0 : isLast ? 'auto' : `${xPct}%`,
+                  left: isFirst ? 0 : isLast ? 'auto' : `${xPctLabel}%`,
                   right: isLast ? 0 : 'auto',
                   transform: !isFirst && !isLast ? 'translateX(-50%)' : 'none',
                 }}
               >
                 {fmtShort(filtered[idx].date)}
+                {isSynth && ' •'}
               </span>
             )
           })}
