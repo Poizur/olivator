@@ -310,6 +310,9 @@ export const getProductsWithOffers = cache(async (): Promise<Array<Product & { c
   for (const row of (data ?? []) as Record<string, unknown>[]) {
     const pid = row.product_id as string
     if (!productIdSet.has(pid)) continue
+    // Filtrujeme nabídky od quarantinovaných retailerů (is_active=false)
+    const retailerRow = row.retailer as Record<string, unknown> | null
+    if (retailerRow && (retailerRow.is_active as boolean) === false) continue
     const offer: ProductOffer = {
       id: row.id as string,
       productId: pid,
@@ -360,18 +363,23 @@ export async function getOffersForProduct(productId: string): Promise<ProductOff
     .eq('product_id', productId)
     .order('price', { ascending: true })
   if (error) throw error
-  const mapped = (data ?? []).map((row: Record<string, unknown>) => ({
-    id: row.id as string,
-    productId: row.product_id as string,
-    retailerId: row.retailer_id as string,
-    retailer: mapRetailer(row.retailer as Record<string, unknown>),
-    price: Number(row.price),
-    currency: (row.currency as string) ?? 'CZK',
-    inStock: (row.in_stock as boolean) ?? true,
-    productUrl: (row.product_url as string) ?? '',
-    affiliateUrl: (row.affiliate_url as string) ?? '',
-    commissionPct: Number(row.commission_pct ?? 0),
-  }))
+  const mapped = (data ?? [])
+    .filter((row: Record<string, unknown>) => {
+      const r = row.retailer as Record<string, unknown> | null
+      return !r || (r.is_active as boolean) !== false
+    })
+    .map((row: Record<string, unknown>) => ({
+      id: row.id as string,
+      productId: row.product_id as string,
+      retailerId: row.retailer_id as string,
+      retailer: mapRetailer(row.retailer as Record<string, unknown>),
+      price: Number(row.price),
+      currency: (row.currency as string) ?? 'CZK',
+      inStock: (row.in_stock as boolean) ?? true,
+      productUrl: (row.product_url as string) ?? '',
+      affiliateUrl: (row.affiliate_url as string) ?? '',
+      commissionPct: Number(row.commission_pct ?? 0),
+    }))
   return sortOffersAffiliate(mapped)
 }
 
