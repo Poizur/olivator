@@ -21,7 +21,7 @@ function bracketStyle(score: number): { background: string } {
 }
 
 const DISCLAIMER_TOOLTIP =
-  'Vypočteno z veřejně deklarovaných parametrů — nejde o laboratorní test ani degustaci. Klikni pro metodiku.'
+  'Vypočteno z veřejně deklarovaných parametrů — nejde o laboratorní test ani degustaci. Náš redakční pohled, ne certifikace. Klikni pro metodiku.'
 
 export function ScoreBadge({ score, type, size = 'small', className = '', withDisclaimer = false }: ScoreBadgeProps) {
   const sizeClasses = {

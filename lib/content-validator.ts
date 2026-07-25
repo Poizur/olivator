@@ -63,7 +63,7 @@ const BANNED_PHRASES: { phrase: RegExp; message: string }[] = [
   { phrase: /kupte\s+(hned|te[ďd])/i, message: 'Nátlakové CTA "kupte hned"' },
   { phrase: /\bnáš\s+olej\b|\bnaše\s+oliv/i, message: 'Osobní zájmena — text imituje e-shop místo objektivního popisu' },
   { phrase: /\bu\s+n[áa]s\s+(doma|na\s+farm|na\s+plant)/i, message: 'Osobní zájmena "u nás"' },
-  { phrase: /\blab\s+data\b|\blaboratorní\s+data\b|\blab\s+test/i, message: 'Falsely implies we run physical tests — use "deklarovaná data" or "data dle výrobce"' },
+  { phrase: /\blab\s+data\b|\blaboratorní\s+data\b|\blab\s+test|\blab\s+report/i, message: 'Falsely implies we run physical tests — use "deklarovaná data", "data dle výrobce" or "dokumentace výrobce"' },
 ]
 
 /** Topics Claude frequently hallucinates when data is missing.

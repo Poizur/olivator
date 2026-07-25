@@ -12,7 +12,7 @@ const TOKEN_RE = /\{\{product:([\w-]+)\}\}/g
 
 // Kategorie článků kde auto-heal zakázán (zdravotní/kosmetický obsah)
 // Domény a výrazy zakázané ve výstupu — ochrana po právním úklidu 2026-07-24
-const BANNED_PHRASES = ['olivum', 'lab testy', 'lab test', 'lab data', 'laboratorní data', 'info@olivator.cz', 'přímé dohody']
+const BANNED_PHRASES = ['olivum', 'lab testy', 'lab test', 'lab data', 'lab report', 'laboratorní data', 'info@olivator.cz', 'přímé dohody']
 
 // Právní stránky musí existovat — kontrola 1× denně
 const REQUIRED_LEGAL_PAGES = [

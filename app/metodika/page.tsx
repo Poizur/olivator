@@ -8,13 +8,13 @@ export const revalidate = 3600
 
 export const metadata: Metadata = {
   title: 'Olivator Score — Jak hodnotíme olivový olej | Olivator',
-  description: 'Transparentní metodika Olivator Score. Vážený průměr 4 měřitelných složek: kyselost, certifikace, polyfenoly, hodnota. Data z EU databází, lab reportů a reálných cen.',
+  description: 'Transparentní metodika Olivator Score. Vážený průměr 4 měřitelných složek: kyselost, certifikace, polyfenoly, hodnota. Data z EU databází, dokumentace výrobců a reálných cen.',
   alternates: { canonical: 'https://olivator.cz/metodika' },
   openGraph: {
     type: 'article',
     url: 'https://olivator.cz/metodika',
     title: 'Olivator Score — Jak hodnotíme olivový olej',
-    description: 'Vážený průměr 4 měřitelných složek. Žádné dojmy — pouze data z certifikací, lab reportů a reálných cen.',
+    description: 'Vážený průměr 4 měřitelných složek. Žádné dojmy — pouze data z certifikací, dokumentace výrobců a reálných cen.',
     images: [{ url: 'https://images.unsplash.com/photo-1751440033950-71236e893284?crop=entropy&cs=tinysrgb&w=1200', width: 1200, height: 630 }],
   },
 }
@@ -188,6 +188,8 @@ async function getPageData() {
       .eq('status', 'active')
       .not('olivator_score', 'is', null)
       .gt('olivator_score', 0)
+      .not('name', 'ilike', '%poškozený obal%')
+      .not('name', 'ilike', '%outlet%')
       .order('olivator_score', { ascending: false })
       .limit(5),
     supabaseAdmin
@@ -246,7 +248,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Jak často se Score mění?',
-    a: 'Cena a výpočet hodnoty se aktualizují u XML partnerů denně, u ostatních prodejců 3× týdně. Kyselost a polyfenoly zůstávají stejné dokud nepřijde nový lab report. Certifikace kontrolujeme 1× měsíčně přes EU registry.',
+    a: 'Cena a výpočet hodnoty se aktualizují u XML partnerů denně, u ostatních prodejců 3× týdně. Kyselost a polyfenoly zůstávají stejné dokud nepřijdou nová analytická data od výrobce. Certifikace kontrolujeme 1× měsíčně přes EU registry.',
   },
   {
     q: 'Mohu Score získat 100/100?',
@@ -312,7 +314,7 @@ export default async function MetodikaPage() {
       <div className="relative overflow-hidden mb-0" style={{ minHeight: 320 }}>
         <img
           src="https://images.unsplash.com/photo-1751440033950-71236e893284?crop=entropy&cs=tinysrgb&w=1400&q=80"
-          alt="Kapky olivového oleje v detailu — vědecká analýza kvality"
+          alt="Kapky olivového oleje v detailu — přirozená textura a zbarvení"
           className="absolute inset-0 w-full h-full object-cover"
         />
         <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, rgba(27,67,50,0.88) 0%, rgba(27,67,50,0.65) 100%)' }} />
@@ -326,9 +328,13 @@ export default async function MetodikaPage() {
               Jak počítáme<br />
               <em className="not-italic text-white/80">Olivator Score</em>
             </h1>
-            <p className="text-[16px] text-white/75 leading-relaxed mb-6 font-light">
+            <p className="text-[16px] text-white/75 leading-relaxed mb-3 font-light">
               Číslo 0–100. Vážený průměr 4 měřitelných složek. Žádné dojmy, žádný marketing —
-              jenom data z EU databází, lab reportů a reálných cen.
+              jenom data z EU databází, dokumentace výrobců a reálných cen.
+            </p>
+            <p className="text-[13px] text-white/55 leading-relaxed mb-6 font-light">
+              Score počítáme z veřejně deklarovaných a doložených dat — sami laboratorně neměříme ani nedegustujeme.
+              Olivator Score je naše redakční metodika — jeden z možných pohledů na kvalitu, ne oficiální standard či certifikace.
             </p>
             <div className="flex flex-wrap gap-2">
               {['✓ Nezávislé hodnocení', '✓ Reálná data', '✓ Žádná placená umístění'].map(t => (
@@ -361,7 +367,7 @@ export default async function MetodikaPage() {
               <p className="text-[15px] text-text2 leading-relaxed mb-6 font-light">
                 Olivator Score říká jak kvalitní olej je. Každá složka má svou váhu —
                 protože ne všechny mají stejný vliv na kvalitu. Score se přepočítává
-                automaticky při každé změně ceny nebo lab dat.
+                automaticky při každé změně ceny nebo dat od výrobce.
               </p>
 
               {/* Score vizuál */}
@@ -381,10 +387,10 @@ export default async function MetodikaPage() {
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
-                    { label: 'Kyselost', score: 33, max: 35, note: '0,15 %' },
-                    { label: 'Certifikace', score: 19, max: 25, note: 'DOP + BIO' },
-                    { label: 'Polyfenoly', score: 21, max: 25, note: '420 mg/kg' },
-                    { label: 'Hodnota', score: 11, max: 15, note: '68 Kč/100ml' },
+                    { label: 'Kyselost', score: 30, max: 35, note: '0,30 %' },
+                    { label: 'Certifikace', score: 23, max: 25, note: 'DOP + BIO' },
+                    { label: 'Polyfenoly', score: 18, max: 25, note: '400 mg/kg' },
+                    { label: 'Hodnota', score: 13, max: 15, note: '55 Kč/100ml' },
                   ].map(c => (
                     <div key={c.label} className="bg-white rounded-xl p-3 text-center">
                       <div className="text-[10px] text-text3 uppercase tracking-wider mb-1">{c.label}</div>
@@ -624,7 +630,7 @@ export default async function MetodikaPage() {
               <div className="grid gap-3 md:grid-cols-2">
                 {[
                   { title: 'Etiketa produktu', body: 'Kyselost, harvest year, BIO/DOP značky — primární zdroj. Foto ze stránky výrobce nebo prodejce.', freq: 'Dle dostupnosti' },
-                  { title: 'Lab reporty výrobce', body: 'Polyfenoly, peroxidové číslo, oleic acid — z dokumentů výrobce nebo NYIOOC databáze.', freq: 'Při novém produktu' },
+                  { title: 'Dokumentace výrobce', body: 'Polyfenoly, peroxidové číslo, oleic acid — z dokumentů výrobce nebo NYIOOC databáze.', freq: 'Při novém produktu' },
                   { title: 'EU databáze', body: 'DOP/CHOP a CHZO ověřujeme přes EU eAmbrosia Register. BIO přes certifikační orgán na etiketě.', freq: 'Audit 1× měsíčně' },
                   { title: 'Ceny u prodejců', body: `Scraper ${retailerCount} prodejců v ČR. Cena za 100 ml jako srovnávací benchmark.`, freq: 'XML partneři denně, ostatní 3× týdně' },
                 ].map(d => (
@@ -680,7 +686,7 @@ export default async function MetodikaPage() {
               <div className="relative h-44 rounded-2xl overflow-hidden">
                 <img
                   src="https://images.unsplash.com/photo-1761106082516-61d4c6883f59?crop=entropy&cs=tinysrgb&w=900&q=80"
-                  alt="Vědecké vybavení laboratoře — analýza olivového oleje"
+                  alt="Olivový háj v Řecku — zdroj dat pro studii PREDIMED a regulační rámec EU"
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0" style={{ background: 'rgba(27,67,50,0.6)' }} />
@@ -760,7 +766,7 @@ export default async function MetodikaPage() {
                       { label: 'Rok sklizně', note: 'výrobci ho zřídka uvádí na etiketě' },
                       { label: 'Senzorické hodnocení', note: 'nezávislý panel pro ČR neexistuje' },
                       { label: 'Etika producenta', note: 'pouze kde je Fairtrade/Demeter certifikace' },
-                      { label: 'Lab report kyselosti', note: 'u neanotovaných produktů etiketa = primární zdroj' },
+                      { label: 'Nezávislý test kyselosti', note: 'u neanotovaných produktů etiketa = primární zdroj' },
                       { label: 'Fyzická dostupnost', note: 'zásoby u prodejce v reálném čase' },
                     ].map(item => (
                       <li key={item.label} className="flex items-start gap-2.5">
@@ -882,7 +888,7 @@ export default async function MetodikaPage() {
                   Opravíme chybná data do 48 hodin
                 </h3>
                 <p className="text-[14px] text-text2 leading-relaxed mb-4">
-                  Máte technický list, lab report nebo novější analytická data? Pošlete odkaz nebo PDF —
+                  Máte technický list, analytickou dokumentaci nebo novější data od výrobce? Pošlete odkaz nebo PDF —
                   data ověříme a aktualizujeme. Bez poplatků.
                 </p>
                 <div className="flex flex-wrap gap-3 items-center">
@@ -894,6 +900,24 @@ export default async function MetodikaPage() {
                   </a>
                   <span className="text-[12px] text-text3">info@makyoutdoors.com · odpovídáme do 48 h</span>
                 </div>
+              </div>
+            </section>
+
+            {/* ── SEKCE 7f: Score je náš pohled ──────────────── */}
+            <section id="pohled" className="scroll-mt-20 mb-14">
+              <div className="border border-off2 bg-off rounded-2xl p-6">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-text3 mb-3">
+                  Důležité upozornění
+                </div>
+                <h3 className="text-[18px] font-medium text-text mb-3 leading-snug">
+                  Score je náš pohled, ne certifikace
+                </h3>
+                <p className="text-[14px] text-text2 leading-relaxed mb-3">
+                  Olivator Score vychází výhradně z parametrů, které výrobci sami deklarují — kyselost na etiketě nebo v technickém listu, certifikace z EU registrů, polyfenoly z dokumentace výrobce. Tyto hodnoty sami laboratorně neověřujeme.
+                </p>
+                <p className="text-[14px] text-text2 leading-relaxed">
+                  Score je naše redakční metodika — jeden z možných pohledů na kvalitu, nikoli nezávislý laboratorní test ani oficiální certifikace. Kde data chybí, Score to říká přímo: složka dostane 0 bodů nebo je skrytá.
+                </p>
               </div>
             </section>
 

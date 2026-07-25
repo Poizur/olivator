@@ -201,9 +201,12 @@ export function ScoreCalculator() {
             </div>
           </div>
 
-          <p className="text-[11px] text-text3 mt-4 leading-relaxed">
-            Výsledek je orientační — skutečný Score závisí na přesném vzorci a aktuálních datech v naší DB.
-          </p>
+          <div className="mt-4 pt-3 border-t border-off2">
+            <p className="text-[11px] text-text3 leading-relaxed">
+              Výsledek je <strong>orientační</strong> — kalkulačka používá produkční vzorec, ale skutečný Score závisí na přesných datech v naší DB.
+              Olivator Score je naše redakční metodika, ne certifikace ani nezávislý test.
+            </p>
+          </div>
         </div>
       </div>
     </div>

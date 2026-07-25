@@ -112,6 +112,8 @@ async function getTopProducts(limit = 80): Promise<ProductContext[]> {
     .select(PRODUCT_SELECT)
     .eq('status', 'active')
     .gt('olivator_score', 0)
+    .not('name', 'ilike', '%poškozený obal%')
+    .not('name', 'ilike', '%outlet%')
     .order('olivator_score', { ascending: false })
     .limit(limit)
 
