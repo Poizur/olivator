@@ -1,9 +1,7 @@
 // Cron: denně 07:00 UTC — kontroluje {{product:slug}} tokeny ve všech
-// aktivních článcích proti aktuálnímu stavu products. Token na neexistující
-// nebo neaktivní produkt = broken token (T-01, project_open_tasks.md backlog).
-//
-// Auto-heal: pokud broken token splňuje bezpečnostní pravidla (A–D), nahradí
-// ho automaticky nejlepším kandidátem (score DESC). Jinak pošle MANUAL alert.
+// aktivních článcích proti aktuálnímu stavu products.
+// REPORT-ONLY: broken tokeny hlásí e-mailem, NEOPRAVUJE je (L-034, 2026-07-25).
+// Náhrady tokenů provádí výhradně člověk nebo člověkem schválený návrh.
 //
 // Regex tokenu musí sedět s lib/template-vars.ts:resolveProductTokens().
 import { supabaseAdmin } from '@/lib/supabase'
@@ -13,8 +11,6 @@ const MAX_RUNTIME_MS = 10 * 60 * 1000
 const TOKEN_RE = /\{\{product:([\w-]+)\}\}/g
 
 // Kategorie článků kde auto-heal zakázán (zdravotní/kosmetický obsah)
-const YMYL_CATEGORIES = new Set(['zdravi', 'kosmetika'])
-
 // Domény a výrazy zakázané ve výstupu — ochrana po právním úklidu 2026-07-24
 const BANNED_PHRASES = ['olivum', 'lab testy', 'lab test', 'lab data', 'laboratorní data', 'info@olivator.cz', 'přímé dohody']
 
@@ -24,118 +20,6 @@ const REQUIRED_LEGAL_PAGES = [
   '/podminky-uziti',
   '/cookies',
 ]
-
-// Kontext safety patternys (150 znaků před/za tokenem)
-const SPECIFIC_NUMBER_RE = /\d+\s*(mg\/kg|%)/i
-const SUPERLATIVE_RE = /\b(rekord|nejvyšší|unikátní|nejlepší|nejdražší|nejlevnější)\b/i
-
-interface AutoHealResult {
-  healed: boolean
-  newSlug?: string
-  reason: string
-}
-
-async function tryAutoHeal(
-  articleSlug: string,
-  articleCategory: string | null,
-  articleBody: string,
-  brokenSlug: string,
-): Promise<AutoHealResult> {
-  // Pravidlo C: YMYL check
-  if (YMYL_CATEGORIES.has(articleCategory ?? '')) {
-    return { healed: false, reason: 'YMYL kategorie — auto-heal zakázán' }
-  }
-
-  // Fetch broken product data
-  const { data: brokenProduct } = await supabaseAdmin
-    .from('products')
-    .select('id, type, name, brand_slug, product_offers(price, in_stock)')
-    .eq('slug', brokenSlug)
-    .maybeSingle()
-
-  if (!brokenProduct) {
-    return { healed: false, reason: 'broken produkt nenalezen v DB' }
-  }
-
-  const brokenType = (brokenProduct.type as string | null)
-  if (!brokenType) {
-    return { healed: false, reason: 'broken produkt nemá typ' }
-  }
-
-  const offers = (brokenProduct.product_offers ?? []) as Array<{ price: number; in_stock: boolean }>
-  const brokenPrice = offers.find(o => o.price > 0)?.price ?? null
-
-  // Pravidlo B: Kontext check
-  const tokenStr = `{{product:${brokenSlug}}}`
-  const idx = articleBody.indexOf(tokenStr)
-  if (idx < 0) return { healed: false, reason: 'token nenalezen v body' }
-
-  const ctxBefore = articleBody.slice(Math.max(0, idx - 150), idx)
-  const ctxAfter = articleBody.slice(idx + tokenStr.length, Math.min(articleBody.length, idx + tokenStr.length + 150))
-  const fullCtx = ctxBefore + ctxAfter
-
-  if (SPECIFIC_NUMBER_RE.test(fullCtx)) {
-    return { healed: false, reason: 'kontext obsahuje specifická čísla (mg/kg, %)' }
-  }
-  if (SUPERLATIVE_RE.test(fullCtx)) {
-    return { healed: false, reason: 'kontext obsahuje superlativy' }
-  }
-
-  // Brand/product name v kontextu
-  const brandSlug = (brokenProduct.brand_slug as string | null) ?? ''
-  const brandName = brandSlug.replace(/-/g, ' ')
-  const nameWords = (brokenProduct.name as string)
-    .split(/\s+/)
-    .filter(w => w.length > 4 && !/^(extra|panenský|olivový|olej|z|v|na|do|ze)$/i.test(w))
-
-  if (brandName && new RegExp(brandName, 'i').test(fullCtx)) {
-    return { healed: false, reason: `kontext obsahuje brand "${brandName}"` }
-  }
-  for (const word of nameWords) {
-    if (new RegExp(`\\b${word}\\b`, 'i').test(fullCtx)) {
-      return { healed: false, reason: `kontext obsahuje slovo z názvu produktu "${word}"` }
-    }
-  }
-
-  // Pravidlo A: Fetch kandidátů
-  const { data: rawCandidates } = await supabaseAdmin
-    .from('products')
-    .select('slug, name, olivator_score, product_offers(price, in_stock)')
-    .eq('type', brokenType)
-    .eq('status', 'active')
-    .gte('olivator_score', 60)
-    .neq('slug', brokenSlug)
-    .order('olivator_score', { ascending: false })
-    .limit(10)
-
-  if (!rawCandidates || rawCandidates.length === 0) {
-    return { healed: false, reason: `žádní kandidáti (${brokenType}, score≥60)` }
-  }
-
-  // Price filter ±30 %
-  let candidates = rawCandidates
-  if (brokenPrice) {
-    const minPrice = brokenPrice * 0.7
-    const maxPrice = brokenPrice * 1.3
-    candidates = rawCandidates.filter(c => {
-      const cOffers = (c.product_offers ?? []) as Array<{ price: number }>
-      const price = cOffers.find(o => o.price > 0)?.price
-      return !price || (price >= minPrice && price <= maxPrice)
-    })
-  }
-
-  // Pravidlo D: min 2 kandidáti
-  if (candidates.length < 2) {
-    return { healed: false, reason: `nedostatek kandidátů (${candidates.length}/2 potřeba)` }
-  }
-
-  const best = candidates[0]
-  return {
-    healed: true,
-    newSlug: best.slug as string,
-    reason: `nahrazeno kandidátem ${best.slug} (score ${best.olivator_score ?? '?'}, ${candidates.length} kandidátů)`,
-  }
-}
 
 async function main() {
   const startedAt = Date.now()
@@ -241,12 +125,15 @@ async function main() {
       statusBySlug.set(p.slug as string, p.status as string)
     }
 
-    // Zpracuj broken tokeny — rozlišení auto-heal vs manual
+    // AUTO-HEAL ZAKÁZÁN (L-034, 2026-07-25): cron je REPORT-ONLY.
+    // Náhrady tokenů provádí výhradně člověk nebo člověkem schválený návrh.
+    // Viz: incidents/2026-07-25-auto-heal-callejas.md
+
+    // Zpracuj broken tokeny — pouze REPORT
     const manualReports: BrokenTokenReport[] = []
     const healedReports: HealedTokenReport[] = []
-    const articleBodyPatches = new Map<string, string>()  // slug → new body
 
-    for (const [articleSlug, { slugs, body, category }] of articleTokens) {
+    for (const [articleSlug, { slugs, body: _body, category: _category }] of articleTokens) {
       const brokenSlugs: string[] = []
       let hasMissing = false
 
@@ -260,72 +147,26 @@ async function main() {
 
       if (brokenSlugs.length === 0) continue
 
-      let currentBody = articleBodyPatches.get(articleSlug) ?? body
-      const healedTokens: Array<{ oldToken: string; newToken: string }> = []
       const manualTokens: string[] = []
-      let articleHasMissing = hasMissing
 
       for (const brokenSlug of brokenSlugs) {
-        const result = await tryAutoHeal(articleSlug, category, currentBody, brokenSlug)
-
-        if (result.healed && result.newSlug) {
-          const oldToken = `{{product:${brokenSlug}}}`
-          const newToken = `{{product:${result.newSlug}}}`
-          currentBody = currentBody.replace(oldToken, newToken)
-          healedTokens.push({ oldToken: brokenSlug, newToken: result.newSlug })
-          console.log(`  [auto-heal] ${articleSlug}: ${brokenSlug} → ${result.newSlug}`)
-
-          try {
-            await supabaseAdmin.from('agent_decisions').insert({
-              agent_name: 'token-validator-autoheal',
-              decision_type: 'token_replaced',
-              payload: {
-                article_slug: articleSlug,
-                old_token: brokenSlug,
-                new_token: result.newSlug,
-                reason: result.reason,
-              },
-            })
-          } catch (err) {
-            console.warn('[validate-tokens] agent_decisions log selhal:', err)
-          }
-        } else {
-          const statusSuffix = statusBySlug.get(brokenSlug)
-          manualTokens.push(statusSuffix ? `${brokenSlug} (${statusSuffix})` : brokenSlug)
-          console.log(`  [manual] ${articleSlug}: ${brokenSlug} — ${result.reason}`)
-        }
-      }
-
-      if (healedTokens.length > 0) {
-        articleBodyPatches.set(articleSlug, currentBody)
-        healedReports.push({ articleSlug, replacements: healedTokens })
+        const statusSuffix = statusBySlug.get(brokenSlug)
+        manualTokens.push(statusSuffix ? `${brokenSlug} (${statusSuffix})` : brokenSlug)
+        console.log(`  [broken] ${articleSlug}: ${brokenSlug}`)
       }
 
       if (manualTokens.length > 0) {
         manualReports.push({
           articleSlug,
           brokenTokens: manualTokens,
-          severity: articleHasMissing ? 'critical' : 'warning',
+          severity: hasMissing ? 'critical' : 'warning',
         })
-      }
-    }
-
-    // PATCH všechny auto-healed articles
-    for (const [slug, newBody] of articleBodyPatches) {
-      const { error: patchErr } = await supabaseAdmin
-        .from('articles')
-        .update({ body_markdown: newBody })
-        .eq('slug', slug)
-      if (patchErr) {
-        console.error(`[validate-tokens] PATCH selhal pro ${slug}:`, patchErr)
-      } else {
-        console.log(`[validate-tokens] PATCH OK: ${slug}`)
       }
     }
 
     console.log(
       `[validate-tokens] zkontrolováno ${articles.length} článků, ${allSlugs.size} unikátních tokenů, ` +
-      `${healedReports.length} auto-healed, ${manualReports.length} vyžaduje ruční zásah`
+      `0 auto-healed (zakázáno), ${manualReports.length} vyžaduje ruční zásah`
     )
 
     // Loguj broken tokeny (manual) do agent_decisions

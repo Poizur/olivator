@@ -47,6 +47,7 @@ export interface FeedSyncResult {
   skipped: number
   autoRescraped: number     // kolik nových draftů úspěšně proběhlo plnou pipeline
   autoRescrapeFailed: number
+  outOfFeedHistoryWritten: number  // produkty mimo feed → in_stock=false price_history
   errors: { ean: string; name: string; reason: string }[]
   startedAt: string
   finishedAt: string
@@ -102,6 +103,7 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
     skipped: 0,
     autoRescraped: 0,
     autoRescrapeFailed: 0,
+    outOfFeedHistoryWritten: 0,
     errors: [],
     startedAt,
     finishedAt: '',
@@ -111,6 +113,8 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
   // rescrape pipeline (Playwright + AI fakta + flavor + lab scan + popisy +
   // Score). Cíl: drafty přicházejí na admin schválení KOMPLETNĚ vyplněné.
   const newDraftIds: string[] = []
+  // Produkty úspěšně zpracované v tomto runu — pro post-run out-of-feed sweep
+  const seenProductIds = new Set<string>()
 
   for (const item of oils) {
     // Cena je jediný hard requirement — bez ceny offer postrádá smysl.
@@ -206,6 +210,7 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
         in_stock: inStock,
       })
 
+      seenProductIds.add(productId)
       result.offersUpserted++
     } catch (err) {
       result.errors.push({
@@ -215,6 +220,32 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
       })
       result.skipped++
     }
+  }
+
+  // ── Out-of-feed sweep: produkty s nabídkou od tohoto retailera, které
+  // dnes nebyly v XML feedu (vyprodány, odebrány). Zapíšeme in_stock=false
+  // s poslední known cenou — grafová řada nesmí mít mezery.
+  try {
+    const { data: existingOffers } = await supabaseAdmin
+      .from('product_offers')
+      .select('product_id, price')
+      .eq('retailer_id', retailer.id)
+
+    for (const offer of existingOffers ?? []) {
+      if (seenProductIds.has(offer.product_id as string)) continue
+      await supabaseAdmin.from('price_history').insert({
+        product_id: offer.product_id,
+        retailer_id: retailer.id,
+        price: offer.price,
+        in_stock: false,
+      })
+      result.outOfFeedHistoryWritten++
+    }
+    if (result.outOfFeedHistoryWritten > 0) {
+      console.log(`[feed-sync] out-of-feed sweep: ${result.outOfFeedHistoryWritten} záznamů (in_stock=false)`)
+    }
+  } catch (err) {
+    console.warn('[feed-sync] out-of-feed sweep selhal:', err)
   }
 
   // ── Auto-rescrape: pro každý nový draft pustíme plnou pipeline.
