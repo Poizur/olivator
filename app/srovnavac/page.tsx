@@ -29,6 +29,7 @@ export default async function SrovnavacPage() {
     certifications: stats.byCertification,
     highPolyphenols: stats.highPolyphenols,
     highOleocanthal: stats.highOleocanthal,
+    extraPolyphenols: stats.extraPolyphenols,
   }
 
   // ItemList JSON-LD pro top 50 produktů dle Score — Google rozliší katalog

@@ -144,6 +144,7 @@ export function ListingContent({
     if (activeTypes.length > 0) list = list.filter((p) => activeTypes.includes(p.type))
     if (activeOrigins.length > 0) list = list.filter((p) => activeOrigins.includes(p.originCountry))
     if (activeCerts.length > 0) list = list.filter((p) => activeCerts.some((c) => p.certifications.includes(c)))
+    if (activeQuality.includes('extra_polyphenols')) list = list.filter((p) => p.polyphenols != null && p.polyphenols >= 1000)
     if (activeQuality.includes('high_polyphenols')) list = list.filter((p) => p.polyphenols != null && p.polyphenols >= 250)
     if (activeQuality.includes('high_oleocanthal')) list = list.filter((p) => p.oleocanthal != null && p.oleocanthal >= 100)
     if (activeIntensity) list = list.filter((p) => classifyIntensity(p) === activeIntensity)
@@ -364,8 +365,11 @@ export function ListingContent({
                 {activeCerts.map((c) => (
                   <FilterChip key={`c-${c}`} label={certLabel(c)} onRemove={() => clearFilter('cert', c)} />
                 ))}
+                {activeQuality.includes('extra_polyphenols') && (
+                  <FilterChip label="Extra polyfenoly ≥1000" onRemove={() => clearFilter('quality', 'extra_polyphenols')} />
+                )}
                 {activeQuality.includes('high_polyphenols') && (
-                  <FilterChip label="Polyfenoly ≥500" onRemove={() => clearFilter('quality', 'high_polyphenols')} />
+                  <FilterChip label="Polyfenoly ≥250" onRemove={() => clearFilter('quality', 'high_polyphenols')} />
                 )}
                 {activeQuality.includes('high_oleocanthal') && (
                   <FilterChip label="Oleokantal ≥100" onRemove={() => clearFilter('quality', 'high_oleocanthal')} />

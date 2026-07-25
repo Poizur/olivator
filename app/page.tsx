@@ -147,6 +147,7 @@ export default async function Home() {
             { label: `🌱 BIO`, href: '/srovnavac?cert=bio', variant: 'default' },
             { label: '🏆 PDO', href: '/srovnavac?cert=dop', variant: 'default' },
             { label: '🔬 Polyfenoly 250+', href: '/srovnavac?quality=high_polyphenols', variant: 'default' },
+            { label: '💪 Extra polyfenoly 1000+', href: '/srovnavac?quality=extra_polyphenols', variant: 'default' },
           ].map((chip) => (
             <Link
               key={chip.href}

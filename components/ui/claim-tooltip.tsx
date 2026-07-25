@@ -11,9 +11,11 @@ interface Props {
   tip: string
   href?: string
   hrefLabel?: string
+  /** 'up' (výchozí) nebo 'down' pro tooltip pod tlačítkem (v hero nahoře stránky) */
+  placement?: 'up' | 'down'
 }
 
-export function ClaimTooltip({ tip, href, hrefLabel = 'Více v metodice →' }: Props) {
+export function ClaimTooltip({ tip, href, hrefLabel = 'Více v metodice →', placement = 'up' }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLSpanElement>(null)
   const id = useId()
@@ -51,14 +53,19 @@ export function ClaimTooltip({ tip, href, hrefLabel = 'Více v metodice →' }: 
         id={id}
         role="tooltip"
         className={[
-          'absolute z-50 bottom-[calc(100%+6px)] left-1/2 -translate-x-1/2',
+          'absolute z-[200]',
+          placement === 'down'
+            ? 'top-[calc(100%+6px)] left-1/2 -translate-x-1/2'
+            : 'bottom-[calc(100%+6px)] left-1/2 -translate-x-1/2',
           'w-[220px] bg-[#1d1d1f] text-white text-[11px] leading-relaxed rounded-lg px-3 py-2.5 shadow-lg',
           'pointer-events-none group-hover:pointer-events-auto',
           open ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1',
           'group-hover:opacity-100 group-hover:translate-y-0',
           'transition-all duration-150',
           // Arrow
-          "after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-[#1d1d1f]",
+          placement === 'down'
+            ? "after:content-[''] after:absolute after:bottom-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-b-[#1d1d1f]"
+            : "after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-[#1d1d1f]",
         ].join(' ')}
       >
         {tip}

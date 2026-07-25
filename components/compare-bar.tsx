@@ -12,6 +12,15 @@ export function CompareBar() {
   const { items, removeItem, clearAll } = useCompare()
   const empty = 5 - items.length
   const [olikPeeking, setOlikPeeking] = useState(false)
+  const [footerVisible, setFooterVisible] = useState(false)
+
+  useEffect(() => {
+    const footer = document.querySelector('footer')
+    if (!footer) return
+    const obs = new IntersectionObserver(([e]) => setFooterVisible(e.isIntersecting), { threshold: 0 })
+    obs.observe(footer)
+    return () => obs.disconnect()
+  }, [])
 
   useEffect(() => {
     function onPeek(e: Event) {
@@ -31,7 +40,7 @@ export function CompareBar() {
   // ── PRÁZDNÝ STAV — kompaktní pill uprostřed dole, vždy viditelný ──
   if (items.length === 0) {
     return (
-      <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[2000] animate-[slideUp_0.4s_ease-out]">
+      <div className={`fixed bottom-5 left-1/2 -translate-x-1/2 z-[2000] animate-[slideUp_0.4s_ease-out] transition-opacity duration-200 ${footerVisible ? 'opacity-0 pointer-events-none' : ''}`}>
         <Link
           href="/porovnani"
           className="group flex items-center gap-3 bg-white border border-off2 rounded-full pl-2 pr-5 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.10)] hover:shadow-[0_12px_36px_rgba(45,106,79,0.18)] hover:border-olive-border transition-all"
@@ -56,7 +65,7 @@ export function CompareBar() {
 
   // ── S POLOŽKAMI — vystředěný floating bar ──
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[2000] w-[calc(100%-1.5rem)] max-w-[920px] animate-[slideUp_0.3s_ease-out]">
+    <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-[2000] w-[calc(100%-1.5rem)] max-w-[920px] animate-[slideUp_0.3s_ease-out] transition-opacity duration-200 ${footerVisible ? 'opacity-0 pointer-events-none' : ''}`}>
       <div className="bg-white border border-off2 rounded-2xl px-4 sm:px-5 py-3 flex items-center gap-3 shadow-[0_12px_40px_rgba(0,0,0,0.14)]">
         <div className="flex gap-2 flex-1 overflow-x-auto">
           {items.map(item => (

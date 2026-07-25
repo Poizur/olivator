@@ -9,6 +9,7 @@ export interface FilterCounts {
   certifications: Record<string, number>
   highPolyphenols?: number
   highOleocanthal?: number
+  extraPolyphenols?: number
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -97,6 +98,11 @@ export function FilterPanel({ counts }: { counts: FilterCounts }) {
       <FilterSection
         label="Polyfenoly"
         items={[
+          ...((counts.extraPolyphenols ?? 0) > 0 ? [{
+            value: 'extra_polyphenols',
+            label: 'Extra polyfenolové (≥1000 mg/kg)',
+            count: counts.extraPolyphenols ?? 0,
+          }] : []),
           {
             value: 'high_polyphenols',
             label: 'Vysocepolyfenolové (≥250 mg/kg)',

@@ -57,9 +57,8 @@ export function Footer() {
             <h4 className="text-[10px] font-medium tracking-widest uppercase text-white/40 mb-3">Průvodce</h4>
             {[
               { href: '/pruvodce/jak-vybrat-olivovy-olej', label: 'Jak vybrat olej' },
-              { href: '/pruvodce/acidita-olivoveho-oleje', label: 'Acidita' },
-              { href: '/pruvodce/polyfenoly-olivovy-olej', label: 'Polyfenoly' },
-              { href: '/pruvodce/pdo-pgp-certifikace', label: 'PDO/PGI' },
+              { href: '/pruvodce/polyfenoly-proc-na-nich-zalezi', label: 'Polyfenoly' },
+              { href: '/metodika', label: 'Metodika Score' },
               { href: '/recept', label: 'Recepty' },
             ].map(l => (
               <Link key={l.href} href={l.href} className="block text-[12px] text-white/65 hover:text-white py-0.5 transition-colors">

@@ -242,8 +242,8 @@ export function SommelierHero({
                     <span><strong className="text-white font-semibold">{totalProducts}</strong> olejů</span>
                     <span className="text-white/40">·</span>
                     <span className="inline-flex items-center gap-0.5">
-                      <strong className="text-white font-semibold">{activeRetailers}</strong> prodejců
-                      <ClaimTooltip tip="Prodejci, u nichž pravidelně sledujeme ceny a dostupnost olivových olejů." />
+                      <strong className="text-white font-semibold">{activeRetailers}</strong> partnerské e-shopy
+                      <ClaimTooltip placement="down" tip="Partnerské e-shopy s denními XML feedy a smluvním vztahem. Ceny aktualizujeme každých 24 h." />
                     </span>
                     <span className="text-white/40">·</span>
                     <span><strong className="text-white font-semibold">{totalBrands}</strong> značek</span>

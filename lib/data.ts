@@ -458,6 +458,7 @@ export interface SiteStats {
   under200Kc: number
   highPolyphenols: number
   highOleocanthal: number
+  extraPolyphenols: number
 }
 
 export const getSiteStats = cache(async (): Promise<SiteStats> => {
@@ -469,6 +470,7 @@ export const getSiteStats = cache(async (): Promise<SiteStats> => {
   let under200Kc = 0
   let highPolyphenols = 0
   let highOleocanthal = 0
+  let extraPolyphenols = 0
 
   for (const p of products) {
     // Skip null/empty origin — frontend by jinak zobrazil prázdný řádek s číslem
@@ -481,6 +483,7 @@ export const getSiteStats = cache(async (): Promise<SiteStats> => {
     }
     if (p.cheapestOffer && p.cheapestOffer.price <= 200) under200Kc++
     if (p.polyphenols != null && p.polyphenols >= 250) highPolyphenols++
+    if (p.polyphenols != null && p.polyphenols >= 1000) extraPolyphenols++
     if (p.oleocanthal != null && p.oleocanthal >= 100) highOleocanthal++
   }
 
@@ -502,6 +505,7 @@ export const getSiteStats = cache(async (): Promise<SiteStats> => {
     under200Kc,
     highPolyphenols,
     highOleocanthal,
+    extraPolyphenols,
   }
 })
 
