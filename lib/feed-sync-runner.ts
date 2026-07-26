@@ -212,8 +212,35 @@ async function autoResearchEmptyRetailers(): Promise<number> {
       if (research.logoUrl) updates.logo_url = research.logoUrl
 
       if (Object.keys(updates).length > 0) {
-        await supabaseAdmin.from('retailers').update(updates).eq('id', r.id)
-        done++
+        // R2 fix (2026-07-26): AI-generované texty (tagline, story) nesmí jít
+        // přímo do retailers bez human gate (L-037). Oddělíme faktická data
+        // (founders, headquarters, founded_year, specialization, logo_url)
+        // od AI editorial textů (tagline, story).
+        const { tagline, story, ...factualUpdates } = updates
+        const hasAiText = tagline || story
+
+        // Faktická data (scraping ze stránek, ne AI inference) — bezpečné zapsat
+        if (Object.keys(factualUpdates).length > 0) {
+          await supabaseAdmin.from('retailers').update(factualUpdates).eq('id', r.id)
+        }
+
+        // AI texty → proposal do agent_decisions, ne přímý zápis
+        if (hasAiText) {
+          await supabaseAdmin.from('agent_decisions').insert({
+            agent_name: 'auto-research',
+            decision_type: 'retailer_text_proposal',
+            payload: {
+              retailer_id: r.id,
+              retailer_slug: r.slug,
+              proposed_tagline: tagline ?? null,
+              proposed_story: story ?? null,
+              reason: 'AI-generovaný text čeká na admin schválení (L-037)',
+            },
+          })
+          console.log(`[auto-research] ${r.slug}: tagline/story → proposal (human gate)`)
+        }
+
+        if (Object.keys(factualUpdates).length > 0 || hasAiText) done++
         console.log(`[auto-research] ${r.slug}: ${Object.keys(updates).join(', ')}`)
       }
     } catch (err) {

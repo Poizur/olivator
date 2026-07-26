@@ -63,11 +63,12 @@ PRAVIDLA:
   const issuesMatch = text.match(/ISSUES:\s*([\s\S]+?)(?:\n\n|$)/i)
 
   if (!severityMatch) {
-    console.warn('[article-reviewer] Neplatný formát odpovědi, fallback warn:', text.slice(0, 200))
+    // L-037: fail-closed — nejasný verdikt = blokovat, ne propustit
+    console.error('[article-reviewer] Neplatný formát odpovědi, fallback BLOCK:', text.slice(0, 200))
     return {
-      severity: 'warn',
-      verdict: 'Reviewer vrátil neplatný formát odpovědi — manuální kontrola nutná',
-      issues: text.slice(0, 300),
+      severity: 'block',
+      verdict: 'Reviewer vrátil neplatný formát odpovědi — draft blokován (fail-closed L-037)',
+      issues: `Parse error: ${text.slice(0, 300)}`,
     }
   }
 

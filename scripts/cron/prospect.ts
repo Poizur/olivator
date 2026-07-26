@@ -12,6 +12,12 @@ import { sendProspectorSummary } from '@/lib/email'
 const MAX_RUNTIME_MS = 10 * 60 * 1000 // 10 minut — pak process.exit bez ohledu
 
 async function main() {
+  // PAUSED 2026-07-26: legalizace 29 karanténních retailerů má přednost.
+  // Přidávat nové shopy před vyřešením karantény = zbytečný šum v discovery_sources.
+  // Reaktivovat: smazat tyto 4 řádky po dokončení karanténní legalizace.
+  console.log('[cron:prospect] PAUSED — reaktivace po dokončení karanténní legalizace (2026-07-26)')
+  process.exit(0)
+
   const startedAt = Date.now()
   console.log('[cron:prospect] start', new Date().toISOString())
 

@@ -5,11 +5,11 @@
 import { render } from '@react-email/render'
 import React from 'react'
 import { supabaseAdmin } from '@/lib/supabase'
-import { sendDraft } from '@/lib/newsletter-sender'
 import { saveDraftToDb } from '@/lib/newsletter-composer'
 import { SeasonalEmail, SEASONAL_CONTENT } from '@/emails/seasonal-template'
 import { validateCzechStyle } from '@/lib/czech-style'
 import { callClaude, extractText } from '@/lib/anthropic'
+import { logAgentAction } from '@/lib/audit-log'
 
 const MODEL = 'claude-haiku-4-5-20251001'
 const MAX_TOKENS = 300
@@ -118,7 +118,9 @@ async function main() {
       { plainText: true }
     )
 
-    // Ulož draft do DB a pošli — campaign_type musí být v CHECK (weekly|deals|harvest|alert)
+    // R3 fix (2026-07-26): Admin gate — ulož draft, NEODESÍLEJ automaticky.
+    // Email subscriberům je nejcitlivější kanál (L-037: AI text bez oka = ne).
+    // Admin schválí v /admin/newsletter a klikne Odeslat manuálně.
     const campaignType: 'weekly' | 'harvest' = requiredPref === 'harvest' ? 'harvest' : 'weekly'
     const { id: draftId } = await saveDraftToDb(campaignType, {
       subject: email.subject_template as string,
@@ -129,16 +131,22 @@ async function main() {
       blocks: {},
     })
 
-    const result = await sendDraft(draftId)
-    if (result.ok) {
-      console.log(`[seasonal-dispatcher] ${email.email_key} — odesláno ${result.totalSent} subscribers`)
-      await supabaseAdmin
-        .from('seasonal_emails')
-        .update({ last_sent_year: year })
-        .eq('id', email.id)
-    } else {
-      console.error(`[seasonal-dispatcher] ${email.email_key} — send failed: ${result.errors.join('; ')}`)
-    }
+    // Log proposal → viditelné v /admin
+    await logAgentAction({
+      agentName: 'seasonal-dispatcher',
+      decisionType: 'newsletter_pending_approval',
+      payload: {
+        email_key: email.email_key,
+        draft_id: draftId,
+        campaign_type: campaignType,
+        subscriber_count: subscribers.length,
+        subject: email.subject_template,
+        reason: 'Admin gate — schválení v /admin/newsletter před odesláním (L-037)',
+      },
+    })
+    console.log(`[seasonal-dispatcher] ${email.email_key} — draft ${draftId} uložen, čeká na admin schválení (${subscribers.length} subscribers)`)
+    // POZNÁMKA: last_sent_year se NEAKTUALIZUJE — email není odeslán.
+    // Pokud admin nezašle do dalšího dne, cron znovu vytvoří draft.
   }
 
   console.log('[seasonal-dispatcher] done')

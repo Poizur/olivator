@@ -318,18 +318,34 @@ export async function publishCandidate(
     // 1) EAN je master — pokud existuje, vrátíme jeho ID místo INSERT.
     const { data: existing } = await supabaseAdmin
       .from('products')
-      .select('id')
+      .select('id, status')
       .eq('ean', scraped.ean)
       .maybeSingle()
 
     if (existing) {
-      // Update existující řádek (může mít jiný slug z dřívějšího scrape).
-      // Slug NEPŘEPISUJEME — jiné odkazy + admin URL by se rozbily.
-      const { name_short, ...updatable } = productPayload
-      void name_short
+      // F-01 (2026-07-26): Aktivní produkty — admin je schválil, nepřepisujeme
+      // status, certifications ani description_short. Aktualizujeme jen měřitelná
+      // scraped data (kyselost, polyfenoly, objem, zdroj). Draft produkty: full update.
+      const isActive = (existing.status as string) === 'active'
+      const updatePayload = isActive
+        ? {
+            // Pouze scraper-safe faktická pole — ne editorial ani status
+            acidity: scraped.acidity ?? undefined,
+            polyphenols: scraped.polyphenols ?? undefined,
+            oleocanthal: scraped.oleocanthal ?? undefined,
+            harvest_year: scraped.harvestYear ?? undefined,
+            processing: scraped.processing ?? undefined,
+            peroxide_value: scraped.peroxideValue ?? undefined,
+            volume_ml: scraped.volumeMl ?? undefined,
+            packaging: scraped.packaging ?? undefined,
+            source_url: scraped.url ?? undefined,
+            raw_description: scraped.rawDescription ?? undefined,
+            updated_at: new Date().toISOString(),
+          }
+        : { ...productPayload, name_short: undefined, slug: undefined }
       const { error: updateErr } = await supabaseAdmin
         .from('products')
-        .update({ ...updatable, slug: undefined })
+        .update(updatePayload)
         .eq('id', existing.id)
       if (updateErr) throw new Error(`Product update failed: ${updateErr.message}`)
       productId = existing.id as string
@@ -815,7 +831,9 @@ export async function runDiscoveryAgent(): Promise<DiscoveryRunResult> {
   })
 
   const dailyLimit = (await getSetting<number>('discovery_daily_limit')) ?? 5
-  const autoPublish = (await getSetting<boolean>('discovery_auto_publish')) ?? false
+  // F-02: discovery_auto_publish setting je dead code — PROPOSE-ONLY mode (L-031)
+  // ignoruje tuto hodnotu. Setting zůstává v DB pro zpětnou kompatibilitu schema,
+  // ale kód ho nečte (smazáno 2026-07-26).
 
   const result: DiscoveryRunResult = {
     shopsCrawled: 0,
