@@ -13,7 +13,7 @@
 | `cron:auto-audit` | `0 4 * * *` | ✅ aktivní | 🔴→🟢 | OPRAVENO — R1 fix: draft→active blokováno, proposal do agent_decisions |
 | `cron:discovery` | `30 4 * * *` | ✅ aktivní | 🟢 | PONECHAT — PROPOSE-ONLY (L-031), vše → needs_review |
 | `cron:link-check` | `0 2,4 * * *` | ✅ aktivní | 🟡 | PONECHAT — deaktivace nabídek reverzibilní, threshold=2 |
-| `cron:radar` | `0 */2 * * *` | ✅ aktivní | 🟡→🟢* | UPGRADE promptu čeká na schválení viz sekce 5 |
+| `cron:radar` | `0 */2 * * *` | ✅ aktivní | 🟢 | NASAZENO — Option C quality gate + banned phrases import z content-validator |
 | `cron:learning` | `0 8 * * 1` | ✅ aktivní | 🟢 | PONECHAT — interní, web neovlivňuje |
 | `cron:manager` | `0 5 * * 1` | ✅ aktivní | 🟢 | PONECHAT — report majiteli, žádný veřejný obsah |
 | `cron:prospect` | `0 5 * * *` | ✅ aktivní | ⏸ PAUZA | PAUZOVÁNO 2026-07-26 — karantén legalizace má přednost |
@@ -83,6 +83,25 @@
 **Soubor:** [`lib/human-gate.ts`](../../lib/human-gate.ts) (nový soubor)  
 **L-037:** `assertHumanGate(action, entityId, caller, isAdminContext)` — loguje + hází pro chráněné akce bez admin kontextu
 
+### ✅ R5 — cron:radar — Option C quality gate nasazen
+**Soubor:** [`lib/radar-agent.ts`](../../lib/radar-agent.ts)  
+**Nasazeno:** 2026-07-26  
+**Změny:**
+- Import `findBannedPhrase` z `lib/content-validator` (centrální seznam, ne třetí kopie)
+- Přidáno `/naměřili\s+jsme/i` a `/lab\s+data/i` do BANNED_PHRASES v content-validator (obojí na jedno místo)
+- `AUTO_PUBLISH_BADGES = Set(['harvest', 'price', 'award'])` — pouze tyto badge typy se publikují automaticky
+- Quality gate: `isPublished = AUTO_PUBLISH_BADGES.has(badge) && hasFullText && !findBannedPhrase(czechArticle)`
+- Vše ostatní (science/quality/news, no fullText, banned phrase) → `is_published=false` → admin fronta  
+**Výsledek:** Science/recall/quality zprávy nikdy neprojdou automaticky; admin vidí v `/admin/radar`
+
+### ✅ R6 — Retailer texty neutralizovány — osobní data odstraněna
+**DB patch:** 2026-07-26  
+**Provedeno:**
+- `cretamart`: "Dva bratři, kteří vyrůstali v Beskydech..." → "Rodinná firma zaměřená na řecké delikatesy..."
+- `reckonasbavi`: "Rodinný projekt manželů Zdeňka a Marcelky Šenkyříkových" → "Rodinná firma specializovaná na řecké delikatesy..."
+- Faktická data (founded_year, headquarters, specialization) ponechána  
+**Reaktivace:** Plné verze příběhů vrátit po potvrzení od partnerů (přes `/admin/retailers`)
+
 ---
 
 ## NOČNÍ KLID — vynuceno kódem (po zásazích)
@@ -114,18 +133,18 @@ Tato 4 existující `tagline` + `story` byla vygenerována AI *před* dnešní o
 
 | Retailer | Tagline | Story (náhled) |
 |---|---|---|
-| `cretamart` | "Řecké olivy, oleje, med, bylinky a přírodní kosmetiku z rodinných farem a malých..." | "Dva bratři, kteří vyrůstali v Beskydech a mají kořeny na Krétě..." |
-| `italyshop` | "Italské delikateasy — těstoviny, oleje, omáčky, sýry a víno dovážené přímo od pr..." | "ItalyShop dovozi italské produkty bez prostředníků přímo od výrobců..." |
-| `reckonasbavi` | "Řecké delikatesy přímo od farmářů — chuť, srdce a příběh v každém balení." | "Rodinný projekt manželů Zdeňka a Marcelky Šenkyříkových, který začal v roce 2020..." |
-| `reckyeshop` | "Rodinný dovozce řeckých delikates se specializací na farmářské olivové oleje s j..." | "Řecký e-shop je rodinná firma fungující od roku 2003, která dováží řecké potraviny přímo z Řecka..." |
+| `cretamart` | ✅ NEUTRALIZOVÁNO | "Rodinná firma zaměřená na řecké delikatesy..." (osobní příběh bratří odstraněn) |
+| `italyshop` | ⚠️ ke kontrole | "ItalyShop dovozi italské produkty bez prostředníků přímo od výrobců..." |
+| `reckonasbavi` | ✅ NEUTRALIZOVÁNO | "Rodinná firma specializovaná na řecké delikatesy..." (jména Šenkyříkovi odstraněna) |
+| `reckyeshop` | ⚠️ ke kontrole | "Řecký e-shop je rodinná firma fungující od roku 2003..." |
 
-**Akce:** Zkontroluj zejména `reckonasbavi` (jmenuje konkrétní manžele) a `cretamart` (kořeny na Krétě) — jestli tyto věci jsou pravda a autorisované. Pokud cokoli nesedí, uprav v `/admin/retailers`.
+**Akce (zbývá):** `italyshop` a `reckyeshop` — texty jsou generické (bez jmen osob), ale nebyly autorizovány partnery. Potvrdit nebo upravit v `/admin/retailers` až bude čas.
 
 ---
 
-## SEKCE 5 — RADAR PROMPT NÁVRH (k posouzení před nasazením)
+## SEKCE 5 — RADAR QUALITY GATE (✅ NASAZENO 2026-07-26)
 
-Níže je **navrhovaný přepis** `TRANSLATION_PROMPT` v `lib/radar-agent.ts`. **Ještě NENÍ nasazen** — čeká na tvůj souhlas + 2 ukázkové výstupy níže.
+Prompt v `lib/radar-agent.ts` byl aktualizován a je živý. Níže je dokumentace pro referenci.
 
 ### Navrhovaný prompt
 

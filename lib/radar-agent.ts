@@ -18,6 +18,7 @@ import { callClaude, extractText } from './anthropic'
 import { fetchArticleText } from './article-fetcher'
 import { searchUnsplash } from './unsplash'
 import { slugify } from './utils'
+import { findBannedPhrase } from './content-validator'
 
 // Klíčová slova pro filter — chceme jen zprávy které opravdu hýbou trhem.
 // Generic "olive oil" article projde přes RSS, ale bez signal nepublikujeme.
@@ -43,6 +44,10 @@ const BREAKING_SIGNALS: ReadonlyArray<string> = [
   'oleic', 'acidity', 'kyselost',
   'spain', 'italy', 'greece', 'croatia', 'řecko', 'itálie', 'španělsko', 'chorvatsko',
 ]
+
+// Option C: auto-publikovat POUZE badge typy s jasnou faktickou hodnotou + fullText + bez banned frází
+// Science/quality/news/recall → admin fronta (is_published=false)
+const AUTO_PUBLISH_BADGES = new Set(['harvest', 'price', 'award'])
 
 export interface RadarRunResult {
   feedsFetched: number
@@ -364,14 +369,19 @@ export async function runRadarAgent(opts: { hoursBack?: number; maxItems?: numbe
       continue
     }
 
-    // Quality gate: bez fullText + příliš krátký článek = nepublikovat automaticky
-    // Zachráníme do DB jako draft (is_published: false) pro ruční review
-    const articleLen = translation.czechArticle.length
-    const hasNoFullText = !fullText
-    const isTooShort = articleLen < 500
-    const isPublished = !(hasNoFullText && isTooShort)
+    // Quality gate — Option C (L-037): auto-publish POUZE harvest/price/award + fullText + bez banned frází.
+    // Vše ostatní (science/quality/news, no fullText, banned phrase) → admin fronta.
+    const hasFullText = !!fullText && fullText.length > 200
+    const bannedPhrase = findBannedPhrase(translation.czechArticle)
+    const badgeAllowed = AUTO_PUBLISH_BADGES.has(translation.badge)
+    const isPublished = badgeAllowed && hasFullText && !bannedPhrase
     if (!isPublished) {
-      console.warn(`[radar] quality gate: "${item.title.slice(0, 50)}" uloženo jako draft (no fullText, ${articleLen}z)`)
+      const reason = !badgeAllowed
+        ? `badge='${translation.badge}' není v auto-publish sadě`
+        : !hasFullText
+          ? 'fullText chybí nebo příliš krátký'
+          : `banned phrase: ${bannedPhrase}`
+      console.warn(`[radar] quality gate → draft: "${item.title.slice(0, 50)}" — ${reason}`)
     }
 
     result.itemsAfterRelevanceCheck++

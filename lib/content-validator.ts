@@ -64,7 +64,19 @@ const BANNED_PHRASES: { phrase: RegExp; message: string }[] = [
   { phrase: /\bnáš\s+olej\b|\bnaše\s+oliv/i, message: 'Osobní zájmena — text imituje e-shop místo objektivního popisu' },
   { phrase: /\bu\s+n[áa]s\s+(doma|na\s+farm|na\s+plant)/i, message: 'Osobní zájmena "u nás"' },
   { phrase: /\blab\s+data\b|\blaboratorní\s+data\b|\blab\s+test|\blab\s+report/i, message: 'Falsely implies we run physical tests — use "deklarovaná data", "data dle výrobce" or "dokumentace výrobce"' },
+  { phrase: /nam[ěe][řr]ili\s+jsme/i, message: 'Falsely implies Olivator ran physical measurements — use "výrobce uvádí", "deklarovaná hodnota"' },
 ]
+
+/**
+ * Lightweight check against BANNED_PHRASES — returns first matched message or null.
+ * Use in radar-agent, article-reviewer, or any text pipeline for one-source-of-truth.
+ */
+export function findBannedPhrase(text: string): string | null {
+  for (const { phrase, message } of BANNED_PHRASES) {
+    if (phrase.test(text)) return message
+  }
+  return null
+}
 
 /** Topics Claude frequently hallucinates when data is missing.
  *  We warn if mentioned without corresponding context. */
