@@ -114,7 +114,6 @@ export function SommelierChat() {
   const touchStartY = useRef<number | null>(null)
   const floaterImpressionFired = useRef(false)
   const peekAutoRetractTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const peekInitTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Stable helper — only uses state setters (stable) and refs
   function retractPeek(openChat = false) {
@@ -164,7 +163,6 @@ export function SommelierChat() {
     setFloaterReady(false)
     setProductHint(null)
     document.body.classList.remove('olik-peeking')
-    if (peekInitTimer.current) clearTimeout(peekInitTimer.current)
     if (peekAutoRetractTimer.current) clearTimeout(peekAutoRetractTimer.current)
 
     if (!pathname.startsWith('/olej/')) {
@@ -175,30 +173,72 @@ export function SommelierChat() {
     const slug = pathname.split('/olej/')[1]?.split('/')[0]?.split('?')[0]
     if (!slug) { setFloaterReady(true); return }
 
-    const peekKey = `olik_peek_${slug}`
-    const alreadyShown = (() => { try { return !!sessionStorage.getItem(peekKey) } catch { return false } })()
-    if (alreadyShown) setFloaterReady(true)
+    // Global session flag — peek max 1× per browser session across all pages
+    const alreadyShown = (() => { try { return !!localStorage.getItem('olik_peek_shown') } catch { return false } })()
+
+    // Mobile (<640px): StickyBuyBar z-[2010] covers Olík z-[50] at scrollY>600.
+    // Dwell threshold ~35% fires after scrollY≈600 on typical product pages — peek
+    // would appear above a covered button. Disable peek entirely on mobile.
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640
+
+    if (alreadyShown || isMobile) {
+      // Still fetch hint so chat suggestions are personalised
+      fetch(`/api/product-hint/${slug}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data: { name: string; nameShort: string | null } | null) => setProductHint(data))
+        .catch(() => {})
+      setFloaterReady(true)
+      return
+    }
+
+    let aborted = false
+    let dwellTimer: ReturnType<typeof setTimeout> | null = null
+    let removeScrollListener: (() => void) | null = null
 
     fetch(`/api/product-hint/${slug}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data: { name: string; nameShort: string | null } | null) => {
+        if (aborted) return
         setProductHint(data)
+        setFloaterReady(true)
 
-        if (data && !alreadyShown) {
-          peekInitTimer.current = setTimeout(() => {
+        if (!data) return
+
+        // Dwell trigger: 35% scroll depth + 1.5s stillness.
+        // 35% stays below the ~42% at which hiddenByStickyBar fires on typical
+        // product pages (scrollY=600 / scrollable≈1400px). A separate useEffect
+        // retracts the peek if the user continues past 600px after it shows.
+        function onScroll() {
+          if (dwellTimer) clearTimeout(dwellTimer)
+          const scrollable = document.documentElement.scrollHeight - window.innerHeight
+          const depth = scrollable > 0 ? window.scrollY / scrollable : 0
+          if (depth < 0.35) return
+          const active = document.activeElement
+          if (active?.tagName === 'INPUT' || active?.tagName === 'TEXTAREA') return
+          dwellTimer = setTimeout(() => {
+            if (aborted) return
+            removeScrollListener?.()
+            removeScrollListener = null
             setPeekState('showing')
             document.body.classList.add('olik-peeking')
             window.dispatchEvent(new CustomEvent('olik:peek', { detail: { active: true } }))
-            try { sessionStorage.setItem(peekKey, '1') } catch {}
+            try { localStorage.setItem('olik_peek_shown', '1') } catch {}
             trackImpression('peek_shown', pathname)
-            peekAutoRetractTimer.current = setTimeout(() => retractPeek(), 4000)
+            peekAutoRetractTimer.current = setTimeout(() => retractPeek(), 12000)
           }, 1500)
         }
+
+        window.addEventListener('scroll', onScroll, { passive: true })
+        removeScrollListener = () => {
+          window.removeEventListener('scroll', onScroll)
+          if (dwellTimer) { clearTimeout(dwellTimer); dwellTimer = null }
+        }
       })
-      .catch(() => setFloaterReady(true))
+      .catch(() => { if (!aborted) setFloaterReady(true) })
 
     return () => {
-      if (peekInitTimer.current) clearTimeout(peekInitTimer.current)
+      aborted = true
+      removeScrollListener?.()
       if (peekAutoRetractTimer.current) clearTimeout(peekAutoRetractTimer.current)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -206,13 +246,20 @@ export function SommelierChat() {
 
   if (pathname.startsWith('/admin')) return null
 
-  // Dismiss peek on scroll or tap outside (grace period 600ms po zobrazení)
+  // Safety: retract peek if sticky bar appears while it's showing (scrollY>600 on desktop)
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (hiddenByStickyBar && peekState === 'showing') retractPeek()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hiddenByStickyBar])
+
+  // Dismiss peek on scroll or tap outside (2s grace period after showing)
   // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
     if (peekState !== 'showing') return
 
     let active = false
-    const grace = setTimeout(() => { active = true }, 600)
+    const grace = setTimeout(() => { active = true }, 2000)
 
     function dismiss(e: Event) {
       if (!active) return
@@ -315,58 +362,63 @@ export function SommelierChat() {
 
   const compareBarActive = compareItems.length > 0
   const floaterBottom = compareBarActive ? 'bottom-24' : 'bottom-6'
+  // Peek sits above floater: floater bottom offset + h-16 (64px) + 12px gap
+  const peekBottomPx = (compareBarActive ? 96 : 24) + 64 + 12
   const isProductPage = pathname.startsWith('/olej/')
 
   return (
     <>
-      {/* PEEK — slide-in zleva, pouze na /olej/* */}
+      {/* PEEK — speech bubble vyrůstající od Olík buttonu (vpravo dole), pouze na /olej/* */}
       {isProductPage && (
         <div
           ref={peekRef}
           role="button"
           tabIndex={peekState === 'showing' ? 0 : -1}
-          aria-label={`Olík — zeptej se na ${productName ?? 'tento olej'}`}
+          aria-label={`Zeptat se Olíka na ${productName ?? 'tento olej'}`}
           onClick={handlePeekClick}
           onKeyDown={(e) => e.key === 'Enter' && handlePeekClick()}
-          className="fixed left-0 z-[49] flex items-center cursor-pointer select-none"
+          className="fixed z-[49] cursor-pointer select-none"
           style={{
-            bottom: '33vh',
-            transform: peekState === 'showing' ? 'translateX(0)' : 'translateX(-100%)',
-            transition: 'transform 350ms ease-out',
+            right: 24,
+            bottom: peekBottomPx,
+            opacity: peekState === 'showing' ? 1 : 0,
+            transform: peekState === 'showing' ? 'translateY(0) scale(1)' : 'translateY(10px) scale(0.95)',
+            transition: 'opacity 300ms ease-out, transform 300ms ease-out',
             pointerEvents: peekState === 'showing' ? 'auto' : 'none',
           }}
         >
-          {/* -70px skryje nakreslený okraj displeje v obrázku za viewport hranu */}
-          <picture>
-            <source srcSet="/olik-peek.webp" type="image/webp" />
-            <img
-              src="/olik-peek.png"
-              alt="Olík"
-              className="block w-[196px] h-[130px] max-w-none shrink-0"
-              style={{ marginLeft: '-70px' }}
-              draggable={false}
-            />
-          </picture>
-          {productHint && (
-            <div
-              className="relative ml-2 rounded-2xl px-3 py-2 text-[13px] font-medium text-olive whitespace-nowrap"
-              style={{
-                background: 'white',
-                filter: 'drop-shadow(0 2px 8px rgba(45,106,79,0.22))',
-              }}
+          <div
+            className="relative rounded-2xl px-3 py-2.5 max-w-[210px]"
+            style={{ background: 'white', filter: 'drop-shadow(0 2px 14px rgba(45,106,79,0.30))' }}
+          >
+            {/* ✕ dismiss */}
+            <button
+              onClick={(e) => { e.stopPropagation(); retractPeek() }}
+              aria-label="Zavřít"
+              className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-text3/40 text-white text-[9px] flex items-center justify-center hover:bg-text3/60 transition-colors"
             >
-              <div
-                className="absolute right-full top-1/2 w-0 h-0 pointer-events-none"
-                style={{
-                  transform: 'translateY(-50%)',
-                  borderTop: '5px solid transparent',
-                  borderBottom: '5px solid transparent',
-                  borderRight: '7px solid white',
-                }}
-              />
-              Znám {productName} — zeptej se mě 🫒
+              ✕
+            </button>
+            <div className="text-[13px] font-medium text-olive leading-snug">
+              {productName ? `Znám ${productName} 🫒` : 'Potřebuješ poradit? 🫒'}
             </div>
-          )}
+            <div className="text-[11px] text-olive/65 mt-1">
+              Zeptej se Olíka →
+            </div>
+            {/* tail pointing down toward floater button */}
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                bottom: -7,
+                right: 20,
+                width: 0,
+                height: 0,
+                borderLeft: '6px solid transparent',
+                borderRight: '6px solid transparent',
+                borderTop: '8px solid white',
+              }}
+            />
+          </div>
         </div>
       )}
 
