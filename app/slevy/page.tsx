@@ -13,11 +13,11 @@ export const revalidate = 600
 export const metadata: Metadata = {
   title: 'Olivový olej — akce a slevy dnes | Olivátor',
   description:
-    'Přehled aktuálních slev a akcí na olivový olej ze 18 českých prodejců. Pouze ověřené slevy porovnané s 30denním maximem ceny.',
+    'Přehled aktuálních slev a akcí na olivový olej od partnerských e-shopů. Pouze ověřené slevy porovnané s 30denním maximem ceny.',
   alternates: { canonical: 'https://olivator.cz/slevy' },
   openGraph: {
     title: 'Olivový olej — akce a slevy dnes | Olivátor',
-    description: 'Denně aktualizovaný přehled skutečných slev ze 13 prodejců.',
+    description: 'Denně aktualizovaný přehled skutečných slev od partnerských e-shopů.',
     url: 'https://olivator.cz/slevy',
   },
 }
@@ -28,7 +28,7 @@ const UTM = 'utm_source=web&utm_medium=slevy&utm_campaign=deals_page'
 const FAQ_ITEMS = [
   {
     q: 'Jak Olivátor ověřuje, že jde o skutečnou slevu?',
-    a: 'Sledujeme ceny ze 13 prodejců každý den. Slevu zobrazujeme pouze tehdy, pokud je aktuální cena alespoň 5 % pod maximální cenou za posledních 30 dní u konkrétního prodejce.',
+    a: 'Sledujeme ceny od partnerských e-shopů každý den. Slevu zobrazujeme pouze tehdy, pokud je aktuální cena alespoň 5 % pod maximální cenou za posledních 30 dní u konkrétního prodejce.',
   },
   {
     q: 'Jak často se přehled aktualizuje?',
@@ -210,7 +210,7 @@ export default async function SlevyPage() {
         '@context': 'https://schema.org',
         '@type': 'ItemList',
         name: 'Slevy na olivový olej — Olivátor',
-        description: `${deals.length} ověřených slev na olivový olej ze srovnání 13 prodejců.`,
+        description: `${deals.length} ověřených slev na olivový olej od partnerských e-shopů.`,
         numberOfItems: deals.length,
         itemListElement: deals.slice(0, 10).map((d, i) => ({
           '@type': 'ListItem',
@@ -397,7 +397,7 @@ export default async function SlevyPage() {
               <div className="text-[28px] mb-2">🔄</div>
               <h3 className="text-[14px] font-semibold text-text mb-1">Denní aktualizace</h3>
               <p className="text-[13px] text-text2 leading-relaxed">
-                Ceny u 13 prodejců scrapujeme každý den ráno. Co vidíte,
+                Ceny u partnerských e-shopů scrapujeme každý den ráno. Co vidíte,
                 to je dnešní stav — ne zastaralá data z minulého týdne.
               </p>
             </div>

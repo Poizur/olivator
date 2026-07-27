@@ -11,7 +11,7 @@ export const revalidate = 3600
 export const metadata: Metadata = {
   title: 'Olivový olej 5L — velké balení od 118 Kč/litr | Olivator',
   description:
-    'Olivový olej 5L — velká balení od 118 Kč/litr. Průměrně výrazně nižší cena za litr než malé lahve. Nezávislé hodnocení, reálné ceny ze 13 prodejců.',
+    'Olivový olej 5L — velká balení od 118 Kč/litr. Průměrně výrazně nižší cena za litr než malé lahve. Nezávislé hodnocení, reálné ceny od partnerských e-shopů.',
   alternates: { canonical: 'https://olivator.cz/olivovy-olej-5l' },
   openGraph: {
     type: 'website',
@@ -118,7 +118,7 @@ export default async function BulkOilPage() {
             </h1>
             <p className="text-[16px] text-text2 max-w-[520px] leading-relaxed mb-7">
               {total} prověřených olejů v 5L balení. Od {minPpl} Kč/litr.
-              Nezávislé Olivator Score, reálné ceny ze srovnání 13 prodejců.
+              Nezávislé Olivator Score, reálné ceny od partnerských e-shopů.
             </p>
 
             <a

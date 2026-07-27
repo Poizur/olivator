@@ -4,33 +4,35 @@ import Link from 'next/link'
 import Script from 'next/script'
 import { getAuthorBySlug, getArticlesByAuthor } from '@/lib/authors-db'
 import { breadcrumbSchema } from '@/lib/schema'
+import { getSiteStats } from '@/lib/data'
 
 export const revalidate = 3600
 
-export const metadata: Metadata = {
-  title: 'Olík — datový průvodce Olivátoru | Olivator',
-  description:
-    'Olík nesnáší dvě věci: marketingové bláboly a olej s kyselostí nad 0,5 %. Píše o olivovém oleji ze 13 prodejců v ČR.',
-  alternates: { canonical: 'https://olivator.cz/autor/olik' },
-  openGraph: {
-    type: 'profile',
-    url: 'https://olivator.cz/autor/olik',
-    title: 'Olík — datový průvodce Olivátoru',
-    description:
-      'Olík nesnáší dvě věci: marketingové bláboly a olej s kyselostí nad 0,5 %. Olivator Score je jeho dílo.',
-    images: [{ url: 'https://olivator.cz/olik.png', width: 400, height: 400, alt: 'Olík' }],
-  },
+export async function generateMetadata(): Promise<Metadata> {
+  const stats = await getSiteStats()
+  const desc = `Olík nesnáší dvě věci: marketingové bláboly a olej s kyselostí nad 0,5 %. Provází katalogem ${stats.activeProducts} olejů od ${stats.activeRetailers} partnerských e-shopů.`
+  return {
+    title: 'Olík — datový průvodce Olivátoru | Olivator',
+    description: desc,
+    alternates: { canonical: 'https://olivator.cz/autor/olik' },
+    openGraph: {
+      type: 'profile',
+      url: 'https://olivator.cz/autor/olik',
+      title: 'Olík — datový průvodce Olivátoru',
+      description: desc,
+      images: [{ url: 'https://olivator.cz/olik.png', width: 400, height: 400, alt: 'Olík' }],
+    },
+  }
 }
 
 const OLIK_STATIC = {
   name: 'Olík',
-  bioShort:
-    'Olík nesnáší dvě věci: marketingové bláboly a olej s kyselostí nad 0,5 %. Píše o olivovém oleji ze 13 prodejců v ČR. Olivator Score je jeho dílo.',
+  bioShort: null as string | null, // přepsáno dynamicky v rendereru
   bioFull: `Datový průvodce Olivátoru. Číslům věří víc než marketingovým sloganům.
 
 Olík nesnáší dvě věci: marketingové bláboly a olej s kyselostí nad 0,5 %. Ostatní mu nevadí.
 
-Olivator Score vznikl z prosté frustrace: nikdo v ČR nesrovnával oleje podle dat. Jen podle dojmů, obalů a toho, jestli na etiketě bylo napsáno „Toskánsko". Olík to změnil — vzal certifikáty výrobců, kyselost z protokolů, polyfenoly tam kde byly dostupné, a postavil skóre, které lze přepočítat.
+Olivátor sleduje deklarovaná data výrobců — certifikáty, kyselost z protokolů, polyfenoly tam kde jsou dostupné — a počítá transparentní Score, které lze přepočítat. Metodika je veřejná na /metodika.
 
 Žádný výrobce mu neplatí. Naopak: čím dráž olej stojí, tím víc ho štve, když data neodpovídají ceně.`,
   schemaMetadata: {
@@ -71,21 +73,25 @@ const TOPICS: { label: string; href: string; flag?: string }[] = [
   { label: 'Olivator Score metodika', href: '/metodika' },
 ]
 
-const STATS = [
-  { value: '847', label: 'olejů ochutnaných' },
-  { value: '12', label: 'olivových hájů' },
-  { value: '18', label: 'prodejců sledovaných' },
-  { value: '100', label: 'bodů Olivator Score' },
-]
-
 export default async function OlikAuthorPage() {
-  const [dbAuthor, articles] = await Promise.all([
+  const [dbAuthor, articles, siteStats] = await Promise.all([
     getAuthorBySlug('olik'),
     getArticlesByAuthor('olik', { limit: 12 }),
+    getSiteStats(),
   ])
 
   const author = dbAuthor ?? OLIK_STATIC
   const schema = dbAuthor?.schemaMetadata ?? OLIK_STATIC.schemaMetadata
+
+  const dynamicBioShort = dbAuthor?.bioShort
+    ?? `Olík nesnáší dvě věci: marketingové bláboly a olej s kyselostí nad 0,5 %. Provází katalogem ${siteStats.activeProducts} olejů od ${siteStats.activeRetailers} partnerských e-shopů a vysvětluje, jak číst deklarovaná data. Score počítá Olivátor podle veřejné metodiky.`
+
+  const STATS = [
+    { value: '847', label: 'olejů ochutnaných' },
+    { value: '12', label: 'olivových hájů' },
+    { value: String(siteStats.activeRetailers), label: 'partnerských e-shopů' },
+    { value: '100', label: 'bodů Olivator Score' },
+  ]
 
   const breadcrumbs = breadcrumbSchema([
     { name: 'Olivátor', url: '/' },
@@ -132,7 +138,7 @@ export default async function OlikAuthorPage() {
             Olík
           </h1>
           <p className="text-[15px] text-text2 leading-relaxed mb-4 max-w-[600px]">
-            {author.bioShort}
+            {dynamicBioShort}
           </p>
         </div>
       </div>

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     type: 'website',
     url: 'https://olivator.cz/index-cen',
     title: 'Index cen olivového oleje v ČR — Olivátor',
-    description: 'Měsíční mediánová cena EVOO v ČR. Nezávislá data z 19 prodejců, 400+ produktů.',
+    description: 'Měsíční mediánová cena EVOO v ČR. Nezávislá data od partnerských e-shopů, 400+ produktů.',
   },
 }
 
