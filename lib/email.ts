@@ -131,10 +131,23 @@ export async function sendBulkJobCompletionEmail(jobInfo: {
   await logNotification(recipient, subject, 'bulk_job_completion', html, sendResult)
 }
 
-/** Send discovery run summary email. */
+/** Send discovery run summary email.
+ * L-039: email se posílá jen pokud je co hlásit (nové produkty, chyby, fronta).
+ * Ticho = vše proběhlo bez novinek. Týdenní souhrn v pondělí vždy.
+ */
 export async function sendDiscoverySummary(result: DiscoveryRunResult): Promise<void> {
   const recipient = await getSetting<string>('notification_email')
   if (!recipient) return
+
+  const hasActivity = result.autoPublished > 0
+    || result.autoAddedOffers > 0
+    || result.needsReview > 0
+    || result.failed > 0
+    || result.shopErrors.length > 0
+
+  const isMonday = new Date().getDay() === 1
+
+  if (!hasActivity && !isMonday) return  // ticho = vše OK
 
   const subject = `[Olivator] Discovery: ${result.autoPublished} publikováno · ${result.needsReview} ke schválení`
 
@@ -353,25 +366,54 @@ export interface HealedTokenReport {
   replacements: Array<{ oldToken: string; newToken: string }>
 }
 
-/** Denní token-validator cron — alert na broken tokeny + přehled auto-healed náhrad. */
+/** Denní token-validator cron — alert na broken tokeny + přehled auto-healed náhrad.
+ * L-039: hlásí ZMĚNY a skutečné problémy. Karanténa = jen souhrn jedním číslem.
+ * Pokud nic nového a nic mimo karanténu → email se neposílá vůbec.
+ */
 export async function sendBrokenTokensAlert(
   reports: BrokenTokenReport[],
   healed: HealedTokenReport[] = [],
+  extra?: {
+    quarantineTokenCount?: number
+    quarantineArticleCount?: number
+    newlyBroken?: Array<{ articleSlug: string; tokens: string[] }>
+    isWeeklySummary?: boolean
+  },
 ): Promise<void> {
   const recipient = await getSetting<string>('notification_email')
   if (!recipient) return
 
   const hasManual = reports.length > 0
   const hasHealed = healed.length > 0
+  const hasNew = (extra?.newlyBroken?.length ?? 0) > 0
+  const quarantineCount = extra?.quarantineTokenCount ?? 0
+  const quarantineArticleCount = extra?.quarantineArticleCount ?? 0
+  const isWeeklySummary = extra?.isWeeklySummary ?? false
 
   const subjectParts: string[] = []
-  if (hasManual) subjectParts.push(`${reports.length} vyžaduje ruční zásah`)
-  if (hasHealed) subjectParts.push(`${healed.length} auto-healed`)
-  const subject = `[Olivator] Broken tokeny: ${subjectParts.join(', ')}`
+  if (hasNew) subjectParts.push(`${extra!.newlyBroken!.length} nové`)
+  if (hasManual) subjectParts.push(`${reports.length} vyžaduje pozornost`)
+  if (hasHealed) subjectParts.push(`${healed.length} opraveno`)
+  if (isWeeklySummary) subjectParts.push(`souhrn: ${quarantineCount} v karanténě`)
+  const subject = `[Olivator] Tokeny: ${subjectParts.join(', ')}`
+
+  const newHtml = hasNew
+    ? `
+  <h2 style="font-size:15px;color:#3949ab;margin:0 0 12px">🆕 Nové od minulého reportu (${extra!.newlyBroken!.length})</h2>
+  <ul style="list-style:none;padding:0;margin:0 0 24px">
+    ${extra!.newlyBroken!.map((r) => `
+    <li style="margin-bottom:8px;padding:10px 12px;background:#f0f4ff;border-radius:8px;border:1px solid #c5cae9">
+      <div style="font-size:13px;font-weight:600">
+        <a href="https://olivator.cz/admin/articles/${r.articleSlug}" style="color:#3949ab">${r.articleSlug}</a>
+      </div>
+      <div style="font-size:12px;color:#6e6e73;margin-top:3px">${r.tokens.join(', ')}</div>
+    </li>`).join('')}
+  </ul>`
+    : ''
 
   const manualHtml = hasManual
     ? `
-  <h2 style="font-size:15px;color:#c4711a;margin:0 0 12px">⚠️ Vyžaduje ruční zásah (${reports.length})</h2>
+  <h2 style="font-size:15px;color:#c00;margin:0 0 12px">⚠️ Vyžaduje pozornost (${reports.length})</h2>
   <ul style="list-style:none;padding:0;margin:0 0 24px">
     ${reports.map((r) => `
     <li style="margin-bottom:10px;padding:12px;background:#fafafa;border-radius:8px;border:1px solid #e8e8ed">
@@ -386,7 +428,7 @@ export async function sendBrokenTokensAlert(
 
   const healedHtml = hasHealed
     ? `
-  <h2 style="font-size:15px;color:#2d6a4f;margin:0 0 12px">✅ Auto-healed (${healed.length})</h2>
+  <h2 style="font-size:15px;color:#2d6a4f;margin:0 0 12px">✅ Opraveno (${healed.length})</h2>
   <ul style="list-style:none;padding:0;margin:0 0 24px">
     ${healed.map((h) => `
     <li style="margin-bottom:10px;padding:12px;background:#f0faf4;border-radius:8px;border:1px solid #b7e4c7">
@@ -400,14 +442,25 @@ export async function sendBrokenTokensAlert(
   </ul>`
     : ''
 
+  const quarantineHtml = quarantineCount > 0
+    ? `
+  <div style="background:#f5f5f7;border-radius:8px;padding:12px 16px;margin-bottom:24px;font-size:13px;color:#6e6e73">
+    ⏳ <strong>Čeká na legalizaci: ${quarantineCount} tokenů v ${quarantineArticleCount} článcích</strong>
+    — produkty retailerů v karanténě, žádná akce potřeba.
+    <a href="https://olivator.cz/admin/retailers" style="color:#2d6a4f;margin-left:6px">Správa retailerů →</a>
+  </div>`
+    : ''
+
   const html = `<!DOCTYPE html>
 <html lang="cs"><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#fafafa">
 <div style="background:white;border-radius:12px;padding:32px;border:1px solid #e8e8ed">
-  <h1 style="font-size:20px;color:#1d1d1f;margin:0 0 8px">🔗 Token validátor</h1>
+  <h1 style="font-size:20px;color:#1d1d1f;margin:0 0 8px">🔗 Token validátor${isWeeklySummary ? ' — týdenní souhrn' : ''}</h1>
   <p style="color:#6e6e73;font-size:14px;margin:0 0 24px">Denní kontrola {{product:}} tokenů v aktivních článcích.</p>
 
-  ${healedHtml}
+  ${newHtml}
   ${manualHtml}
+  ${healedHtml}
+  ${quarantineHtml}
 
   <div style="text-align:center;margin-top:24px">
     <a href="https://olivator.cz/admin/articles" style="display:inline-block;background:#2d6a4f;color:white;text-decoration:none;padding:12px 24px;border-radius:24px;font-size:14px;font-weight:500">
@@ -416,7 +469,7 @@ export async function sendBrokenTokensAlert(
   </div>
 
   <p style="font-size:11px;color:#aeaeb2;margin-top:32px;border-top:1px solid #e8e8ed;padding-top:16px">
-    Generováno automaticky cron:validate-tokens (denně 07:00 UTC).
+    Generováno automaticky cron:validate-tokens (denně 07:00 UTC). Ticho = vše OK.
   </p>
 </div>
 </body></html>`.trim()

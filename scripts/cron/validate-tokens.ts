@@ -3,6 +3,8 @@
 // REPORT-ONLY: broken tokeny hlásí e-mailem, NEOPRAVUJE je (L-034, 2026-07-25).
 // Náhrady tokenů provádí výhradně člověk nebo člověkem schválený návrh.
 //
+// L-039: hlásí ZMĚNY, ne opakující se stav. Karanténní retaileři = týdenní souhrn.
+//
 // Regex tokenu musí sedět s lib/template-vars.ts:resolveProductTokens().
 import { supabaseAdmin } from '@/lib/supabase'
 import { sendBrokenTokensAlert, type BrokenTokenReport, type HealedTokenReport } from '@/lib/email'
@@ -133,7 +135,7 @@ async function main() {
       } catch { /* non-fatal */ }
     }
 
-    // Jeden dotaz pro stav všech referencovaných produktů
+    // Jeden dotaz pro stav všech referencovaných produktů + jejich retaileři
     const { data: products } = await supabaseAdmin
       .from('products')
       .select('slug, status')
@@ -144,75 +146,136 @@ async function main() {
       statusBySlug.set(p.slug as string, p.status as string)
     }
 
-    // AUTO-HEAL ZAKÁZÁN (L-034, 2026-07-25): cron je REPORT-ONLY.
-    // Náhrady tokenů provádí výhradně člověk nebo člověkem schválený návrh.
-    // Viz: incidents/2026-07-25-auto-heal-callejas.md
+    // Zjisti které produkty jsou inactive kvůli karanténnímu retailerovi
+    // Karanténní produkt: status='inactive' + aspoň 1 offer z retailera s quarantine_status != null
+    const inactiveSlugs = [...allSlugs].filter(s => statusBySlug.get(s) === 'inactive')
+    const quarantineProductSlugs = new Set<string>()
+    if (inactiveSlugs.length > 0) {
+      const { data: quarantineOffers } = await supabaseAdmin
+        .from('product_offers')
+        .select('product_id, products!inner(slug), retailers!inner(quarantine_status)')
+        .in('products.slug', inactiveSlugs)
+        .not('retailers.quarantine_status', 'is', null)
+      for (const row of quarantineOffers ?? []) {
+        const p = row.products as { slug: string } | null
+        if (p?.slug) quarantineProductSlugs.add(p.slug)
+      }
+    }
 
-    // Zpracuj broken tokeny — pouze REPORT
+    // Načti stav z předchozího runu (diff)
+    const { data: lastRun } = await supabaseAdmin
+      .from('agent_decisions')
+      .select('payload, created_at')
+      .eq('agent_name', 'token-validator')
+      .eq('decision_type', 'broken_tokens_snapshot')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const prevSnapshot: Record<string, string[]> = (lastRun?.payload as { tokens?: Record<string, string[]> })?.tokens ?? {}
+    // prevSnapshot: { articleSlug → [productSlug, ...] }
+
+    // AUTO-HEAL ZAKÁZÁN (L-034, 2026-07-25): cron je REPORT-ONLY.
     const manualReports: BrokenTokenReport[] = []
     const healedReports: HealedTokenReport[] = []
 
-    for (const [articleSlug, { slugs, body: _body, category: _category }] of articleTokens) {
+    // Aktuální snapshot broken tokenů (pro uložení do DB)
+    const currentSnapshot: Record<string, string[]> = {}
+
+    // Karanténní přehled (bez detailů)
+    let quarantineTokenCount = 0
+    const quarantineArticles = new Set<string>()
+    const newlyBrokenArticles: Array<{ articleSlug: string; tokens: string[] }> = []
+
+    for (const [articleSlug, { slugs }] of articleTokens) {
       const brokenSlugs: string[] = []
-      let hasMissing = false
+      const quarantineSlugs: string[] = []
+      const realProblemSlugs: string[] = []
 
       for (const slug of slugs) {
         const status = statusBySlug.get(slug)
         if (!status || status !== 'active') {
           brokenSlugs.push(slug)
-          if (!status) hasMissing = true
+          if (quarantineProductSlugs.has(slug)) {
+            quarantineSlugs.push(slug)
+          } else {
+            realProblemSlugs.push(slug)
+          }
         }
       }
 
       if (brokenSlugs.length === 0) continue
 
-      const manualTokens: string[] = []
+      // Uložit do snapshotu
+      currentSnapshot[articleSlug] = brokenSlugs
 
-      for (const brokenSlug of brokenSlugs) {
-        const statusSuffix = statusBySlug.get(brokenSlug)
-        manualTokens.push(statusSuffix ? `${brokenSlug} (${statusSuffix})` : brokenSlug)
-        console.log(`  [broken] ${articleSlug}: ${brokenSlug}`)
+      // Karanténní tokeny — jen počítej, nereportuj detailně
+      if (quarantineSlugs.length > 0) {
+        quarantineTokenCount += quarantineSlugs.length
+        quarantineArticles.add(articleSlug)
       }
 
-      if (manualTokens.length > 0) {
+      // Skutečné problémy — vždy reportovat
+      if (realProblemSlugs.length > 0) {
+        const hasMissing = realProblemSlugs.some(s => !statusBySlug.has(s))
+        const formatted = realProblemSlugs.map(s => {
+          const st = statusBySlug.get(s)
+          return st ? `${s} (${st})` : s
+        })
         manualReports.push({
           articleSlug,
-          brokenTokens: manualTokens,
+          brokenTokens: formatted,
           severity: hasMissing ? 'critical' : 'warning',
         })
+        console.log(`  [broken:real] ${articleSlug}: ${formatted.join(', ')}`)
       }
+
+      // Nové karanténní tokeny (nebyly v předchozím snapshotu)
+      const prevBroken = prevSnapshot[articleSlug] ?? []
+      const newlySeen = brokenSlugs.filter(s => !prevBroken.includes(s))
+      if (newlySeen.length > 0) {
+        newlyBrokenArticles.push({ articleSlug, tokens: newlySeen })
+        console.log(`  [broken:new] ${articleSlug}: ${newlySeen.join(', ')}`)
+      }
+    }
+
+    // Ulož aktuální snapshot do agent_decisions (pro příští diff)
+    try {
+      await supabaseAdmin.from('agent_decisions').insert({
+        agent_name: 'token-validator',
+        decision_type: 'broken_tokens_snapshot',
+        payload: { tokens: currentSnapshot, quarantine_count: quarantineTokenCount },
+      })
+    } catch (err) {
+      console.warn('[validate-tokens] snapshot save failed:', err)
     }
 
     console.log(
-      `[validate-tokens] zkontrolováno ${articles.length} článků, ${allSlugs.size} unikátních tokenů, ` +
-      `0 auto-healed (zakázáno), ${manualReports.length} vyžaduje ruční zásah`
+      `[validate-tokens] zkontrolováno ${articles.length} článků, ${allSlugs.size} unikátních tokenů | ` +
+      `karanténa: ${quarantineTokenCount} tokenů v ${quarantineArticles.size} článcích | ` +
+      `skutečné problémy: ${manualReports.length} | nové od včerejška: ${newlyBrokenArticles.length}`
     )
 
-    // Loguj broken tokeny (manual) do agent_decisions
-    for (const r of manualReports) {
-      try {
-        await supabaseAdmin.from('agent_decisions').insert({
-          agent_name: 'token-validator',
-          decision_type: 'broken_tokens_found',
-          payload: {
-            article_slug: r.articleSlug,
-            broken_tokens: r.brokenTokens,
-            severity: r.severity,
-          },
-        })
-      } catch (err) {
-        console.warn('[validate-tokens] log do agent_decisions selhal:', err)
-      }
-    }
+    // Email logika (L-039: hlásíme ZMĚNY, ne opakující se stav)
+    const isMonday = new Date().getDay() === 1
+    const hasRealProblems = manualReports.length > 0 || healedReports.length > 0
+    const hasNewIssues = newlyBrokenArticles.length > 0
+    const shouldSendEmail = hasRealProblems || hasNewIssues || (isMonday && quarantineTokenCount > 0)
 
-    // Email — pouze pokud něco rozbité nebo healed
-    if (manualReports.length > 0 || healedReports.length > 0) {
+    if (shouldSendEmail) {
       try {
-        await sendBrokenTokensAlert(manualReports, healedReports)
+        await sendBrokenTokensAlert(manualReports, healedReports, {
+          quarantineTokenCount,
+          quarantineArticleCount: quarantineArticles.size,
+          newlyBroken: newlyBrokenArticles,
+          isWeeklySummary: isMonday && !hasRealProblems && !hasNewIssues,
+        })
         console.log('[validate-tokens] alert email sent')
       } catch (err) {
         console.warn('[validate-tokens] email failed:', err)
       }
+    } else {
+      console.log('[validate-tokens] žádné nové problémy, email neposlán (ticho = vše OK)')
     }
 
     const elapsedSec = Math.round((Date.now() - startedAt) / 1000)
