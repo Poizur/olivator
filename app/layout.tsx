@@ -53,7 +53,7 @@ export default function RootLayout({
   const gaId = process.env.NEXT_PUBLIC_GA4_ID
 
   return (
-    <html lang="cs">
+    <html lang="cs" data-scroll-behavior="smooth">
       <body className="min-h-screen flex flex-col antialiased">
         <WishlistProvider>
           <CompareProvider>
