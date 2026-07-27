@@ -81,6 +81,7 @@ export interface RawBriefData {
   autonomousActions: object
   priceWatch: object
   olik: object
+  retailerStatus: object
 }
 
 export interface GenerateBriefResult {
@@ -410,6 +411,23 @@ function buildSystemSection(autonomousActions: object): string {
   return result
 }
 
+async function collectRetailerStatus(): Promise<object> {
+  const { data: retailers } = await supabaseAdmin
+    .from('retailers')
+    .select('slug, name, is_active, quarantine_status')
+  const all = retailers ?? []
+  const active = all.filter(r => (r.is_active as boolean) && !(r.quarantine_status as string | null))
+  const quarantine = all.filter(r => (r.quarantine_status as string | null))
+  const inactive = all.filter(r => !(r.is_active as boolean) && !(r.quarantine_status as string | null))
+  return {
+    total: all.length,
+    active: active.length,
+    quarantine: quarantine.length,
+    inactive: inactive.length,
+    quarantineSlugs: quarantine.map(r => r.slug as string),
+  }
+}
+
 // ── Prompt ────────────────────────────────────────────────────────────────────
 
 function buildPrompt(raw: RawBriefData, weekLabel: string, learningSummary: string): string {
@@ -559,6 +577,14 @@ ${(() => {
   return lines.join('\n')
 })()}
 
+🏪 Retaileři — aktuální stav:
+${(() => {
+  const rs = raw.retailerStatus as { total?: number; active?: number; quarantine?: number; inactive?: number; quarantineSlugs?: string[]; error?: string }
+  if (rs.error) return `  (nedostupné: ${rs.error})`
+  const slugList = (rs.quarantineSlugs ?? []).length > 0 ? ` (${(rs.quarantineSlugs ?? []).join(', ')})` : ''
+  return `  Celkem: ${rs.total ?? '?'} | Aktivní: ${rs.active ?? '?'} | Karanténa: ${rs.quarantine ?? 0}${slugList} | Neaktivní: ${rs.inactive ?? 0}`
+})()}
+
 ━━━ LEKCE K POUŽITÍ ━━━
 ${learningSummary || '(žádné relevantní lekce)'}
 
@@ -626,7 +652,8 @@ PRAVIDLA:
 - options.label: použij VÝHRADNĚ přesně tyto tři řetězce: "ANO", "NE", "ODLOŽIT". Žádná jiná slova, žádné cizí jazyky.
 - recommended_option musí být jedno z: "ANO", "NE", "ODLOŽIT".
 - affiliate nabídky: rozlišuj "opravitelné Executorem" (retailer má eHUB tracking) vs. "bez affiliate programu". Celkové číslo bez affiliate neznamená ztracený revenue — většina jsou retaileři bez affiliate programu (viz L-010).
-- executor_rule: pokud kategorie="affiliate" a chceš spustit opravu affiliate URL, uveď "fix_affiliate_url". Pokud kategorie="catalog" nebo "katalog" nebo "product" a chceš přepočítat skóre, uveď "recalc_score". Ve všech ostatních případech uveď null. NIKDY nevymýšlej jiné hodnoty — executor_rule smí být VÝHRADNĚ: "fix_affiliate_url", "recalc_score", nebo null.`
+- executor_rule: pokud kategorie="affiliate" a chceš spustit opravu affiliate URL, uveď "fix_affiliate_url". Pokud kategorie="catalog" nebo "katalog" nebo "product" a chceš přepočítat skóre, uveď "recalc_score". Ve všech ostatních případech uveď null. NIKDY nevymýšlej jiné hodnoty — executor_rule smí být VÝHRADNĚ: "fix_affiliate_url", "recalc_score", nebo null.
+- KARANTÉNNÍ RETAILEŘI: retaileři v karanténě (viz sekce Retaileři výše) čekají na legalizaci smluv. Jejich prázdné nabídky a neaktualizované ceny jsou ZÁMĚR — NEDOPORUČUJ jejich opravu. Místo toho sleduj postup legalizace. Karanténní retailer ve "nasel" ani "rozhodnuti" nesmí figurovat jako "problém k opravě".`
 }
 
 
@@ -826,8 +853,8 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
   const { weekLabel, weekStart } = getWeekLabel()
   console.log(`[executive-director] Generuji brief ${weekLabel}${opts.dryRun ? ' (DRY-RUN)' : ''}${opts.testFailOpen ? ' (TEST-FAILOPEN)' : ''}...`)
 
-  // 13 zdrojů dat paralelně
-  const [gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts, autonomousActions, priceWatch, olik] = await Promise.all([
+  // 14 zdrojů dat paralelně
+  const [gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts, autonomousActions, priceWatch, olik, retailerStatus] = await Promise.all([
     collectGsc().catch((e) => ({ error: (e as Error).message })),
     collectCatalog().catch((e) => ({ error: (e as Error).message })),
     collectAffiliate().catch((e) => ({ error: (e as Error).message })),
@@ -841,9 +868,10 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
     collectAutonomousActions().catch((e) => ({ error: (e as Error).message })),
     collectPriceWatch().catch((e) => ({ error: (e as Error).message })),
     collectOlik().catch((e) => ({ error: (e as Error).message })),
+    collectRetailerStatus().catch((e) => ({ error: (e as Error).message })),
   ])
 
-  const rawData: RawBriefData = { gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts, autonomousActions, priceWatch, olik }
+  const rawData: RawBriefData = { gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts, autonomousActions, priceWatch, olik, retailerStatus }
   console.log('[executive-director] Data sesbírána')
 
   // Learning Memory Layer — inject relevantní lekce do promptu

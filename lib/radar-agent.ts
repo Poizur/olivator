@@ -179,7 +179,14 @@ const TRANSLATION_PROMPT = (source: string, title: string, description: string, 
       `- Kontext a pozadí (region, soutěž, trendy) je OK pokud je obecně znám\n` +
       `- Použij SPRÁVNÉ české názvy: Puglia = "Apulie", adjektivum "apulský/apulská"\n` +
       `- Pokud nelze napsat alespoň 3 faktické odstavce, vrať is_relevant: false\n` +
-      `- ABSOLUTNĚ ŽÁDNÁ cyrilická písmena — pouze latina s háčky a čárkami`)
+      `- ABSOLUTNĚ ŽÁDNÁ cyrilická písmena — pouze latina s háčky a čárkami`) +
+  `\n\nKOREKTURA (povinná před vrácením JSON):\n` +
+  `Projdi hotový czech_article a oprav:\n` +
+  `- Gramatické chyby a překlepy\n` +
+  `- Strojové formulace ("v oblasti X hraje klíčovou roli", "je třeba zdůraznit", "není bez zajímavosti")\n` +
+  `- Anglicismy v češtině ("impact" → "dopad", "timing" → "načasování")\n` +
+  `- Špatné skloňování ("Řecka slaví" → "Řečtí producenti slaví")\n` +
+  `Teprve po korektuře vrať finální JSON.`
 
 async function translateAndLocalize(item: RssItem, fullText: string | null): Promise<TranslationResult | null> {
   try {
@@ -290,6 +297,18 @@ export async function runRadarAgent(opts: { hoursBack?: number; maxItems?: numbe
     errors: [],
     startedAt,
     finishedAt: '',
+  }
+
+  // Housekeeping: novinky starší 30 dní nejsou novinky — unpublish automaticky
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+  const { data: expiredRows } = await supabaseAdmin
+    .from('radar_items')
+    .update({ is_published: false })
+    .eq('is_published', true)
+    .lt('published_at', thirtyDaysAgo)
+    .select('id')
+  if ((expiredRows?.length ?? 0) > 0) {
+    console.log(`[radar] housekeeping: unpublished ${expiredRows!.length} expired items (>30 days)`)
   }
 
   const seen = await loadSeenIndex()

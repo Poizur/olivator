@@ -47,19 +47,38 @@ async function main() {
     // Sesbírej tokeny per článek + unikátní sadu slugů napříč všemi články
     const articleTokens = new Map<string, { slugs: Set<string>; body: string; category: string | null }>()
     const allSlugs = new Set<string>()
+    const duplicateTokenReports: Array<{ articleSlug: string; slug: string; count: number }> = []
     for (const a of articles) {
       const body = (a.body_markdown as string) ?? ''
       if (!body.includes('{{product:')) continue
       const slugs = new Set<string>()
+      const slugCounts = new Map<string, number>()
       const re = new RegExp(TOKEN_RE)
       let m: RegExpExecArray | null
       while ((m = re.exec(body)) !== null) {
         slugs.add(m[1])
         allSlugs.add(m[1])
+        slugCounts.set(m[1], (slugCounts.get(m[1]) ?? 0) + 1)
+      }
+      // Hlásit duplikáty (stejný produkt >2× v jednom článku)
+      for (const [slug, count] of slugCounts) {
+        if (count > 2) {
+          duplicateTokenReports.push({ articleSlug: a.slug as string, slug, count })
+          console.warn(`[validate-tokens] DUPLIKÁT: ${a.slug} má ${slug} ${count}× — zkontroluj a dedup manuálně`)
+        }
       }
       if (slugs.size > 0) {
         articleTokens.set(a.slug as string, { slugs, body, category: (a.category as string | null) ?? null })
       }
+    }
+    if (duplicateTokenReports.length > 0) {
+      try {
+        await supabaseAdmin.from('agent_decisions').insert({
+          agent_name: 'token-validator',
+          decision_type: 'duplicate_tokens_found',
+          payload: { duplicates: duplicateTokenReports },
+        })
+      } catch { /* non-fatal */ }
     }
 
     if (allSlugs.size === 0) {

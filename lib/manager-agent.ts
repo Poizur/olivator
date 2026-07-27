@@ -43,6 +43,9 @@ export interface ManagerMetrics {
   totalDraftProducts: number
   topScoreProducts: Array<{ slug: string; name: string; score: number }>
   bottomScoreProducts: Array<{ slug: string; name: string; score: number }>
+  // Retailers
+  quarantineRetailerCount: number
+  quarantineRetailerSlugs: string[]
 }
 
 export interface ManagerReport {
@@ -209,6 +212,14 @@ async function gatherMetrics(): Promise<ManagerMetrics> {
       score: (p.olivator_score as number) ?? 0,
     }))
 
+  // ── Retailer karanténa ──
+  const { data: allRetailers } = await supabaseAdmin
+    .from('retailers')
+    .select('slug, quarantine_status')
+  const quarantineRetailers = (allRetailers ?? []).filter((r) => r.quarantine_status as string | null)
+  const quarantineRetailerCount = quarantineRetailers.length
+  const quarantineRetailerSlugs = quarantineRetailers.map((r) => r.slug as string)
+
   return {
     periodStart,
     periodEnd,
@@ -225,6 +236,8 @@ async function gatherMetrics(): Promise<ManagerMetrics> {
     totalDraftProducts,
     topScoreProducts,
     bottomScoreProducts,
+    quarantineRetailerCount,
+    quarantineRetailerSlugs,
   }
 }
 
@@ -264,6 +277,9 @@ Kategorie:
 
 Pokud chybí data (málo kliků, málo dat) — napiš to upřímně, nedávej vatu.
 
+KARANTÉNNÍ RETAILEŘI: část retailerů čeká na legalizaci smluv. Jejich "prázdné nabídky"
+a "neaktualizované ceny" jsou ZÁMĚR — nedoporučuj jejich opravu ani je nehlás jako problém.
+
 Vrať POUZE JSON. Žádný úvod ani závěr.`
 
 async function callClaude(metrics: ManagerMetrics): Promise<{
@@ -291,6 +307,10 @@ DISCOVERY
 
 QUALITY
 - Otevřené quality issues: ${metrics.openQualityIssues}
+
+RETAILEŘI
+- V karanténě (čekají na legalizaci smluv): ${metrics.quarantineRetailerCount}${metrics.quarantineRetailerSlugs.length > 0 ? ` (${metrics.quarantineRetailerSlugs.join(', ')})` : ''}
+- Poznámka: karanténní retaileři mají záměrně prázdné nabídky — NEHLÁS jako problém
 
 Vrať JSON s ai_analysis (4-6 vět) + 3 actions.`
 
