@@ -195,8 +195,8 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
         </div>
       )}
 
-      {/* Chart wrapper */}
-      <div className="relative">
+      {/* Chart wrapper — onMouseLeave zde jako záloha pro případ rychlého pohybu myší */}
+      <div className="relative" onMouseLeave={() => setHoverIdx(null)}>
         {/* Hover tooltip — anchored to data point, clamped to prevent edge overflow */}
         {hoverPt && hoverX !== null && (
           <div
@@ -224,6 +224,7 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
           aria-label="Graf vývoje ceny"
           onMouseMove={onMouseMove}
           onMouseLeave={() => setHoverIdx(null)}
+          onTouchEnd={() => setHoverIdx(null)}
         >
           <defs>
             <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
