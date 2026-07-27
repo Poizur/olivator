@@ -148,13 +148,41 @@ export default function EditorialPolicyPage() {
 
       <section className="mb-10">
         <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-3">
+          AI asistence a lidská kontrola
+        </h2>
+        <p className="text-[15px] text-text2 leading-relaxed mb-3">
+          Část obsahu na Olivátoru vzniká s podporou AI nástrojů (Claude od Anthropic).
+          AI asistence se používá pro:
+        </p>
+        <ul className="text-[15px] text-text2 leading-relaxed mb-3 list-disc pl-5 space-y-1">
+          <li>Strukturování a prvotní sepsání průvodců a žebříčků</li>
+          <li>Výpočet Olivator Score z dodaných dat produktu</li>
+          <li>Generování alternativního textu k obrázkům</li>
+          <li>Překlad a lokalizaci popisků</li>
+        </ul>
+        <p className="text-[15px] text-text2 leading-relaxed mb-3">
+          Každý výstup AI prochází kontrolou redakce před publikací. Pravidla jsou přísná:
+          AI <strong>nesmí vymýšlet produkty, čísla ani zdroje</strong>. Všechna citovaná data
+          (kyselost, polyfenoly, Score) musí pocházet z ověřeného záznamu v databázi.
+        </p>
+        <p className="text-[15px] text-text2 leading-relaxed">
+          Olivátor Score je algoritmická metodika — ne subjektivní hodnocení.
+          Výpočet je plně transparentní a popsaný na{' '}
+          <Link href="/metodika" className="text-olive underline decoration-dotted">
+            /metodika
+          </Link>.
+        </p>
+      </section>
+
+      <section className="mb-10">
+        <h2 className="font-[family-name:var(--font-display)] text-2xl font-normal text-text mb-3">
           Opravy a námitky
         </h2>
         <p className="text-[15px] text-text2 leading-relaxed mb-3">
           Pokud najdeš na Olivátoru chybu — špatný parametr, neaktuální cenu,
           chybějící produkt — napiš nám na{' '}
-          <a href="mailto:info@makyoutdoors.com" className="text-olive underline decoration-dotted">
-            info@makyoutdoors.com
+          <a href="mailto:info@olivator.cz" className="text-olive underline decoration-dotted">
+            info@olivator.cz
           </a>
           . Opravu zaznamenáme do 48 hodin.
         </p>

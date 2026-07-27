@@ -193,9 +193,9 @@ export default async function ArticleDetailPage({
         }
       : {}),
     author: {
-      '@type': 'Person',
-      name: 'Olík',
-      url: 'https://olivator.cz/autor/olik',
+      '@type': 'Organization',
+      name: 'Redakce Olivátoru',
+      url: 'https://olivator.cz/o-projektu',
     },
     publisher: {
       '@type': 'Organization',

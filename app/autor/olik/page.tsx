@@ -30,6 +30,8 @@ const OLIK_STATIC = {
   bioShort: null as string | null, // přepsáno dynamicky v rendereru
   bioFull: `Datový průvodce Olivátoru. Číslům věří víc než marketingovým sloganům.
 
+Olík je maskot a průvodce Olivátoru — obsah připravuje redakce podle veřejné metodiky.
+
 Olík nesnáší dvě věci: marketingové bláboly a olej s kyselostí nad 0,5 %. Ostatní mu nevadí.
 
 Olivátor sleduje deklarovaná data výrobců — certifikáty, kyselost z protokolů, polyfenoly tam kde jsou dostupné — a počítá transparentní Score, které lze přepočítat. Metodika je veřejná na /metodika.
