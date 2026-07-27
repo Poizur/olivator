@@ -1,5 +1,5 @@
 'use client'
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 
 interface PricePoint { date: string; price: number; synthetic?: true }
 interface Props { data: PricePoint[]; currentPrice: number | null; currency?: string }
@@ -20,6 +20,9 @@ const W = 320, H = 72, PL = 4, PR = 4, PT = 8, PB = 6
 export function PriceSparkline({ data, currentPrice, currency: _c = 'CZK' }: Props) {
   const [range, setRange] = useState<RangeOption>(() => data.length < 30 ? 0 : 30)
   const [hov, setHov] = useState<{ idx: number; pxLeft: number } | null>(null)
+  // svgRef — single source of geometry: all mouse mapping and tooltip placement
+  // come from this rect only, never from a parent wrapper.
+  const svgRef = useRef<SVGSVGElement>(null)
 
   useEffect(() => {
     const hide = () => setHov(null)
@@ -44,8 +47,7 @@ export function PriceSparkline({ data, currentPrice, currency: _c = 'CZK' }: Pro
     </div>
   )
 
-  // ONE source of truth — pts[] is used for both SVG drawing and tooltip snapping.
-  // No separate xs/ys arrays. No dual coordinate calculations.
+  // ONE source of truth — pts[] used for both SVG drawing and tooltip snapping.
   const prices = slice.map(p => p.price)
   const minP = Math.min(...prices), maxP = Math.max(...prices), priceRange = maxP - minP || 1
   const n = slice.length
@@ -55,9 +57,6 @@ export function PriceSparkline({ data, currentPrice, currency: _c = 'CZK' }: Pro
     yPx: PT + ((maxP - p.price) / priceRange) * (H - PT - PB),
   }))
 
-  // synthIdx: index of synthetic today point, -1 if none.
-  // solidEnd: index of the LAST REAL data point (never the synthetic one).
-  // Solid polyline = real data only. Dashed extension = last real → today (if synthetic exists).
   const synthIdx = pts.findIndex(p => p.synthetic)
   const solidEnd = synthIdx >= 1 ? synthIdx - 1 : n - 1
   const solidPts = pts.slice(0, solidEnd + 1)
@@ -88,13 +87,15 @@ export function PriceSparkline({ data, currentPrice, currency: _c = 'CZK' }: Pro
   const hovPt = hov !== null ? pts[hov.idx] : null
 
   function onMouseMove(e: React.MouseEvent<SVGSVGElement>) {
-    const r = e.currentTarget.getBoundingClientRect()
-    // Convert mouse position to viewBox X coordinate
+    // Always measure from svgRef — not from e.currentTarget (same element, but ref is explicit)
+    // and never from a parent wrapper. One element, one coordinate system.
+    const el = svgRef.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
     const mouseX = ((e.clientX - r.left) / r.width) * W
-    // Find closest point in pts[] — same array used for drawing
     let ci = 0, minD = Infinity
     pts.forEach((p, i) => { const d = Math.abs(p.xPx - mouseX); if (d < minD) { minD = d; ci = i } })
-    // Convert dot position back to container pixels for tooltip placement
+    // pxLeft is in SVG-element pixels; tooltip is positioned inside the same element's wrapper
     const dotPx = (pts[ci].xPx / W) * r.width
     setHov({ idx: ci, pxLeft: Math.max(55, Math.min(dotPx, r.width - 55)) })
   }
@@ -124,6 +125,8 @@ export function PriceSparkline({ data, currentPrice, currency: _c = 'CZK' }: Pro
       {isAtMin && <div className="inline-flex items-center gap-1 text-[11px] font-medium text-olive-dark bg-olive-bg border border-olive-border rounded-full px-3 py-1 mb-3">✓ Teď nejlevněji v tomto období</div>}
       {!isAtMin && isAtMax && <div className="inline-flex items-center gap-1 text-[11px] font-medium text-terra bg-terra-bg border border-terra/20 rounded-full px-3 py-1 mb-3">↑ Aktuálně na maximu</div>}
 
+      {/* svg-wrap: single positioning context for tooltip + SVG.
+          onMouseLeave here catches the edge where mouse exits the SVG then the labels. */}
       <div className="relative" onMouseLeave={clear}>
         {hovPt && hov !== null && (
           <div className="absolute -top-1 pointer-events-none z-10" style={{ left: hov.pxLeft, transform: 'translateX(-50%)' }}>
@@ -134,8 +137,24 @@ export function PriceSparkline({ data, currentPrice, currency: _c = 'CZK' }: Pro
           </div>
         )}
 
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full cursor-crosshair" style={{ height: H }}
-          aria-label="Graf vývoje ceny" onMouseMove={onMouseMove} onMouseLeave={clear} onTouchEnd={clear}>
+        {/* width="100%" overrides viewBox intrinsic width (320px).
+            preserveAspectRatio="none" lets the chart stretch horizontally to fill
+            any container width — without this, the default "xMidYMid meet" with a
+            fixed 72px height locks the rendered width at 320px regardless of CSS w-full.
+            That left the curve in a 320px island centered in e.g. a 1200px column,
+            with tooltip/label coordinates referencing the full-width wrapper. (L-041) */}
+        <svg
+          ref={svgRef}
+          width="100%"
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          className="block cursor-crosshair"
+          style={{ height: H }}
+          aria-label="Graf vývoje ceny"
+          onMouseMove={onMouseMove}
+          onMouseLeave={clear}
+          onTouchEnd={clear}
+        >
           <defs>
             <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={color} stopOpacity="0.18" />
