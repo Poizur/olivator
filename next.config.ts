@@ -7,10 +7,12 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
 const nextConfig: NextConfig = {
   async redirects() {
     return [
-      // GSC 404 — slug 2026 nikdy neexistoval v DB, statický obsah má slug 2025 — 2026-07-22
-      { source: '/zebricek/nejlepsi-olivovy-olej-2026', destination: '/zebricek/nejlepsi-olivovy-olej-2025', permanent: true },
-      // Italská žebříčková kanibalizace — 2026-07-03
+      // B2: 2025 → 2026 (ranking přejmenován 2026-07-27)
+      { source: '/zebricek/nejlepsi-olivovy-olej-2025', destination: '/zebricek/nejlepsi-olivovy-olej-2026', permanent: true },
+      // B1: deaktivované kratší duplikáty → kanonická URL (2026-07-27)
       { source: '/zebricek/nejlepsi-italsky-olej', destination: '/zebricek/nejlepsi-italsky-olivovy-olej', permanent: true },
+      { source: '/zebricek/nejlepsi-recky-olej', destination: '/zebricek/nejlepsi-recky-olivovy-olej', permanent: true },
+      { source: '/zebricek/nejlepsi-bio-olej', destination: '/zebricek/nejlepsi-bio-olivovy-olej', permanent: true },
       // Kanibalizace merge — 2026-06-01
       { source: '/pruvodce/olivovy-olej-a-zdravi-veda-2026', destination: '/pruvodce/je-olivovy-olej-zdravy',   permanent: true },
       // Sitia mis-kategorizace (T-08/T-15) — 2026-06-24

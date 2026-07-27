@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { getActiveRankings } from '@/lib/rankings-db'
 import { getRankings as getStaticRankings } from '@/lib/static-content'
+import type { Metadata } from 'next'
 
-export const metadata = {
-  title: 'Žebříčky olivových olejů',
+export const metadata: Metadata = {
+  title: 'Žebříčky olivových olejů | Olivátor',
   description: 'Přehled žebříčků — nejlepší oleje podle Olivator Score, původu, certifikace a ceny.',
   alternates: { canonical: 'https://olivator.cz/zebricek' },
 }
@@ -29,8 +30,14 @@ export default async function ZebrickyPage() {
         <h1 className="font-[family-name:var(--font-display)] text-4xl font-normal text-text mb-1.5">
           Žebříčky
         </h1>
-        <p className="text-[15px] text-text2 font-light">
+        <p className="text-[15px] text-text2 font-light mb-2">
           Objektivní hodnocení dle Olivator Score
+        </p>
+        <p className="text-[13px] text-text3">
+          ⓘ Všechna pořadí vycházejí z Olivator Score — naší veřejné redakční metodiky.{' '}
+          <Link href="/metodika" className="text-olive hover:underline">
+            Jak počítáme →
+          </Link>
         </p>
       </div>
 
