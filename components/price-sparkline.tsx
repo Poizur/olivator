@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 
 interface PricePoint {
   date: string   // YYYY-MM-DD
@@ -40,16 +40,23 @@ function pickLabelIndices(n: number): number[] {
 
 export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK' }: Props) {
   const [range, setRange] = useState<RangeOption>(() => (data.length < 30 ? 0 : 30))
-  const [hoverIdx, setHoverIdx] = useState<number | null>(null)
+  // hover.pxLeft = pixel offset from left of SVG container (already clamped)
+  const [hover, setHover] = useState<{ idx: number; pxLeft: number } | null>(null)
+
+  // Clear tooltip on scroll — mouseleave does NOT fire on wheel/touch scroll
+  useEffect(() => {
+    const clear = () => setHover(null)
+    window.addEventListener('scroll', clear, { passive: true })
+    return () => window.removeEventListener('scroll', clear)
+  }, [])
 
   // Extend last known price to today if currentPrice exists and data is stale
   const dataWithToday = useMemo(() => {
     if (!currentPrice || data.length === 0) return data
     const today = new Date().toISOString().slice(0, 10)
     const last = data[data.length - 1]
-    // Only add synthetic point if last record is older than 1 day
     if (last.date >= today) return data
-    return [...data, { date: today, price: currentPrice, synthetic: true }]
+    return [...data, { date: today, price: currentPrice, synthetic: true as const }]
   }, [data, currentPrice])
 
   const filtered = useMemo(() => {
@@ -83,14 +90,10 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
   )
   const ys = filtered.map((d) => PAD.top + ((maxP - d.price) / priceRange) * (H - PAD.top - PAD.bottom))
 
-  // Find index where synthetic data starts (for dashed extension line)
   const synthStart = filtered.findIndex((d) => d.synthetic)
-
-  // Real segment polyline (solid)
   const realEnd = synthStart >= 0 ? synthStart : filtered.length - 1
   const polylineReal = xs.slice(0, realEnd + 1).map((x, i) => `${x},${ys[i]}`).join(' ')
 
-  // Extension segment (dashed) — from last real point to synthetic today
   const polylineExt = synthStart >= 0
     ? `${xs[synthStart - 1]},${ys[synthStart - 1]} ${xs[synthStart]},${ys[synthStart]}`
     : null
@@ -104,7 +107,6 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
   const lastX = xs[xs.length - 1]
   const lastY = ys[ys.length - 1]
 
-  // Trend uses only real data (exclude synthetic today)
   const realFiltered = filtered.filter((d) => !d.synthetic)
   const firstPrice = realFiltered[0]?.price ?? filtered[0].price
   const lastRealPrice = realFiltered[realFiltered.length - 1]?.price ?? filtered[filtered.length - 1].price
@@ -134,9 +136,15 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
 
   const labelIndices = pickLabelIndices(filtered.length)
 
-  const hoverPt = hoverIdx !== null ? filtered[hoverIdx] : null
-  const hoverX = hoverIdx !== null ? xs[hoverIdx] : null
-  const hoverY = hoverIdx !== null ? ys[hoverIdx] : null
+  const hoverPt = hover !== null ? filtered[hover.idx] : null
+  const hoverX = hover !== null ? xs[hover.idx] : null
+  const hoverY = hover !== null ? ys[hover.idx] : null
+
+  // Tooltip position: pixel-accurate from mouse event, clamped in JS (not CSS).
+  // Computed during onMouseMove using the SVG's actual rendered width.
+  // This avoids the CSS clamp(px, %, px) mismatch that shifted the tooltip
+  // 40 px left of the dot on wide viewports.
+  const TOOLTIP_HALF_W = 55  // half of max tooltip width (~110 px)
 
   function onMouseMove(e: React.MouseEvent<SVGSVGElement>) {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -147,13 +155,15 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
       const dist = Math.abs(x - svgX)
       if (dist < minDist) { minDist = dist; closest = i }
     })
-    setHoverIdx(closest)
+    // Dot position in container-pixel space (SVG is w-full so rect.width === container width)
+    const dotPx = (xs[closest] / W) * rect.width
+    const pxLeft = Math.max(TOOLTIP_HALF_W, Math.min(dotPx, rect.width - TOOLTIP_HALF_W))
+    setHover({ idx: closest, pxLeft })
   }
 
-  // Tooltip x: percentage of container width, clamped to prevent overflow.
-  // Half-width estimate: 55px (largest tooltip ~"1 490 Kč\n24. 7. 2026").
-  // clamp(55px, xPct%, calc(100% - 55px)) keeps the center inside the container.
-  const xPct = hoverX !== null ? (hoverX / W) * 100 : 0
+  function clearHover() {
+    setHover(null)
+  }
 
   return (
     <div className="mt-4 pt-4 border-t border-off">
@@ -195,16 +205,13 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
         </div>
       )}
 
-      {/* Chart wrapper — onMouseLeave zde jako záloha pro případ rychlého pohybu myší */}
-      <div className="relative" onMouseLeave={() => setHoverIdx(null)}>
-        {/* Hover tooltip — anchored to data point, clamped to prevent edge overflow */}
-        {hoverPt && hoverX !== null && (
+      {/* Chart wrapper — onMouseLeave as safety net for fast cursor exits */}
+      <div className="relative" onMouseLeave={clearHover}>
+        {/* Tooltip — positioned with JS-computed px left, hidden when not hovering */}
+        {hoverPt && hover !== null && (
           <div
             className="absolute -top-1 pointer-events-none z-10"
-            style={{
-              left: `clamp(55px, ${xPct.toFixed(2)}%, calc(100% - 55px))`,
-              transform: 'translateX(-50%)',
-            }}
+            style={{ left: hover.pxLeft, transform: 'translateX(-50%)' }}
           >
             <div className="bg-text text-white text-[11px] rounded-lg px-2.5 py-1.5 shadow-lg whitespace-nowrap">
               <div className="font-semibold tabular-nums">{formatCzk(hoverPt.price)}</div>
@@ -223,8 +230,8 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
           style={{ height: H }}
           aria-label="Graf vývoje ceny"
           onMouseMove={onMouseMove}
-          onMouseLeave={() => setHoverIdx(null)}
-          onTouchEnd={() => setHoverIdx(null)}
+          onMouseLeave={clearHover}
+          onTouchEnd={clearHover}
         >
           <defs>
             <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
@@ -233,10 +240,8 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
             </linearGradient>
           </defs>
 
-          {/* Fill area under real data */}
           <polygon points={fillPts} fill="url(#sparkGrad)" />
 
-          {/* Solid line — real data */}
           {realEnd >= 1 && (
             <polyline
               points={polylineReal}
@@ -248,7 +253,6 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
             />
           )}
 
-          {/* Dashed extension to today */}
           {polylineExt && (
             <polyline
               points={polylineExt}
@@ -261,7 +265,6 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
             />
           )}
 
-          {/* Hover: vertical guide + highlighted point */}
           {hoverX !== null && hoverY !== null && (
             <>
               <line
@@ -277,8 +280,7 @@ export function PriceSparkline({ data, currentPrice, currency: _currency = 'CZK'
             </>
           )}
 
-          {/* Default endpoint when not hovering */}
-          {hoverIdx === null && (
+          {hover === null && (
             <circle
               cx={lastX} cy={lastY} r="3.5"
               fill={filtered[filtered.length - 1]?.synthetic ? 'white' : lineColor}
