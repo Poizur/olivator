@@ -6,6 +6,24 @@ import { useRouter } from 'next/navigation'
 import type { Retailer } from '@/lib/types'
 import type { DiscoveryProposal } from '@/lib/data'
 
+type LegalizationStatus = 'email_sent' | 'consented_free' | 'consented_affiliate' | 'declined' | 'no_response'
+
+const LEGAL_STATUS_LABELS: Record<LegalizationStatus, string> = {
+  email_sent: '📧 Email odeslán',
+  consented_free: '✓ Souhlas (zdarma)',
+  consented_affiliate: '✓ Souhlas (affiliate)',
+  declined: '✗ Odmítl',
+  no_response: '⏳ Bez odpovědi',
+}
+
+const LEGAL_STATUS_COLORS: Record<LegalizationStatus, string> = {
+  email_sent: 'bg-blue-50 text-blue-700 border-blue-200',
+  consented_free: 'bg-olive-bg text-olive-dark border-olive-border',
+  consented_affiliate: 'bg-olive-bg text-olive-dark border-olive-border',
+  declined: 'bg-red-50 text-red-600 border-red-200',
+  no_response: 'bg-gray-50 text-gray-500 border-gray-200',
+}
+
 interface Props {
   active: Retailer[]
   quarantine: Retailer[]
@@ -14,14 +32,63 @@ interface Props {
   proposals: DiscoveryProposal[]
 }
 
+function LegalizationCell({ r }: { r: Retailer }) {
+  const router = useRouter()
+  const [saving, setSaving] = useState(false)
+  const current = r.legalizationStatus as LegalizationStatus | null
+
+  async function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const value = e.target.value as LegalizationStatus | ''
+    setSaving(true)
+    try {
+      await fetch(`/api/admin/retailers/${r.id}/legalization-status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: value || null }),
+      })
+      router.refresh()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1 min-w-[160px]">
+      <select
+        value={current ?? ''}
+        onChange={handleChange}
+        disabled={saving}
+        className={[
+          'text-[11px] rounded-full border px-2.5 py-1 font-medium transition-colors cursor-pointer appearance-none',
+          'focus:outline-none focus:ring-1 focus:ring-olive/40',
+          saving ? 'opacity-50 cursor-wait' : '',
+          current ? LEGAL_STATUS_COLORS[current] : 'bg-gray-50 text-gray-400 border-gray-200',
+        ].join(' ')}
+      >
+        <option value="">— kampaň —</option>
+        {(Object.keys(LEGAL_STATUS_LABELS) as LegalizationStatus[]).map(s => (
+          <option key={s} value={s}>{LEGAL_STATUS_LABELS[s]}</option>
+        ))}
+      </select>
+      {r.legalizationStatusAt && (
+        <div className="text-[10px] text-text3 tabular-nums pl-1">
+          {new Date(r.legalizationStatusAt).toLocaleDateString('cs')}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function RetailerRow({
   r,
   offerCount,
   onToggle,
+  showLegal,
 }: {
   r: Retailer
   offerCount: number
   onToggle?: (retailer: Retailer) => void
+  showLegal?: boolean
 }) {
   const status = r.retailerStatus ?? 'active'
   return (
@@ -42,6 +109,11 @@ function RetailerRow({
         )}
       </td>
       <td className="px-4 py-3 text-sm text-text text-right tabular-nums">{offerCount}</td>
+      {showLegal && (
+        <td className="px-4 py-3">
+          <LegalizationCell r={r} />
+        </td>
+      )}
       <td className="px-4 py-3 text-right">
         <div className="flex items-center justify-end gap-2">
           {status !== 'removed_legal' && onToggle && (
@@ -75,6 +147,7 @@ function Section({
   offerCounts,
   onToggle,
   footer,
+  showLegal,
 }: {
   title: string
   badge: string
@@ -83,8 +156,10 @@ function Section({
   offerCounts: Record<string, number>
   onToggle?: (retailer: Retailer) => void
   footer?: React.ReactNode
+  showLegal?: boolean
 }) {
   if (retailers.length === 0 && !footer) return null
+  const colSpan = showLegal ? 7 : 6
   return (
     <div className="mb-6">
       <div className="flex items-center gap-2 mb-2">
@@ -100,6 +175,9 @@ function Section({
               <th className="text-right px-4 py-2.5 text-[11px] font-semibold tracking-wider uppercase text-text3 hidden md:table-cell">Komise</th>
               <th className="text-center px-4 py-2.5 text-[11px] font-semibold tracking-wider uppercase text-text3">Affiliate</th>
               <th className="text-right px-4 py-2.5 text-[11px] font-semibold tracking-wider uppercase text-text3">Nabídek</th>
+              {showLegal && (
+                <th className="text-left px-4 py-2.5 text-[11px] font-semibold tracking-wider uppercase text-text3">Kampaň</th>
+              )}
               <th className="px-4 py-2.5"></th>
             </tr>
           </thead>
@@ -110,10 +188,11 @@ function Section({
                 r={r}
                 offerCount={offerCounts[r.id] ?? 0}
                 onToggle={onToggle}
+                showLegal={showLegal}
               />
             ))}
             {retailers.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-6 text-center text-[13px] text-text3">Žádní prodejci</td></tr>
+              <tr><td colSpan={colSpan} className="px-4 py-6 text-center text-[13px] text-text3">Žádní prodejci</td></tr>
             )}
           </tbody>
         </table>
@@ -289,7 +368,13 @@ export function RetailersPanel({ active, quarantine, removedLegal, offerCounts, 
         retailers={quarantine}
         offerCounts={offerCounts}
         onToggle={handleToggle}
-        footer={<>Partneři dočasně pozastaveni — bez aktivních nabídek. Pro reaktivaci klikni na tlačítko v řádku.</>}
+        showLegal
+        footer={
+          <>
+            Partneři dočasně pozastaveni — bez aktivních nabídek. Pro reaktivaci klikni → Aktivovat po obdržení souhlasu.{' '}
+            Sloupec <em>Kampaň</em> sleduje stav legalizační komunikace.
+          </>
+        }
       />
 
       {removedLegal.length > 0 && (

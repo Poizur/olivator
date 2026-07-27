@@ -82,6 +82,9 @@ export interface Retailer {
   retailerStatus?: 'active' | 'quarantine' | 'removed_legal'
   retailerStatusNote?: string | null
   legalBasis?: string | null
+  legalizationStatus?: 'email_sent' | 'consented_free' | 'consented_affiliate' | 'declined' | 'no_response' | null
+  legalizationStatusAt?: string | null
+  legalizationConsentRef?: string | null
   market: string
   rating?: number | null
   ratingCount?: number | null
