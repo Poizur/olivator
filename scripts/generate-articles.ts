@@ -14,6 +14,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { callClaude, extractText } from '@/lib/anthropic'
 import { searchUnsplash } from '@/lib/unsplash'
 import { getInjectionBlock } from '@/lib/learning-injector'
+import { findBannedPhrase } from '@/lib/content-validator'
 
 const TARGET_SLUG = process.argv.find(a => a.startsWith('--slug='))?.split('=')[1]
 const SKIP_EXISTING = !process.argv.includes('--force')
@@ -1063,7 +1064,14 @@ NEPŘIDÁVEJ titulek (## ${brief.title}) — to je v DB. Začni rovnou lead/H2 p
     system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }],
   })
-  return extractText(res).trim()
+  const body = extractText(res).trim()
+
+  const banned = findBannedPhrase(body)
+  if (banned) {
+    throw new Error(`[content-validator] banned phrase v ${brief.slug}: ${banned}`)
+  }
+
+  return body
 }
 
 async function generateMeta(brief: ArticleBrief, body: string): Promise<{ title: string; description: string }> {

@@ -181,8 +181,8 @@ export default function EditorialPolicyPage() {
         <p className="text-[15px] text-text2 leading-relaxed mb-3">
           Pokud najdeš na Olivátoru chybu — špatný parametr, neaktuální cenu,
           chybějící produkt — napiš nám na{' '}
-          <a href="mailto:info@olivator.cz" className="text-olive underline decoration-dotted">
-            info@olivator.cz
+          <a href="mailto:info@makyoutdoors.com" className="text-olive underline decoration-dotted">
+            info@makyoutdoors.com
           </a>
           . Opravu zaznamenáme do 48 hodin.
         </p>
