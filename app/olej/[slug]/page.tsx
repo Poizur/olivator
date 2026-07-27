@@ -292,9 +292,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         : (product.packaging || '— nezveřejněno'),
       missing: !product.packaging,
     },
-    ...(product.ean
-      ? [{ key: 'EAN', value: product.ean, missing: false }]
-      : [{ key: 'Původ', value: 'Přímo od výrobce', missing: false }]),
+    ...(product.ean ? [{ key: 'EAN', value: product.ean, missing: false }] : []),
   ]
 
   // Product-specific FAQs:
