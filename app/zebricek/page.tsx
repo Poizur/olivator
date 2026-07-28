@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   alternates: { canonical: 'https://olivator.cz/zebricek' },
 }
 
-export const revalidate = 3600
+export const revalidate = 300
 
 export default async function ZebrickyPage() {
   // DB-first, fallback na static (pre-migration period).
