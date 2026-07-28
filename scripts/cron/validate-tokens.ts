@@ -147,23 +147,27 @@ async function main() {
     }
 
     // Zjisti které produkty jsou inactive kvůli karanténnímu retailerovi
-    // Karanténní produkt: status='inactive' + aspoň 1 offer z retailera s quarantine_status != null
+    // Karanténní produkt: status='inactive' + aspoň 1 offer z retailera s retailer_status='quarantine'
     const inactiveSlugs = [...allSlugs].filter(s => statusBySlug.get(s) === 'inactive')
     const quarantineProductSlugs = new Set<string>()
     if (inactiveSlugs.length > 0) {
-      const { data: quarantineOffers } = await supabaseAdmin
+      const { data: quarantineOffers, error: qErr } = await supabaseAdmin
         .from('product_offers')
-        .select('product_id, products!inner(slug), retailers!inner(quarantine_status)')
+        .select('product_id, products!inner(slug), retailers!inner(retailer_status)')
         .in('products.slug', inactiveSlugs)
-        .not('retailers.quarantine_status', 'is', null)
+        .eq('retailers.retailer_status', 'quarantine')
+      if (qErr) {
+        console.warn('[validate-tokens] quarantine lookup failed:', qErr.message)
+      }
       for (const row of quarantineOffers ?? []) {
         const p = row.products as { slug: string } | null
         if (p?.slug) quarantineProductSlugs.add(p.slug)
       }
     }
+    console.log(`[validate-tokens] karanténní produkty: ${quarantineProductSlugs.size} slugů`)
 
     // Načti stav z předchozího runu (diff)
-    const { data: lastRun } = await supabaseAdmin
+    const { data: lastRun, error: loadErr } = await supabaseAdmin
       .from('agent_decisions')
       .select('payload, created_at')
       .eq('agent_name', 'token-validator')
@@ -171,6 +175,11 @@ async function main() {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
+    if (loadErr) {
+      console.warn('[validate-tokens] snapshot load failed:', loadErr.message)
+    } else {
+      console.log(`[validate-tokens] snapshot z ${lastRun?.created_at ?? 'N/A'} (${Object.keys((lastRun?.payload as { tokens?: Record<string, string[]> })?.tokens ?? {}).length} článků)`)
+    }
 
     const prevSnapshot: Record<string, string[]> = (lastRun?.payload as { tokens?: Record<string, string[]> })?.tokens ?? {}
     // prevSnapshot: { articleSlug → [productSlug, ...] }
@@ -240,14 +249,16 @@ async function main() {
     }
 
     // Ulož aktuální snapshot do agent_decisions (pro příští diff)
-    try {
-      await supabaseAdmin.from('agent_decisions').insert({
-        agent_name: 'token-validator',
-        decision_type: 'broken_tokens_snapshot',
-        payload: { tokens: currentSnapshot, quarantine_count: quarantineTokenCount },
-      })
-    } catch (err) {
-      console.warn('[validate-tokens] snapshot save failed:', err)
+    // POZOR: Supabase JS v2 nevyhazuje výjimku na API chybách — musíme checkovat { error }
+    const { error: snapErr } = await supabaseAdmin.from('agent_decisions').insert({
+      agent_name: 'token-validator',
+      decision_type: 'broken_tokens_snapshot',
+      payload: { tokens: currentSnapshot, quarantine_count: quarantineTokenCount },
+    })
+    if (snapErr) {
+      console.warn('[validate-tokens] snapshot save FAILED (diff bude nefunkční příští run):', snapErr.message, snapErr.code)
+    } else {
+      console.log(`[validate-tokens] snapshot saved: ${Object.keys(currentSnapshot).length} entries`)
     }
 
     console.log(
