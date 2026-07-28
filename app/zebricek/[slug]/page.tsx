@@ -170,7 +170,9 @@ export default async function RankingDetailPage({ params }: { params: Promise<{ 
             <a href={`/olej/${products[0].slug}`} className="text-olive font-medium hover:underline">
               {products[0].name}
             </a>
-            {` (Score ${products[0].olivatorScore}/100)`}
+            {` (Score ${products[0].olivatorScore}/100`}
+            {products[0].polyphenols != null && `, ${products[0].polyphenols.toLocaleString('cs-CZ')} mg/kg polyfenolů`}
+            {')'}
             {offers[0] != null && (
               <>{` — od ${Math.round(offers[0].price)} Kč u ${offers[0].retailer.name}`}</>
             )}

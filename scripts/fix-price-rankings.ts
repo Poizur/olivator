@@ -8,6 +8,93 @@
  */
 import { supabaseAdmin } from '@/lib/supabase'
 
+// ─── Polyfenolový žebříček ────────────────────────────────────────────────────
+const POLY_RANKING = {
+  slug: 'nejlepsi-vysokopolyfenolovy-olej',
+  title: 'Nejlepší vysokopolyfenolové oleje',
+  description:
+    'Oleje s nejvyšším doloženým obsahem polyfenolů — seřazeny sestupně podle mg/kg. ' +
+    'Práh vstupu do žebříčku: ≥500 mg/kg (EU tvrzení „vysoký obsah" začíná na 250 mg/kg; ' +
+    'nad 500 mg/kg mluvíme o intenzitě, nad 1 500 mg/kg o světové špičce). ' +
+    'Jen oleje s aktivní nabídkou u ověřeného prodejce.',
+  emoji: '⚗️',
+  metaTitle: 'Nejlepší vysokopolyfenolový olivový olej 2026 | Olivátor',
+  polyMin: 500,
+}
+
+async function regeneratePolyRanking(
+  isEffectivelyFlavored: (name: string) => boolean,
+  minBottlePrice: Map<string, number>
+) {
+  const { data: products, error } = await supabaseAdmin
+    .from('products')
+    .select('id, slug, name, polyphenols, olivator_score, type, status')
+    .eq('status', 'active')
+    .gte('polyphenols', POLY_RANKING.polyMin)
+    .not('polyphenols', 'is', null)
+    .neq('type', 'flavored')
+    .order('polyphenols', { ascending: false })
+    .order('olivator_score', { ascending: false })
+  if (error) throw error
+
+  // Dedup: jeden produkt per (poly_bucket × brand_prefix)
+  // Bucket = Math.round(poly/100)*100 → Sitia 646 + 646 + ... → jeden "600-sitia"
+  // Různé poly úrovně stejné značky (Evolia 2777 vs 2012, Intini 903 vs 623) → zachovány
+  // DŮLEŽITÉ: slug musí přesně odpovídat slug v products tabulce — verifikuj před commitem
+  const seenBucket = new Set<string>()
+  const filtered: typeof products = []
+  for (const p of products ?? []) {
+    if (isEffectivelyFlavored(p.name as string)) continue
+    if (!minBottlePrice.has(p.id as string)) continue // bez aktivní nabídky ven
+    const bucket = `${Math.round((p.polyphenols as number) / 100) * 100}-${(p.slug as string).split('-')[0]}`
+    if (seenBucket.has(bucket)) continue
+    seenBucket.add(bucket)
+    filtered.push(p)
+  }
+
+  const top = filtered.slice(0, 12)
+  const productSlugs = top.map((p) => p.slug as string)
+
+  console.log(`\n${POLY_RANKING.slug}: ${productSlugs.length} produktů (≥${POLY_RANKING.polyMin} mg/kg, dedupováno)`)
+  top.forEach((p, i) => {
+    const price = minBottlePrice.get(p.id as string)
+    console.log(`  ${i + 1}. poly=${p.polyphenols} score=${p.olivator_score} | ${(p.name as string).slice(0, 60)} [${price} Kč]`)
+  })
+
+  if (productSlugs.length === 0) {
+    console.warn(`  ⚠️  Žádné produkty — žebříček neregenrujeme`)
+    return
+  }
+
+  const winner = top[0]
+  const winnerPrice = minBottlePrice.get(winner.id as string)
+  const metaDesc = `Vítěz: ${winner.name} (Score ${winner.olivator_score}, ${winner.polyphenols} mg/kg polyfenolů)${winnerPrice ? ` od ${winnerPrice} Kč` : ''}. Žebříček ${top.length} olejů s nejvyšší doloženou koncentrací polyfenolů.`
+
+  const { error: upsertErr } = await supabaseAdmin
+    .from('rankings')
+    .upsert(
+      {
+        slug: POLY_RANKING.slug,
+        title: POLY_RANKING.title,
+        description: POLY_RANKING.description,
+        emoji: POLY_RANKING.emoji,
+        meta_title: POLY_RANKING.metaTitle,
+        meta_description: metaDesc,
+        product_slugs: productSlugs,
+        status: 'active',
+      },
+      { onConflict: 'slug' },
+    )
+
+  if (upsertErr) {
+    console.error(`  ✗ Chyba:`, upsertErr.message)
+  } else {
+    console.log(`  ✓ Upsertováno ${productSlugs.length} produktů`)
+    console.log(`  meta_description: ${metaDesc}`)
+  }
+}
+
+// ─── Cenové žebříčky ──────────────────────────────────────────────────────────
 const PRICE_RANKINGS = [
   {
     slug: 'nejlepsi-olivovy-olej-do-200-kc',
@@ -115,6 +202,9 @@ async function main() {
       console.log(`  ✓ Upsertováno ${productSlugs.length} produktů`)
     }
   }
+
+  // 4. Polyfenolový žebříček (řazení poly DESC, ne Score)
+  await regeneratePolyRanking(isEffectivelyFlavored, minBottlePrice)
 
   console.log('\nHotovo.')
 }

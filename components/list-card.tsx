@@ -60,8 +60,8 @@ export function ListCard({ product, offer, rank, compact = false, segmentBadge }
                   </span>
                 )}
                 {product.polyphenols != null && (
-                  <span className="text-[10px] px-[7px] py-0.5 rounded-md bg-off text-text2">
-                    Polyfenoly {product.polyphenols}
+                  <span className={`text-[10px] px-[7px] py-0.5 rounded-md ${product.polyphenols >= 1000 ? 'bg-olive-bg text-olive-dark font-semibold' : 'bg-off text-text2'}`}>
+                    {product.polyphenols.toLocaleString('cs-CZ')} mg/kg poly
                   </span>
                 )}
               </div>
@@ -158,8 +158,8 @@ export function ListCard({ product, offer, rank, compact = false, segmentBadge }
                 </span>
               )}
               {product.polyphenols != null && (
-                <span className="text-[10px] px-[7px] py-0.5 rounded-md bg-off text-text2">
-                  Polyfenoly {product.polyphenols}
+                <span className={`text-[10px] px-[7px] py-0.5 rounded-md ${product.polyphenols >= 1000 ? 'bg-olive-bg text-olive-dark font-semibold' : 'bg-off text-text2'}`}>
+                  {product.polyphenols.toLocaleString('cs-CZ')} mg/kg poly
                 </span>
               )}
               {product.certifications.map(c => (
