@@ -433,7 +433,7 @@ async function getSeoProgress() {
 }
 
 async function getNeedsAttention() {
-  const [draftsRes, missingTplRes, missingAffiliateRes, draftNewslettersRes, discoveryReviewRes] = await Promise.all([
+  const [draftsRes, missingTplRes, missingAffiliateRes, draftNewslettersRes, discoveryReviewRes, partnerInquiriesRes] = await Promise.all([
     supabaseAdmin.from('products').select('id', { count: 'exact', head: true }).eq('status', 'draft'),
     supabaseAdmin.from('retailers').select('id, name, base_tracking_url'),
     supabaseAdmin
@@ -448,6 +448,12 @@ async function getNeedsAttention() {
       .from('discovery_candidates')
       .select('id', { count: 'exact', head: true })
       .in('status', ['needs_review', 'pending']),
+    supabaseAdmin
+      .from('partner_inquiries')
+      .select('id, shop_name, email, created_at', { count: 'exact' })
+      .eq('status', 'new')
+      .order('created_at', { ascending: false })
+      .limit(5),
   ])
 
   return {
@@ -458,6 +464,8 @@ async function getNeedsAttention() {
     offersWithoutAffiliate: missingAffiliateRes.count ?? 0,
     pendingNewsletters: draftNewslettersRes.count ?? 0,
     discoveryReview: discoveryReviewRes.count ?? 0,
+    partnerInquiries: partnerInquiriesRes.count ?? 0,
+    partnerInquiriesLatest: (partnerInquiriesRes.data ?? []) as Array<{ id: string; shop_name: string; email: string; created_at: string }>,
   }
 }
 
@@ -1039,6 +1047,34 @@ export default async function AdminDashboardPage() {
           </ul>
         )}
       </div>
+
+      {/* Poptávky prodejců */}
+      {attention.partnerInquiries > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-3">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[10px] font-bold tracking-widest uppercase text-amber-700">
+              — Nové poptávky prodejců ({attention.partnerInquiries})
+            </div>
+            <Link href="/pro-prodejce" className="text-[11px] text-olive hover:underline">
+              /pro-prodejce →
+            </Link>
+          </div>
+          <ul className="divide-y divide-amber-100">
+            {attention.partnerInquiriesLatest.map(inq => (
+              <li key={inq.id} className="py-2.5 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[13px] text-text font-medium">{inq.shop_name}</div>
+                  <div className="text-[11px] text-text3">{inq.email} · {fmtRelative(inq.created_at)}</div>
+                </div>
+                <span className="text-[11px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full whitespace-nowrap">nová</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-[11px] text-text3 mt-3">
+            Human gate: poptávka NEaktivuje retailera automaticky. Schvaluješ ručně v admin → Prodejci.
+          </p>
+        </div>
+      )}
 
       {/* Needs attention */}
       {(attention.drafts > 0 ||

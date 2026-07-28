@@ -82,6 +82,7 @@ export interface RawBriefData {
   priceWatch: object
   olik: object
   retailerStatus: object
+  partnerInquiries: object
 }
 
 export interface GenerateBriefResult {
@@ -411,6 +412,18 @@ function buildSystemSection(autonomousActions: object): string {
   return result
 }
 
+async function collectPartnerInquiries(): Promise<object> {
+  const [newRes, totalRes] = await Promise.all([
+    supabaseAdmin.from('partner_inquiries').select('id, shop_name, email, created_at', { count: 'exact' }).eq('status', 'new').order('created_at', { ascending: false }).limit(5),
+    supabaseAdmin.from('partner_inquiries').select('id', { count: 'exact', head: true }),
+  ])
+  return {
+    newCount: newRes.count ?? 0,
+    totalCount: totalRes.count ?? 0,
+    newest: (newRes.data ?? []).map((r: Record<string, unknown>) => ({ shop: r.shop_name, email: r.email, ago: Math.floor((Date.now() - new Date(r.created_at as string).getTime()) / 3600000) + 'h' })),
+  }
+}
+
 async function collectRetailerStatus(): Promise<object> {
   const { data: retailers } = await supabaseAdmin
     .from('retailers')
@@ -440,6 +453,7 @@ function buildPrompt(raw: RawBriefData, weekLabel: string, learningSummary: stri
   const ls = raw.learningStats as Record<string, unknown>
   const scan = raw.scanFindings as Record<string, unknown>
   const artDrafts = raw.articleDrafts as { pendingCount?: number; recent?: Array<{ title: string; severity: string | null; status: string }> }
+  const partnerInq = raw.partnerInquiries as { newCount?: number; totalCount?: number; newest?: Array<{ shop: string; email: string; ago: string }> }
   const scoreD = (catalog.scoreDistribution ?? {}) as Record<string, number>
   const affBreakdown = (affiliate.affiliateBreakdown ?? {}) as Record<string, number>
 
@@ -584,6 +598,11 @@ ${(() => {
   const slugList = (rs.quarantineSlugs ?? []).length > 0 ? ` (${(rs.quarantineSlugs ?? []).join(', ')})` : ''
   return `  Celkem: ${rs.total ?? '?'} | Aktivní: ${rs.active ?? '?'} | Karanténa: ${rs.quarantine ?? 0}${slugList} | Neaktivní: ${rs.inactive ?? 0}`
 })()}
+
+📩 Poptávky prodejců (/pro-prodejce):
+  Nové (vyžadují odpověď): ${partnerInq.newCount ?? 0} | Celkem: ${partnerInq.totalCount ?? 0}
+${(partnerInq.newest ?? []).length > 0 ? (partnerInq.newest ?? []).map(p => `  - ${p.shop} (${p.email}, ${p.ago} zpět)`).join('\n') : '  (žádné nové)'}
+  Poznámka: human gate platí — poptávka NEaktivuje retailera, schvaluješ ručně v admin.
 
 ━━━ LEKCE K POUŽITÍ ━━━
 ${learningSummary || '(žádné relevantní lekce)'}
@@ -853,8 +872,8 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
   const { weekLabel, weekStart } = getWeekLabel()
   console.log(`[executive-director] Generuji brief ${weekLabel}${opts.dryRun ? ' (DRY-RUN)' : ''}${opts.testFailOpen ? ' (TEST-FAILOPEN)' : ''}...`)
 
-  // 14 zdrojů dat paralelně
-  const [gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts, autonomousActions, priceWatch, olik, retailerStatus] = await Promise.all([
+  // 15 zdrojů dat paralelně
+  const [gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts, autonomousActions, priceWatch, olik, retailerStatus, partnerInquiries] = await Promise.all([
     collectGsc().catch((e) => ({ error: (e as Error).message })),
     collectCatalog().catch((e) => ({ error: (e as Error).message })),
     collectAffiliate().catch((e) => ({ error: (e as Error).message })),
@@ -869,9 +888,10 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
     collectPriceWatch().catch((e) => ({ error: (e as Error).message })),
     collectOlik().catch((e) => ({ error: (e as Error).message })),
     collectRetailerStatus().catch((e) => ({ error: (e as Error).message })),
+    collectPartnerInquiries().catch(() => ({ newCount: 0, totalCount: 0, newest: [] })),
   ])
 
-  const rawData: RawBriefData = { gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts, autonomousActions, priceWatch, olik, retailerStatus }
+  const rawData: RawBriefData = { gsc, catalog, affiliate, newsletter, crons, git, pendingDecisions, learningStats, scanFindings, articleDrafts, autonomousActions, priceWatch, olik, retailerStatus, partnerInquiries }
   console.log('[executive-director] Data sesbírána')
 
   // Learning Memory Layer — inject relevantní lekce do promptu

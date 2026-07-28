@@ -75,6 +75,7 @@ export function Footer() {
               { href: '/metodika', label: 'Metodika' },
               { href: '/novinky', label: 'Novinky' },
               { href: '/o-projektu#affiliate', label: 'Affiliate' },
+              { href: '/pro-prodejce', label: 'Pro prodejce' },
               { href: '/o-projektu#kontakt', label: 'Kontakt' },
             ].map(l => (
               <Link key={l.href} href={l.href} className="block text-[12px] text-white/65 hover:text-white py-0.5 transition-colors">
