@@ -183,8 +183,14 @@ export function ListingContent({
       case 'polyphenols':
         list.sort((a, b) => (b.polyphenols ?? 0) - (a.polyphenols ?? 0))
         break
-      default:
-        list.sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))
+      default: {
+        const hasOffer = (p: typeof list[0]) => p.cheapestOffer !== null ? 1 : 0
+        list.sort((a, b) => {
+          const offerDiff = hasOffer(b) - hasOffer(a)
+          if (offerDiff !== 0) return offerDiff
+          return (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0)
+        })
+      }
     }
     return list
   }, [products, search, activeTypes, activeOrigins, activeCerts, activeQuality, activeIntensity, sort, maxPrice, volume, activeFlavorLabels])

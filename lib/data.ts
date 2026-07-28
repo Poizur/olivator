@@ -505,8 +505,10 @@ export const getSiteStats = cache(async (): Promise<SiteStats> => {
 
   const totalBrands = new Set(products.map(p => p.brandSlug).filter(Boolean)).size
 
+  const productsWithOffer = products.filter(p => p.cheapestOffer !== null)
+
   return {
-    totalProducts: products.length,
+    totalProducts: productsWithOffer.length,
     activeProducts: products.length,
     activeRetailers: count ?? 0,
     totalBrands,

@@ -102,7 +102,7 @@ export function TopProductCard({
         )}
 
         {/* Cena */}
-        {product.cheapestOffer && (
+        {product.cheapestOffer ? (
           <div className="pt-1.5 border-t border-off flex items-baseline gap-1">
             <span className="text-[14px] font-bold text-text tabular-nums leading-none">
               {formatPrice(product.cheapestOffer.price)}
@@ -110,6 +110,10 @@ export function TopProductCard({
             <span className="text-[10px] text-text2 ml-auto tabular-nums">
               {formatPricePer100ml(product.cheapestOffer.price, product.volumeMl)}
             </span>
+          </div>
+        ) : (
+          <div className="pt-1.5 border-t border-off">
+            <span className="text-[10px] text-text3 italic">aktuálně bez nabídky</span>
           </div>
         )}
       </div>

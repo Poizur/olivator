@@ -137,7 +137,7 @@ async function collectCatalog(): Promise<object> {
 async function collectAffiliate(): Promise<object> {
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
   const { data: clicks, count: totalClicks } = await supabaseAdmin
-    .from('affiliate_clicks').select('product_id, retailer_id, source_type', { count: 'exact' }).gte('clicked_at', since)
+    .from('affiliate_clicks').select('product_id, retailer_id, source_type', { count: 'exact' }).gte('clicked_at', since).eq('is_test', false)
 
   const productCounts: Record<string, number> = {}
   const retailerCounts: Record<string, number> = {}
