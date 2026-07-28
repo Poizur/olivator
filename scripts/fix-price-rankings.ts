@@ -33,20 +33,26 @@ const PRICE_RANKINGS = [
 ]
 
 async function main() {
-  // 1. Načti min. cenu lahve per produkt (aktivní nabídky, skladem)
+  // 1. Načti min. cenu lahve per produkt — pouze aktivní, neskladem-OK, ne karanténní
+  //    NUTNÉ: bez tohoto filtru by žebříček zahrnoval produkty bez affiliate URL
+  //    nebo od retailerů v karanténě (reálně nedostupné)
   const { data: allOffers, error: offersErr } = await supabaseAdmin
     .from('product_offers')
-    .select('product_id, price')
+    .select('product_id, price, retailers!inner(is_active, retailer_status)')
     .eq('in_stock', true)
+    .not('affiliate_url', 'is', null)
   if (offersErr) throw offersErr
 
   const minBottlePrice = new Map<string, number>()
   for (const o of allOffers ?? []) {
+    const r = o.retailers as { is_active: boolean; retailer_status: string }
+    if (!r.is_active) continue
+    if (r.retailer_status === 'quarantine' || r.retailer_status === 'removed_legal') continue
     const cur = minBottlePrice.get(o.product_id as string)
     const price = o.price as number
     if (cur === undefined || price < cur) minBottlePrice.set(o.product_id as string, price)
   }
-  console.log(`Loaded ${minBottlePrice.size} products with offers`)
+  console.log(`Loaded ${minBottlePrice.size} products with active buyable offers`)
 
   // 2. Načti aktivní produkty s olivator_score — ochucené vyloučeny (jiná kategorie)
   const { data: allProducts, error: productsErr } = await supabaseAdmin
