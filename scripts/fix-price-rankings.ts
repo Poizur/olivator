@@ -48,20 +48,30 @@ async function main() {
   }
   console.log(`Loaded ${minBottlePrice.size} products with offers`)
 
-  // 2. Načti aktivní produkty s olivator_score
+  // 2. Načti aktivní produkty s olivator_score — ochucené vyloučeny (jiná kategorie)
   const { data: allProducts, error: productsErr } = await supabaseAdmin
     .from('products')
-    .select('id, slug, name, olivator_score, volume_ml')
+    .select('id, slug, name, olivator_score, volume_ml, type')
     .eq('status', 'active')
     .gt('olivator_score', 0)
+    .neq('type', 'flavored')
     .order('olivator_score', { ascending: false })
   if (productsErr) throw productsErr
+
+  // DB data quality: typ='evoo' ale přísada v názvu
+  const FLAVOR_KW = ['rozmarýn','rosemary','chilli','chili','citron','česnek','garlic','lanýž','truffle','bazalka','basil','uzený','uzena','koření','oregano','jalapeño','feferonk','lemon','tymián','zázvor']
+  function isEffectivelyFlavored(name: string): boolean {
+    const lower = name.toLowerCase()
+    return FLAVOR_KW.some((k) => lower.includes(k))
+  }
 
   // 3. Pro každý žebříček: filtruj + sort + upsert
   for (const def of PRICE_RANKINGS) {
     const filtered = (allProducts ?? []).filter((p) => {
       const bottlePrice = minBottlePrice.get(p.id as string)
-      return bottlePrice !== undefined && bottlePrice <= def.priceMax
+      if (bottlePrice === undefined || bottlePrice > def.priceMax) return false
+      if (isEffectivelyFlavored(p.name as string)) return false
+      return true
     })
 
     // Top 20 po Score (bereits seřazeno desc)

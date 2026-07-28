@@ -149,11 +149,20 @@ export function computeSegmentValueBadges(
   const badges = new Map<string, string>()
   const claimed = new Set<string>()
 
-  // Helper: best Score/price ratio in a price band
+  // DB data quality: some products have type='evoo' but contain flavorings in name
+  const FLAVOR_KW = ['rozmarýn','rosemary','chilli','chili','citron','česnek','garlic','lanýž','truffle','bazalka','basil','uzený','uzena','koření','oregano','jalapeño','feferonk','lemon','tymián','zázvor']
+  function isEffectivelyFlavored(p: ProductWithOffer): boolean {
+    if (p.type === 'flavored') return true
+    const lower = p.name.toLowerCase()
+    return FLAVOR_KW.some((k) => lower.includes(k))
+  }
+
+  // Helper: best Score in a price band — flavored vždy vyloučen (typ i název)
   function bestInBand(maxPrice: number, excludeIds: Set<string>): ProductWithOffer | null {
     return products
       .filter((p) => {
         if (excludeIds.has(p.id)) return false
+        if (isEffectivelyFlavored(p)) return false
         if (!p.cheapestOffer || p.cheapestOffer.price > maxPrice) return false
         if (!p.olivatorScore || p.olivatorScore <= 0) return false
         return true
@@ -173,11 +182,12 @@ export function computeSegmentValueBadges(
     claimed.add(winner300.id)
   }
 
-  // Na vaření — best Score among frying/cooking use_cases with active offer
+  // Na vaření — strop ≤350 Kč (lahev), ne flavored; jinak by vyhrával prémiový olej
   const cookingWinner = products
     .filter((p) => {
       if (claimed.has(p.id)) return false
-      if (!p.cheapestOffer) return false
+      if (isEffectivelyFlavored(p)) return false
+      if (!p.cheapestOffer || p.cheapestOffer.price > 350) return false
       if (!p.olivatorScore || p.olivatorScore <= 0) return false
       return p.useCases.some((u) => u === 'frying' || u === 'cooking')
     })
