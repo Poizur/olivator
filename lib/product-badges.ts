@@ -135,6 +135,62 @@ export function computeBadges(
 }
 
 /**
+ * Per-segment value badges — "★ Nejlepší hodnota do 200 Kč" atd.
+ * Volá se server-side nad plným katalogem; vrací Map<productId, label>.
+ *
+ * Segmenty (nepřekrývají se — vítěz do 200 Kč nevyhraje do 300 Kč):
+ *   do 200 Kč — nejlepší Score/price mezi produkty s nabídkou ≤ 200 Kč
+ *   do 300 Kč — totéž pro 201–300 Kč (bez vítěze do 200)
+ *   na vaření  — nejlepší Score z use_cases frying/cooking, aktivní nabídka
+ */
+export function computeSegmentValueBadges(
+  products: ProductWithOffer[]
+): Map<string, string> {
+  const badges = new Map<string, string>()
+  const claimed = new Set<string>()
+
+  // Helper: best Score/price ratio in a price band
+  function bestInBand(maxPrice: number, excludeIds: Set<string>): ProductWithOffer | null {
+    return products
+      .filter((p) => {
+        if (excludeIds.has(p.id)) return false
+        if (!p.cheapestOffer || p.cheapestOffer.price > maxPrice) return false
+        if (!p.olivatorScore || p.olivatorScore <= 0) return false
+        return true
+      })
+      .sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))[0] ?? null
+  }
+
+  const winner200 = bestInBand(200, claimed)
+  if (winner200) {
+    badges.set(winner200.id, '★ Nejlepší hodnota do 200 Kč')
+    claimed.add(winner200.id)
+  }
+
+  const winner300 = bestInBand(300, claimed)
+  if (winner300) {
+    badges.set(winner300.id, '★ Nejlepší hodnota do 300 Kč')
+    claimed.add(winner300.id)
+  }
+
+  // Na vaření — best Score among frying/cooking use_cases with active offer
+  const cookingWinner = products
+    .filter((p) => {
+      if (claimed.has(p.id)) return false
+      if (!p.cheapestOffer) return false
+      if (!p.olivatorScore || p.olivatorScore <= 0) return false
+      return p.useCases.some((u) => u === 'frying' || u === 'cooking')
+    })
+    .sort((a, b) => (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0))[0] ?? null
+  if (cookingWinner) {
+    badges.set(cookingWinner.id, '★ Nejlepší na vaření')
+    claimed.add(cookingWinner.id)
+  }
+
+  return badges
+}
+
+/**
  * Vybere TOP olej v dané chuťové kategorii pro homepage "Tipy" sekci.
  * Vrací top 1 podle hodnoty osy * Score (kvalita má vliv, ale ne dominantní).
  */

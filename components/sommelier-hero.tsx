@@ -27,7 +27,7 @@ interface Props {
 const SUGGESTIONS = [
   '🇬🇷 Lehký řecký do 300 Kč',
   '🔬 Co má nejvíc polyfenolů?',
-  '🎁 Dárek pro tátu co rád vaří',
+  '💰 Dobrý olej do 300 Kč',
   '💚 BIO olej na saláty',
   '🇬🇷 Tradiční řecký na grilování',
 ]

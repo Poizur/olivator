@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { getProductsWithOffers, getSiteStats } from '@/lib/data'
 import { ListingContent } from './listing-content'
+import { computeSegmentValueBadges } from '@/lib/product-badges'
 
 export async function generateMetadata() {
   const stats = await getSiteStats()
@@ -31,6 +32,9 @@ export default async function SrovnavacPage() {
     highOleocanthal: stats.highOleocanthal,
     extraPolyphenols: stats.extraPolyphenols,
   }
+
+  const segmentBadgesMap = computeSegmentValueBadges(products)
+  const segmentBadges = Object.fromEntries(segmentBadgesMap)
 
   // ItemList JSON-LD pro top 50 produktů dle Score — Google rozliší katalog
   // od ranking/listing. Bez ItemList Google neví, že je to vybraný seznam,
@@ -63,7 +67,7 @@ export default async function SrovnavacPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
       />
       <Suspense fallback={<div className="p-10 text-center text-text3">Načítání...</div>}>
-        <ListingContent products={products} counts={counts} />
+        <ListingContent products={products} counts={counts} segmentBadges={segmentBadges} />
       </Suspense>
     </>
   )

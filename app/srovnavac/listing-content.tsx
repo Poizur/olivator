@@ -46,9 +46,11 @@ const FLAVOR_LABEL_CZ: Record<string, string> = {
 export function ListingContent({
   products,
   counts,
+  segmentBadges = {},
 }: {
   products: ProductWithOffer[]
   counts: FilterCounts
+  segmentBadges?: Record<string, string>
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -408,6 +410,7 @@ export function ListingContent({
                   key={p.id}
                   product={p}
                   rank={(safePage - 1) * PAGE_SIZE + i + 1}
+                  segmentBadge={segmentBadges[p.id] ?? null}
                   sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1280px) 20vw, 200px"
                 />
               ))}

@@ -14,9 +14,11 @@ interface ListCardProps {
   rank: number
   /** Compact variant for narrow sidebars (entity pages, etc) — stacks vertically. */
   compact?: boolean
+  /** Per-segment value badge (server-computed): "★ Nejlepší hodnota do 200 Kč" etc. */
+  segmentBadge?: string | null
 }
 
-export function ListCard({ product, offer, rank, compact = false }: ListCardProps) {
+export function ListCard({ product, offer, rank, compact = false, segmentBadge }: ListCardProps) {
   const router = useRouter()
   if (compact) {
     return <CompactCard product={product} offer={offer} rank={rank} />
@@ -143,6 +145,11 @@ export function ListCard({ product, offer, rank, compact = false }: ListCardProp
               {product.name}
             </div>
             <div className="flex gap-1 flex-wrap">
+              {segmentBadge && (
+                <span className="text-[10px] px-[7px] py-0.5 rounded-md bg-terra/10 text-terra font-semibold border border-terra/20">
+                  {segmentBadge}
+                </span>
+              )}
               {product.acidity != null && (
                 <span className={`text-[10px] px-[7px] py-0.5 rounded-md ${
                   product.acidity <= 0.3 ? 'bg-olive-bg text-olive-dark' : 'bg-off text-text2'

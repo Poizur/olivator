@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { QuickChip } from '@/components/quick-chip'
 import {
   getProductsWithOffers,
   getSiteStats,
@@ -136,32 +137,18 @@ export default async function Home() {
       {/* ─── QUICK CATEGORIES ──────────────────────────────────────────── */}
       <div className="bg-white border-b border-off2 px-6 md:px-10 py-3.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         <div className="max-w-[1280px] mx-auto flex items-center gap-2 flex-nowrap">
-          {[
+          {([
             { label: '🏆 Top Score', href: '/srovnavac', variant: 'default' },
             { label: '🔥 Bestsellery', href: '/nejprodavanejsi', variant: 'featured' },
-            { label: '🏷️ Slevy', href: '/slevy', variant: 'danger' },
             { label: '🇬🇷 Řecko', href: '/srovnavac?origin=GR', variant: 'default' },
             { label: '🇮🇹 Itálie', href: '/srovnavac?origin=IT', variant: 'default' },
-            { label: '🇪🇸 Španělsko', href: '/srovnavac?origin=ES', variant: 'default' },
-            { label: '📦 5L balení', href: '/olivovy-olej-5l', variant: 'default' },
-            { label: `🌱 BIO`, href: '/srovnavac?cert=bio', variant: 'default' },
-            { label: '🏆 PDO', href: '/srovnavac?cert=dop', variant: 'default' },
+            { label: '🌱 BIO', href: '/srovnavac?cert=bio', variant: 'default' },
+            { label: '🏅 DOP certifikát', href: '/srovnavac?cert=dop', variant: 'default' },
             { label: '🔬 Polyfenoly 250+', href: '/srovnavac?quality=high_polyphenols', variant: 'default' },
-            { label: '💪 Extra polyfenoly 1000+', href: '/srovnavac?quality=extra_polyphenols', variant: 'default' },
-          ].map((chip) => (
-            <Link
-              key={chip.href}
-              href={chip.href}
-              className={`text-[13px] font-medium whitespace-nowrap rounded-full px-3.5 py-2 transition-all shrink-0 flex items-center gap-1.5 ${
-                chip.variant === 'featured'
-                  ? 'bg-amber-bg text-amber-text hover:bg-amber-mid hover:text-white'
-                  : chip.variant === 'danger'
-                  ? 'bg-[#FCEBEB] text-[#A32D2D] hover:bg-[#A32D2D] hover:text-white'
-                  : 'bg-off text-text2 hover:bg-olive-bg hover:text-olive'
-              }`}
-            >
-              {chip.label}
-            </Link>
+            { label: '📦 5L balení', href: '/olivovy-olej-5l', variant: 'default' },
+            { label: '💰 Do 300 Kč', href: '/srovnavac?maxPrice=300', variant: 'default' },
+          ] as const).map((chip) => (
+            <QuickChip key={chip.href} label={chip.label} href={chip.href} variant={chip.variant} />
           ))}
         </div>
       </div>

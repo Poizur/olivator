@@ -26,6 +26,7 @@ interface Props {
   product: ProductWithOffer
   rank: number
   badge?: ProductBadge | null
+  segmentBadge?: string | null
   sizes?: string
   variant?: 'default' | 'large'
 }
@@ -34,6 +35,7 @@ export function TopProductCard({
   product,
   rank,
   badge,
+  segmentBadge,
   sizes = '(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 200px',
   variant = 'default',
 }: Props) {
@@ -86,9 +88,18 @@ export function TopProductCard({
         </div>
 
         {/* Název produktu */}
-        <div className={`font-medium text-text leading-snug line-clamp-2 flex-1 mb-1.5 ${isLarge ? 'text-[10px] font-semibold min-h-[2.4em]' : 'text-[12px]'}`}>
+        <div className={`font-medium text-text leading-snug line-clamp-2 ${segmentBadge ? 'mb-1' : 'flex-1 mb-1.5'} ${isLarge ? 'text-[10px] font-semibold min-h-[2.4em]' : 'text-[12px]'}`}>
           {product.name}
         </div>
+
+        {/* Segment value badge */}
+        {segmentBadge && (
+          <div className="flex-1 mb-1.5">
+            <span className="text-[9px] px-[6px] py-0.5 rounded bg-terra/10 text-terra font-semibold border border-terra/20 leading-tight">
+              {segmentBadge}
+            </span>
+          </div>
+        )}
 
         {/* Cena */}
         {product.cheapestOffer && (
