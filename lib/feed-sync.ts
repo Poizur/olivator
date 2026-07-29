@@ -224,15 +224,19 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
 
   // ── Out-of-feed sweep: produkty s nabídkou od tohoto retailera, které
   // dnes nebyly v XML feedu (vyprodány, odebrány). Zapíšeme in_stock=false
-  // s poslední known cenou — grafová řada nesmí mít mezery.
+  // jak do price_history (grafová řada nesmí mít mezery) TAK do product_offers
+  // (web musí okamžitě přestat nabídku zobrazovat jako dostupnou).
   try {
     const { data: existingOffers } = await supabaseAdmin
       .from('product_offers')
-      .select('product_id, price')
+      .select('id, product_id, price, in_stock')
       .eq('retailer_id', retailer.id)
+
+    const outOfFeedIds: string[] = []
 
     for (const offer of existingOffers ?? []) {
       if (seenProductIds.has(offer.product_id as string)) continue
+      outOfFeedIds.push(offer.product_id as string)
       await supabaseAdmin.from('price_history').insert({
         product_id: offer.product_id,
         retailer_id: retailer.id,
@@ -241,8 +245,19 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
       })
       result.outOfFeedHistoryWritten++
     }
+
+    // Batch update product_offers.in_stock=false pro všechny out-of-feed produkty.
+    // Až se produkt vrátí do feedu, upsert v hlavní smyčce ho přepne zpět na true.
+    if (outOfFeedIds.length > 0) {
+      await supabaseAdmin
+        .from('product_offers')
+        .update({ in_stock: false })
+        .eq('retailer_id', retailer.id)
+        .in('product_id', outOfFeedIds)
+    }
+
     if (result.outOfFeedHistoryWritten > 0) {
-      console.log(`[feed-sync] out-of-feed sweep: ${result.outOfFeedHistoryWritten} záznamů (in_stock=false)`)
+      console.log(`[feed-sync] out-of-feed sweep: ${result.outOfFeedHistoryWritten} offers → in_stock=false (price_history + product_offers)`)
     }
   } catch (err) {
     console.warn('[feed-sync] out-of-feed sweep selhal:', err)

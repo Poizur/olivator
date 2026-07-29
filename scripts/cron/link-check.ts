@@ -4,7 +4,7 @@
  * Denně projde affiliate URLs, mrtvé deaktivuje, znovu-žijící reaktivuje.
  * Local: npm run cron:link-check
  */
-import { runLinkRotCheck } from '@/lib/link-rot-checker'
+import { runLinkRotCheck, checkFeedStaleness } from '@/lib/link-rot-checker'
 import { supabaseAdmin } from '@/lib/supabase'
 
 const MAX_RUNTIME_MS = 15 * 60 * 1000 // 15 min hard limit
@@ -39,6 +39,22 @@ async function main() {
       for (const d of result.deadOffers) {
         console.log(`  ✗ ${d.productSlug} @ ${d.retailerName}: ${d.statusCode ?? '?'} — ${d.url}`)
       }
+    }
+
+    // Feed consistency spot-check: stale in_stock=true nabídky od feedových partnerů
+    try {
+      const staleness = await checkFeedStaleness()
+      if (staleness.staleCount > 0) {
+        console.warn(`[cron:link-check] ⚠️ FEED STALENESS: ${staleness.staleCount} in_stock=true offers nebyly v posledním feed-syncu`)
+        for (const o of staleness.staleOffers.slice(0, 10)) {
+          console.warn(`  stale: ${o.retailerSlug} / ${o.productSlug} — last_checked: ${o.lastChecked.slice(0, 16)} (${o.price} Kč)`)
+        }
+        console.warn('  → Spusť: npx tsx --env-file=.env.local scripts/out-of-feed-sweep.ts')
+      } else {
+        console.log('[cron:link-check] feed staleness: 0 stale offers ✓')
+      }
+    } catch (err) {
+      console.warn('[cron:link-check] feed staleness check failed:', err)
     }
 
     // Audit log (nice-to-have, jen do console pokud tabulka neexistuje)

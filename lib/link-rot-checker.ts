@@ -305,3 +305,48 @@ export async function runLinkRotCheck(): Promise<LinkCheckResult> {
 
   return result
 }
+
+// ── Feed consistency spot-check ──────────────────────────────────────────────
+// Pro každého feedového retailera: jsou nějaké in_stock=true nabídky, jejichž
+// last_checked je starší než 28 hodin? Pokud ano, feed-sync je přeskočil →
+// offer je pravděpodobně stale a sweep to nezachytil.
+export interface FeedStalenessResult {
+  staleCount: number
+  staleOffers: Array<{ retailerSlug: string; productSlug: string; lastChecked: string; price: number }>
+}
+
+export async function checkFeedStaleness(): Promise<FeedStalenessResult> {
+  const cutoff = new Date(Date.now() - 28 * 60 * 60 * 1000).toISOString()
+
+  const { data: feedRetailers } = await supabaseAdmin
+    .from('retailers')
+    .select('id, slug')
+    .eq('is_active', true)
+    .not('xml_feed_url', 'is', null)
+
+  if (!feedRetailers?.length) return { staleCount: 0, staleOffers: [] }
+
+  const retailerIds = feedRetailers.map(r => r.id)
+  const slugByRetailerId = new Map(feedRetailers.map(r => [r.id as string, r.slug as string]))
+
+  // Namátkový vzorek: max 5 per retailer, celkem max 50
+  const { data: stale } = await supabaseAdmin
+    .from('product_offers')
+    .select('retailer_id, price, last_checked, products!inner(slug)')
+    .in('retailer_id', retailerIds)
+    .eq('in_stock', true)
+    .lt('last_checked', cutoff)
+    .limit(50)
+
+  const result: FeedStalenessResult = {
+    staleCount: stale?.length ?? 0,
+    staleOffers: (stale ?? []).map(o => ({
+      retailerSlug: slugByRetailerId.get(o.retailer_id as string) ?? o.retailer_id as string,
+      productSlug: (o.products as unknown as { slug: string } | null)?.slug ?? '?',
+      lastChecked: o.last_checked as string,
+      price: Number(o.price),
+    })),
+  }
+
+  return result
+}

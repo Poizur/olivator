@@ -150,6 +150,8 @@ async function main() {
     // Karanténní produkt: status='inactive' + aspoň 1 offer z retailera s retailer_status='quarantine'
     const inactiveSlugs = [...allSlugs].filter(s => statusBySlug.get(s) === 'inactive')
     const quarantineProductSlugs = new Set<string>()
+    // Produkty bez jakýchkoli offers (Olivum/Lozano nabídky smazány) → detekovat zvlášť
+    const noOfferProductSlugs = new Set<string>()
     if (inactiveSlugs.length > 0) {
       const { data: quarantineOffers, error: qErr } = await supabaseAdmin
         .from('product_offers')
@@ -163,8 +165,24 @@ async function main() {
         const p = row.products as { slug: string } | null
         if (p?.slug) quarantineProductSlugs.add(p.slug)
       }
+
+      // Detekuj inactive produkty bez JAKÝCHKOLI nabídek (osiřelé po smazání offers)
+      // Tato skupina se nesmí zobrazovat jako "Vyžaduje pozornost" — jde o karanténu bez offers.
+      const { data: allInactiveOffers, error: aoErr } = await supabaseAdmin
+        .from('product_offers')
+        .select('products!inner(slug)')
+        .in('products.slug', inactiveSlugs)
+      if (aoErr) {
+        console.warn('[validate-tokens] no-offer lookup failed:', aoErr.message)
+      }
+      const slugsWithAnyOffer = new Set(
+        (allInactiveOffers ?? []).map(r => (r.products as { slug: string } | null)?.slug).filter(Boolean)
+      )
+      for (const slug of inactiveSlugs) {
+        if (!slugsWithAnyOffer.has(slug)) noOfferProductSlugs.add(slug)
+      }
     }
-    console.log(`[validate-tokens] karanténní produkty: ${quarantineProductSlugs.size} slugů`)
+    console.log(`[validate-tokens] karanténní produkty: ${quarantineProductSlugs.size} slugů | osiřelé (bez offers): ${noOfferProductSlugs.size} slugů`)
 
     // Načti stav z předchozího runu (diff)
     const { data: lastRun, error: loadErr } = await supabaseAdmin
@@ -196,9 +214,13 @@ async function main() {
     const quarantineArticles = new Set<string>()
     const newlyBrokenArticles: Array<{ articleSlug: string; tokens: string[] }> = []
 
+    let noOfferTokenCount = 0
+    const noOfferArticles = new Set<string>()
+
     for (const [articleSlug, { slugs }] of articleTokens) {
       const brokenSlugs: string[] = []
       const quarantineSlugs: string[] = []
+      const noOfferSlugs: string[] = []
       const realProblemSlugs: string[] = []
 
       for (const slug of slugs) {
@@ -207,6 +229,9 @@ async function main() {
           brokenSlugs.push(slug)
           if (quarantineProductSlugs.has(slug)) {
             quarantineSlugs.push(slug)
+          } else if (noOfferProductSlugs.has(slug)) {
+            // Osiřelý produkt: inactive + 0 offers (pravděpodobně smazáno po karanténě)
+            noOfferSlugs.push(slug)
           } else {
             realProblemSlugs.push(slug)
           }
@@ -222,6 +247,12 @@ async function main() {
       if (quarantineSlugs.length > 0) {
         quarantineTokenCount += quarantineSlugs.length
         quarantineArticles.add(articleSlug)
+      }
+
+      // Osiřelé tokeny (bez offers) — jen souhrnný počet, žádný per-článek výpis
+      if (noOfferSlugs.length > 0) {
+        noOfferTokenCount += noOfferSlugs.length
+        noOfferArticles.add(articleSlug)
       }
 
       // Skutečné problémy — vždy reportovat
@@ -253,7 +284,7 @@ async function main() {
     const { error: snapErr } = await supabaseAdmin.from('agent_decisions').insert({
       agent_name: 'token-validator',
       decision_type: 'broken_tokens_snapshot',
-      payload: { tokens: currentSnapshot, quarantine_count: quarantineTokenCount },
+      payload: { tokens: currentSnapshot, quarantine_count: quarantineTokenCount, no_offer_count: noOfferTokenCount },
     })
     if (snapErr) {
       console.warn('[validate-tokens] snapshot save FAILED (diff bude nefunkční příští run):', snapErr.message, snapErr.code)
@@ -264,6 +295,7 @@ async function main() {
     console.log(
       `[validate-tokens] zkontrolováno ${articles.length} článků, ${allSlugs.size} unikátních tokenů | ` +
       `karanténa: ${quarantineTokenCount} tokenů v ${quarantineArticles.size} článcích | ` +
+      `osiřelé (bez offers): ${noOfferTokenCount} tokenů v ${noOfferArticles.size} článcích | ` +
       `skutečné problémy: ${manualReports.length} | nové od včerejška: ${newlyBrokenArticles.length}`
     )
 
@@ -271,7 +303,7 @@ async function main() {
     const isMonday = new Date().getDay() === 1
     const hasRealProblems = manualReports.length > 0 || healedReports.length > 0
     const hasNewIssues = newlyBrokenArticles.length > 0
-    const shouldSendEmail = hasRealProblems || hasNewIssues || (isMonday && quarantineTokenCount > 0)
+    const shouldSendEmail = hasRealProblems || hasNewIssues || (isMonday && (quarantineTokenCount > 0 || noOfferTokenCount > 0))
 
     if (shouldSendEmail) {
       try {

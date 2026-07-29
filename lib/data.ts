@@ -333,10 +333,16 @@ export const getProductsWithOffers = cache(async (): Promise<Array<Product & { c
     allOffersByProduct.set(pid, bucket)
   }
 
-  // Pick best offer with affiliate priority (sortOffersAffiliate), then first
+  // Pick best in-stock offer with affiliate priority. Out-of-stock offers
+  // jsou stále v allOffersByProduct (detail stránka je potřebuje pro historii),
+  // ale cheapestOffer pro listing/hero = VŽDY jen dostupný produkt.
   const offersByProduct = new Map<string, ProductOffer>()
   for (const [pid, bucket] of allOffersByProduct) {
-    offersByProduct.set(pid, sortOffersAffiliate(bucket)[0])
+    const inStockBucket = bucket.filter(o => o.inStock !== false)
+    if (inStockBucket.length > 0) {
+      offersByProduct.set(pid, sortOffersAffiliate(inStockBucket)[0])
+    }
+    // else: žádná dostupná nabídka → cheapestOffer=null (produkt viditelný, ale bez ceny)
   }
 
   return products.map(p => ({ ...p, cheapestOffer: offersByProduct.get(p.id) ?? null }))
