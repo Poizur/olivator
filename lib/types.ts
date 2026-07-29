@@ -123,6 +123,9 @@ export interface ProductOffer {
   productUrl: string
   affiliateUrl: string
   commissionPct: number
+  pagePrice?: number        // cena ověřená Playwrightem ze stránky partnera
+  priceMismatch?: boolean   // true pokud |pagePrice - price| > 5 %
+  manualOverride?: boolean  // true = feed nesmí přepsat in_stock
 }
 
 export interface AffiliateClick {

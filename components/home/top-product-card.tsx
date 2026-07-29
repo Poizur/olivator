@@ -105,10 +105,10 @@ export function TopProductCard({
         {product.cheapestOffer ? (
           <div className="pt-1.5 border-t border-off flex items-baseline gap-1">
             <span className="text-[14px] font-bold text-text tabular-nums leading-none">
-              {formatPrice(product.cheapestOffer.price)}
+              {formatPrice(product.cheapestOffer.pagePrice ?? product.cheapestOffer.price)}
             </span>
             <span className="text-[10px] text-text2 ml-auto tabular-nums">
-              {formatPricePer100ml(product.cheapestOffer.price, product.volumeMl)}
+              {formatPricePer100ml(product.cheapestOffer.pagePrice ?? product.cheapestOffer.price, product.volumeMl)}
             </span>
           </div>
         ) : (

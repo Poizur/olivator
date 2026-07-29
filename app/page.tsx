@@ -259,10 +259,10 @@ export default async function Home() {
                       {p.cheapestOffer && (
                         <div className="mt-auto pt-1.5 border-t border-off">
                           <div className="text-[12px] font-bold text-text tabular-nums">
-                            {Math.round(p.cheapestOffer.price / (p.volumeMl / 1000))} Kč/l
+                            {Math.round((p.cheapestOffer.pagePrice ?? p.cheapestOffer.price) / (p.volumeMl / 1000))} Kč/l
                           </div>
                           <div className="text-[10px] text-text2 tabular-nums">
-                            {Math.round(p.cheapestOffer.price)} Kč
+                            {Math.round(p.cheapestOffer.pagePrice ?? p.cheapestOffer.price)} Kč
                           </div>
                         </div>
                       )}
@@ -438,7 +438,7 @@ export default async function Home() {
 
 function BulkPackCard({ product, rank }: { product: ProductWithOffer; rank: number }) {
   const offer = product.cheapestOffer!
-  const pricePerLitre = Math.round(offer.price / (product.volumeMl / 1000))
+  const pricePerLitre = Math.round((offer.pagePrice ?? offer.price) / (product.volumeMl / 1000))
   const volumeLabel =
     product.volumeMl >= 1000
       ? `${product.volumeMl / 1000} l`
@@ -459,7 +459,7 @@ function BulkPackCard({ product, rank }: { product: ProductWithOffer; rank: numb
         <p className="text-amber-200 text-[15px] font-bold tabular-nums leading-none mb-0.5">
           {pricePerLitre} Kč/l
         </p>
-        <p className="text-white/50 text-[10px] mb-1.5">{offer.price} Kč · {volumeLabel}</p>
+        <p className="text-white/50 text-[10px] mb-1.5">{offer.pagePrice ?? offer.price} Kč · {volumeLabel}</p>
         <p className="text-white/80 text-[11px] font-medium leading-snug line-clamp-2 flex-1">
           {product.nameShort || product.name}
         </p>

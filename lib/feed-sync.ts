@@ -179,6 +179,17 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
       const inStock = item.deliveryDate === '0' || item.deliveryDate === ''
       const priceCzk = Math.round(item.priceVat * 100) / 100
 
+      // Zkontroluj manual_override — pokud je aktivní, nepřepisuj in_stock feedem.
+      // Override může nastavit jen administrátor (feed-vs-web-check --apply-override).
+      const { data: existingOffer } = await supabaseAdmin
+        .from('product_offers')
+        .select('manual_override')
+        .eq('product_id', productId)
+        .eq('retailer_id', retailer.id)
+        .maybeSingle()
+
+      const isOverridden = (existingOffer as { manual_override?: boolean } | null)?.manual_override === true
+
       const { error: offerErr } = await supabaseAdmin
         .from('product_offers')
         .upsert(
@@ -187,7 +198,9 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
             retailer_id: retailer.id,
             price: priceCzk,
             currency: 'CZK',
-            in_stock: inStock,
+            // Pokud je manual_override aktivní, zachovej stávající in_stock (false).
+            // Feed hodnotu ignorujeme dokud admin override nesmaže.
+            in_stock: isOverridden ? false : inStock,
             product_url: item.url,
             commission_pct: retailer.default_commission_pct,
             last_checked: new Date().toISOString(),

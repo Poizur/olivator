@@ -83,10 +83,10 @@ export function OilCard({ product, offer, isTop }: OilCardProps) {
             <div className="flex items-center justify-between pt-3 border-t border-off">
               <div>
                 <div className="text-[17px] font-semibold text-text tracking-tight">
-                  {formatPrice(offer.price)}
+                  {formatPrice(offer.pagePrice ?? offer.price)}
                 </div>
                 <div className="text-[11px] text-text3 mt-0.5">
-                  {formatPricePer100ml(offer.price, product.volumeMl)}
+                  {formatPricePer100ml(offer.pagePrice ?? offer.price, product.volumeMl)}
                 </div>
                 <div className="text-[11px] text-olive-light mt-0.5">
                   {offer.retailer.name}

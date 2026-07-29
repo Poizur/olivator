@@ -303,7 +303,7 @@ export const getProductsWithOffers = cache(async (): Promise<Array<Product & { c
 
   const { data, error } = await supabaseAdmin
     .from('product_offers')
-    .select(`id, product_id, retailer_id, price, currency, in_stock, product_url, affiliate_url, commission_pct, retailer:retailers(${RETAILER_PUBLIC_COLUMNS})`)
+    .select(`id, product_id, retailer_id, price, currency, in_stock, product_url, affiliate_url, commission_pct, page_price, price_mismatch, manual_override, retailer:retailers(${RETAILER_PUBLIC_COLUMNS})`)
     .not('price', 'is', null)
     .order('price', { ascending: true })
   if (error) throw error
@@ -327,6 +327,9 @@ export const getProductsWithOffers = cache(async (): Promise<Array<Product & { c
       productUrl: (row.product_url as string) ?? '',
       affiliateUrl: (row.affiliate_url as string) ?? '',
       commissionPct: Number(row.commission_pct ?? 0),
+      pagePrice: row.page_price != null ? Number(row.page_price) : undefined,
+      priceMismatch: (row.price_mismatch as boolean) ?? false,
+      manualOverride: (row.manual_override as boolean) ?? false,
     }
     const bucket = allOffersByProduct.get(pid) ?? []
     bucket.push(offer)
@@ -348,6 +351,12 @@ export const getProductsWithOffers = cache(async (): Promise<Array<Product & { c
   return products.map(p => ({ ...p, cheapestOffer: offersByProduct.get(p.id) ?? null }))
 })
 
+// Cena pro zobrazení zákazníkovi: page_price (ověřená Playwrightem) má přednost.
+// Feed cena je interní; zákazníka zajímá co uvidí po kliknutí.
+export function offerDisplayPrice(offer: ProductOffer): number {
+  return offer.pagePrice ?? offer.price
+}
+
 // Affiliate-priority sort: pokud má affiliate nabídka cenu do 5 % nad nejlevnější,
 // dostane přednost před non-affiliate. Ceny všech nabídek zůstávají viditelné.
 // Viz CLAUDE.md sekce 9: "Preferuj vyšší komisi při srovnatelné ceně (±5%)".
@@ -368,7 +377,7 @@ export function sortOffersAffiliate(offers: ProductOffer[]): ProductOffer[] {
 export async function getOffersForProduct(productId: string): Promise<ProductOffer[]> {
   const { data, error } = await supabaseAdmin
     .from('product_offers')
-    .select(`id, product_id, retailer_id, price, currency, in_stock, product_url, affiliate_url, commission_pct, retailer:retailers(${RETAILER_PUBLIC_COLUMNS})`)
+    .select(`id, product_id, retailer_id, price, currency, in_stock, product_url, affiliate_url, commission_pct, page_price, price_mismatch, manual_override, retailer:retailers(${RETAILER_PUBLIC_COLUMNS})`)
     .eq('product_id', productId)
     .order('price', { ascending: true })
   if (error) throw error
@@ -388,6 +397,9 @@ export async function getOffersForProduct(productId: string): Promise<ProductOff
       productUrl: (row.product_url as string) ?? '',
       affiliateUrl: (row.affiliate_url as string) ?? '',
       commissionPct: Number(row.commission_pct ?? 0),
+      pagePrice: row.page_price != null ? Number(row.page_price) : undefined,
+      priceMismatch: (row.price_mismatch as boolean) ?? false,
+      manualOverride: (row.manual_override as boolean) ?? false,
     }))
   return sortOffersAffiliate(mapped)
 }

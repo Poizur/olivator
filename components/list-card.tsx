@@ -91,10 +91,10 @@ export function ListCard({ product, offer, rank, compact = false, segmentBadge }
             <div className="flex items-center justify-between gap-3 px-3 py-2.5 border-t border-off bg-off/30">
               <div className="min-w-0">
                 <div className="text-[16px] font-semibold text-text tabular-nums leading-none">
-                  {formatPrice(offer.price)}
+                  {formatPrice(offer.pagePrice ?? offer.price)}
                 </div>
                 <div className="text-[11px] text-text3 mt-1 truncate">
-                  {formatPricePer100ml(offer.price, product.volumeMl)} · {offer.retailer.name}
+                  {formatPricePer100ml(offer.pagePrice ?? offer.price, product.volumeMl)} · {offer.retailer.name}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
@@ -204,10 +204,10 @@ export function ListCard({ product, offer, rank, compact = false, segmentBadge }
           {offer && (
             <div className="text-right shrink-0">
               <div className="text-lg font-semibold text-text tracking-tight">
-                {formatPrice(offer.price)}
+                {formatPrice(offer.pagePrice ?? offer.price)}
               </div>
               <div className="text-[11px] text-text3">
-                {formatPricePer100ml(offer.price, product.volumeMl)}
+                {formatPricePer100ml(offer.pagePrice ?? offer.price, product.volumeMl)}
               </div>
               <div className="text-[11px] text-olive-light">
                 {offer.retailer.name}
@@ -281,10 +281,10 @@ function CompactCard({ product, offer, rank }: { product: Product; offer?: Produ
         <div className="flex items-center justify-between pt-2 border-t border-off">
           <div>
             <div className="text-[15px] font-semibold text-text tabular-nums">
-              {formatPrice(offer.price)}
+              {formatPrice(offer.pagePrice ?? offer.price)}
             </div>
             <div className="text-[10px] text-text3">
-              {formatPricePer100ml(offer.price, product.volumeMl)} · {offer.retailer.name}
+              {formatPricePer100ml(offer.pagePrice ?? offer.price, product.volumeMl)} · {offer.retailer.name}
             </div>
           </div>
           <span className="text-[11px] text-olive font-medium">

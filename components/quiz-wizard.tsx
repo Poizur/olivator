@@ -241,11 +241,11 @@ function QuizResults({
                       {offer ? (
                         <>
                           <span className="text-sm font-semibold text-text">
-                            {formatPrice(offer.price)}
+                            {formatPrice(offer.pagePrice ?? offer.price)}
                           </span>
                           {p.volumeMl > 0 && (
                             <span className="text-[11px] text-text3 ml-1.5">
-                              · {formatPricePer100ml(offer.price, p.volumeMl)}
+                              · {formatPricePer100ml(offer.pagePrice ?? offer.price, p.volumeMl)}
                             </span>
                           )}
                           <div className="text-[11px] text-text3 mt-0.5">u {offer.retailer.name}</div>

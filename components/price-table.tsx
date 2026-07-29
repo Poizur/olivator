@@ -62,10 +62,10 @@ export function PriceTable({ offers, volumeMl, productSlug, productName }: Price
             </div>
             <div className="text-right">
               <div className={`text-base font-semibold tabular-nums ${inStock ? 'text-text' : 'text-text3 line-through'}`}>
-                {formatPrice(offer.price)}
+                {formatPrice(offer.pagePrice ?? offer.price)}
               </div>
               <div className="text-[11px] text-text3 tabular-nums whitespace-nowrap">
-                {formatPricePer100ml(offer.price, volumeMl)}
+                {formatPricePer100ml(offer.pagePrice ?? offer.price, volumeMl)}
               </div>
             </div>
           </>
@@ -90,7 +90,7 @@ export function PriceTable({ offers, volumeMl, productSlug, productName }: Price
               productName,
               retailerSlug: offer.retailer.slug,
               retailerName: offer.retailer.name,
-              price: offer.price,
+              price: offer.pagePrice ?? offer.price,
               source: 'product_page',
             }}
             className={`flex items-center justify-between px-3.5 py-3 rounded-xl border mb-2 cursor-pointer transition-all ${
