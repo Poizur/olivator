@@ -12,17 +12,21 @@ import { createClient } from '@supabase/supabase-js'
 
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
 
-// Výrazy označující nedostupnost (case-insensitive)
-const UNAVAILABLE_PATTERNS = [
-  'vyprodáno', 'vyprodano', 'nedostupné', 'nedostupne',
+// Fráze nikdy v cross-sell — pouze u nedostupného hlavního produktu
+const SPECIFIC_UNAVAILABLE = [
+  'Položka byla vyprodána', 'Dlouhodobě nedostupné',
+  'Trvale nedostupné', 'Produkt není dostupný',
+]
+// Generické — mohou být v cross-sell; používáme jen jako fallback po buy-button
+const GENERIC_UNAVAILABLE = [
   'není skladem', 'neni skladem', 'out of stock', 'sold out',
   'momentálně nedostupné', 'momentalne nedostupne',
-  'není k dispozici', 'neni k dispozici', 'dočasně nedostupné',
+  'není k dispozici', 'dočasně nedostupné', 'nelze objednat',
 ]
 
 /**
- * Priorita: structured data → buy button disabled → main section text.
- * NIKDY full-page scan — cross-sell widgety obsahují "Vyprodáno" u jiných produktů.
+ * Priorita: specifické fráze → structured data → add-to-cart button → main section generické.
+ * NIKDY full-page scan — cross-sell kontaminuje. "Přejít do košíku" ≠ buy button.
  */
 async function checkAvailability(page: import('playwright').Page, url: string): Promise<{
   available: boolean
@@ -35,65 +39,69 @@ async function checkAvailability(page: import('playwright').Page, url: string): 
       return { available: false, reason: `HTTP ${res?.status() ?? '?'}`, bodySnippet: '' }
     }
 
-    // 1. Structured data
-    const domAvail = await page.evaluate(() => {
-      const el = document.querySelector('[itemprop="availability"]')
-      if (el) return el.getAttribute('content') ?? el.textContent ?? ''
-      const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'))
-      for (const s of scripts) {
-        try {
-          const d = JSON.parse(s.textContent || '') as Record<string, unknown>
-          const dig = (o: Record<string, unknown>): string | null => {
-            if (o?.availability) return String(o.availability)
-            if (o?.offers) {
-              const off = (Array.isArray(o.offers) ? o.offers[0] : o.offers) as Record<string, unknown>
-              if (off?.availability) return String(off.availability)
-            }
-            return null
-          }
-          const r = dig(d); if (r) return r
-        } catch { /* ignore */ }
-      }
-      return ''
-    }).catch(() => '')
+    const { bodyText, domAvail, buyBtn, mainText } = await page.evaluate(() => {
+      const body = document.body.innerText
 
+      let domAvail = ''
+      const avEl = document.querySelector('[itemprop="availability"]')
+      if (avEl) { domAvail = avEl.getAttribute('content') ?? avEl.textContent ?? '' }
+      else {
+        for (const s of Array.from(document.querySelectorAll('script[type="application/ld+json"]'))) {
+          try {
+            const d = JSON.parse(s.textContent || '') as Record<string, unknown>
+            const dig = (o: Record<string, unknown>): string | null => {
+              if (o?.availability) return String(o.availability)
+              if (o?.offers) { const off = (Array.isArray(o.offers) ? o.offers[0] : o.offers) as Record<string, unknown>; return dig(off) }
+              return null
+            }
+            const r = dig(d); if (r) { domAvail = r; break }
+          } catch { /* ignore */ }
+        }
+      }
+
+      const NAV = ['přejít do košíku', 'pokračovat do košíku', 'zobrazit košík', 'go to cart', 'view cart']
+      const ADD = ['přidat do košíku', 'vložit do košíku', 'přidat', 'vložit', 'koupit', 'objednat', 'add to cart']
+      let buyBtn: { found: boolean; disabled: boolean } = { found: false, disabled: false }
+      for (const el of Array.from(document.querySelectorAll('button, input[type="submit"], [class*="add-to-cart"]'))) {
+        const label = ((el.textContent ?? '').trim() || ((el as HTMLInputElement).value ?? '').trim()).toLowerCase()
+        if (NAV.some(p => label.startsWith(p))) continue
+        if (ADD.some(p => label.startsWith(p))) {
+          buyBtn = { found: true, disabled: (el as HTMLButtonElement).disabled || el.getAttribute('disabled') !== null }; break
+        }
+      }
+
+      let mainText = ''
+      for (const sel of ['.product-detail__info', '.product-detail', '[class*="product-detail"]', '.entry-summary', 'main']) {
+        const el = document.querySelector(sel)
+        if (el && (el.textContent?.length ?? 0) > 50) { mainText = (el.textContent ?? '').toLowerCase(); break }
+      }
+
+      return { bodyText: body, domAvail, buyBtn, mainText }
+    }).catch(() => ({ bodyText: '', domAvail: '', buyBtn: { found: false, disabled: false }, mainText: '' }))
+
+    // 1. Specifické fráze — nikdy v cross-sell
+    for (const phrase of SPECIFIC_UNAVAILABLE) {
+      if (bodyText.includes(phrase)) {
+        return { available: false, reason: `specific: "${phrase}"`, bodySnippet: '' }
+      }
+    }
+
+    // 2. Structured data
     if (domAvail) {
       const lo = domAvail.toLowerCase()
       if (lo.includes('instock') || lo.includes('in_stock')) return { available: true, reason: `LD: ${domAvail.slice(0, 60)}`, bodySnippet: '' }
       if (lo.includes('outofstock') || lo.includes('out_of_stock')) return { available: false, reason: `LD: ${domAvail.slice(0, 60)}`, bodySnippet: '' }
     }
 
-    // 2. Buy button
-    const buyBtn = await page.evaluate(() => {
-      const candidates = Array.from(document.querySelectorAll('button, input[type="submit"], .btn-buy, [class*="buy-btn"], [class*="add-to-cart"]'))
-      for (const el of candidates) {
-        const t = (el.textContent || '').toLowerCase()
-        const v = ((el as HTMLInputElement).value || '').toLowerCase()
-        if (['přidat', 'koupit', 'do košíku', 'vložit', 'objednat'].some(kw => t.includes(kw) || v.includes(kw))) {
-          return { found: true, disabled: (el as HTMLButtonElement).disabled || el.getAttribute('disabled') !== null }
-        }
-      }
-      return { found: false, disabled: false }
-    }).catch(() => ({ found: false, disabled: false }))
-
+    // 3. Striktní add-to-cart (bez navigačních "Přejít do košíku")
     if (buyBtn.found) {
-      return { available: !buyBtn.disabled, reason: `buy-btn disabled=${buyBtn.disabled}`, bodySnippet: '' }
+      return { available: !buyBtn.disabled, reason: `add-to-cart disabled=${buyBtn.disabled}`, bodySnippet: '' }
     }
 
-    // 3. Main section text only (ne celá stránka!)
-    const mainText = await page.evaluate(() => {
-      const sels = ['.product-detail__info', '.product-detail', '.product-info', '[class*="product-detail"]', 'main .product', '.entry-summary', 'form[action*="cart"]', 'main']
-      for (const sel of sels) {
-        const el = document.querySelector(sel)
-        if (el && (el.textContent?.length ?? 0) > 50) return el.textContent?.toLowerCase() ?? ''
-      }
-      return ''
-    }).catch(() => '')
-
-    for (const pattern of UNAVAILABLE_PATTERNS) {
+    // 4. Generické fráze jen v main section
+    for (const pattern of GENERIC_UNAVAILABLE) {
       if (mainText.includes(pattern)) {
-        const idx = mainText.indexOf(pattern)
-        return { available: false, reason: `main-section: "${pattern}"`, bodySnippet: mainText.slice(Math.max(0, idx - 30), idx + 60).replace(/\n/g, ' ') }
+        return { available: false, reason: `main-section: "${pattern}"`, bodySnippet: mainText.slice(mainText.indexOf(pattern) - 30, mainText.indexOf(pattern) + 60).replace(/\n/g, ' ') }
       }
     }
 
