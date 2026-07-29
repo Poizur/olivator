@@ -42,6 +42,15 @@ export async function runReprice(opts: {
   const { dryRun = false } = opts
   const retailerFilter = opts.retailers ?? MODE_A_RETAILERS
 
+  if (retailerFilter.length === 0) {
+    console.log('[reprice] MODE_A_RETAILERS je prázdný — nothing to do, exit 0')
+    return {
+      fetched: 0, matched: 0, changed: 0, anomalies: 0, failed: 0,
+      skipped: 0, notFoundDeactivated: 0, dryRun,
+      byRetailer: {}, notFoundUrls: [],
+    }
+  }
+
   const { data: retailers, error: rErr } = await supabaseAdmin
     .from('retailers')
     .select('id, slug, name')

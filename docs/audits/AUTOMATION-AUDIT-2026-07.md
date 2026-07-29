@@ -33,7 +33,7 @@
 | `cron:site-scanner` | neuvedeno | ❓ nejasné | 🟢 | Skenování webu — monitoring, žádný zápis |
 | `cron:price-index` | `0 7 1 * *` | ❓ nejasné | 🟢 | Měsíční cenový index → DB snapshot, analytics |
 | `cron:price-watch-notify` | denně 09:00 | ❓ nejasné | 🟢 | Feature flag `price_alerts=false` → efektivně disabled |
-| `cron:reprice` | neuvedeno | ❌ off | 💤 MRTVÉ | `MODE_A_RETAILERS=[]` → vždy failuje, není v Railway plánu |
+| `cron:reprice` | neuvedeno | 🛑 DEAKTIVOVÁN | 💤 MRTVÉ | DEAKTIVOVÁN v Railway 2026-07-28 · graceful exit přidán (prázdný seznam → exit 0) |
 | `admin approve endpoints` | human trigger | — | 🟢 | Human gate zachován, F-01 EAN fix aplikován |
 
 ---
