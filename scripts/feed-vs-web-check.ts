@@ -20,6 +20,10 @@ const UNAVAILABLE_PATTERNS = [
   'není k dispozici', 'neni k dispozici', 'dočasně nedostupné',
 ]
 
+/**
+ * Priorita: structured data → buy button disabled → main section text.
+ * NIKDY full-page scan — cross-sell widgety obsahují "Vyprodáno" u jiných produktů.
+ */
 async function checkAvailability(page: import('playwright').Page, url: string): Promise<{
   available: boolean
   reason: string
@@ -31,36 +35,69 @@ async function checkAvailability(page: import('playwright').Page, url: string): 
       return { available: false, reason: `HTTP ${res?.status() ?? '?'}`, bodySnippet: '' }
     }
 
-    const text = (await page.evaluate(() => document.body.innerText)).toLowerCase()
+    // 1. Structured data
+    const domAvail = await page.evaluate(() => {
+      const el = document.querySelector('[itemprop="availability"]')
+      if (el) return el.getAttribute('content') ?? el.textContent ?? ''
+      const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'))
+      for (const s of scripts) {
+        try {
+          const d = JSON.parse(s.textContent || '') as Record<string, unknown>
+          const dig = (o: Record<string, unknown>): string | null => {
+            if (o?.availability) return String(o.availability)
+            if (o?.offers) {
+              const off = (Array.isArray(o.offers) ? o.offers[0] : o.offers) as Record<string, unknown>
+              if (off?.availability) return String(off.availability)
+            }
+            return null
+          }
+          const r = dig(d); if (r) return r
+        } catch { /* ignore */ }
+      }
+      return ''
+    }).catch(() => '')
 
-    // Zkontroluj buy button — existuje a není disabled?
-    const hasBuyButton = await page.evaluate(() => {
-      const btns = Array.from(document.querySelectorAll('button, input[type="submit"], a'))
-      return btns.some(el => {
+    if (domAvail) {
+      const lo = domAvail.toLowerCase()
+      if (lo.includes('instock') || lo.includes('in_stock')) return { available: true, reason: `LD: ${domAvail.slice(0, 60)}`, bodySnippet: '' }
+      if (lo.includes('outofstock') || lo.includes('out_of_stock')) return { available: false, reason: `LD: ${domAvail.slice(0, 60)}`, bodySnippet: '' }
+    }
+
+    // 2. Buy button
+    const buyBtn = await page.evaluate(() => {
+      const candidates = Array.from(document.querySelectorAll('button, input[type="submit"], .btn-buy, [class*="buy-btn"], [class*="add-to-cart"]'))
+      for (const el of candidates) {
         const t = (el.textContent || '').toLowerCase()
-        const v = (el.getAttribute('value') || '').toLowerCase()
-        return (t.includes('přidat') || t.includes('koupit') || t.includes('add to cart') ||
-                v.includes('přidat') || v.includes('koupit')) &&
-               !(el as HTMLButtonElement).disabled
-      })
-    }).catch(() => false)
+        const v = ((el as HTMLInputElement).value || '').toLowerCase()
+        if (['přidat', 'koupit', 'do košíku', 'vložit', 'objednat'].some(kw => t.includes(kw) || v.includes(kw))) {
+          return { found: true, disabled: (el as HTMLButtonElement).disabled || el.getAttribute('disabled') !== null }
+        }
+      }
+      return { found: false, disabled: false }
+    }).catch(() => ({ found: false, disabled: false }))
+
+    if (buyBtn.found) {
+      return { available: !buyBtn.disabled, reason: `buy-btn disabled=${buyBtn.disabled}`, bodySnippet: '' }
+    }
+
+    // 3. Main section text only (ne celá stránka!)
+    const mainText = await page.evaluate(() => {
+      const sels = ['.product-detail__info', '.product-detail', '.product-info', '[class*="product-detail"]', 'main .product', '.entry-summary', 'form[action*="cart"]', 'main']
+      for (const sel of sels) {
+        const el = document.querySelector(sel)
+        if (el && (el.textContent?.length ?? 0) > 50) return el.textContent?.toLowerCase() ?? ''
+      }
+      return ''
+    }).catch(() => '')
 
     for (const pattern of UNAVAILABLE_PATTERNS) {
-      if (text.includes(pattern)) {
-        const idx = text.indexOf(pattern)
-        return {
-          available: false,
-          reason: `nalezeno: "${pattern}"`,
-          bodySnippet: text.slice(Math.max(0, idx - 30), idx + 60).replace(/\n/g, ' '),
-        }
+      if (mainText.includes(pattern)) {
+        const idx = mainText.indexOf(pattern)
+        return { available: false, reason: `main-section: "${pattern}"`, bodySnippet: mainText.slice(Math.max(0, idx - 30), idx + 60).replace(/\n/g, ' ') }
       }
     }
 
-    return {
-      available: hasBuyButton,
-      reason: hasBuyButton ? 'buy button found' : 'no buy button, no unavailable text',
-      bodySnippet: text.slice(0, 120).replace(/\n/g, ' '),
-    }
+    return { available: true, reason: 'no-signal (assume avail)', bodySnippet: '' }
   } catch (err) {
     return { available: false, reason: `error: ${err instanceof Error ? err.message : String(err)}`, bodySnippet: '' }
   }
@@ -74,7 +111,7 @@ async function main() {
 
   const browser = await chromium.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--single-process'],
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
   })
   const ctx = await browser.newContext({ userAgent: 'Mozilla/5.0 (compatible; Olivator-check/1.0)' })
 

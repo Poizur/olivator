@@ -112,29 +112,76 @@ async function extractPagePrice(page: Page, feedPrice: number): Promise<number |
   return null
 }
 
-/** Ověří dostupnost stránky. Vrací false pokud nalezena nedostupná fráze. */
+/**
+ * Ověří dostupnost stránky. Priorita: structured data → buy button → main section text.
+ * NIKDY neskenujeme celou stránku — cross-sell widgety mají "Vyprodáno" u jiných produktů.
+ */
 async function checkAvailability(page: Page): Promise<{ available: boolean; reason: string }> {
   try {
-    const text = (await page.evaluate(() => document.body.innerText)).toLowerCase()
-    for (const pattern of UNAVAILABLE_PATTERNS) {
-      if (text.includes(pattern)) {
-        const idx = text.indexOf(pattern)
-        const snippet = text.slice(Math.max(0, idx - 20), idx + 40).replace(/\n/g, ' ').trim()
-        return { available: false, reason: `"${pattern}" → "${snippet}"` }
+    // 1. Structured data — nejspolehlivější, neplní je cross-sell
+    const domAvail = await page.evaluate(() => {
+      const el = document.querySelector('[itemprop="availability"]')
+      if (el) return el.getAttribute('content') ?? el.textContent ?? ''
+      const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'))
+      for (const s of scripts) {
+        try {
+          const d = JSON.parse(s.textContent || '') as Record<string, unknown>
+          const dig = (o: Record<string, unknown>): string | null => {
+            if (o?.availability) return String(o.availability)
+            if (o?.offers) {
+              const off = (Array.isArray(o.offers) ? o.offers[0] : o.offers) as Record<string, unknown>
+              if (off?.availability) return String(off.availability)
+            }
+            return null
+          }
+          const r = dig(d)
+          if (r) return r
+        } catch { /* ignore */ }
       }
+      return ''
+    }).catch(() => '')
+
+    if (domAvail) {
+      const lo = domAvail.toLowerCase()
+      if (lo.includes('instock') || lo.includes('in_stock')) return { available: true, reason: `LD: ${domAvail.slice(0, 60)}` }
+      if (lo.includes('outofstock') || lo.includes('out_of_stock') || lo.includes('discontinued')) return { available: false, reason: `LD: ${domAvail.slice(0, 60)}` }
     }
-    // Zkontroluj přítomnost buy tlačítka jako sekundární signál
-    const hasBuy = await page.evaluate(() => {
-      const els = Array.from(document.querySelectorAll('button, input[type="submit"]'))
-      return els.some(el => {
+
+    // 2. Buy button — disabled=true znamená produkt není do košíku
+    const buyBtn = await page.evaluate(() => {
+      const candidates = Array.from(document.querySelectorAll('button, input[type="submit"], .btn-buy, [class*="buy-btn"], [class*="add-to-cart"]'))
+      for (const el of candidates) {
         const t = (el.textContent || '').toLowerCase()
         const v = ((el as HTMLInputElement).value || '').toLowerCase()
-        return (t.includes('přidat') || t.includes('koupit') || t.includes('objednat') ||
-                v.includes('přidat') || v.includes('koupit')) &&
-               !(el as HTMLButtonElement).disabled
-      })
-    }).catch(() => false)
-    return { available: hasBuy, reason: hasBuy ? 'buy button found' : 'no buy button, no unavailable text' }
+        const isBuy = ['přidat', 'koupit', 'do košíku', 'vložit', 'objednat'].some(kw => t.includes(kw) || v.includes(kw))
+        if (isBuy) {
+          return { found: true, disabled: (el as HTMLButtonElement).disabled || el.getAttribute('disabled') !== null || el.getAttribute('aria-disabled') === 'true' }
+        }
+      }
+      return { found: false, disabled: false }
+    }).catch(() => ({ found: false, disabled: false }))
+
+    if (buyBtn.found) {
+      return { available: !buyBtn.disabled, reason: `buy-btn disabled=${buyBtn.disabled}` }
+    }
+
+    // 3. Fallback: text jen v hlavní sekci produktu (ne celá stránka!)
+    const mainText = await page.evaluate(() => {
+      const sels = ['.product-detail__info', '.product-detail', '.product-info', '[class*="product-detail"]', 'main .product', '.entry-summary', 'form[action*="cart"]', 'main']
+      for (const sel of sels) {
+        const el = document.querySelector(sel)
+        if (el && (el.textContent?.length ?? 0) > 50) return el.textContent?.toLowerCase() ?? ''
+      }
+      return ''
+    }).catch(() => '')
+
+    for (const pattern of UNAVAILABLE_PATTERNS) {
+      if (mainText.includes(pattern)) {
+        return { available: false, reason: `main-section text: "${pattern}"` }
+      }
+    }
+
+    return { available: true, reason: 'no-signal (assume avail)' }
   } catch (err) {
     return { available: false, reason: `eval error: ${err instanceof Error ? err.message : String(err)}` }
   }
@@ -288,7 +335,7 @@ export async function runWebCheck(): Promise<WebCheckResult> {
   try {
     browser = await chromium.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--single-process'],
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
     })
 
     // Rozdělíme nabídky na CONCURRENCY skupin, každá má svou stránku
