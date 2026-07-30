@@ -17,6 +17,7 @@ import { researchRetailer } from './retailer-research'
 import { runRescrape } from './product-rescrape'
 import { linkAndRecomputeForProduct } from './entity-aggregator'
 import { inferOriginFromText } from './utils'
+import { syncReckonasbavyComplete } from './reckonasbavi-complete-sync'
 
 // Kolik pending draftů zpracovat per cron run. Každý rescrape ~30-90s.
 // 40 × 60s = 40 min — feed sync sám trvá ~5 min, celkem ~45 min < 60 min Railway timeout.
@@ -161,6 +162,22 @@ export async function runFeedSyncForAllRetailers(): Promise<FeedSyncRunResult> {
     }
   } catch (err) {
     console.warn('[feed-sync] origin backfill stage failed:', err)
+  }
+
+  // ── PASS 6: Reckonasbavi Complete export — authoritative stock + action prices ──
+  // Runs AFTER Heureka feed (PASS 1) so Complete data wins on conflicts.
+  // Requires RECKONASBAVI_COMPLETE_FEED_URL env. Silently skips if not set.
+  try {
+    const completeResult = await syncReckonasbavyComplete()
+    if (completeResult) {
+      console.log(
+        `[feed-sync] complete-sync: ${completeResult.offersUpdated} updated, ` +
+        `${completeResult.overridesCleared} overrides cleared, ` +
+        `${completeResult.errors.length} errors`
+      )
+    }
+  } catch (err) {
+    console.warn('[feed-sync] complete-sync stage failed:', err)
   }
 
   result.finishedAt = new Date().toISOString()
