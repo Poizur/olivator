@@ -39,6 +39,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://olivator.cz',
   },
+  other: {
+    'seznam-wmt': 'mIFD6SMJOcyQLqUhXd7MtChJGvpp74nG',
+  },
 }
 
 // Root layout je STATIC (žádné headers()/cookies()). Chrome (Nav/Footer/
