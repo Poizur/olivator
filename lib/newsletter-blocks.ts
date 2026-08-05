@@ -383,6 +383,20 @@ export async function pickDeals(
     const dropPct = ((maxPrice - offer.price) / maxPrice) * 100
     if (dropPct < minDropPct) continue
     // Cap 50 % — vyšší hodnoty jsou téměř vždy datová anomálie (jiný objem, chybný import)
+    // Permanent sale filter — pokud cena nebyla >10 % nad aktuální déle než 21 dní,
+    // považujeme tuto "slevu" za trvalou (normální cena), ne reálný pokles.
+    const { data: lastHighRecord } = await supabaseAdmin
+      .from('price_history')
+      .select('recorded_at')
+      .eq('product_id', offer.product_id)
+      .eq('retailer_id', offer.retailer_id)
+      .gt('price', (offer.price as number) * 1.10)
+      .order('recorded_at', { ascending: false })
+      .limit(1)
+    if (lastHighRecord?.[0]) {
+      const daysSinceHigh = (Date.now() - new Date(lastHighRecord[0].recorded_at as string).getTime()) / 86400000
+      if (daysSinceHigh > 21) continue  // permanent deal — this is the normal price now
+    }
     if (dropPct > 50) continue
 
     // Najdi 90d minimum u stejného retailera

@@ -52,6 +52,7 @@ async function generateHook(stats: {
   recentNew: number
   totalProducts: number
   oilOfWeekName: string | null
+  recentSubjects?: string[]
 }): Promise<{ subject: string; preheader: string; hook: string }> {
   if (!process.env.ANTHROPIC_API_KEY) {
     // Fallback bez AI
@@ -88,6 +89,9 @@ CONTENT RULES (povinné):
 - Žádné zdravotní sliby: zakázáno "léčí", "chrání před rakovinou/infarktem/cukrovkou", "zaručeně" + nemoc
 - Žádné tvrzení o fyzickém testování (Olivator neprovádí degustace ani laboratorní testy)
 - Nezmiňovat konkrétní ceny v textu — ceny se denně mění
+${stats.recentSubjects && stats.recentSubjects.length > 0
+  ? `- ZAKÁZANÝ VZOREC PŘEDMĚTU: Poslední vydání začínala "[číslo] slevy/slev..." — NEOPAKUJ tento vzorec. Dřívější předměty: ${stats.recentSubjects.map(s => `"${s}"`).join(', ')}. Navrhni jiný typ předmětu: produktový (jméno oleje), geografický (Kréta, Kalamata...), chuťový (polyfenoly, kyselost...), sezónní nebo otázkový.`
+  : ''}
 
 Vrať jako čistý JSON (žádný markdown):
 {"subject": "...", "preheader": "...", "hook": "..."}`
@@ -155,7 +159,7 @@ export async function composeWeeklyDraft(): Promise<ComposedDraft> {
   // Produkty z posledních 8 draftů — vyloučit z Oleje týdne aby se neopakoval
   const { data: recentDrafts } = await supabaseAdmin
     .from('newsletter_drafts')
-    .select('blocks, status')
+    .select('blocks, status, subject')
     .in('status', ['sent', 'approved', 'draft', 'archived'])
     .order('created_at', { ascending: false })
     .limit(8)
@@ -253,11 +257,18 @@ export async function composeWeeklyDraft(): Promise<ComposedDraft> {
   }
 
   // 3. AI generuje subject + preheader + hook
+  // Předáme posledních 5 předmětů aby Claude věděl co NEopakovat
+  const recentSubjects = (recentDrafts ?? [])
+    .filter(d => d.status === 'sent' || d.status === 'approved' || d.status === 'archived')
+    .slice(0, 5)
+    .map(d => (d as { subject?: string }).subject)
+    .filter((s): s is string => !!s)
   const { subject, preheader, hook } = await generateHook({
     recentDrops: stats.recentDrops,
     recentNew: stats.recentNew,
     totalProducts: stats.totalProducts,
     oilOfWeekName: oilOfWeek?.name ?? null,
+    recentSubjects,
   })
 
   // 4. Render React Email → HTML + plaintext

@@ -75,6 +75,8 @@ Pokud pravidlo NENÍ porušeno, NEPŘIDÁVEJ ho do issues.
 Pokud je vše v pořádku, vrať verdict: "ok" a issues: [].
 verdict musí být "warn" pokud existuje alespoň 1 warn issue, jinak "ok" (nebo "info" není platný verdict — použij "ok").
 
+KRITICKÉ: Odpovídej VÝHRADNĚ česky. ŽÁDNÁ cyrilická písmena v textu odpovědi — pouze latinika s háčky a čárkami. Ani jedno cyrilické písmeno v polích "detail" nebo "summary".
+
 Vrať POUZE čistý JSON (bez markdown kódu, bez komentářů):
 {
   "verdict": "ok" | "warn",
