@@ -140,7 +140,13 @@ export function productSchema(product: Product, offers: ProductOffer[]) {
             hasMerchantReturnPolicy: buildReturnPolicy(o.retailer),
           })),
         }
-      : undefined,
+      : {
+          // Žádné aktivní nabídky — Google vyžaduje offers field i u vyprodaných produktů.
+          // Bez offers field stránka není způsobilá pro Product rich result.
+          '@type': 'Offer',
+          priceCurrency: 'CZK',
+          availability: 'https://schema.org/OutOfStock',
+        },
   }
 }
 
