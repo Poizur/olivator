@@ -157,14 +157,12 @@ export async function GET(
   const sourcePage = spParam ?? (referrer || null)
   const sourceType = stParam ?? deriveSourceType(sourcePage, utm.utm_medium)
 
-  // is_test detekce pro budoucí použití — sloupec affiliate_clicks.is_test
-  // musí být v DB (migrace 20260728_affiliate_clicks_is_test.sql) před tím,
-  // než se přidá zpět do INSERT níže.
-  // const isTest =
-  //   userAgent === 'node' || userAgent.startsWith('curl/') ||
-  //   userAgent.toLowerCase().includes('jscrawler') ||
-  //   userAgent.toLowerCase().includes('olivatortest') ||
-  //   request.headers.get('x-olivator-test') === '1'
+  const isTest =
+    userAgent === 'node' ||
+    userAgent.startsWith('curl/') ||
+    userAgent.toLowerCase().includes('jscrawler') ||
+    userAgent.toLowerCase().includes('olivatortest') ||
+    request.headers.get('x-olivator-test') === '1'
 
   const { error: clickErr } = await supabaseAdmin.from('affiliate_clicks').insert({
     product_id: product.id,
@@ -176,6 +174,7 @@ export async function GET(
     source_page: sourcePage,
     source_type: sourceType,
     price_at_click: (offer.price as number | null) ?? null,
+    is_test: isTest,
     ...utm,
   })
   if (clickErr) console.error('[affiliate] Log failed:', clickErr.message)
