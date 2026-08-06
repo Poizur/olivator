@@ -592,3 +592,52 @@ export async function sendExecutionFailedNotification(info: {
   const sendResult = await sendViaResend(recipient, subject, html)
   await logNotification(recipient, subject, 'executor_failed', html, sendResult)
 }
+
+/** Dead-man's switch — 0 organických kliků za N hodin = tracking možná nefunguje. */
+export async function sendTrackingAlert(info: {
+  windowHours: number
+  lastClickAt: string | null
+}): Promise<void> {
+  const recipient = await getSetting<string>('notification_email')
+  if (!recipient) return
+
+  const subject = `⚠️ [Olivator] Affiliate tracking: 0 kliků za ${info.windowHours}h`
+  const lastSeen = info.lastClickAt
+    ? `Poslední organický klik: ${info.lastClickAt.slice(0, 19).replace('T', ' ')} UTC`
+    : 'Žádný organický klik v DB vůbec'
+
+  const html = `<!DOCTYPE html>
+<html lang="cs"><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#fafafa">
+<div style="background:white;border-radius:12px;padding:32px;border:1px solid #e8e8ed">
+  <h1 style="font-size:20px;color:#c4711a;margin:0 0 8px">⚠️ Affiliate tracking upozornění</h1>
+  <p style="color:#6e6e73;font-size:14px;margin:0 0 24px">Olivator — dead-man's switch</p>
+
+  <div style="background:#fff3cd;border-left:4px solid #c4711a;padding:16px;border-radius:8px;margin-bottom:24px">
+    <div style="font-size:15px;font-weight:600;color:#856404;margin-bottom:4px">0 organických kliků za posledních ${info.windowHours} hodin</div>
+    <div style="font-size:13px;color:#856404">${lastSeen}</div>
+  </div>
+
+  <p style="font-size:14px;color:#1d1d1f;margin:0 0 12px"><strong>Možné příčiny (zkontroluj v pořadí):</strong></p>
+  <ol style="font-size:13px;color:#6e6e73;padding-left:20px;margin:0 0 24px;line-height:1.8">
+    <li>Nová DB migrace: zkontroluj Railway logy pro chyby "column … does not exist"</li>
+    <li>Railway redeployment uprostřed dne — sleduj logy /go/ route</li>
+    <li>Supabase RLS policy blokuje INSERT (service key použit? Ano.)</li>
+    <li>Legitimně nízký traffic (víkend, svátek) — ověř v eHUB exportu</li>
+  </ol>
+
+  <div style="text-align:center;margin-top:24px">
+    <a href="https://olivator.cz/admin" style="display:inline-block;background:#c4711a;color:white;text-decoration:none;padding:12px 24px;border-radius:24px;font-size:14px;font-weight:500">
+      Otevřít admin →
+    </a>
+  </div>
+
+  <p style="font-size:11px;color:#aeaeb2;margin-top:32px;border-top:1px solid #e8e8ed;padding-top:16px">
+    Generováno automaticky (dead-man's switch, cron:link-check 04:00 UTC).
+    Pošle se jen pokud 0 organických kliků za ${info.windowHours}h. Ticho = tracking OK.
+  </p>
+</div>
+</body></html>`.trim()
+
+  const sendResult = await sendViaResend(recipient, subject, html)
+  await logNotification(recipient, subject, 'tracking_alert', html, sendResult)
+}

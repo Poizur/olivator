@@ -177,7 +177,15 @@ export async function GET(
     is_test: isTest,
     ...utm,
   })
-  if (clickErr) console.error('[affiliate] Log failed:', clickErr.message)
+  if (clickErr) {
+    console.error('[affiliate] click log failed', {
+      product: productSlug,
+      retailer: retailerSlug,
+      errCode: clickErr.code,
+      errMsg: clickErr.message,
+      isTest,
+    })
+  }
 
   return NextResponse.redirect(target, 302)
 }
