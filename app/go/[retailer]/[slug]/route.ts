@@ -174,7 +174,9 @@ export async function GET(
     source_page: sourcePage,
     source_type: sourceType,
     price_at_click: (offer.price as number | null) ?? null,
-    is_test: isTest,
+    // is_test: isTest — POZOR: sloupec musí být v DB před zapnutím.
+    // Migrace: supabase/migrations/20260728_affiliate_clicks_is_test.sql
+    // Po aplikaci migraci: odkomentovat.
     ...utm,
   })
   if (clickErr) console.error('[affiliate] Log failed:', clickErr.message)
