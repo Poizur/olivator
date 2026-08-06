@@ -274,10 +274,12 @@ async function getCatalogHealth(): Promise<{
     .not('affiliate_url', 'is', null)
     .neq('affiliate_url', '')
 
-  // Distinct count produktů s aspoň 1 nabídkou
+  // Distinct count aktivních produktů s aspoň 1 nabídkou (product_id jenom z active produktů).
+  // DŮVOD: bez filtru se počítají i draft/inactive produkty → čitatel > jmenovatel.
   const offersWithProductId = await supabaseAdmin
     .from('product_offers')
-    .select('product_id')
+    .select('product_id, products!inner(status)')
+    .eq('products.status', 'active')
   const withOfferCount = new Set(
     (offersWithProductId.data ?? []).map((o) => o.product_id as string)
   ).size
@@ -450,11 +452,22 @@ async function getNeedsAttention() {
       .in('status', ['needs_review', 'pending']),
     supabaseAdmin
       .from('partner_inquiries')
-      .select('id, shop_name, email, created_at', { count: 'exact' })
+      .select('id, shop_name, email, created_at')
       .eq('status', 'new')
       .order('created_at', { ascending: false })
-      .limit(5),
+      .limit(20),
   ])
+
+  // Filtruj testovací záznamy JS-side přes pattern (shop_name/email).
+  // Po aplikaci migrace 20260806_partner_inquiries_is_test.sql přepnout na .eq('is_test', false).
+  const allInquiries = (partnerInquiriesRes.data ?? []) as Array<{
+    id: string; shop_name: string; email: string; created_at: string
+  }>
+  const realInquiries = allInquiries.filter(r => {
+    const name = (r.shop_name ?? '').toLowerCase()
+    const email = (r.email ?? '').toLowerCase()
+    return !name.includes('test') && !email.startsWith('test@')
+  }).slice(0, 5)
 
   return {
     drafts: draftsRes.count ?? 0,
@@ -464,8 +477,8 @@ async function getNeedsAttention() {
     offersWithoutAffiliate: missingAffiliateRes.count ?? 0,
     pendingNewsletters: draftNewslettersRes.count ?? 0,
     discoveryReview: discoveryReviewRes.count ?? 0,
-    partnerInquiries: partnerInquiriesRes.count ?? 0,
-    partnerInquiriesLatest: (partnerInquiriesRes.data ?? []) as Array<{ id: string; shop_name: string; email: string; created_at: string }>,
+    partnerInquiries: realInquiries.length,
+    partnerInquiriesLatest: realInquiries,
   }
 }
 
@@ -500,11 +513,13 @@ export default async function AdminDashboardPage() {
   }> = [
     {
       label: 'Aktivní produkty',
-      value: stats.totalProducts.toString(),
+      // Správná definice: všechny produkty se status=active, ne jen ty s in-stock nabídkou.
+      // stats.totalProducts = produkty s dostupnou nabídkou (subset) — pro KPI zavádějící.
+      value: catalogHealth.totalActive.toString(),
       sub:
         attention.drafts > 0
           ? `+ ${attention.drafts} v draftu`
-          : `${catalogHealth.totalOffers} nabídek`,
+          : `${catalogHealth.withOffer} s nabídkou`,
       href: '/admin/products',
       accent: attention.drafts > 0 ? 'amber' : undefined,
     },
