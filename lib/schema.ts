@@ -63,7 +63,12 @@ function buildReturnPolicy(retailer: Retailer) {
   }
 }
 
-export function productSchema(product: Product, offers: ProductOffer[]) {
+export function productSchema(product: Product, offers: ProductOffer[]): object | null {
+  // Karanténní produkt — žádná nabídka od aktivního retailera.
+  // Netlačíme Product schema s obchodními daty která neaktualizujeme.
+  // Stránka a obsah zůstávají, jen bez merchant markup.
+  if (offers.length === 0) return null
+
   const cheapest = offers[0]
   // Canonical URL produktu — Google Rich Results Test vyžaduje absolute URL
   const url = `https://olivator.cz/olej/${product.slug}`
@@ -140,13 +145,7 @@ export function productSchema(product: Product, offers: ProductOffer[]) {
             hasMerchantReturnPolicy: buildReturnPolicy(o.retailer),
           })),
         }
-      : {
-          // Žádné aktivní nabídky — Google vyžaduje offers field i u vyprodaných produktů.
-          // Bez offers field stránka není způsobilá pro Product rich result.
-          '@type': 'Offer',
-          priceCurrency: 'CZK',
-          availability: 'https://schema.org/OutOfStock',
-        },
+      : undefined,
   }
 }
 

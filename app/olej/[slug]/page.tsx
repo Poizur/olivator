@@ -323,15 +323,18 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   // For Schema.org we combine both — Google rewards comprehensive FAQ pages
   const allFAQs = [...productFAQs, ...generalFAQs]
+  const productSchemaData = productSchema(product, offers)
 
   return (
     <div>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(productSchema(product, offers)),
-        }}
-      />
+      {productSchemaData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(productSchemaData),
+          }}
+        />
+      )}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
