@@ -157,12 +157,19 @@ export async function GET(
   const sourcePage = spParam ?? (referrer || null)
   const sourceType = stParam ?? deriveSourceType(sourcePage, utm.utm_medium)
 
+  const lowerUA = userAgent.toLowerCase()
   const isTest =
     userAgent === 'node' ||
     userAgent.startsWith('curl/') ||
-    userAgent.toLowerCase().includes('jscrawler') ||
-    userAgent.toLowerCase().includes('olivatortest') ||
-    request.headers.get('x-olivator-test') === '1'
+    lowerUA.includes('jscrawler') ||
+    lowerUA.includes('olivatortest') ||
+    request.headers.get('x-olivator-test') === '1' ||
+    lowerUA.includes('bot') ||
+    lowerUA.includes('crawler') ||
+    lowerUA.includes('spider') ||
+    lowerUA.includes('meta-webindexer') ||
+    lowerUA.includes('semrush') ||
+    lowerUA.includes('ahref')
 
   const { error: clickErr } = await supabaseAdmin.from('affiliate_clicks').insert({
     product_id: product.id,
