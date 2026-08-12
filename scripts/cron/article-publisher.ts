@@ -12,6 +12,8 @@
 import { findOpportunities, saveOpportunities } from '@/lib/article-publisher/opportunity-finder'
 import { generateDraft } from '@/lib/article-publisher/draft-generator'
 import { reviewDraft } from '@/lib/article-publisher/article-reviewer'
+import { validateArticle } from '@/lib/article-validator'
+import { logLanguageValidation } from '@/lib/validate-language'
 import { supabaseAdmin } from '@/lib/supabase'
 
 const MAX_RUNTIME_MS = 15 * 60 * 1000
@@ -62,6 +64,21 @@ async function main() {
       console.error('[article-publisher] BLOCK — draft NEULOŽEN. Issues:', review.issues)
       clearTimeout(killTimer)
       process.exit(1)
+    }
+
+    // 3b. Fact-check oproti DB — UZÁVĚRA-3 (mandatory)
+    logLanguageValidation(draft.bodyMarkdown, 'cs', `article-publisher:${draft.slug}`)
+    const factCheck = await validateArticle(draft.slug, draft.bodyMarkdown).catch(e => {
+      console.warn('[article-publisher] fact-check selhal (non-fatal):', e.message)
+      return null
+    })
+    if (factCheck) {
+      if (factCheck.errors.length) {
+        console.warn(`[article-publisher] FACT-CHECK ${factCheck.errors.length} ERROR(ů) — draft uložen se statusem, admin musí zkontrolovat:`)
+        for (const e of factCheck.errors) console.warn(`  [${e.type}] ${e.productSlug}: ${e.articleValue} → DB: ${e.dbValue}`)
+      } else {
+        console.log(`[article-publisher] FACT-CHECK ✓ OK${factCheck.warnings.length ? ` (${factCheck.warnings.length} warning)` : ''}`)
+      }
     }
 
     if (dryRun) {
@@ -118,6 +135,8 @@ async function main() {
           severity: review.severity,
           verdict: review.verdict,
           issues: review.issues,
+          fact_check_errors: factCheck?.errors.length ?? 0,
+          fact_check_warnings: factCheck?.warnings.length ?? 0,
         },
         reviewer_severity: review.severity,
         word_count: draft.wordCount,

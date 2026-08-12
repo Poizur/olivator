@@ -90,17 +90,27 @@ function extractNumbers(ctx: string): {
   }
 }
 
-export async function validateArticle(articleSlug: string): Promise<ValidationResult> {
-  const { data: article } = await supabaseAdmin
-    .from('articles')
-    .select('body_markdown')
-    .eq('slug', articleSlug)
-    .maybeSingle()
+/**
+ * Validuje článek oproti DB.
+ * @param articleSlug - slug článku (pro logování i fetch z DB pokud markdownOverride chybí)
+ * @param markdownOverride - pokud zadán, použije tento markdown místo DB (pro validaci draftů před uložením)
+ */
+export async function validateArticle(articleSlug: string, markdownOverride?: string): Promise<ValidationResult> {
+  let body: string
 
-  const empty: ValidationResult = { articleSlug, errors: [], warnings: [], ok: true }
-  if (!article?.body_markdown) return empty
+  if (markdownOverride !== undefined) {
+    body = markdownOverride
+  } else {
+    const { data: article } = await supabaseAdmin
+      .from('articles')
+      .select('body_markdown')
+      .eq('slug', articleSlug)
+      .maybeSingle()
 
-  const body: string = article.body_markdown
+    const empty: ValidationResult = { articleSlug, errors: [], warnings: [], ok: true }
+    if (!article?.body_markdown) return empty
+    body = article.body_markdown
+  }
 
   // Deklarujeme zde, před sekcí 0, aby sekce 0 mohla push do errors.
   const errors:   ValidationIssue[] = []

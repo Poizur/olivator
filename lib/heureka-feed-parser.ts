@@ -14,6 +14,7 @@ export interface HeurekaItem {
   imgUrl: string
   imgUrlAlternative: string[]
   priceVat: number    // s DPH, CZK
+  actionPriceVat: number | null  // Heureka ACTION_PRICE — null pokud není akce
   manufacturer: string
   categoryText: string
   ean: string
@@ -73,6 +74,8 @@ export function parseHeurekaXml(xml: string): HeurekaItem[] {
 
     const priceText = $el.find('PRICE_VAT').first().text().trim()
     const priceVat = parsePrice(priceText)
+    const actionPriceText = $el.find('ACTION_PRICE').first().text().trim()
+    const actionPriceVat = actionPriceText ? parsePrice(actionPriceText) : null
 
     items.push({
       itemId: $el.find('ITEM_ID').first().text().trim(),
@@ -82,6 +85,7 @@ export function parseHeurekaXml(xml: string): HeurekaItem[] {
       imgUrl: $el.find('IMGURL').first().text().trim(),
       imgUrlAlternative: altUrls,
       priceVat,
+      actionPriceVat: actionPriceVat && actionPriceVat < priceVat ? actionPriceVat : null,
       manufacturer: $el.find('MANUFACTURER').first().text().trim(),
       categoryText: $el.find('CATEGORYTEXT').first().text().trim(),
       ean: $el.find('EAN').first().text().trim(),

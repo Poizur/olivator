@@ -4,9 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "tsx --env-file=.env.local scripts/check-schema.ts && tsx scripts/check-prices.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "schema:snapshot": "tsx --env-file=.env.local scripts/update-schema-snapshot.ts",
     "cron:discovery": "tsx scripts/cron/discovery.ts",
     "cron:prospect": "tsx scripts/cron/prospect.ts",
     "cron:manager": "tsx scripts/cron/manager.ts",

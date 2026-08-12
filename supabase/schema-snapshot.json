@@ -1,0 +1,77 @@
+{
+  "_meta": {
+    "generated": "2026-08-12",
+    "note": "Spusť 'npm run schema:snapshot' po každé aplikované SQL migraci v Supabase UI."
+  },
+  "products": [
+    "id","ean","name","slug","name_short","origin_country","origin_region","type",
+    "acidity","polyphenols","peroxide_value","oleic_acid_pct","harvest_year","best_before",
+    "processing","flavor_profile","certifications","use_cases","volume_ml","packaging",
+    "olivator_score","score_breakdown","description_short","description_long",
+    "meta_title","meta_description","status","ai_generated_at","created_at","updated_at",
+    "image_url","image_source","extracted_facts","source_url","raw_description","custom_faqs",
+    "brand_slug","region_slug","oleocanthal","status_reason_code","status_reason_note",
+    "status_changed_by","status_changed_at","lab_research_attempted_at","variety","producer",
+    "admin_note","last_offer_seen_at","old_slugs","meta_title_alt","acidity_source",
+    "polyphenols_source","source_note","flavor_labels"
+  ],
+  "retailers": [
+    "id","name","slug","domain","affiliate_network","base_tracking_url",
+    "default_commission_pct","is_active","market","created_at","rating","rating_count",
+    "rating_source","tagline","story","founded_year","founders","headquarters",
+    "specialization","logo_url","xml_feed_url","xml_feed_format","xml_feed_last_synced",
+    "xml_feed_last_result","shipping_rate_czk","free_shipping_threshold_czk",
+    "delivery_days_min","delivery_days_max","return_days","retailer_status",
+    "retailer_status_note","legal_basis","legalization_status","legalization_status_at",
+    "legalization_consent_ref"
+  ],
+  "product_offers": [
+    "id","product_id","retailer_id","price","currency","in_stock","product_url",
+    "affiliate_url","commission_pct","last_checked","last_price_change","fail_count",
+    "last_fail_at","consecutive_404","manual_override","override_note","page_price",
+    "price_mismatch","last_web_check","availability_note"
+  ],
+  "price_history": [
+    "id","product_id","retailer_id","price","in_stock","recorded_at"
+  ],
+  "affiliate_clicks": [
+    "id","click_id","product_id","retailer_id","session_id","ip_hash","market",
+    "user_agent","referrer","clicked_at","utm_source","utm_medium","utm_campaign",
+    "utm_content","source_page","source_type","price_at_click","is_test"
+  ],
+  "product_images": [
+    "id","product_id","url","alt_text","is_primary","sort_order","source","width","height","created_at"
+  ],
+  "entity_images": [
+    "id","entity_type","entity_id","url","alt_text","caption","source","source_id",
+    "source_attribution","source_url","is_primary","sort_order","width","height","status",
+    "created_at","image_role","subject","suggested_role"
+  ],
+  "articles": [
+    "id","slug","title","excerpt","emoji","read_time","hero_image_url","category",
+    "body_markdown","meta_title","meta_description","status","source","ai_generated_at",
+    "published_at","created_at","updated_at","author_id"
+  ],
+  "article_drafts": [
+    "id","opportunity_id","title","slug","meta_description","body_markdown",
+    "reviewer_notes","reviewer_severity","word_count","status","admin_note","created_at"
+  ],
+  "article_opportunities": [
+    "id","discovered_at","keyword","opportunity_type","gsc_impressions","gsc_position",
+    "gsc_clicks","existing_url","cannibalize_risk","status","priority_score","created_at"
+  ],
+  "agent_decisions": [
+    "id","agent_name","decision_type","payload","fingerprint","created_at"
+  ],
+  "feature_flags": [
+    "key","enabled","description","updated_at"
+  ],
+  "keyword_mapping": [
+    "id","keyword","search_volume","cpc_czk","competition_score","yoy_change_pct","intent",
+    "cluster_group","priority","status","target_url","target_article_id","notes","added_at","last_checked"
+  ],
+  "partner_inquiries": [
+    "id","email","retailer_name","website","message","commission_expectation","is_test",
+    "status","created_at"
+  ]
+}

@@ -204,10 +204,35 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
             product_url: item.url,
             commission_pct: retailer.default_commission_pct,
             last_checked: new Date().toISOString(),
+            // action_price — jen pokud sloupec existuje v DB (migration 20260812)
+            ...(item.actionPriceVat != null
+              ? { action_price: item.actionPriceVat, action_price_start: new Date().toISOString().split('T')[0] }
+              : { action_price: null }),
           },
           { onConflict: 'product_id,retailer_id' }
         )
-      if (offerErr) throw new Error(`Offer upsert: ${offerErr.message}`)
+      // Graceful fallback: pokud action_price sloupec ještě neexistuje (migrace nebyla aplikována)
+      if (offerErr?.message?.includes('action_price')) {
+        const { error: offerErrFallback } = await supabaseAdmin
+          .from('product_offers')
+          .upsert(
+            {
+              product_id: productId,
+              retailer_id: retailer.id,
+              price: priceCzk,
+              currency: 'CZK',
+              in_stock: isOverridden ? false : inStock,
+              product_url: item.url,
+              commission_pct: retailer.default_commission_pct,
+              last_checked: new Date().toISOString(),
+            },
+            { onConflict: 'product_id,retailer_id' }
+          )
+        if (offerErrFallback) throw new Error(`Offer upsert (fallback): ${offerErrFallback.message}`)
+        console.warn('[feed-sync] action_price column missing — apply migration 20260812_product_offers_action_price.sql')
+      } else if (offerErr) {
+        throw new Error(`Offer upsert: ${offerErr.message}`)
+      }
 
       // Aktualizuj last_offer_seen_at na produktu — používá no_offers grace period
       await supabaseAdmin
