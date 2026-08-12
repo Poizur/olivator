@@ -72,6 +72,16 @@ function main() {
   // Skenujeme jen content/ — editorial MDX soubory.
   // docs/, scripts/ a root *.md jsou plánování, ne živý obsah.
   const contentDir = join(ROOT, 'content')
+
+  // Adresář content/ není v gitu (MDX soubory jsou velké, živý obsah).
+  // Na Railway (čistý git clone) neexistuje → přeskoč bez chyby.
+  try {
+    statSync(contentDir)
+  } catch {
+    console.log('[check-prices] ✓ content/ neexistuje (Railway build) — přeskakuji')
+    process.exit(0)
+  }
+
   const files = collectFiles(contentDir)
   const violations: Violation[] = []
   for (const f of files) checkFile(f, violations)
