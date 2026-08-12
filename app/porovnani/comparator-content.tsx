@@ -382,15 +382,14 @@ export function ComparatorContent({ allProducts, serverItems = [] }: Props) {
               numberOfItems: items.length,
               itemListElement: items.map((item, i) => {
                 const offer = getCheapestOffer(item.id)
-                const productJson = productSchema(item, offer ? [offer] : []) as Record<string, unknown>
-                // Pro ItemList nemáme @context na inner item (root má jeden)
-                delete productJson['@context']
-                productJson.url = `https://olivator.cz/olej/${item.slug}`
-                if (item.imageUrl) productJson.image = item.imageUrl
+                const productJson = productSchema(item, offer ? [offer] : []) as Record<string, unknown> | null
+                const itemData = productJson
+                  ? { ...productJson, '@context': undefined, url: `https://olivator.cz/olej/${item.slug}`, ...(item.imageUrl ? { image: item.imageUrl } : {}) }
+                  : { '@type': 'Product', name: item.name, url: `https://olivator.cz/olej/${item.slug}` }
                 return {
                   '@type': 'ListItem',
                   position: i + 1,
-                  item: productJson,
+                  item: itemData,
                 }
               }),
             }),
