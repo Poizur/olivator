@@ -332,7 +332,7 @@ export async function getSlevyDeals(limit = 20): Promise<SlevyPageData> {
   const [offersResult, productsResult, retailersResult, brandsResult] = await Promise.all([
     supabaseAdmin
       .from('product_offers')
-      .select('product_id, price, retailer_id')
+      .select('product_id, price, action_price, retailer_id')
       .eq('in_stock', true),
     supabaseAdmin
       .from('products')
@@ -395,29 +395,57 @@ export async function getSlevyDeals(limit = 20): Promise<SlevyPageData> {
   }
 
   // Index aktuálních nabídek per (product, retailer) pro per-retailer srovnání
-  const offerByKey = new Map<string, { price: number; retailerId: string }>()
+  const offerByKey = new Map<string, { price: number; actionPrice: number | null; retailerId: string }>()
   for (const o of offers) {
     const pid = o.product_id as string
     if (!productMap.has(pid)) continue
     const key = `${pid}|${o.retailer_id}`
-    offerByKey.set(key, { price: o.price as number, retailerId: o.retailer_id as string })
+    offerByKey.set(key, {
+      price: o.price as number,
+      actionPrice: (o.action_price as number | null) ?? null,
+      retailerId: o.retailer_id as string,
+    })
   }
 
   // Nejlepší per-product deal — porovnáváme current vs STEJNÝ retailer 30d max
   const bestDealByProduct = new Map<string, { price: number; retailerId: string; maxPrice: number; dropPct: number }>()
+
+  // 1. History-based deals (30d price max > current price)
   for (const [key, offer] of offerByKey.entries()) {
     const [productId] = key.split('|')
     const hist = historyByKey.get(key)
     // Přeskočit: žádná nebo nedostatečná historie pro tento (produkt, retailer)
     if (!hist || hist.days.size < MIN_HISTORY_DAYS) continue
-    if (hist.maxPrice <= offer.price) continue
-    const dropPct = Math.round(((hist.maxPrice - offer.price) / hist.maxPrice) * 100)
+    // Effectivní cena = action_price pokud je nižší než price
+    const effectivePrice = offer.actionPrice != null && offer.actionPrice < offer.price
+      ? offer.actionPrice
+      : offer.price
+    if (hist.maxPrice <= effectivePrice) continue
+    const dropPct = Math.round(((hist.maxPrice - effectivePrice) / hist.maxPrice) * 100)
     if (dropPct < 5) continue
 
     const existing = bestDealByProduct.get(productId)
     if (!existing || dropPct > existing.dropPct) {
-      bestDealByProduct.set(productId, { price: offer.price, retailerId: offer.retailerId, maxPrice: hist.maxPrice, dropPct })
+      bestDealByProduct.set(productId, { price: effectivePrice, retailerId: offer.retailerId, maxPrice: hist.maxPrice, dropPct })
     }
+  }
+
+  // 2. Explicit action_price deals — action_price < price (z Complete XML feedu)
+  //    Tyto nemusí mít dostatečnou historii, ale retailer explicitně oznámil akci.
+  for (const [key, offer] of offerByKey.entries()) {
+    const [productId] = key.split('|')
+    if (!offer.actionPrice || offer.actionPrice >= offer.price) continue
+    const dropPct = Math.round(((offer.price - offer.actionPrice) / offer.price) * 100)
+    if (dropPct < 5) continue
+    // Nepřepisujeme history-based deal pokud je výhodnější
+    const existing = bestDealByProduct.get(productId)
+    if (existing && existing.dropPct >= dropPct) continue
+    bestDealByProduct.set(productId, {
+      price: offer.actionPrice,
+      retailerId: offer.retailerId,
+      maxPrice: offer.price,
+      dropPct,
+    })
   }
 
   const deals: SlevyDeal[] = []

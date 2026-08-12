@@ -17,7 +17,7 @@ import { join, relative, extname } from 'node:path'
 
 const ROOT = join(__dirname, '..')
 
-const PRICE_RE = /\b(\d[\d\s]*[\d])\s*(Kč|CZK|€|EUR)\b/g
+const PRICE_RE = /\b(\d[\d\s]*[\d])\s*(Kč|CZK|€|EUR)(?=[\s.,;!?)\]"']|$)/g
 const TOKEN_LINE_RE = /\{\{(?:product|price):[^}]+\}\}/
 
 // Vzory pro editorial cenové rozsahy — méně přísné (jen INFO, ne WARNING)
@@ -25,6 +25,7 @@ const TOKEN_LINE_RE = /\{\{(?:product|price):[^}]+\}\}/
 const RANGE_RE = /\b\d+[–\-]\d+\s*(Kč|CZK|€|EUR)\b/
 
 const SKIP_DIRS = new Set(['node_modules', '.next', '.git', '.claude', 'dist'])
+const SKIP_FILES = new Set(['CLAUDE.md', 'BUGS.md', 'BACKLOG.md', 'DESIGN_REFERENCE.html'])
 const TARGET_EXTS = new Set(['.mdx', '.md'])
 
 interface Violation {
@@ -40,7 +41,7 @@ function collectFiles(dir: string, out: string[] = []): string[] {
     const full = join(dir, entry)
     const s = statSync(full)
     if (s.isDirectory()) collectFiles(full, out)
-    else if (TARGET_EXTS.has(extname(full))) out.push(full)
+    else if (TARGET_EXTS.has(extname(full)) && !SKIP_FILES.has(entry)) out.push(full)
   }
   return out
 }
@@ -68,7 +69,10 @@ function checkFile(filePath: string, violations: Violation[]): void {
 }
 
 function main() {
-  const files = collectFiles(ROOT)
+  // Skenujeme jen content/ — editorial MDX soubory.
+  // docs/, scripts/ a root *.md jsou plánování, ne živý obsah.
+  const contentDir = join(ROOT, 'content')
+  const files = collectFiles(contentDir)
   const violations: Violation[] = []
   for (const f of files) checkFile(f, violations)
 

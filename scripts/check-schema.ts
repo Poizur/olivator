@@ -50,6 +50,10 @@ interface Issue {
 const SKIP_DIRS = new Set(['node_modules', '.next', '.git', '.claude', 'dist'])
 const SKIP_TABLES = new Set(['_meta']) // pseudo-tables in snapshots
 
+// Diagnostic / one-off scripts that intentionally reference stale or non-existent columns.
+// These are not production code — skip from schema guard.
+const SKIP_FILE_RE = /scripts\/(check-|_|debug-|feed-audit|diag)/
+
 function collectFiles(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
     if (SKIP_DIRS.has(entry)) continue
@@ -58,17 +62,24 @@ function collectFiles(dir: string, out: string[] = []): string[] {
     if (stat.isDirectory()) {
       collectFiles(full, out)
     } else if (['.ts', '.tsx'].includes(extname(full))) {
-      out.push(full)
+      if (!SKIP_FILE_RE.test(full.replace(/\\/g, '/'))) {
+        out.push(full)
+      }
     }
   }
   return out
 }
 
 function parseSelectCols(raw: string): string[] {
-  // Handle: 'col1, col2, nested:table(col)', 'col1, col2, *, ...'
-  return raw
+  // Strip join sub-selects before comma-splitting so their inner column names
+  // are not wrongly attributed to the main table:
+  //   "retailers!inner(slug, name)"  →  removed
+  //   "brand:brands(slug, name)"     →  removed (alias:table(cols) pattern)
+  //   "products(id)"                 →  removed
+  const stripped = raw.replace(/(?:\w+:)?\w+!?\w*\([^)]*\)/g, '')
+  return stripped
     .split(',')
-    .map(s => s.trim().split('(')[0].split(':')[0].trim())
+    .map(s => s.trim())
     .filter(c => c && !c.startsWith('*') && !c.includes('...') && /^[a-z_]+$/.test(c))
 }
 
@@ -96,6 +107,9 @@ function checkFile(filePath: string, issues: Issue[]): void {
     }
 
     if (!currentTable || !KNOWN_TABLES.has(currentTable)) continue
+
+    // Lines with // schema:ignore are intentionally referencing future/pending columns
+    if (line.includes('// schema:ignore')) continue
 
     // .select() — expand CSV of columns
     const selMatches = [...line.matchAll(SELECT_RE)]

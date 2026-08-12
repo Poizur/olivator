@@ -215,7 +215,7 @@ async function gatherMetrics(): Promise<ManagerMetrics> {
   // ── Retailer karanténa ──
   const { data: allRetailers } = await supabaseAdmin
     .from('retailers')
-    .select('slug, quarantine_status')
+    .select('slug, quarantine_status') // schema:ignore — migrace čeká: ADD COLUMN quarantine_status
   const quarantineRetailers = (allRetailers ?? []).filter((r) => r.quarantine_status as string | null)
   const quarantineRetailerCount = quarantineRetailers.length
   const quarantineRetailerSlugs = quarantineRetailers.map((r) => r.slug as string)

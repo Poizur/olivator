@@ -173,11 +173,12 @@ export async function syncReckonasbavyComplete(): Promise<CompleteSyncResult | n
     .select('id, product_id, in_stock, manual_override, price')
     .eq('retailer_id', retailerId)
 
-  const offerByProductId = new Map<string, { id: string; manual_override: boolean }>()
+  const offerByProductId = new Map<string, { id: string; manual_override: boolean; price: number }>()
   for (const o of existingOffers ?? []) {
     offerByProductId.set(o.product_id as string, {
       id: o.id as string,
       manual_override: (o.manual_override as boolean) ?? false,
+      price: (o.price as number) ?? 0,
     })
   }
 
@@ -201,9 +202,13 @@ export async function syncReckonasbavyComplete(): Promise<CompleteSyncResult | n
 
     const updatePayload: Record<string, unknown> = {
       in_stock: item.inStock,
-      price: item.effectivePrice,
+      // priceVat = regular selling price (reference); action_price = promotional price.
+      // effectivePrice is only used internally for price_history logging — not stored as price.
+      price: item.priceVat,
       last_checked: new Date().toISOString(),
       availability_note: item.availabilityNote,
+      action_price: item.actionPrice,
+      ...(item.actionPrice != null ? { action_price_start: new Date().toISOString().split('T')[0] } : {}),
     }
 
     if (clearOverride) {
@@ -223,8 +228,9 @@ export async function syncReckonasbavyComplete(): Promise<CompleteSyncResult | n
         errors.push(`Update offer (EAN ${item.ean}): ${error.message}`)
       } else {
         offersUpdated++
-        // Log stock change to price_history for availability tracking
-        if (existing.manual_override && clearOverride) {
+        // Log to price_history on every price change (powers /slevy 30d baseline)
+        const priceChanged = Math.abs(existing.price - item.effectivePrice) > 0.01
+        if (priceChanged || clearOverride) {
           await supabaseAdmin.from('price_history').insert({
             product_id: productId,
             retailer_id: retailerId,
