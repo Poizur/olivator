@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "tsx --env-file=.env.local scripts/check-schema.ts && tsx scripts/check-prices.ts",
+    "prebuild": "tsx scripts/check-schema.ts && tsx scripts/check-prices.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
