@@ -187,7 +187,7 @@ export async function runRescrape(
         // Doplníme jen pole která jsou v products NULL
         const { data: current } = await supabaseAdmin
           .from('products')
-          .select('acidity, polyphenols, oleocanthal, peroxide_value, oleic_acid_pct, k232, k270, delta_k') // schema:ignore — migrace čeká: ADD COLUMN delta_k
+          .select('acidity, polyphenols, oleocanthal, peroxide_value, oleic_acid_pct, k232, k270, delta_k')
           .eq('id', productId)
           .maybeSingle()
 

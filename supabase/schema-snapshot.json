@@ -57,7 +57,9 @@
     "acidity_source",
     "polyphenols_source",
     "source_note",
-    "flavor_labels"
+    "flavor_labels",
+    "completeness_score",
+    "delta_k"
   ],
   "retailers": [
     "id",
@@ -94,7 +96,8 @@
     "legal_basis",
     "legalization_status",
     "legalization_status_at",
-    "legalization_consent_ref"
+    "legalization_consent_ref",
+    "quarantine_status"
   ],
   "product_offers": [
     "id",

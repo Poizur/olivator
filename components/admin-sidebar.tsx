@@ -17,7 +17,7 @@ async function getBadges(): Promise<Record<string, { value: number; tone: 'amber
   const [drafts, pendingDiscovery, qualityIssues, draftBrands, seoPending, aiDrafts] = await Promise.all([
     supabaseAdmin.from('products').select('*', { count: 'exact', head: true }).eq('status', 'draft'),
     supabaseAdmin.from('discovery_candidates').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-    supabaseAdmin.from('products').select('*', { count: 'exact', head: true }).lt('completeness_score', 50), // schema:ignore — migrace čeká: ADD COLUMN completeness_score
+    supabaseAdmin.from('products').select('*', { count: 'exact', head: true }).lt('completeness_score', 50),
     supabaseAdmin.from('brands').select('*', { count: 'exact', head: true }).eq('status', 'draft'),
     supabaseAdmin.from('seo_tasks').select('*', { count: 'exact', head: true }).in('status', ['pending', 'in_progress']),
     // AI-generované drafty čekající na schválení (article_drafts tabulka)

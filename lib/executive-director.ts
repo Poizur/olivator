@@ -427,7 +427,7 @@ async function collectPartnerInquiries(): Promise<object> {
 async function collectRetailerStatus(): Promise<object> {
   const { data: retailers } = await supabaseAdmin
     .from('retailers')
-    .select('slug, name, is_active, quarantine_status') // schema:ignore — migrace čeká: ADD COLUMN quarantine_status
+    .select('slug, name, is_active, quarantine_status')
   const all = retailers ?? []
   const active = all.filter(r => (r.is_active as boolean) && !(r.quarantine_status as string | null))
   const quarantine = all.filter(r => (r.quarantine_status as string | null))
