@@ -121,6 +121,7 @@ export async function syncReckonasbavyComplete(): Promise<CompleteSyncResult | n
     const res = await fetch(feedUrl, {
       headers: { 'User-Agent': 'OlivatorBot/1.0 (+https://olivator.cz)' },
       cache: 'no-store',
+      signal: AbortSignal.timeout(180_000), // 3 min — feed is ~53 MB
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     xml = await res.text()

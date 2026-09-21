@@ -7,6 +7,7 @@ import { getAllArticles } from '@/lib/articles-db'
 import { supabaseAdmin } from '@/lib/supabase'
 import { CreateArticleButton } from './create-article-button'
 import { BulkPublishButton } from '@/components/admin/bulk-publish-button'
+import { DraftActions } from './draft-actions'
 
 export const dynamic = 'force-dynamic'
 
@@ -192,6 +193,12 @@ export default async function AdminArticlesPage({
                         <span className="text-[11px] text-text3 font-mono">{d.id.slice(0, 8)}</span>
                       </div>
                     </div>
+                    <DraftActions
+                      draftId={d.id}
+                      slug={d.slug ?? ''}
+                      reviewerSeverity={d.reviewer_severity}
+                      status={d.status}
+                    />
                   </div>
                 )
               })}
@@ -199,12 +206,12 @@ export default async function AdminArticlesPage({
           )}
 
           <div className="mt-8 bg-olive-bg/30 border border-olive-border rounded-xl p-5 text-[12px] text-olive-dark/80 leading-relaxed">
-            <strong className="text-olive-dark">Workflow:</strong> Reviewer vrátí{' '}
-            <code className="font-mono bg-white/60 px-1 rounded">ok</code> nebo{' '}
-            <code className="font-mono bg-white/60 px-1 rounded">warn</code> (publikovatelné) nebo{' '}
-            <code className="font-mono bg-white/60 px-1 rounded">block</code> (vyžaduje editaci).
-            Po schválení: vykopíruj body_markdown na záložku{' '}
-            <Link href="/admin/articles" className="underline">Publikované</Link> → vytvoř nový článek se slugem.
+            <strong className="text-olive-dark">Workflow:</strong>{' '}
+            <strong>✓ Publikovat</strong> vytvoří článek automaticky.{' '}
+            <code className="font-mono bg-white/60 px-1 rounded">block</code> = publikace blokována.{' '}
+            <code className="font-mono bg-white/60 px-1 rounded">warn</code> = YMYL — tlačítko zobrazí varování, publikace vyžaduje potvrzení.{' '}
+            <strong>↩ Vrátit</strong> = draft zpět s poznámkou.{' '}
+            <strong>✕ Zamítnout</strong> = nevratně zahodí.
           </div>
         </>
       )}

@@ -470,8 +470,15 @@ function buildPrompt(raw: RawBriefData, weekLabel: string, learningSummary: stri
   const lastDrafts = (newsletter.lastDrafts as Array<{ status: string; subject: string; reviewerSeverity?: string }> ?? [])
     .map((d) => `  - [${d.status}${d.reviewerSeverity ? ', AI:' + d.reviewerSeverity : ''}] "${d.subject}"`).join('\n')
   const lastCommits = (git.lastCommits as string[] ?? []).slice(0, 7).map((c) => `  - ${c}`).join('\n')
-  const pendingItems = (pending.items as Array<{ title: string; priority: string; ageDays: number }> ?? [])
+  const allPendingItems = (pending.items as Array<{ title: string; priority: string; ageDays: number }> ?? [])
+  const pendingItems = allPendingItems
     .map((p) => `  - [${p.priority}, ${p.ageDays}d starý] ${p.title}`).join('\n')
+  const overdueItems7 = allPendingItems.filter(p => p.ageDays >= 7 && p.ageDays < 14)
+  const overdueItems14 = allPendingItems.filter(p => p.ageDays >= 14)
+  const overdueStr = [
+    ...overdueItems14.map(p => `  🔴 ${p.ageDays}d — ${p.title}`),
+    ...overdueItems7.map(p => `  ⚠️ ${p.ageDays}d — ${p.title}`),
+  ].join('\n') || '  (žádné zpožděné)'
   const scanHigh = (scan.high as Array<{ finding_type: string; url: string; detail: string }> ?? [])
     .map((f) => `  🔴 [${f.finding_type}] ${f.detail} — ${f.url.replace('https://olivator.cz', '')}`).join('\n')
   const scanMedium = (scan.medium as Array<{ finding_type: string; url: string; detail: string }> ?? [])
@@ -544,6 +551,9 @@ ${articleDraftsList || '  (žádné nové)'}
 
 Nevyřízená rozhodnutí z minulých briefů: ${pending.count ?? 0}
 ${pendingItems ? pendingItems : '  (žádná)'}
+
+⏰ Zpožděná rozhodnutí (čeká na admina): >7d ⚠️ ${overdueItems7.length}, >14d 🔴 ${overdueItems14.length}
+${overdueStr}
 
 Paměť lekcí: ${ls.totalApplications ?? 0} aplikací, ${ls.openPatternsAboveThreshold ?? 0} otevřených patternů
 
