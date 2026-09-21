@@ -35,24 +35,37 @@ async function main() {
     }
     if (result.error) console.warn(`  warning: ${result.error}`)
 
+    // Email vypnutý defaultně (2026-09-21) — brief se řeší v Claude Code session,
+    // ne mailem. EXECUTIVE_BRIEF_EMAIL_ENABLED=true jde zpátky zapnout bez dalšího kódu.
+    // Brief zůstává v manager_reports / agent_decisions bez ohledu na email.
+    const emailEnabled = process.env.EXECUTIVE_BRIEF_EMAIL_ENABLED === 'true'
+
     if (!DRY_RUN && result.briefId !== 'dry-run') {
       if (result.briefJson) {
         // Úspěšný brief — standardní notifikace
-        try {
-          await sendBriefNotification({ briefId: result.briefId, weekLabel: result.weekLabel, decisionCount: result.decisionCount })
-          console.log('[cron:executive-brief] email notification sent')
-        } catch (err) {
-          console.warn('[cron:executive-brief] email failed (non-fatal):', err)
+        if (emailEnabled) {
+          try {
+            await sendBriefNotification({ briefId: result.briefId, weekLabel: result.weekLabel, decisionCount: result.decisionCount })
+            console.log('[cron:executive-brief] email notification sent')
+          } catch (err) {
+            console.warn('[cron:executive-brief] email failed (non-fatal):', err)
+          }
+        } else {
+          console.log('[cron:executive-brief] email skipped (default off — EXECUTIVE_BRIEF_EMAIL_ENABLED not set)')
         }
       } else {
         // Selhání AI generace — error notifikace + log do agent_decisions
         const errorMsg = result.error ?? 'AI generation failed'
         console.warn(`[cron:executive-brief] brief generation failed: ${errorMsg}`)
-        try {
-          await sendBriefErrorNotification({ weekLabel: result.weekLabel, error: errorMsg })
-          console.log('[cron:executive-brief] error notification sent')
-        } catch (err) {
-          console.warn('[cron:executive-brief] error notification failed (non-fatal):', err)
+        if (emailEnabled) {
+          try {
+            await sendBriefErrorNotification({ weekLabel: result.weekLabel, error: errorMsg })
+            console.log('[cron:executive-brief] error notification sent')
+          } catch (err) {
+            console.warn('[cron:executive-brief] error notification failed (non-fatal):', err)
+          }
+        } else {
+          console.log('[cron:executive-brief] error notification skipped (default off — EXECUTIVE_BRIEF_EMAIL_ENABLED not set)')
         }
         try {
           await supabaseAdmin.from('agent_decisions').insert({
