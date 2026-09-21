@@ -26,10 +26,10 @@ async function main() {
     console.log(`[cron:manager] period: ${report.metrics.periodStart} – ${report.metrics.periodEnd}`)
     console.log(`[cron:manager] clicks=${report.metrics.totalClicks} candidates=${report.metrics.newCandidatesThisWeek} actions=${report.suggestedActions.length}`)
 
-    // MANAGER_EMAIL_DISABLED=true → email se neodesílá. Cron běží dál (AI Ředitel
-    // čte manager_reports data). Oba systémy posílají pondělní email → duplicita.
-    // Řešení: AI Ředitel je primární (sendBriefNotification), Manager je archiv.
-    if (!process.env.MANAGER_EMAIL_DISABLED) {
+    // Email vypnutý defaultně (2026-09-21) — report se řeší v Claude Code session,
+    // ne mailem. MANAGER_EMAIL_ENABLED=true jde zpátky zapnout bez dalšího kódu.
+    // Data zůstávají v manager_reports bez ohledu na email.
+    if (process.env.MANAGER_EMAIL_ENABLED === 'true') {
       try {
         await sendManagerReport(report)
         console.log('[cron:manager] email sent')
@@ -37,7 +37,7 @@ async function main() {
         console.warn('[cron:manager] email failed:', err)
       }
     } else {
-      console.log('[cron:manager] email skipped (MANAGER_EMAIL_DISABLED=true)')
+      console.log('[cron:manager] email skipped (default off — MANAGER_EMAIL_ENABLED not set)')
     }
 
     clearTimeout(killTimer)

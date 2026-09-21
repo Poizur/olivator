@@ -305,7 +305,10 @@ async function main() {
     const hasNewIssues = newlyBrokenArticles.length > 0
     const shouldSendEmail = hasRealProblems || hasNewIssues || (isMonday && (quarantineTokenCount > 0 || noOfferTokenCount > 0))
 
-    if (shouldSendEmail) {
+    // Email vypnutý defaultně (2026-09-21) — nálezy se řeší v Claude Code session,
+    // ne mailem. TOKEN_VALIDATOR_EMAIL_ENABLED=true jde zpátky zapnout bez dalšího kódu.
+    // Nálezy zůstávají v agent_decisions (broken_tokens_snapshot) bez ohledu na email.
+    if (shouldSendEmail && process.env.TOKEN_VALIDATOR_EMAIL_ENABLED === 'true') {
       try {
         await sendBrokenTokensAlert(manualReports, healedReports, {
           quarantineTokenCount,
@@ -317,6 +320,8 @@ async function main() {
       } catch (err) {
         console.warn('[validate-tokens] email failed:', err)
       }
+    } else if (shouldSendEmail) {
+      console.log('[validate-tokens] problémy nalezeny, email skipped (default off — TOKEN_VALIDATOR_EMAIL_ENABLED not set)')
     } else {
       console.log('[validate-tokens] žádné nové problémy, email neposlán (ticho = vše OK)')
     }

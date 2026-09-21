@@ -41,7 +41,7 @@ async function findReplacement(
 
   const { data: candidates } = await supabaseAdmin
     .from('products')
-    .select('slug, olivator_score, product_offers(price, in_stock), product_offers!inner(product_url)')
+    .select('slug, olivator_score, product_offers(price, in_stock, product_url)')
     .eq('type', broken.type)
     .eq('status', 'active')
     .gte('olivator_score', 60)
