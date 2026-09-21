@@ -83,7 +83,6 @@ export async function sendBulkJobCompletionEmail(jobInfo: {
   durationSec: number
 }): Promise<void> {
   const recipient = await getSetting<string>('notification_email')
-  if (!recipient) return
 
   const typeLabel = jobInfo.type === 'discovery_bulk_approve'
     ? 'Hromadné schválení'
@@ -127,8 +126,11 @@ export async function sendBulkJobCompletionEmail(jobInfo: {
 </div>
 </body></html>`.trim()
 
-  const sendResult = await sendViaResend(recipient, subject, html)
-  await logNotification(recipient, subject, 'bulk_job_completion', html, sendResult)
+  const logTarget = recipient || 'internal'
+  const sendResult = recipient
+    ? await sendViaResend(recipient, subject, html)
+    : { ok: true, delivered: false, error: 'admin_email_disabled' }
+  await logNotification(logTarget, subject, 'bulk_job_completion', html, sendResult)
 }
 
 /** Send discovery run summary email.
@@ -137,7 +139,6 @@ export async function sendBulkJobCompletionEmail(jobInfo: {
  */
 export async function sendDiscoverySummary(result: DiscoveryRunResult): Promise<void> {
   const recipient = await getSetting<string>('notification_email')
-  if (!recipient) return
 
   const hasActivity = result.autoPublished > 0
     || result.autoAddedOffers > 0
@@ -152,8 +153,11 @@ export async function sendDiscoverySummary(result: DiscoveryRunResult): Promise<
   const subject = `[Olivator] Discovery: ${result.autoPublished} publikováno · ${result.needsReview} ke schválení`
 
   const html = renderDiscoveryHTML(result)
-  const sendResult = await sendViaResend(recipient, subject, html)
-  await logNotification(recipient, subject, 'discovery_summary', html, sendResult)
+  const logTarget = recipient || 'internal'
+  const sendResult = recipient
+    ? await sendViaResend(recipient, subject, html)
+    : { ok: true, delivered: false, error: 'admin_email_disabled' }
+  await logNotification(logTarget, subject, 'discovery_summary', html, sendResult)
 }
 
 function renderDiscoveryHTML(r: DiscoveryRunResult): string {
@@ -236,10 +240,9 @@ function renderDiscoveryHTML(r: DiscoveryRunResult): string {
 
 /** Send prospector run summary email — list of newly added shop suggestions. */
 export async function sendProspectorSummary(result: ProspectResult): Promise<void> {
-  if (result.newlyAdded === 0) return // no point emailing about nothing
+  if (result.newlyAdded === 0) return // no point logging about nothing
 
   const recipient = await getSetting<string>('notification_email')
-  if (!recipient) return
 
   const subject = `[Olivator] Prospector: ${result.newlyAdded} nových e-shopů`
 
@@ -273,8 +276,11 @@ export async function sendProspectorSummary(result: ProspectResult): Promise<voi
 </div>
 </body></html>`.trim()
 
-  const sendResult = await sendViaResend(recipient, subject, html)
-  await logNotification(recipient, subject, 'prospector_summary', html, sendResult)
+  const logTarget = recipient || 'internal'
+  const sendResult = recipient
+    ? await sendViaResend(recipient, subject, html)
+    : { ok: true, delivered: false, error: 'admin_email_disabled' }
+  await logNotification(logTarget, subject, 'prospector_summary', html, sendResult)
 }
 
 import type { ManagerReport } from './manager-agent'
@@ -296,7 +302,6 @@ const CATEGORY_LABEL: Record<string, string> = {
 /** Týdenní strategický report od Manager agenta. */
 export async function sendManagerReport(report: ManagerReport): Promise<void> {
   const recipient = await getSetting<string>('notification_email')
-  if (!recipient) return
 
   const m = report.metrics
   const subject = `[Olivator] Týdenní report ${m.periodStart} – ${m.periodEnd}`
@@ -351,8 +356,11 @@ export async function sendManagerReport(report: ManagerReport): Promise<void> {
 </div>
 </body></html>`.trim()
 
-  const sendResult = await sendViaResend(recipient, subject, html)
-  await logNotification(recipient, subject, 'manager_report', html, sendResult)
+  const logTarget = recipient || 'internal'
+  const sendResult = recipient
+    ? await sendViaResend(recipient, subject, html)
+    : { ok: true, delivered: false, error: 'admin_email_disabled' }
+  await logNotification(logTarget, subject, 'manager_report', html, sendResult)
 }
 
 export interface BrokenTokenReport {
@@ -381,7 +389,6 @@ export async function sendBrokenTokensAlert(
   },
 ): Promise<void> {
   const recipient = await getSetting<string>('notification_email')
-  if (!recipient) return
 
   const hasManual = reports.length > 0
   const hasHealed = healed.length > 0
@@ -474,8 +481,11 @@ export async function sendBrokenTokensAlert(
 </div>
 </body></html>`.trim()
 
-  const sendResult = await sendViaResend(recipient, subject, html)
-  await logNotification(recipient, subject, 'broken_tokens_alert', html, sendResult)
+  const logTarget = recipient || 'internal'
+  const sendResult = recipient
+    ? await sendViaResend(recipient, subject, html)
+    : { ok: true, delivered: false, error: 'admin_email_disabled' }
+  await logNotification(logTarget, subject, 'broken_tokens_alert', html, sendResult)
 }
 
 export async function sendBriefNotification(info: {
