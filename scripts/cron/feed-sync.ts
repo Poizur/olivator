@@ -11,6 +11,7 @@
  * Local: npm run cron:feed-sync
  */
 import { runFeedSyncForAllRetailers } from '@/lib/feed-sync-runner'
+import { runGscDailySnapshot } from '@/lib/gsc'
 
 const MAX_RUNTIME_MS = 15 * 60 * 1000 // 15 min hard limit (visící HTTP / DNS)
 
@@ -40,6 +41,15 @@ async function main() {
       pendingDraftsFailed: result.pendingDraftsFailed,
       brandLinksBackfilled: result.brandLinksBackfilled,
     })
+
+    // PASS 7: GSC snapshot (non-fatal — feed-sync uspěje i bez GSC)
+    const gscResult = await runGscDailySnapshot()
+    if (gscResult) {
+      console.log(`[cron:feed-sync] gsc snapshot: ${gscResult.rowsUpserted} rows`)
+    } else {
+      console.log('[cron:feed-sync] gsc snapshot skipped (GSC not configured)')
+    }
+
     process.exit(0)
   } catch (err) {
     clearTimeout(killTimer)

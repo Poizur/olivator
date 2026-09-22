@@ -146,3 +146,98 @@ export async function fetchGscDailyTrend(days = 28): Promise<GscRow[] | null> {
     return null
   }
 }
+
+export interface GscSnapshotResult {
+  rowsUpserted: number
+  queriesFetched: number
+  pagesFetched: number
+  skipped?: boolean
+}
+
+/**
+ * Uloží denní GSC snapshot do tabulky gsc_snapshot.
+ * Idempotentní (UPSERT) — opakované spuštění je bezpečné.
+ * Vrací null pokud GSC není nakonfigurovaný.
+ */
+export async function runGscDailySnapshot(
+  periodDays = 28,
+): Promise<GscSnapshotResult | null> {
+  const auth = getAuth()
+  const siteUrl = process.env.GSC_SITE_URL
+  if (!auth || !siteUrl) return null
+
+  try {
+    const { supabaseAdmin } = await import('@/lib/supabase')
+    const sc = google.searchconsole({ version: 'v1', auth })
+    const today = new Date().toISOString().slice(0, 10)
+    const endDate = new Date()
+    const startDate = new Date()
+    startDate.setDate(endDate.getDate() - periodDays)
+    const fmt = (d: Date) => d.toISOString().slice(0, 10)
+
+    const [queryRes, pageRes] = await Promise.all([
+      sc.searchanalytics.query({
+        siteUrl,
+        requestBody: {
+          startDate: fmt(startDate),
+          endDate: fmt(endDate),
+          dimensions: ['query'],
+          rowLimit: 200,
+          dataState: 'all',
+        },
+      }),
+      sc.searchanalytics.query({
+        siteUrl,
+        requestBody: {
+          startDate: fmt(startDate),
+          endDate: fmt(endDate),
+          dimensions: ['page'],
+          rowLimit: 100,
+          dataState: 'all',
+        },
+      }),
+    ])
+
+    const queryRows = queryRes.data.rows ?? []
+    const pageRows = pageRes.data.rows ?? []
+
+    const rows = [
+      ...queryRows.map((r) => ({
+        taken_at: today,
+        dimension: 'query',
+        key1: (r.keys ?? [])[0] ?? '',
+        key2: '',
+        clicks: r.clicks ?? 0,
+        impressions: r.impressions ?? 0,
+        ctr: r.ctr ?? 0,
+        position: r.position ?? 0,
+        period_days: periodDays,
+      })),
+      ...pageRows.map((r) => ({
+        taken_at: today,
+        dimension: 'page',
+        key1: ((r.keys ?? [])[0] ?? '').replace(/^https?:\/\/[^/]+/, ''),
+        key2: '',
+        clicks: r.clicks ?? 0,
+        impressions: r.impressions ?? 0,
+        ctr: r.ctr ?? 0,
+        position: r.position ?? 0,
+        period_days: periodDays,
+      })),
+    ]
+
+    const { error } = await supabaseAdmin
+      .from('gsc_snapshot')
+      .upsert(rows, { onConflict: 'taken_at,dimension,key1,key2' })
+
+    if (error) {
+      console.error('[GSC] snapshot upsert failed:', error.message)
+      return null
+    }
+
+    return { rowsUpserted: rows.length, queriesFetched: queryRows.length, pagesFetched: pageRows.length }
+  } catch (err) {
+    console.error('[GSC] snapshot failed:', (err as Error).message)
+    return null
+  }
+}
