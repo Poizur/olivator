@@ -17,6 +17,7 @@
     "cron:entity-aggregate": "tsx scripts/cron/entity-aggregate.ts",
     "cron:feed-sync": "tsx scripts/cron/feed-sync.ts",
     "cron:complete-sync": "tsx scripts/cron/complete-sync.ts",
+    "cron:gsc-daily": "tsx scripts/cron/gsc-daily.ts",
     "cron:radar": "tsx scripts/cron/radar.ts",
     "cron:learning": "tsx scripts/cron/learning.ts",
     "cron:newsletter-generate": "tsx scripts/cron/newsletter-generate.ts",
