@@ -609,7 +609,6 @@ export async function sendTrackingAlert(info: {
   lastClickAt: string | null
 }): Promise<void> {
   const recipient = await getSetting<string>('notification_email')
-  if (!recipient) return
 
   const subject = `⚠️ [Olivator] Affiliate tracking: 0 kliků za ${info.windowHours}h`
   const lastSeen = info.lastClickAt
@@ -648,6 +647,9 @@ export async function sendTrackingAlert(info: {
 </div>
 </body></html>`.trim()
 
-  const sendResult = await sendViaResend(recipient, subject, html)
-  await logNotification(recipient, subject, 'tracking_alert', html, sendResult)
+  const logTarget = recipient || 'internal'
+  const sendResult = recipient
+    ? await sendViaResend(recipient, subject, html)
+    : { ok: true as const, delivered: false, error: 'admin_email_disabled' }
+  await logNotification(logTarget, subject, 'tracking_alert', html, sendResult)
 }

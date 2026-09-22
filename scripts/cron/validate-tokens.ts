@@ -166,20 +166,25 @@ async function main() {
         if (p?.slug) quarantineProductSlugs.add(p.slug)
       }
 
-      // Detekuj inactive produkty bez JAKÝCHKOLI nabídek (osiřelé po smazání offers)
-      // Tato skupina se nesmí zobrazovat jako "Vyžaduje pozornost" — jde o karanténu bez offers.
+      // Detekuj inactive produkty bez JAKÝCHKOLI nabídek, nebo s nabídkami všemi in_stock=false.
+      // Tato skupina se nesmí zobrazovat jako "Vyžaduje pozornost" — jde o dočasně nedostupné produkty.
       const { data: allInactiveOffers, error: aoErr } = await supabaseAdmin
         .from('product_offers')
-        .select('products!inner(slug)')
+        .select('in_stock, products!inner(slug)')
         .in('products.slug', inactiveSlugs)
       if (aoErr) {
         console.warn('[validate-tokens] no-offer lookup failed:', aoErr.message)
       }
-      const slugsWithAnyOffer = new Set(
-        (allInactiveOffers ?? []).map(r => (r.products as { slug: string } | null)?.slug).filter(Boolean)
-      )
+      const slugsWithInStockOffer = new Set<string>()
+      for (const r of allInactiveOffers ?? []) {
+        const slug = (r.products as { slug: string } | null)?.slug
+        if (slug && (r as { in_stock: boolean }).in_stock === true) {
+          slugsWithInStockOffer.add(slug)
+        }
+      }
       for (const slug of inactiveSlugs) {
-        if (!slugsWithAnyOffer.has(slug)) noOfferProductSlugs.add(slug)
+        // No in-stock offer (either no offer rows at all, or all in_stock=false) → suppress noise
+        if (!slugsWithInStockOffer.has(slug)) noOfferProductSlugs.add(slug)
       }
     }
     console.log(`[validate-tokens] karanténní produkty: ${quarantineProductSlugs.size} slugů | osiřelé (bez offers): ${noOfferProductSlugs.size} slugů`)
