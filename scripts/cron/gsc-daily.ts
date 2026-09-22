@@ -111,7 +111,7 @@ async function main() {
 
   const { error } = await supabaseAdmin
     .from('gsc_snapshot')
-    .upsert(rows, { onConflict: 'taken_at,dimension,key1' })
+    .upsert(rows, { onConflict: 'taken_at,dimension,key1,key2' })
 
   clearTimeout(killTimer)
 
