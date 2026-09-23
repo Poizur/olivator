@@ -181,14 +181,14 @@ export async function runFeedSyncForAllRetailers(): Promise<FeedSyncRunResult> {
     } else {
       // null = env var not set — log so it's detectable in notification_log
       console.warn('[feed-sync] complete-sync skipped: RECKONASBAVI_COMPLETE_FEED_URL not set')
-      await supabaseAdmin.from('notification_log').insert({
+      supabaseAdmin.from('notification_log').insert({
         recipient: 'internal',
         subject: '[feed-sync] PASS 6 přeskočen: RECKONASBAVI_COMPLETE_FEED_URL chybí',
         type: 'complete_sync_skipped',
         body_preview: 'action_price nebyla aktualizována — env var není v Railway prostředí.',
         delivery_status: 'skipped',
         sent_at: new Date().toISOString(),
-      }).catch(() => {})  // fire-and-forget
+      }).then(() => {}, () => {})  // fire-and-forget
     }
   } catch (err) {
     console.warn('[feed-sync] complete-sync stage failed:', err)
