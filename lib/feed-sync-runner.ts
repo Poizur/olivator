@@ -166,7 +166,7 @@ export async function runFeedSyncForAllRetailers(): Promise<FeedSyncRunResult> {
 
   // ── PASS 6: Reckonasbavi Complete export — authoritative stock + action prices ──
   // Runs AFTER Heureka feed (PASS 1) so Complete data wins on conflicts.
-  // Requires RECKONASBAVI_COMPLETE_FEED_URL env. Silently skips if not set.
+  // Requires RECKONASBAVI_COMPLETE_FEED_URL env. Logs to notification_log if not set.
   try {
     const completeResult = await syncReckonasbavyComplete()
     if (completeResult) {
@@ -175,6 +175,20 @@ export async function runFeedSyncForAllRetailers(): Promise<FeedSyncRunResult> {
         `${completeResult.overridesCleared} overrides cleared, ` +
         `${completeResult.errors.length} errors`
       )
+      if (completeResult.errors.length > 0) {
+        console.warn('[feed-sync] complete-sync errors:', completeResult.errors)
+      }
+    } else {
+      // null = env var not set — log so it's detectable in notification_log
+      console.warn('[feed-sync] complete-sync skipped: RECKONASBAVI_COMPLETE_FEED_URL not set')
+      await supabaseAdmin.from('notification_log').insert({
+        recipient: 'internal',
+        subject: '[feed-sync] PASS 6 přeskočen: RECKONASBAVI_COMPLETE_FEED_URL chybí',
+        type: 'complete_sync_skipped',
+        body_preview: 'action_price nebyla aktualizována — env var není v Railway prostředí.',
+        delivery_status: 'skipped',
+        sent_at: new Date().toISOString(),
+      }).catch(() => {})  // fire-and-forget
     }
   } catch (err) {
     console.warn('[feed-sync] complete-sync stage failed:', err)

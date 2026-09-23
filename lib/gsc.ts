@@ -4,6 +4,7 @@
  * Gracefully returns null when not configured.
  */
 import { google } from 'googleapis'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export interface GscRow {
   keys: string[]
@@ -167,7 +168,6 @@ export async function runGscDailySnapshot(
   if (!auth || !siteUrl) return null
 
   try {
-    const { supabaseAdmin } = await import('@/lib/supabase')
     const sc = google.searchconsole({ version: 'v1', auth })
     const today = new Date().toISOString().slice(0, 10)
     const endDate = new Date()
