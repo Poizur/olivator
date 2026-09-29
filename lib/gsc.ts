@@ -162,6 +162,7 @@ export interface GscSnapshotResult {
  */
 export async function runGscDailySnapshot(
   periodDays = 28,
+  asOf?: string, // YYYY-MM-DD — backfill: snapshot jako by běžel ten den
 ): Promise<GscSnapshotResult | null> {
   const auth = getAuth()
   const siteUrl = process.env.GSC_SITE_URL
@@ -169,9 +170,9 @@ export async function runGscDailySnapshot(
 
   try {
     const sc = google.searchconsole({ version: 'v1', auth })
-    const today = new Date().toISOString().slice(0, 10)
-    const endDate = new Date()
-    const startDate = new Date()
+    const endDate = asOf ? new Date(`${asOf}T12:00:00Z`) : new Date()
+    const today = endDate.toISOString().slice(0, 10)
+    const startDate = new Date(endDate)
     startDate.setDate(endDate.getDate() - periodDays)
     const fmt = (d: Date) => d.toISOString().slice(0, 10)
 

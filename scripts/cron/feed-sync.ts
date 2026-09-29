@@ -15,6 +15,25 @@ import { runGscDailySnapshot } from '@/lib/gsc'
 
 const MAX_RUNTIME_MS = 15 * 60 * 1000 // 15 min hard limit (visící HTTP / DNS)
 
+async function runGscSnapshotPass() {
+  try {
+    if (process.env.GSC_SERVICE_ACCOUNT_KEY && process.env.GSC_SITE_URL) {
+      const r = await runGscDailySnapshot()
+      console.log(r ? `[cron:feed-sync] gsc snapshot: ${r.rowsUpserted} rows` : '[cron:feed-sync] gsc snapshot FAILED (lokálně)')
+      return
+    }
+    const res = await fetch('https://olivator.cz/api/cron/gsc-daily', {
+      headers: { 'x-cron-secret': process.env.CRON_SECRET ?? '' },
+      signal: AbortSignal.timeout(120_000),
+    })
+    const body = await res.text()
+    if (res.ok) console.log(`[cron:feed-sync] gsc snapshot via web: ${body}`)
+    else console.error(`[cron:feed-sync] gsc snapshot FAILED via web: HTTP ${res.status} ${body.slice(0, 200)}`)
+  } catch (err) {
+    console.error('[cron:feed-sync] gsc snapshot FAILED:', (err as Error).message)
+  }
+}
+
 async function main() {
   const startedAt = Date.now()
   console.log('[cron:feed-sync] start', new Date().toISOString())
@@ -42,13 +61,8 @@ async function main() {
       brandLinksBackfilled: result.brandLinksBackfilled,
     })
 
-    // PASS 7: GSC snapshot (non-fatal — feed-sync uspěje i bez GSC)
-    const gscResult = await runGscDailySnapshot()
-    if (gscResult) {
-      console.log(`[cron:feed-sync] gsc snapshot: ${gscResult.rowsUpserted} rows`)
-    } else {
-      console.log('[cron:feed-sync] gsc snapshot skipped (GSC not configured)')
-    }
+    // PASS 7: GSC snapshot (non-fatal). Cron služba nemá GSC klíče → přes web endpoint.
+    await runGscSnapshotPass()
 
     process.exit(0)
   } catch (err) {

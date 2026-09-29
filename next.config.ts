@@ -5,6 +5,9 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
   : 'dyaloliwynmfnpjemzrh.supabase.co'
 
 const nextConfig: NextConfig = {
+  // Default 60s nestačí, když ~30 Railway služeb buildí paralelně a dotazují Supabase
+  // (feed-sync build 2026-09-23 spadl na /olej/[slug] timeoutu → cron běžel týden se starým kódem).
+  staticPageGenerationTimeout: 180,
   async redirects() {
     return [
       // B2: 2025 → 2026 (ranking přejmenován 2026-07-27)
