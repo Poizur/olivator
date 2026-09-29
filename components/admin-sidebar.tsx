@@ -103,7 +103,6 @@ export async function AdminSidebar() {
           badge: badges['/admin/quality']?.value,
           badgeTone: badges['/admin/quality']?.tone,
         },
-        { href: '/admin/manager', label: 'Manager Agent' },
         { href: '/admin/content-strategy', label: 'Obsahová strategie' },
         { href: '/admin/content-calendar', label: 'Editoriální kalendář' },
         { href: '/admin/keyword-mapping', label: 'Keyword Mapping' },

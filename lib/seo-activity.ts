@@ -1,6 +1,8 @@
 // Activity log + metric snapshots pro SEO dashboard "Historie" tab.
 
 import { supabaseAdmin } from './supabase'
+import { calculateCompleteness } from './completeness'
+import { getAllProductsAdmin } from './data'
 
 export interface SeoActivity {
   id: string
@@ -187,6 +189,32 @@ export async function takeMetricSnapshot(): Promise<{ ok: boolean; snapshots: nu
         const total = await supabaseAdmin.from('seo_tasks').select('*', { count: 'exact', head: true }).neq('status', 'skipped')
         const done = await supabaseAdmin.from('seo_tasks').select('*', { count: 'exact', head: true }).eq('status', 'done')
         return { count: done.count, total: total.count }
+      },
+    },
+    {
+      key: 'quality_issues_open',
+      total: false,
+      query: async () => {
+        const r = await supabaseAdmin.from('quality_issues').select('*', { count: 'exact', head: true }).eq('status', 'open')
+        return { count: r.count }
+      },
+    },
+    {
+      key: 'products_low_completeness',
+      total: true,
+      query: async () => {
+        const rows = await getAllProductsAdmin('active')
+        return { count: rows.filter((p) => calculateCompleteness(p).percent < 70).length, total: rows.length }
+      },
+    },
+    {
+      // L-010: bez affiliate = ani affiliate_url, ani retailer.base_tracking_url
+      key: 'offers_without_affiliate',
+      total: true,
+      query: async () => {
+        const { data } = await supabaseAdmin.from('product_offers').select('affiliate_url, retailer:retailers(base_tracking_url)')
+        const rows = (data ?? []) as unknown as Array<{ affiliate_url: string | null; retailer: { base_tracking_url: string | null } | null }>
+        return { count: rows.filter((o) => !o.affiliate_url && !o.retailer?.base_tracking_url).length, total: rows.length }
       },
     },
   ]

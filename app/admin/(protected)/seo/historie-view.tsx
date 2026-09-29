@@ -25,6 +25,9 @@ const METRIC_LABELS: Record<string, string> = {
   recipes_count: 'Receptů',
   rankings_in_db: 'Žebříčků v DB',
   seo_tasks_done: 'Hotových SEO úkolů',
+  quality_issues_open: 'Otevřené quality issues',
+  products_low_completeness: 'Produkty pod 70 % completeness',
+  offers_without_affiliate: 'Nabídky bez affiliate URL',
 }
 
 function formatTime(iso: string): string {

@@ -298,7 +298,7 @@ async function getCatalogHealth(): Promise<{
 // ── Activity feed (extended) ───────────────────────────────────────────────
 
 async function getActivityFeed() {
-  const [discoveryRes, bulkRes, managerRes, draftsRes, signupsRes] = await Promise.all([
+  const [discoveryRes, bulkRes, draftsRes, signupsRes] = await Promise.all([
     supabaseAdmin
       .from('discovery_candidates')
       .select('id, suggested_name, source_domain, scraped_at, status')
@@ -309,11 +309,6 @@ async function getActivityFeed() {
       .select('id, type, status, total, created_at')
       .order('created_at', { ascending: false })
       .limit(3),
-    supabaseAdmin
-      .from('manager_reports')
-      .select('id, generated_at')
-      .order('generated_at', { ascending: false })
-      .limit(2),
     supabaseAdmin
       .from('newsletter_drafts')
       .select('id, subject, status, generated_at, approved_at')
@@ -356,15 +351,6 @@ async function getActivityFeed() {
       subtitle: `${b.total} položek · ${b.status}`,
       tone: b.status === 'failed' ? 'red' : 'amber',
       href: '/admin/bulk-jobs',
-    })
-  }
-  for (const m of managerRes.data ?? []) {
-    items.push({
-      kind: 'manager',
-      ts: m.generated_at as string,
-      title: 'Manager report vygenerován',
-      tone: 'olive',
-      href: '/admin/manager',
     })
   }
   for (const d of draftsRes.data ?? []) {

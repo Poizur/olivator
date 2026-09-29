@@ -561,7 +561,6 @@ disabuj (signál v adminu, že XML to řeší).
 | `cron:discovery` | `/api/cron/discovery` | `30 4 * * *` | Playwright crawl pro shopy bez XML feedu |
 | `cron:prospect` | `/api/cron/prospect` | `0 5 * * *` | hledá nové eshopy |
 | `cron:link-check` | `/api/cron/link-check` | `0 2,4 * * *` | mrtvé affiliate URL → status='inactive'; threshold=2 (2× nočně) |
-| `cron:manager` | `/api/cron/manager` | `0 5 * * 1` | týdenní strategický report |
 | — | `/api/cron/newsletter-generate` | středa 18:00 UTC | (Newsletter generation, Fáze 2) |
 | — | `/api/cron/newsletter-send` | čtvrtek 8:00 UTC | (Newsletter send) |
 | — | `/api/cron/price-alerts` | denně 9:00 UTC | (Price drop notifications) |

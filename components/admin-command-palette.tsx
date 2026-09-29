@@ -26,7 +26,6 @@ const ROUTES: CommandItem[] = [
   { id: 'r-retailer-new', label: 'Přidat prodejce', group: 'Obchod', href: '/admin/retailers/new' },
   { id: 'r-faq', label: 'FAQ', group: 'Obsah', href: '/admin/faq' },
   { id: 'r-newsletter', label: 'Newsletter', group: 'Obsah', href: '/admin/newsletter' },
-  { id: 'r-manager', label: 'Manager Agent', group: 'Obsah', href: '/admin/manager' },
   { id: 'r-settings', label: 'Nastavení', group: 'Systém', href: '/admin/nastaveni' },
   { id: 'r-public', label: 'Otevřít veřejný web', group: 'Systém', href: '/' },
 ]

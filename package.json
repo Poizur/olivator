@@ -11,7 +11,6 @@
     "schema:snapshot": "tsx --env-file=.env.local scripts/update-schema-snapshot.ts",
     "cron:discovery": "tsx scripts/cron/discovery.ts",
     "cron:prospect": "tsx scripts/cron/prospect.ts",
-    "cron:manager": "tsx scripts/cron/manager.ts",
     "cron:link-check": "tsx scripts/cron/link-check.ts",
     "cron:web-check": "tsx scripts/cron/web-check.ts",
     "cron:entity-aggregate": "tsx scripts/cron/entity-aggregate.ts",
