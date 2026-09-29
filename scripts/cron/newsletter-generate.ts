@@ -89,7 +89,7 @@ async function main() {
 ${pinnedNote}
 ${buildReviewerHtml(review)}
 <p><a href="${draftUrl}">Zobrazit a schválit draft →</a></p>
-<p>Odesílání probíhá manuálně přes admin.</p>`.trim(),
+<p>Odešle se automaticky ve čtvrtek v 9:00 UTC (pokud je newsletter_auto_send zapnutý). Nechceš? Draft archivuj v adminu.</p>`.trim(),
         text: `Newsletter draft čeká na schválení.\nPředmět: ${result.subject}\nReviewer: ${review.verdict} (${review.issues.length} issues)\n${review.summary}\nOdkaz: ${draftUrl}`,
       }).catch((err) => console.warn('[cron:newsletter-generate] notify email failed:', err))
       console.log(`[cron:newsletter-generate] notification sent to ${notifyEmail}`)

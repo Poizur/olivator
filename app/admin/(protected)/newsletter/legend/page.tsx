@@ -191,9 +191,9 @@ export default function NewsletterLegendPage() {
           when="Před spuštěním kampaně, při testování změn"
         />
         <SafetyItem
-          name="Manuální schválení"
-          how="newsletter_auto_send = false (default) → drafty čekají na tebe"
-          when="Vždy. Auto-send je nepovinný feature pro pokročilé."
+          name="Auto-send ve čtvrtek"
+          how="newsletter_auto_send = true → čt 9:00 UTC odejde středeční draft (reviewer ok/warn). Veto = archivovat draft"
+          when="Vypni, když chceš každý draft schvalovat ručně."
         />
         <SafetyItem
           name="Rate limit"
