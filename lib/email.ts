@@ -573,3 +573,39 @@ export async function sendTrackingAlert(info: {
     : { ok: true as const, delivered: false, error: 'admin_email_disabled' }
   await logNotification(logTarget, subject, 'tracking_alert', html, sendResult)
 }
+
+export async function sendPass6MissingAlert(): Promise<void> {
+  const recipient = await getSetting<string>('notification_email')
+  const subject = '🚨 [Olivator] PASS 6 SELHALO: RECKONASBAVI_COMPLETE_FEED_URL chybí'
+  const html = `<!DOCTYPE html>
+<html lang="cs"><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;padding:24px;background:#fafafa">
+<div style="background:white;border-radius:12px;padding:32px;border:1px solid #e8e8ed">
+  <h1 style="font-size:20px;color:#c00;margin:0 0 8px">🚨 feed-sync PASS 6 selhalo</h1>
+  <p style="color:#6e6e73;font-size:14px;margin:0 0 24px">Reckonasbavi Complete export — chybí env var</p>
+
+  <div style="background:#ffe0e0;border-left:4px solid #c00;padding:16px;border-radius:8px;margin-bottom:24px">
+    <div style="font-size:15px;font-weight:600;color:#900;margin-bottom:4px">RECKONASBAVI_COMPLETE_FEED_URL není nastavena v Railway</div>
+    <div style="font-size:13px;color:#900">
+      action_price nebyla dnes aktualizována — slevy na olivator.cz/slevy jsou zastaralé nebo prázdné.
+    </div>
+  </div>
+
+  <p style="font-size:14px;color:#1d1d1f;margin:0 0 12px"><strong>Jak opravit:</strong></p>
+  <ol style="font-size:13px;color:#6e6e73;padding-left:20px;margin:0 0 24px;line-height:1.8">
+    <li>Otevři Railway → feed-sync service → Variables</li>
+    <li>Přidej <code>RECKONASBAVI_COMPLETE_FEED_URL</code> (hodnota v olivator/.env.local)</li>
+    <li>Redeploy feed-sync nebo počkej na noční cron (04:00 UTC)</li>
+  </ol>
+
+  <p style="font-size:11px;color:#aeaeb2;margin-top:32px;border-top:1px solid #e8e8ed;padding-top:16px">
+    Generováno automaticky při každém feed-sync běhu kde env var chybí. Ticho = PASS 6 OK.
+  </p>
+</div>
+</body></html>`.trim()
+
+  const logTarget = recipient || 'internal'
+  const sendResult = recipient
+    ? await sendViaResend(recipient, subject, html)
+    : { ok: true as const, delivered: false, error: 'admin_email_disabled' }
+  await logNotification(logTarget, subject, 'pass6_missing_alert', html, sendResult)
+}

@@ -18,6 +18,7 @@ import { runRescrape } from './product-rescrape'
 import { linkAndRecomputeForProduct } from './entity-aggregator'
 import { inferOriginFromText } from './utils'
 import { syncReckonasbavyComplete } from './reckonasbavi-complete-sync'
+import { sendPass6MissingAlert } from './email'
 
 // Kolik pending draftů zpracovat per cron run. Každý rescrape ~30-90s.
 // 40 × 60s = 40 min — feed sync sám trvá ~5 min, celkem ~45 min < 60 min Railway timeout.
@@ -179,16 +180,9 @@ export async function runFeedSyncForAllRetailers(): Promise<FeedSyncRunResult> {
         console.warn('[feed-sync] complete-sync errors:', completeResult.errors)
       }
     } else {
-      // null = env var not set — log so it's detectable in notification_log
-      console.warn('[feed-sync] complete-sync skipped: RECKONASBAVI_COMPLETE_FEED_URL not set')
-      supabaseAdmin.from('notification_log').insert({
-        recipient: 'internal',
-        subject: '[feed-sync] PASS 6 přeskočen: RECKONASBAVI_COMPLETE_FEED_URL chybí',
-        type: 'complete_sync_skipped',
-        body_preview: 'action_price nebyla aktualizována — env var není v Railway prostředí.',
-        delivery_status: 'skipped',
-        sent_at: new Date().toISOString(),
-      }).then(() => {}, () => {})  // fire-and-forget
+      // null = env var not set — FAIL LOUD: email alert + console.error (pondělní rutina to zachytí)
+      console.error('[feed-sync] PASS 6 FAILED: RECKONASBAVI_COMPLETE_FEED_URL chybí — action_price neaktualizována')
+      await sendPass6MissingAlert().catch(e => console.error('[feed-sync] sendPass6MissingAlert failed:', e))
     }
   } catch (err) {
     console.warn('[feed-sync] complete-sync stage failed:', err)
