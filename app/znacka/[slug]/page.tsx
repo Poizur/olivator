@@ -250,7 +250,7 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
       <BreadcrumbJsonLd
         items={[
           { name: 'Olivátor', url: '/' },
-          { name: 'Katalog', url: '/srovnavac' },
+          { name: 'Značky', url: '/znacky' },
           { name: brand.name, url: `/znacka/${slug}` },
         ]}
       />
@@ -263,8 +263,8 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
               Olivator
             </Link>
             {' › '}
-            <Link href="/srovnavac" className="text-olive">
-              Katalog
+            <Link href="/znacky" className="text-olive">
+              Značky
             </Link>
             {' › '}
             <span>{brand.name}</span>

@@ -1585,24 +1585,36 @@ export async function getRegionTiles(): Promise<RegionTile[]> {
     .sort((a, b) => b.productCount - a.productCount)
 }
 
-export async function getBrandTiles(): Promise<BrandTile[]> {
-  // Načteme všechny brand entity_images a roztřídíme per role.
-  // image_role: 'logo' = brand logo, ostatní (gallery/hero/editorial) = hero kandidát
-  const [brandsRes, productsRes, imagesRes] = await Promise.all([
-    supabaseAdmin.from('brands').select('id, slug, name, country_code'),
-    supabaseAdmin.from('products').select('brand_slug').eq('status', 'active'),
+export interface BrandDirectoryEntry extends BrandTile {
+  regionName: string | null
+  avgScore: number | null
+}
+
+/** Přehled /znacky — aktivní značky s ≥1 aktivním produktem, abecedně. */
+export async function getBrandDirectory(): Promise<BrandDirectoryEntry[]> {
+  const [brandsRes, productsRes, imagesRes, regionsRes] = await Promise.all([
+    supabaseAdmin.from('brands').select('id, slug, name, country_code, region_slug').eq('status', 'active'),
+    supabaseAdmin.from('products').select('brand_slug, olivator_score').eq('status', 'active'),
     supabaseAdmin
       .from('entity_images')
       .select('entity_id, url, image_role, is_primary, sort_order')
       .eq('entity_type', 'brand')
       .eq('status', 'active')
       .order('sort_order', { ascending: true }),
+    supabaseAdmin.from('regions').select('slug, name'),
   ])
 
   const counts: Record<string, number> = {}
-  for (const r of productsRes.data ?? []) {
-    if (r.brand_slug) counts[r.brand_slug] = (counts[r.brand_slug] ?? 0) + 1
+  const scores: Record<string, number[]> = {}
+  for (const r of (productsRes.data ?? []) as Array<{ brand_slug: string | null; olivator_score: number | null }>) {
+    if (!r.brand_slug) continue
+    counts[r.brand_slug] = (counts[r.brand_slug] ?? 0) + 1
+    // Stejný výpočet jako KPI „Průměrné skóre“ na /znacka/[slug] (entity-page-data)
+    if (r.olivator_score != null) {
+      ;(scores[r.brand_slug] ??= []).push(r.olivator_score)
+    }
   }
+  const regionName = new Map((regionsRes.data ?? []).map((r: { slug: string; name: string }) => [r.slug, r.name]))
 
   const logoByEntity = new Map<string, string>()
   const heroByEntity = new Map<string, string>()
@@ -1620,21 +1632,24 @@ export async function getBrandTiles(): Promise<BrandTile[]> {
   }
 
   return (brandsRes.data ?? [])
-    .map((b: { id: string; slug: string; name: string; country_code: string }) => {
+    .map((b: { id: string; slug: string; name: string; country_code: string; region_slug: string | null }) => {
       const logoUrl = logoByEntity.get(b.id) ?? null
       const heroUrl = heroByEntity.get(b.id) ?? null
+      const s = scores[b.slug] ?? []
       return {
         slug: b.slug,
         name: b.name,
         countryCode: b.country_code,
+        regionName: b.region_slug ? regionName.get(b.region_slug) ?? null : null,
         productCount: counts[b.slug] ?? 0,
+        avgScore: s.length ? Math.round(s.reduce((a, x) => a + x, 0) / s.length) : null,
         photoUrl: heroUrl ?? logoUrl,
         logoUrl,
         heroUrl,
       }
     })
     .filter((b) => b.productCount > 0)
-    .sort((a, b) => b.productCount - a.productCount)
+    .sort((a, b) => a.name.localeCompare(b.name, 'cs'))
 }
 
 /** Top featured značky (is_featured=true) ordered by featured_order. Returns BrandTile[]. */
