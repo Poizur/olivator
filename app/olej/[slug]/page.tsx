@@ -397,7 +397,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             ) : (
               <div className="flex flex-col items-start gap-1">
                 <div className="bg-off2 text-text2 text-[11px] font-medium px-3 py-1.5 rounded-full border border-off2" title="Score udělujeme pouze produktům s ověřitelnými laboratorními daty (kyselost, polyfenoly)">
-                  Score: čekáme na analytická data
+                  Hodnocení připravujeme — čekáme na laboratorní data od výrobce
                 </div>
                 {(product.acidity != null || product.polyphenols != null) && (
                   <div className="flex gap-1.5 flex-wrap">
