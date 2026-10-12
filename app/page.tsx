@@ -18,6 +18,7 @@ import { TopByCountry } from '@/components/home/top-by-country'
 import { DealsNewsSection } from '@/components/home/deals-news-section'
 import { BestsellersSection } from '@/components/home/bestsellers-section'
 import { FeaturedBrandsSection } from '@/components/home/featured-brands-section'
+import { NewInCatalogSection } from '@/components/home/new-in-catalog-section'
 import { TopProductCard } from '@/components/home/top-product-card'
 import { ClaimTooltip } from '@/components/ui/claim-tooltip'
 import { FlavorSelector } from '@/components/flavor-selector'
@@ -197,6 +198,7 @@ export default async function Home() {
       <FlavorSelector totalProducts={stats.totalProducts} />
 
       {/* ─── TOP ZNAČKY ─────────────────────────────────────────────────── */}
+      <NewInCatalogSection />
       <FeaturedBrandsSection brands={featuredBrands} />
 
       {/* ─── 5L FEATURED BOX ─────────────────────────────────────────────── */}

@@ -24,7 +24,7 @@ export function badgeClass(tone: 'gold' | 'olive' | 'terra' | 'amber' | 'sage'):
 
 interface Props {
   product: ProductWithOffer
-  rank: number
+  rank?: number
   badge?: ProductBadge | null
   segmentBadge?: string | null
   sizes?: string
@@ -60,11 +60,11 @@ export function TopProductCard({
           >
             {badge.label}
           </span>
-        ) : (
+        ) : rank != null ? (
           <span className="absolute top-1.5 left-1.5 z-10 text-[10px] font-bold text-text bg-white/90 backdrop-blur-sm rounded px-1.5 py-0.5 shadow-sm leading-none">
             #{rank}
           </span>
-        )}
+        ) : null}
 
         {/* Score vpravo nahoře */}
         <span className={`absolute top-1.5 right-1.5 z-10 ${isLarge ? 'shadow-md rounded-full' : ''}`}>

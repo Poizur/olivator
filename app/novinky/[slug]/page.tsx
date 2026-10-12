@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { supabaseAdmin } from '@/lib/supabase'
 import { breadcrumbSchema } from '@/lib/schema'
+import { isAdminAuthenticated } from '@/lib/admin-auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,6 +25,7 @@ interface RadarItem {
   image_source_url: string | null
   meta_title: string | null
   meta_description: string | null
+  is_published: boolean
 }
 
 const BADGE_CONFIG: Record<string, { emoji: string; label: string; bg: string; text: string }> = {
@@ -42,6 +44,7 @@ const SOURCE_LABEL: Record<string, string> = {
   certifiedorigins: 'Certified Origins',
   googlenews_olive: 'Google News',
   googlenews_cz:    'Google News',
+  olivator:         'Redakce Olivátoru',
 }
 
 async function loadItem(slugOrId: string): Promise<RadarItem | null> {
@@ -78,6 +81,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title: `${title} | Olivátor`,
     description,
+    // Neschválené položky z fronty radaru vidí jen admin jako náhled
+    ...(item.is_published ? {} : { robots: { index: false, follow: false } }),
     alternates: canonical ? { canonical } : undefined,
     openGraph: {
       title,
@@ -94,6 +99,8 @@ export default async function NovinkaDetailPage({ params }: { params: Promise<{ 
   const { slug } = await params
   const item = await loadItem(slug)
   if (!item) notFound()
+  if (!item.is_published && !(await isAdminAuthenticated())) notFound()
+  const isEditorial = item.source === 'olivator'
 
   const badge = BADGE_CONFIG[item.badge ?? 'news'] ?? BADGE_CONFIG.news
   const sourceLabel = SOURCE_LABEL[item.source ?? ''] ?? item.source ?? 'Zdroj'
@@ -150,7 +157,7 @@ export default async function NovinkaDetailPage({ params }: { params: Promise<{ 
         }
       : {}),
     ...(item.czech_article ? { articleBody: item.czech_article } : {}),
-    ...(item.original_url
+    ...(item.original_url && !isEditorial
       ? {
           citation: {
             '@type': 'CreativeWork',
@@ -181,6 +188,12 @@ export default async function NovinkaDetailPage({ params }: { params: Promise<{ 
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
       />
+
+      {!item.is_published && (
+        <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-[13px] text-amber-800">
+          Náhled pro admina — tato zpráva není zveřejněná.
+        </div>
+      )}
 
       <div className="text-xs text-text3 mb-6">
         <Link href="/" className="text-olive">Olivátor</Link>
@@ -256,7 +269,15 @@ export default async function NovinkaDetailPage({ params }: { params: Promise<{ 
         </div>
       )}
 
-      {item.original_url && (
+      {item.original_url && isEditorial && (
+        <div className="border-t border-off2 pt-6 mt-10">
+          <Link href={item.original_url} className="inline-flex items-center gap-1.5 text-[14px] text-olive hover:text-olive-dark">
+            {item.original_title ?? 'Více v katalogu'} →
+          </Link>
+        </div>
+      )}
+
+      {item.original_url && !isEditorial && (
         <div className="border-t border-off2 pt-6 mt-10">
           <div className="text-[11px] font-semibold text-text3 uppercase tracking-wider mb-2">
             Originální zdroj

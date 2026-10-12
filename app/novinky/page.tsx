@@ -34,6 +34,7 @@ const SOURCE_LABEL: Record<string, string> = {
   certifiedorigins: 'Certified Origins',
   googlenews_olive: 'Google News (EN)',
   googlenews_cz:    'Google News (CZ)',
+  olivator:         'Redakce Olivátoru',
 }
 
 interface NewsItemRow {
