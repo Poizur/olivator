@@ -21,6 +21,7 @@ import {
   detectPackaging,
   detectType,
   isSuspectEan,
+  isEanUnreliableShop,
   normalizeEan,
   extractShippingFromXml,
   type HeurekaItem,
@@ -94,6 +95,15 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
   // (origin_country pro nový draft) a linkAndRecomputeForProduct (region_slug).
   const retailerDefaultOrigin = RETAILER_DEFAULT_ORIGIN[retailer.slug as string] ?? null
 
+  // EAN sdílený víc URL v jednom feedu = chyba shopu (varianty se stejným EAN),
+  // párování přes něj by slilo různé objemy do jednoho produktu.
+  const urlsByEan = new Map<string, Set<string>>()
+  for (const item of oils) {
+    const ean = normalizeEan(item.ean)
+    if (ean && item.url) urlsByEan.set(ean, (urlsByEan.get(ean) ?? new Set()).add(item.url))
+  }
+  const shopEanUnreliable = isEanUnreliableShop(retailer.slug as string)
+
   const result: FeedSyncResult = {
     total: items.length,
     oilsInFeed: oils.length,
@@ -143,7 +153,9 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
       const itemOrigin = retailerDefaultOrigin
         ?? extractOriginFromParams(item.params)
         ?? inferOriginFromText(`${item.productName} ${item.description}`).country
-      const { productId, created, excluded } = await ensureProduct(item, itemOrigin)
+      const itemEan = normalizeEan(item.ean)
+      const trustEan = !shopEanUnreliable && !(itemEan && (urlsByEan.get(itemEan)?.size ?? 0) > 1)
+      const { productId, created, excluded } = await ensureProduct(item, itemOrigin, trustEan)
 
       // Blocklist: admin tento produkt vyřadil → nedělej upsert offer ani
       // price_history. Záznam zůstává, ale sync ho neaktualizuje.
@@ -332,12 +344,13 @@ export async function syncRetailerFeed(retailerId: string): Promise<FeedSyncResu
 
 async function ensureProduct(
   item: HeurekaItem,
-  defaultOriginCountry: string | null
+  defaultOriginCountry: string | null,
+  trustEan: boolean
 ): Promise<{ productId: string; created: boolean; excluded?: boolean }> {
   // 1) Match přes EAN — jen když je validní GTIN-13 / UPC-A. Shop-internal
   //    placeholdery (7777770000xxx) ukládáme jako null, dedupujeme přes URL.
   const normalizedEan = normalizeEan(item.ean)
-  const validEan = normalizedEan && !isSuspectEan(normalizedEan) ? normalizedEan : null
+  const validEan = trustEan && normalizedEan && !isSuspectEan(normalizedEan) ? normalizedEan : null
 
   if (validEan) {
     const { data: existing, error: queryErr } = await supabaseAdmin

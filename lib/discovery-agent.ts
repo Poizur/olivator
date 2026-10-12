@@ -33,6 +33,7 @@ import { scanLabReport, looksLikeLabReport } from './lab-report-agent'
 import { detectCertificationsInText } from './cert-detector'
 import { auditProduct, runPrePublishAudit } from './quality-rules'
 import { countryName } from './utils'
+import { isEanUnreliableShop } from './heureka-feed-parser'
 import { logAgentAction } from './audit-log'
 
 export type CandidateStatus =
@@ -259,6 +260,9 @@ export async function publishCandidate(
   retailerSlug: string,
   retailerDomain: string
 ): Promise<string> {
+  if (isEanUnreliableShop(retailerSlug) || isEanUnreliableShop(retailerDomain)) {
+    scraped = { ...scraped, ean: null }
+  }
   if (!scraped.name || !scraped.slug) throw new Error('Missing name/slug')
   if (!validateOliveOilProduct(scraped.name)) {
     throw new Error(`Non-olive product rejected: "${scraped.name.slice(0, 60)}"`)
@@ -894,7 +898,8 @@ export async function runDiscoveryAgent(): Promise<DiscoveryRunResult> {
       }
 
       try {
-        const scraped = await scrapeProductPage(url)
+        const rawScraped = await scrapeProductPage(url)
+        const scraped = isEanUnreliableShop(cr.shopDomain) ? { ...rawScraped, ean: null } : rawScraped
         const match = await matchProduct(scraped)
         const quality = assessQuality(scraped)
 

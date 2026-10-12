@@ -163,6 +163,14 @@ export function normalizeEan(ean: string | undefined | null): string | null {
 // samé nuly). Pro tyto NESTORUJEME do products.ean (riziko kolize přes různé
 // shopy které také používají placeholder), ale produkt vytvoříme s ean=null
 // a dedupujeme přes source_url. Real EAN i UPC-A projdou jako validní.
+// Shopy, kde jeden EAN sdílí víc variant (Olive Hills: 500 ml–5 l = 0112321115124).
+// Párujeme je jen přes URL produktu, nikdy přes EAN.
+const EAN_UNRELIABLE_SHOPS = new Set(['olive-hills', 'olivehills.cz', 'www.olivehills.cz'])
+
+export function isEanUnreliableShop(slugOrDomain: string | null | undefined): boolean {
+  return !!slugOrDomain && EAN_UNRELIABLE_SHOPS.has(slugOrDomain.toLowerCase())
+}
+
 export function isSuspectEan(ean: string | null): boolean {
   if (!ean) return true
   if (ean.length !== 13) return true
