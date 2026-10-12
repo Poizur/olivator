@@ -92,8 +92,8 @@ export default async function NovinkyPage() {
         </h1>
         <p className="text-[15px] text-text2 leading-relaxed">
           Sklizně, ceny, ocenění a věda. Vybíráme zprávy ze světového tisku co reálně
-          hýbou trhem. <strong>Aktualizováno každé 2 hodiny</strong> · zdroje:
-          Olive Oil Times, IOC, Google News.
+          hýbou trhem. Radar prochází světový tisk každé 2 hodiny a zprávy zveřejňujeme
+          až po kontrole · zdroje: Olive Oil Times, IOC, Google News.
         </p>
       </div>
 
@@ -103,9 +103,9 @@ export default async function NovinkyPage() {
           {items.length === 0 ? (
             <div className="bg-off/40 border border-off2 rounded-xl p-10 text-center">
               <div className="text-3xl mb-3">📡</div>
-              <h2 className="text-[16px] font-medium text-text mb-1">Zatím žádné novinky</h2>
+              <h2 className="text-[16px] font-medium text-text mb-1">Momentálně žádné zveřejněné zprávy</h2>
               <p className="text-[13px] text-text3">
-                Sběr právě začíná. Přijď za pár hodin — pravidelně skenujeme světový tisk.
+                Každou zprávu před zveřejněním kontrolujeme. Ze zpráv za posledních 30 dní zatím žádná kontrolou neprošla.
               </p>
             </div>
           ) : (
@@ -182,7 +182,7 @@ export default async function NovinkyPage() {
             <p className="text-[12px] text-text3 leading-relaxed">
               Stránka funguje na bázi RSS scanneru — fetchne novinky ze světových odborných
               médií, deduplikuje (fingerprint hash + AI judge), přeloží do češtiny přes
-              Claude AI a publikuje. Jen zprávy s konkrétním dopadem (sklizeň, ceny, ocenění,
+              Claude AI a po kontrole publikuje. Jen zprávy s konkrétním dopadem (sklizeň, ceny, ocenění,
               regulace) — žádný marketing.
             </p>
           </div>
@@ -198,8 +198,8 @@ export default async function NovinkyPage() {
               Co tato čísla znamenají
             </div>
             <p className="mb-2">
-              <strong>€407 / 100 kg = 4 €/kg ≈ 100 Kč/kg</strong> — to je co
-              dostává <em>výrobce</em> ve Španělsku za surovinu.
+              Například <strong>€400 / 100 kg = 4 €/kg ≈ 100 Kč/kg</strong> — tolik
+              dostává <em>výrobce</em> za surovinu.
             </p>
             <p className="mb-2">
               V eshopu vidíš <strong>250–500 Kč/litr</strong>. Rozdíl jde na
@@ -217,12 +217,12 @@ export default async function NovinkyPage() {
               Jak číst trend
             </div>
             <div className="space-y-1.5">
-              <div><span className="text-olive-dark font-medium">↓ zelená</span> — cena klesá (dobré za pár měsíců pro spotřebitele)</div>
-              <div><span className="text-amber-700 font-medium">↑ amber</span> — cena roste (může se promítnout do retailu)</div>
-              <div><span className="text-text3">→ šedá</span> — stabilní</div>
+              <div><span className="text-olive-dark font-medium">↓ zelená</span> — meziročně nižší cena než ve stejném týdnu loňské sklizně</div>
+              <div><span className="text-amber-700 font-medium">↑ amber</span> — meziročně vyšší cena</div>
+              <div><span className="text-text3">→ šedá</span> — beze změny</div>
             </div>
             <div className="mt-2 pt-2 border-t border-off2">
-              Aktualizace po IOC reportu (cca 1× měsíčně, vždy se zpožděním 2–3 týdnů).
+              Ceny výrobců z posledního statistického reportu IOC. IOC je nevydává v pravidelných intervalech — datum je uvedené u cen.
             </div>
           </div>
         </aside>

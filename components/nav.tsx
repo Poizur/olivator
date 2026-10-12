@@ -12,7 +12,6 @@ const links = [
   { href: '/olivovy-olej-5l', label: 'Velká balení' },
   { href: '/slevy', label: 'Slevy 🏷' },
   { href: '/zebricek', label: 'Žebříčky' },
-  { href: '/novinky', label: 'Novinky' },
   { href: '/pruvodce', label: 'Průvodce' },
   { href: '/recept', label: 'Recepty' },
   { href: '/metodika', label: 'Metodika' },

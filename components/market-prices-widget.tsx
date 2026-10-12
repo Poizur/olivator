@@ -21,7 +21,7 @@ interface Props {
 }
 
 function formatEur(n: number): string {
-  return `€${n.toLocaleString('cs-CZ', { maximumFractionDigits: 0 })}`
+  return `€${n.toLocaleString('cs-CZ', { maximumFractionDigits: 1 })}`
 }
 
 function formatChange(pct: number | null): { text: string; color: string; arrow: string } {
@@ -71,12 +71,12 @@ export async function MarketPricesWidget({ variant = 'card' }: Props = {}) {
             🫒 Velkoobchod
           </div>
           <h2 className={`font-[family-name:var(--font-display)] ${isSidebar ? 'text-base' : 'text-xl md:text-2xl'} text-text leading-tight`}>
-            EVOO tento týden
+            Ceny EVOO u výrobců
           </h2>
         </div>
         {!isSidebar && (
           <div className="text-[11px] text-text3">
-            Zdroj: {rows[0]?.source ?? 'IOC'} · {formatWeek(rows[0].week_of)}
+            Zdroj: {rows[0]?.source ?? 'IOC'} · týden od {formatWeek(rows[0].week_of)} · změna meziročně
           </div>
         )}
       </div>
@@ -118,7 +118,7 @@ export async function MarketPricesWidget({ variant = 'card' }: Props = {}) {
 
       <div className={`flex items-center justify-between gap-2 flex-wrap border-t border-off ${isSidebar ? 'mt-2 pt-2' : 'mt-3 pt-3'}`}>
         <span className="text-[10px] text-text3">
-          {isSidebar ? `IOC · ${formatWeek(rows[0].week_of)}` : ''}
+          {isSidebar ? `IOC · týden od ${formatWeek(rows[0].week_of)} · změna meziročně` : ''}
         </span>
         {firstSource && (
           <a
