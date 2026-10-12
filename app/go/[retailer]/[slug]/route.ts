@@ -86,11 +86,25 @@ function resolveUrl(
   return null
 }
 
+// Kliky za posledních 60 sekund ze stejné IP překračující tento limit = bot
+const RATE_LIMIT_PER_MIN = 5
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ retailer: string; slug: string }> }
 ) {
   const { retailer: retailerSlug, slug: productSlug } = await params
+
+  // Bot filter: rate limit per IP before any eHUB redirect
+  const rawIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
+  const earlyIpHash = createHash('sha256').update(rawIp).digest('hex')
+  const oneMinuteAgo = new Date(Date.now() - 60_000).toISOString()
+  const { count: recentCount } = await supabaseAdmin
+    .from('affiliate_clicks')
+    .select('id', { count: 'exact', head: true })
+    .eq('ip_hash', earlyIpHash)
+    .gte('clicked_at', oneMinuteAgo)
+  const isRateLimited = (recentCount ?? 0) >= RATE_LIMIT_PER_MIN
 
   const { data: product, error: pErr } = await supabaseAdmin
     .from('products')
@@ -120,12 +134,29 @@ export async function GET(
     return NextResponse.json({ error: 'No offer found' }, { status: 404 })
   }
 
-  // Resolve + validate target URL PŘED logem (kdyby URL nebyla validní,
-  // nelogujeme zbytečně klik který se nikam nedostane).
-  const target = resolveUrl(retailer, offer, {
-    productSlug,
-    ean: (product.ean as string) ?? null,
-  })
+  // Resolve target URL — pro rate-limited requesty použij přímou URL, ne eHUB tracking
+  let target: string | null
+  if (isRateLimited) {
+    // Bypass eHUB: přímý product URL nebo retailer homepage
+    const directUrl = safeParseUrl(offer.product_url)
+    target = directUrl
+      ? directUrl.toString()
+      : retailer.domain
+        ? `https://${retailer.domain}`
+        : null
+    console.warn('[affiliate] rate-limit bot blocked', {
+      ipHash: earlyIpHash.slice(0, 16),
+      productSlug,
+      retailerSlug,
+      recentCount,
+    })
+  } else {
+    target = resolveUrl(retailer, offer, {
+      productSlug,
+      ean: (product.ean as string) ?? null,
+    })
+  }
+
   if (!target) {
     console.warn('[affiliate] Invalid offer URL', {
       productSlug,
@@ -138,8 +169,8 @@ export async function GET(
 
   // Log click — AWAIT kvůli serverless lifecycle (Vercel/Railway zmrazí
   // runtime hned po redirect → fire-and-forget by ztratil insert).
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'unknown'
-  const ipHash = createHash('sha256').update(ip).digest('hex')
+  const ip = rawIp
+  const ipHash = earlyIpHash
   const userAgent = request.headers.get('user-agent') ?? ''
   const referrer = request.headers.get('referer') ?? ''
   const reqUrl = request.nextUrl
@@ -159,6 +190,7 @@ export async function GET(
 
   const lowerUA = userAgent.toLowerCase()
   const isTest =
+    isRateLimited ||
     userAgent === 'node' ||
     userAgent.startsWith('curl/') ||
     lowerUA.includes('jscrawler') ||
