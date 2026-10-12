@@ -86,6 +86,15 @@ function resolveUrl(
   return null
 }
 
+// Prodejce bez affiliate sítě vidí náš traffic jen přes UTM v GA4. Přidáváme
+// je až tady, aby je feed-sync přepsáním product_url nesmazal.
+function withReferralUtm(raw: string): string {
+  const u = new URL(raw)
+  if (!u.searchParams.has('utm_source')) u.searchParams.set('utm_source', 'olivator')
+  if (!u.searchParams.has('utm_medium')) u.searchParams.set('utm_medium', 'referral')
+  return u.toString()
+}
+
 // Kliky za posledních 60 sekund ze stejné IP překračující tento limit = bot
 const RATE_LIMIT_PER_MIN = 5
 
@@ -117,7 +126,7 @@ export async function GET(
 
   const { data: retailer, error: rErr } = await supabaseAdmin
     .from('retailers')
-    .select('id, domain, base_tracking_url')
+    .select('id, domain, base_tracking_url, affiliate_network')
     .eq('slug', retailerSlug)
     .maybeSingle()
   if (rErr || !retailer) {
@@ -155,6 +164,10 @@ export async function GET(
       productSlug,
       ean: (product.ean as string) ?? null,
     })
+    // Bez UTM pro rate-limited boty — nafukovaly by prodejci čísla v GA4.
+    if (target && !retailer.affiliate_network && !retailer.base_tracking_url && !offer.affiliate_url) {
+      target = withReferralUtm(target)
+    }
   }
 
   if (!target) {
