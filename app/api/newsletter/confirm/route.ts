@@ -125,7 +125,7 @@ async function sendLeadMagnetEmail0(email: string, unsubUrl: string) {
       <li>Co dělá olivový olej skutečně kvalitním (polyfenoly, kyselost)</li>
       <li>Jak číst etiketu — 5 klíčových údajů</li>
       <li>3 mýty, na které většina kupujících naletí</li>
-      <li>Olivátor Score — transparentní metodika hodnocení</li>
+      <li>Olivator Score — transparentní metodika hodnocení</li>
       <li>Nákupní checklist do kapsy</li>
     </ul>
     <p style="margin:0 0 8px;color:#878779;font-size:13px;line-height:1.6;">
@@ -142,7 +142,7 @@ async function sendLeadMagnetEmail0(email: string, unsubUrl: string) {
 </div>
 </body></html>`
 
-  const text = `Váš průvodce olivovým olejem je připraven!\n\nStáhněte si PDF průvodce:\n${PDF_URL}\n\nObsah:\n- Co dělá olivový olej skutečně kvalitním\n- Jak číst etiketu\n- 3 mýty o olivovém oleji\n- Olivátor Score — metodika\n- Nákupní checklist\n\nOdhlásit: ${unsubUrl}`
+  const text = `Váš průvodce olivovým olejem je připraven!\n\nStáhněte si PDF průvodce:\n${PDF_URL}\n\nObsah:\n- Co dělá olivový olej skutečně kvalitním\n- Jak číst etiketu\n- 3 mýty o olivovém oleji\n- Olivator Score — metodika\n- Nákupní checklist\n\nOdhlásit: ${unsubUrl}`
 
   await sendTransactionalEmail({
     to: email,

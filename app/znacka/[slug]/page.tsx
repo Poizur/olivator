@@ -210,11 +210,13 @@ export default async function BrandPage({ params }: { params: Promise<{ slug: st
       label: brand.hectares ? 'Hektary' : 'Cenové rozpětí',
       value: brand.hectares ? `${brand.hectares} ha` : formatPriceRange(kpis.priceRange),
     },
-    {
-      label: 'Pěstuje od',
-      value: brand.founded_year ? String(brand.founded_year) : '—',
-      hint: brand.generation ? `${brand.generation}. generace` : undefined,
-    },
+    ...(brand.founded_year
+      ? [{
+          label: 'Pěstuje od',
+          value: String(brand.founded_year),
+          hint: brand.generation ? `${brand.generation}. generace` : undefined,
+        }]
+      : []),
   ]
 
   const accordionSections = splitDescriptionToAccordion(brand.description_long)

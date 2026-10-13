@@ -166,7 +166,7 @@ export default function EditorialPolicyPage() {
           (kyselost, polyfenoly, Score) musí pocházet z ověřeného záznamu v databázi.
         </p>
         <p className="text-[15px] text-text2 leading-relaxed">
-          Olivátor Score je algoritmická metodika — ne subjektivní hodnocení.
+          Olivator Score je algoritmická metodika — ne subjektivní hodnocení.
           Výpočet je plně transparentní a popsaný na{' '}
           <Link href="/metodika" className="text-olive underline decoration-dotted">
             /metodika
