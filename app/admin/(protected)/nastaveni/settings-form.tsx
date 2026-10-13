@@ -106,6 +106,21 @@ export function SettingsForm({ initialValues, defs }: SettingsFormProps) {
           </label>
         </Field>
 
+        <Field label="Radar: automaticky zveřejňovat novinky" desc={defs.radar_auto_publish?.description}>
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={values.radar_auto_publish === true || values.radar_auto_publish === 'true'}
+              onChange={e => update('radar_auto_publish', e.target.checked)}
+            />
+            <span className="text-[13px] text-text2">
+              {values.radar_auto_publish === true || values.radar_auto_publish === 'true'
+                ? 'Zapnuto — prověřené zprávy vychází automaticky'
+                : 'Vypnuto — vše čeká v admin frontě'}
+            </span>
+          </label>
+        </Field>
+
         <Field label="Aktivní e-shopy" desc={defs.discovery_enabled_shops?.description}>
           <div className="flex flex-wrap gap-2">
             {KNOWN_SHOPS.map(s => (

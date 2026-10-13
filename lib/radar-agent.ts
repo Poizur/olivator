@@ -18,7 +18,9 @@ import { callClaude, extractText } from './anthropic'
 import { fetchArticleText } from './article-fetcher'
 import { searchUnsplash } from './unsplash'
 import { slugify } from './utils'
-import { findBannedPhrase } from './content-validator'
+import { resolveGoogleNewsUrl } from './google-news-url'
+import { evaluateRadarItem, checkCzechLanguage } from './radar-quality'
+import { getSetting } from './settings'
 
 // Klíčová slova pro filter — chceme jen zprávy které opravdu hýbou trhem.
 // Generic "olive oil" article projde přes RSS, ale bez signal nepublikujeme.
@@ -44,10 +46,6 @@ const BREAKING_SIGNALS: ReadonlyArray<string> = [
   'oleic', 'acidity', 'kyselost',
   'spain', 'italy', 'greece', 'croatia', 'řecko', 'itálie', 'španělsko', 'chorvatsko',
 ]
-
-// Option C: auto-publikovat POUZE badge typy s jasnou faktickou hodnotou + fullText + bez banned frází
-// Science/quality/news/recall → admin fronta (is_published=false)
-const AUTO_PUBLISH_BADGES = new Set(['harvest', 'price', 'award'])
 
 export interface RadarRunResult {
   feedsFetched: number
@@ -75,7 +73,7 @@ async function loadSeenIndex(): Promise<SeenIndex> {
   const { data } = await supabaseAdmin
     .from('agent_decisions')
     .select('payload, fingerprint, created_at')
-    .eq('decision_type', 'breaking_news_processed')
+    .in('decision_type', ['breaking_news_processed', 'breaking_news_dropped'])
     .gte('created_at', cutoff)
     .order('created_at', { ascending: false })
     .limit(200)
@@ -88,9 +86,10 @@ async function loadSeenIndex(): Promise<SeenIndex> {
   }
 
   for (const row of data ?? []) {
-    const payload = (row.payload as { title?: string; url?: string } | null) ?? {}
+    const payload = (row.payload as { title?: string; url?: string; source_url?: string } | null) ?? {}
     const title = (payload.title ?? '').trim()
     const url = (payload.url ?? '').trim()
+    if (payload.source_url) idx.urls.add(payload.source_url)
     const fp = (row.fingerprint as string | null) ?? ''
     if (url) idx.urls.add(url)
     if (title) idx.titlesLower.add(title.toLowerCase())
@@ -123,7 +122,7 @@ async function haikuSameStory(titleA: string, titleB: string): Promise<boolean> 
   }
 }
 
-interface TranslationResult {
+export interface TranslationResult {
   czechTitle: string
   czechSummary: string
   czechArticle: string
@@ -144,8 +143,8 @@ const TRANSLATION_PROMPT = (source: string, title: string, description: string, 
   `{\n` +
   `  "czech_title": "Nadpis česky, max 80 znaků, konkrétní (čísla, místo, dopad)",\n` +
   `  "czech_summary": "2-3 věty — stručné shrnutí pro listing card",\n` +
-  `  "czech_article": "Plnohodnotný článek 350-600 slov ve 4-6 odstavcích, oddělené \\n\\n. První odstavec = lead (kdo, co, kdy, kde). Další odstavce = kontext, čísla, citace, pozadí. Poslední odstavec = co to znamená pro českého spotřebitele/trh. Piš česky, plynule, novinářsky — ne jen překlad. Žádné marketingové fráze.",\n` +
-  `  "cz_context": "1 věta — konkrétní dopad na české ceny/dostupnost",\n` +
+  `  "czech_article": "Článek 150-450 slov ve 3-5 odstavcích, oddělené \\n\\n — délka podle toho, kolik faktů originál obsahuje, NEnafukuj. První odstavec = lead (kdo, co, kdy, kde). Další odstavce = čísla, citace, pozadí — VÝHRADNĚ z originálu. Žádné vlastní úvahy o dopadu na Česko. Piš česky, plynule, novinářsky. Žádné marketingové fráze.",\n` +
+  `  "cz_context": "1 věta o dopadu na ČR JEN pokud přímo plyne z faktů originálu (např. ceny v EU); jinak prázdný řetězec \\"\\"",\n` +
   `  "badge": "harvest|price|award|science|quality|news",\n` +
   `  "country_code": "Primární země článku — ISO kód: GR|IT|ES|HR|PT|TN|TR|US|MA|IL — nebo 'XX' (více zemí/global) nebo null (nezjistitelné)",\n` +
   `  "meta_title": "SEO title, max 60 znaků, klíčové slovo na začátku",\n` +
@@ -158,7 +157,9 @@ const TRANSLATION_PROMPT = (source: string, title: string, description: string, 
   `- Piš novinářsky: aktivní hlas, konkrétní čísla, jména, místa\n` +
   `- Pokud zdroj má citace, přelož je v uvozovkách s atribucí\n` +
   `- Vyhni se "podle zdroje", "uvádí článek" — piš jako bys to věděl sám\n` +
-  `- Český kontext patří JEN do cz_context a posledního odstavce, ne do leadu\n\n` +
+  `- FAKTA: každé jméno, číslo, místo a tvrzení musí být v originálu. Nic nedomýšlej, nic neodhaduj\n` +
+  `- Jména osob, firem a soutěží přepiš přesně jako v originálu\n` +
+  `- ŽÁDNÁ zdravotní tvrzení, která originál výslovně neuvádí\n\n` +
   `ZAKÁZANÁ SLOVA A CHYBY (kritická pravidla češtiny):\n` +
   `- "olivární" NEEXISTUJE — piš "olivový", "olivářský" nebo "výrobci olivového oleje"\n` +
   `- "Řecka slaví/radují/dominují" — "Řecka" je genitiv státu, ne množné číslo lidí. Piš "Řečtí producenti", "řečtí oliváři", "výrobci z Řecka"\n` +
@@ -188,7 +189,35 @@ const TRANSLATION_PROMPT = (source: string, title: string, description: string, 
   `- Špatné skloňování ("Řecka slaví" → "Řečtí producenti slaví")\n` +
   `Teprve po korektuře vrať finální JSON.`
 
-async function translateAndLocalize(item: RssItem, fullText: string | null): Promise<TranslationResult | null> {
+// Haiku občas (~1 z 6) vloží do češtiny cyrilici — jeden nový pokus, pak už rozhodne brána.
+export async function translateChecked(item: RssItem, fullText: string | null): Promise<TranslationResult | null> {
+  const first = await translateAndLocalize(item, fullText)
+  if (!first) return translateAndLocalize(item, fullText)
+  if (!first.isRelevant) return first
+  const text = [first.czechTitle, first.czechSummary, first.czechArticle, first.czContext].join('\n\n')
+  if (!checkCzechLanguage(text)) return first
+  return (await translateAndLocalize(item, fullText)) ?? first
+}
+
+// Haiku občas za JSON připíše zdůvodnění — vezmi jen první vyvážený objekt.
+function firstJsonObject(text: string): string {
+  const start = text.indexOf('{')
+  if (start < 0) return text
+  let depth = 0
+  let inString = false
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i]
+    if (inString) {
+      if (ch === '\\') i++
+      else if (ch === '"') inString = false
+    } else if (ch === '"') inString = true
+    else if (ch === '{') depth++
+    else if (ch === '}' && --depth === 0) return text.slice(start, i + 1)
+  }
+  return text
+}
+
+export async function translateAndLocalize(item: RssItem, fullText: string | null): Promise<TranslationResult | null> {
   try {
     const resp = await callClaude({
       model: 'claude-haiku-4-5-20251001',
@@ -197,7 +226,7 @@ async function translateAndLocalize(item: RssItem, fullText: string | null): Pro
       messages: [{ role: 'user', content: TRANSLATION_PROMPT(item.source, item.title, item.description, fullText) }],
     })
     const raw = extractText(resp).trim().replace(/^```(?:json)?\s*|\s*```$/g, '')
-    const data = JSON.parse(raw) as Partial<{
+    const data = JSON.parse(firstJsonObject(raw)) as Partial<{
       czech_title: string
       czech_summary: string
       czech_article: string
@@ -311,6 +340,7 @@ export async function runRadarAgent(opts: { hoursBack?: number; maxItems?: numbe
     console.log(`[radar] housekeeping: unpublished ${expiredRows!.length} expired items (>30 days)`)
   }
 
+  const autoPublish = await getSetting<boolean>('radar_auto_publish')
   const seen = await loadSeenIndex()
   const items = await fetchAllOliveFeeds(hoursBack)
   result.itemsTotal = items.length
@@ -374,11 +404,32 @@ export async function runRadarAgent(opts: { hoursBack?: number; maxItems?: numbe
   const topItems = afterHaiku.slice(0, maxItems)
 
   // Translate + save
-  for (const item of topItems) {
-    // Stáhni full article text z originálu (best effort, ~8s timeout)
-    const fullText = await fetchArticleText(item.url)
+  const logDropped = async (item: (typeof topItems)[number], reason: string, sourceUrl: string | null) => {
+    console.warn(`[radar] dropped "${item.title.slice(0, 50)}" — ${reason}`)
+    await supabaseAdmin.from('agent_decisions').insert({
+      agent_name: 'radar_agent',
+      decision_type: 'breaking_news_dropped',
+      payload: { title: item.title, url: item.url, source_url: sourceUrl, reason },
+      fingerprint: item.fingerprint,
+    })
+  }
 
-    const translation = await translateAndLocalize(item, fullText)
+  for (const item of topItems) {
+    // Google News vrací obálky — bez skutečné URL nejde ověřit ani uvést zdroj.
+    const sourceUrl = await resolveGoogleNewsUrl(item.url)
+    if (!sourceUrl) {
+      await logDropped(item, 'nedohledaná skutečná URL článku', null)
+      continue
+    }
+    if (sourceUrl !== item.url && seen.urls.has(sourceUrl)) continue
+
+    const fullText = await fetchArticleText(sourceUrl)
+    if (!fullText || fullText.length < 200) {
+      await logDropped(item, 'nepodařilo se stáhnout text originálu', sourceUrl)
+      continue
+    }
+
+    const translation = await translateChecked(item, fullText)
     if (!translation) {
       result.errors.push(`translate failed: ${item.title.slice(0, 50)}`)
       continue
@@ -388,24 +439,24 @@ export async function runRadarAgent(opts: { hoursBack?: number; maxItems?: numbe
       continue
     }
 
-    // Quality gate — Option C (L-037): auto-publish POUZE harvest/price/award + fullText + bez banned frází.
-    // Vše ostatní (science/quality/news, no fullText, banned phrase) → admin fronta.
-    const hasFullText = !!fullText && fullText.length > 200
-    const bannedPhrase = findBannedPhrase(translation.czechArticle)
-    const badgeAllowed = AUTO_PUBLISH_BADGES.has(translation.badge)
-    const isPublished = badgeAllowed && hasFullText && !bannedPhrase
-    if (!isPublished) {
-      const reason = !badgeAllowed
-        ? `badge='${translation.badge}' není v auto-publish sadě`
-        : !hasFullText
-          ? 'fullText chybí nebo příliš krátký'
-          : `banned phrase: ${bannedPhrase}`
-      console.warn(`[radar] quality gate → draft: "${item.title.slice(0, 50)}" — ${reason}`)
-    }
-
     result.itemsAfterRelevanceCheck++
 
     const badge = ALLOWED_BADGES.has(translation.badge) ? translation.badge : 'news'
+
+    const quality = await evaluateRadarItem({
+      sourceUrl,
+      fullText,
+      originalTitle: item.title,
+      badge,
+      czechTitle: translation.czechTitle,
+      czechSummary: translation.czechSummary,
+      czechArticle: translation.czechArticle,
+      czContext: translation.czContext,
+    })
+    const isPublished = autoPublish === true && quality.decision === 'publish'
+    if (!isPublished) {
+      console.warn(`[radar] quality gate → draft: "${item.title.slice(0, 50)}" — ${quality.reasons.join('; ')}`)
+    }
 
     // Hero image z Unsplash (best effort)
     const hero = await fetchHeroImage(translation.unsplashQuery, translation.czechTitle)
@@ -419,7 +470,7 @@ export async function runRadarAgent(opts: { hoursBack?: number; maxItems?: numbe
       .upsert(
         {
           source: item.source,
-          original_url: item.url,
+          original_url: sourceUrl,
           original_title: item.title,
           slug,
           czech_title: translation.czechTitle,
@@ -449,7 +500,7 @@ export async function runRadarAgent(opts: { hoursBack?: number; maxItems?: numbe
     await supabaseAdmin.from('agent_decisions').insert({
       agent_name: 'radar_agent',
       decision_type: 'breaking_news_processed',
-      payload: { title: item.title, url: item.url, badge },
+      payload: { title: item.title, url: item.url, source_url: sourceUrl, badge, quality: quality.decision, reasons: quality.reasons },
       fingerprint: item.fingerprint,
     })
 

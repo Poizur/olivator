@@ -10,6 +10,7 @@ export type SettingKey =
   | 'notification_email'
   | 'discovery_daily_limit'
   | 'discovery_auto_publish'
+  | 'radar_auto_publish'
   | 'discovery_enabled_shops'
   | 'discovery_schedule_cron'
   | 'cron_secret'
@@ -60,6 +61,11 @@ export const SETTINGS: Record<SettingKey, SettingDef<unknown>> = {
     key: 'discovery_auto_publish',
     default: true,
     description: 'Auto-publikovat HIGH-confidence nálezy bez ručního schválení',
+  },
+  radar_auto_publish: {
+    key: 'radar_auto_publish',
+    default: false,
+    description: 'Radar (/novinky): zveřejňovat automaticky zprávy, které projdou kontrolami a reviewerem. Vypnuto = vše jde do admin fronty. Zdravotní studie nikdy automaticky.',
   },
   discovery_enabled_shops: {
     key: 'discovery_enabled_shops',
