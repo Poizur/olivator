@@ -19,7 +19,7 @@ import { fetchArticleText } from './article-fetcher'
 import { searchUnsplash } from './unsplash'
 import { slugify } from './utils'
 import { resolveGoogleNewsUrl } from './google-news-url'
-import { evaluateRadarItem, checkCzechLanguage } from './radar-quality'
+import { evaluateRadarItem, checkCzechLanguage, looksLikeHealthStory } from './radar-quality'
 import { getSetting } from './settings'
 
 // Klíčová slova pro filter — chceme jen zprávy které opravdu hýbou trhem.
@@ -166,7 +166,9 @@ const TRANSLATION_PROMPT = (source: string, title: string, description: string, 
   `- "celosvětová soutěž" — příliš vágní. Piš konkrétní název: NYIOOC, World Olive Oil Competition atd.\n` +
   `- "Puljský/Puljská" — správně "apulský/apulská" (Puglia = Apulie česky)\n` +
   `- ŽÁDNÉ cyrilické znaky — pouze latinika s háčky a čárkami\n` +
-  `- ŽÁDNÉ marketingové fráze: "prémiový zážitek", "expanzivně rozrůstá", "rostoucí povědomí"\n\n` +
+  `- Uvozovky uvnitř textu VÝHRADNĚ české „takto“ — nikdy rovné " (rozbijí JSON)\n` +
+  `- ŽÁDNÉ marketingové fráze: "prémiový zážitek", "expanzivně rozrůstá", "rostoucí povědomí"\n` +
+  `- NEPOUŽÍVEJ slova "prémiový/prémiová/prémiové" ani "výjimečný/výjimečná/výjimečné" — ani jako překlad "premium"/"exceptional". Popiš věcně, co originál uvádí (ocenění, kategorie, čísla); název produktové řady ponech v originále\n\n` +
   `Zpráva:\n` +
   `Zdroj: ${source}\n` +
   `Titulek: ${title}\n` +
@@ -190,6 +192,9 @@ const TRANSLATION_PROMPT = (source: string, title: string, description: string, 
   `Teprve po korektuře vrať finální JSON.`
 
 // Haiku občas (~1 z 6) vloží do češtiny cyrilici — jeden nový pokus, pak už rozhodne brána.
+// Překlad jen pro zprávy po předfiltru (skutečná URL + text + ne zdraví), proto Sonnet.
+export const RADAR_TRANSLATION_MODEL = 'claude-sonnet-4-6'
+
 export async function translateChecked(item: RssItem, fullText: string | null): Promise<TranslationResult | null> {
   const first = await translateAndLocalize(item, fullText)
   if (!first) return translateAndLocalize(item, fullText)
@@ -197,6 +202,15 @@ export async function translateChecked(item: RssItem, fullText: string | null): 
   const text = [first.czechTitle, first.czechSummary, first.czechArticle, first.czContext].join('\n\n')
   if (!checkCzechLanguage(text)) return first
   return (await translateAndLocalize(item, fullText)) ?? first
+}
+
+// Model občas zavře české „uvozovky" rovnou uvozovkou → nevalidní JSON. Oprav jen tento vzor.
+function parseTranslationJson(text: string): unknown {
+  try {
+    return JSON.parse(text)
+  } catch {
+    return JSON.parse(text.replace(/„([^"„“]{1,1500})"/g, '„$1“'))
+  }
 }
 
 // Haiku občas za JSON připíše zdůvodnění — vezmi jen první vyvážený objekt.
@@ -220,13 +234,13 @@ function firstJsonObject(text: string): string {
 export async function translateAndLocalize(item: RssItem, fullText: string | null): Promise<TranslationResult | null> {
   try {
     const resp = await callClaude({
-      model: 'claude-haiku-4-5-20251001',
+      model: RADAR_TRANSLATION_MODEL,
       max_tokens: 2500,
       system: 'Jsi redaktor olivator.cz. Píšeš česky, novinářsky, věcně. Vracíš jen validní JSON.',
       messages: [{ role: 'user', content: TRANSLATION_PROMPT(item.source, item.title, item.description, fullText) }],
     })
     const raw = extractText(resp).trim().replace(/^```(?:json)?\s*|\s*```$/g, '')
-    const data = JSON.parse(firstJsonObject(raw)) as Partial<{
+    const data = parseTranslationJson(firstJsonObject(raw)) as Partial<{
       czech_title: string
       czech_summary: string
       czech_article: string
@@ -426,6 +440,10 @@ export async function runRadarAgent(opts: { hoursBack?: number; maxItems?: numbe
     const fullText = await fetchArticleText(sourceUrl)
     if (!fullText || fullText.length < 200) {
       await logDropped(item, 'nepodařilo se stáhnout text originálu', sourceUrl)
+      continue
+    }
+    if (looksLikeHealthStory(item.title, item.description)) {
+      await logDropped(item, 'zdravotní téma — nepřekládá se', sourceUrl)
       continue
     }
 

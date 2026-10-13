@@ -8,7 +8,7 @@ import { writeFileSync } from 'node:fs'
 import { supabaseAdmin } from '@/lib/supabase'
 import { resolveGoogleNewsUrl } from '@/lib/google-news-url'
 import { fetchArticleText } from '@/lib/article-fetcher'
-import { evaluateRadarItem, fullTextMatchesTitle } from '@/lib/radar-quality'
+import { evaluateRadarItem, fullTextMatchesTitle, looksLikeHealthStory } from '@/lib/radar-quality'
 import { translateChecked, type TranslationResult } from '@/lib/radar-agent'
 
 const APPLY = process.argv.includes('--apply')
@@ -46,7 +46,7 @@ async function evaluate(row: Row): Promise<Outcome> {
   if (row.original_title && !fullTextMatchesTitle(fullText, row.original_title)) {
     return { ...base, sourceUrl, decision: 'drop', reasons: ['stažený text neodpovídá článku (asi jen navigace webu)'] }
   }
-  if (row.badge === 'science') {
+  if (row.badge === 'science' || looksLikeHealthStory(row.original_title ?? '')) {
     return { ...base, sourceUrl, decision: 'draft', reasons: ['zdravotní studie — vždy ruční schválení'] }
   }
   if (Date.now() - new Date(row.published_at).getTime() > PUBLISH_WINDOW_MS) {

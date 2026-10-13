@@ -39,6 +39,13 @@ export function checkCzechLanguage(text: string): string | null {
   return null
 }
 
+// Zdravotní zprávy (YMYL) se ani nepřekládají — rozhoduje se z originálního titulku a popisu.
+const HEALTH_SIGNALS = /\b(health\w*|stud(y|ies)|research\w*|diet\w*|heart|cardio\w*|cancer|brain|alzheimer\w*|dementia|diabet\w*|cholesterol|blood pressure|obes\w*|weight loss|longevity|live longer|disease\w*|patients?|acne|gut|inflammat\w*|zdrav\w*|studie|výzkum\w*|diet[ay]\w*|nemoc\w*|rakovin\w*|srdc\w*)\b/i
+
+export function looksLikeHealthStory(title: string, description = ''): boolean {
+  return HEALTH_SIGNALS.test(`${title} ${description}`)
+}
+
 // Stahovač někdy vrátí jen navigaci webu — článek pak v textu vůbec není.
 export function fullTextMatchesTitle(fullText: string, title: string): boolean {
   // Google News přidává " - Vydavatel" — jméno média v textu článku nebývá

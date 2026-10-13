@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getRankings, getRankingBySlug as getStaticRankingBySlug } from '@/lib/static-content'
 import { getActiveRankings, getRankingBySlug as getDbRankingBySlug } from '@/lib/rankings-db'
-import { getProductsBySlugs, getCheapestOffer } from '@/lib/data'
+import { getProductsBySlugs, getOffersForProduct } from '@/lib/data'
 import { ListCard } from '@/components/list-card'
 import { breadcrumbSchema, faqSchema } from '@/lib/schema'
 
@@ -79,8 +79,22 @@ export default async function RankingDetailPage({ params }: { params: Promise<{ 
   const ranking = await loadRanking(slug)
   if (!ranking) notFound()
 
-  const products = await getProductsBySlugs(ranking.productSlugs)
-  const offers = await Promise.all(products.map(p => getCheapestOffer(p.id)))
+  // Pořadí jen z dostupných: aktivní, s Score, nabídka skladem s funkčním odkazem.
+  // Řazení podle Score (stabilní vůči kurátorskému pořadí při shodě).
+  const listed = await getProductsBySlugs(ranking.productSlugs)
+  const candidates = await Promise.all(
+    listed.map(async (p) => {
+      const offers = await getOffersForProduct(p.id)
+      const offer = offers.find((o) => o.inStock && (o.affiliateUrl || o.productUrl)) ?? null
+      return { p, offer }
+    }),
+  )
+  const available = candidates
+    .filter(({ p, offer }) => offer && p.status === 'active' && p.olivatorScore != null && p.olivatorScore > 0)
+    .sort((a, b) => b.p.olivatorScore! - a.p.olivatorScore!)
+  const products = available.map((c) => c.p)
+  const offers = available.map((c) => c.offer!)
+  const fewAvailable = listed.length > 0 && products.length < 3
 
   const breadcrumbs = breadcrumbSchema([
     { name: 'Olivátor', url: '/' },
@@ -164,7 +178,7 @@ export default async function RankingDetailPage({ params }: { params: Promise<{ 
         {ranking.description && (
           <p className="text-[15px] text-text2 font-light">{ranking.description}</p>
         )}
-        {products.length > 0 && products[0].olivatorScore != null && (
+        {!fewAvailable && products.length > 0 && (
           <p className="text-[15px] text-text mt-3 leading-relaxed">
             {'Aktuálně nejlepší volbou je '}
             <a href={`/olej/${products[0].slug}`} className="text-olive font-medium hover:underline">
@@ -174,14 +188,18 @@ export default async function RankingDetailPage({ params }: { params: Promise<{ 
             {products[0].polyphenols != null && `, ${products[0].polyphenols.toLocaleString('cs-CZ')} mg/kg polyfenolů`}
             {')'}
             {offers[0] != null && (
-              <>{` — od ${Math.round(offers[0].price)} Kč u ${offers[0].retailer.name}`}</>
+              <>{` — za ${Math.round(offers[0].price)} Kč u ${offers[0].retailer.name}`}</>
             )}
             {'.'}
           </p>
         )}
       </div>
 
-      {products.length === 0 ? (
+      {fewAvailable ? (
+        <div className="bg-off/40 border border-off2 rounded-xl p-6 text-center">
+          <p className="text-[14px] text-text2">Část olejů je dočasně vyprodaná.</p>
+        </div>
+      ) : products.length === 0 ? (
         <div className="bg-off/40 border border-off2 rounded-xl p-10 text-center">
           <h2 className="text-[16px] font-medium text-text mb-2">Žebříček se právě sestavuje</h2>
           <p className="text-[13px] text-text3 max-w-[400px] mx-auto">

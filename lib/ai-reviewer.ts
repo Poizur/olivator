@@ -39,7 +39,15 @@ async function callOnce(prompt: string): Promise<ReviewResult> {
   if (first < 0 || last <= first) {
     throw new Error(`Reviewer response is not JSON: ${text.slice(0, 120)}`)
   }
-  const parsed = JSON.parse(text.slice(first, last + 1)) as {
+  const body = text.slice(first, last + 1)
+  let json: unknown
+  try {
+    json = JSON.parse(body)
+  } catch {
+    // české „citace" zavřené rovnou uvozovkou rozbijí JSON — oprav jen tento vzor
+    json = JSON.parse(body.replace(/„([^"„“]{1,1500})"/g, '„$1“'))
+  }
+  const parsed = json as {
     verdict?: string
     issues?: Array<{ rule?: string; severity?: string; detail?: string }>
     summary?: string
