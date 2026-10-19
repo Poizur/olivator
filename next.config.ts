@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
   staticPageGenerationTimeout: 180,
   async redirects() {
     return [
+      // Sloučení /pruvodce × /zebricek (2026-10-19): kanonická verze podle GSC
+      { source: '/pruvodce/nejlepsi-recky-olivovy-olej', destination: '/zebricek/nejlepsi-recky-olivovy-olej', statusCode: 301 },
+      { source: '/pruvodce/nejlepsi-bio-olivovy-olej', destination: '/zebricek/nejlepsi-bio-olivovy-olej', statusCode: 301 },
+      { source: '/pruvodce/nejlepsi-olivovy-olej-na-vareni', destination: '/zebricek/nejlepsi-olivovy-olej-na-vareni', statusCode: 301 },
+      { source: '/zebricek/nejlepsi-olivovy-olej-5l', destination: '/pruvodce/nejlepsi-olivovy-olej-5l', statusCode: 301 },
       // B2: 2025 → 2026 (ranking přejmenován 2026-07-27)
       { source: '/zebricek/nejlepsi-olivovy-olej-2025', destination: '/zebricek/nejlepsi-olivovy-olej-2026', permanent: true },
       // B1: deaktivované kratší duplikáty → kanonická URL (2026-07-27)

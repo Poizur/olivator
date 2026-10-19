@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
-import { getArticles, getRankings } from '@/lib/static-content'
+import { getArticles } from '@/lib/static-content'
+import { getActiveRankings } from '@/lib/rankings-db'
 import { supabaseAdmin } from '@/lib/supabase'
 import { getActiveTerms } from '@/lib/glossary-db'
 
@@ -58,9 +59,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }))
 
-  // Rankings jsou statický seznam v lib/static-content.ts — bez updated_at.
-  // Použij buildTime (refresh při deployi nového rankingu).
-  const rankingPages: MetadataRoute.Sitemap = getRankings().map(r => ({
+  // Žebříčky z DB (status=active) — statický seznam obsahoval jen staré přesměrované slugy.
+  const rankingPages: MetadataRoute.Sitemap = (await getActiveRankings()).map(r => ({
     url: `${baseUrl}/zebricek/${r.slug}`,
     lastModified: buildTime,
     changeFrequency: 'weekly' as const,

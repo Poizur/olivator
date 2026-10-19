@@ -265,11 +265,45 @@ async function collectGit(): Promise<object> {
   }
 }
 
+const DEDUPE_WINDOW_DAYS = 60
+
+// Pojistka i mimo prompt: oslovování obchodníků kvůli provizím majitel zakázal (2026-10-19).
+function isCommissionOutreach(title: string, category: string | null | undefined): boolean {
+  return /(jednán|oslov|naváz|rozjet|zahájit).*(proviz|affiliate|dohod|smlouv)|(proviz|affiliate).*(jednán|oslov|dohod|smlouv)/i.test(title)
+    && /affiliate|proviz/i.test(`${category ?? ''} ${title}`)
+}
+
+function titleTokens(t: string): Set<string> {
+  return new Set(t.toLowerCase().replace(/[^\p{L}\s]/gu, ' ').split(/\s+/).filter((w) => w.length > 3))
+}
+
+function titleSimilarity(a: string, b: string): number {
+  const A = titleTokens(a), B = titleTokens(b)
+  if (!A.size || !B.size) return 0
+  let inter = 0
+  for (const w of A) if (B.has(w)) inter++
+  return inter / (A.size + B.size - inter)
+}
+
+async function blockedDecisionTitles(): Promise<string[]> {
+  const since = new Date(Date.now() - DEDUPE_WINDOW_DAYS * 86400000).toISOString()
+  const { data } = await supabaseAdmin
+    .from('weekly_decisions').select('title, admin_choice, decided_at')
+    .or(`admin_choice.is.null,and(admin_choice.eq.NE,decided_at.gte.${since})`)
+  return (data ?? []).map((d) => d.title as string)
+}
+
 async function collectPendingDecisions(): Promise<object> {
-  const { data: pending } = await supabaseAdmin
-    .from('weekly_decisions').select('title, priority, category, created_at')
-    .is('admin_choice', null).order('created_at', { ascending: false }).limit(10)
+  const since = new Date(Date.now() - DEDUPE_WINDOW_DAYS * 86400000).toISOString()
+  const [{ data: pending }, { data: rejected }] = await Promise.all([
+    supabaseAdmin
+      .from('weekly_decisions').select('title, priority, category, created_at')
+      .is('admin_choice', null).order('created_at', { ascending: false }).limit(10),
+    supabaseAdmin
+      .from('weekly_decisions').select('title').eq('admin_choice', 'NE').gte('decided_at', since).limit(40),
+  ])
   return {
+    recentlyRejectedTitles: (rejected ?? []).map((d) => d.title as string),
     count: pending?.length ?? 0,
     items: (pending ?? []).map((d) => ({
       title: d.title, priority: d.priority, category: d.category,
@@ -682,6 +716,8 @@ PRAVIDLA:
 - recommended_option musí být jedno z: "ANO", "NE", "ODLOŽIT".
 - affiliate nabídky: rozlišuj "opravitelné Executorem" (retailer má eHUB tracking) vs. "bez affiliate programu". Celkové číslo bez affiliate neznamená ztracený revenue — většina jsou retaileři bez affiliate programu (viz L-010).
 - executor_rule: pokud kategorie="affiliate" a chceš spustit opravu affiliate URL, uveď "fix_affiliate_url". Pokud kategorie="catalog" nebo "katalog" nebo "product" a chceš přepočítat skóre, uveď "recalc_score". Ve všech ostatních případech uveď null. NIKDY nevymýšlej jiné hodnoty — executor_rule smí být VÝHRADNĚ: "fix_affiliate_url", "recalc_score", nebo null.
+- NIKDY nenavrhuj oslovení obchodníků ani jednání o provizi / affiliate dohodě (platí i pro Řecko nás baví — majitel je strýc a provize je vyřešená). Výjimka jen pokud se obchodník ozval sám (nová poptávka z /pro-prodejce).
+- DUPLICITY: nenavrhuj rozhodnutí, které už je v ČEKAJÍCÍ ROZHODNUTÍ (pendingDecisions.items) nebo v pendingDecisions.recentlyRejectedTitles — ani přeformulované.
 - KARANTÉNNÍ RETAILEŘI: retaileři v karanténě (viz sekce Retaileři výše) čekají na legalizaci smluv. Jejich prázdné nabídky a neaktualizované ceny jsou ZÁMĚR — NEDOPORUČUJ jejich opravu. Místo toho sleduj postup legalizace. Karanténní retailer ve "nasel" ani "rozhodnuti" nesmí figurovat jako "problém k opravě".`
 }
 
@@ -998,7 +1034,12 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
 
   if (briefJson?.rozhodnuti?.length) {
     const VALID_EXECUTOR_RULES = ['fix_affiliate_url', 'recalc_score']
-    const rows = briefJson.rozhodnuti.map((d) => ({
+    const blocked = await blockedDecisionTitles()
+    const fresh = briefJson.rozhodnuti.filter((d) => {
+      if (isCommissionOutreach(d.title, d.category)) return false
+      return !blocked.some((t) => titleSimilarity(t, d.title) >= 0.5)
+    })
+    const rows = fresh.map((d) => ({
       brief_id: briefId,
       decision_key: d.key,
       title: d.title,
@@ -1009,7 +1050,10 @@ export async function generateExecutiveBrief(opts: { dryRun?: boolean; testFailO
       category: d.category,
       executor_rule: VALID_EXECUTOR_RULES.includes(d.executor_rule ?? '') ? d.executor_rule : null,
     }))
-    await supabaseAdmin.from('weekly_decisions').upsert(rows, { onConflict: 'brief_id,decision_key' })
+    if (rows.length) await supabaseAdmin.from('weekly_decisions').upsert(rows, { onConflict: 'brief_id,decision_key' })
+    if (rows.length < briefJson.rozhodnuti.length) {
+      console.log(`[executive-director] vyřazeno ${briefJson.rozhodnuti.length - rows.length} rozhodnutí (duplicita nebo oslovení kvůli provizi)`)
+    }
   }
 
   console.log(`[executive-director] Brief ${weekLabel} uložen (id=${briefId}, decisions=${briefJson?.rozhodnuti?.length ?? 0})`)
