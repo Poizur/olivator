@@ -6,6 +6,8 @@
 // Pro weekly: vyber data z block generators, vyrender React Email template
 // → HTML, AI generuje subject + preheader + intro hook.
 
+import { recentlySentFamilies } from './newsletter-dedupe'
+import { oilFamilyKey } from './oil-family'
 import { render } from '@react-email/render'
 import { callClaude, extractText } from './anthropic'
 import { supabaseAdmin } from './supabase'
@@ -223,6 +225,14 @@ export async function composeWeeklyDraft(): Promise<ComposedDraft> {
     }
   }
 
+  // Oleje (rodiny napříč baleními) odeslané za posledních 30 dní nevybírat znovu
+  const sentFamilies = await recentlySentFamilies()
+  if (sentFamilies.size > 0) {
+    const { data: active } = await supabaseAdmin.from('products').select('id, name').eq('status', 'active')
+    for (const p of active ?? []) if (sentFamilies.has(oilFamilyKey(p.name as string))) recentlyFeaturedIds.push(p.id as string)
+  }
+  const familyBlocked = new Set(recentlyFeaturedIds)
+
   // 2. Pick blocks (parallel)
   // Deals threshold 5 % — pro malou DB s krátkou price history. Až bude
   // dostatek dat, nastav vyšší (10-15 %) v admin/newsletter/settings.
@@ -238,7 +248,7 @@ export async function composeWeeklyDraft(): Promise<ComposedDraft> {
 
   // Vyhneme se duplikaci
   const excludeIds = [oilOfWeek?.productId, tipProduct?.productId].filter(Boolean) as string[]
-  const filteredDeals = deals.filter((d) => !excludeIds.includes(d.productId))
+  const filteredDeals = deals.filter((d) => !excludeIds.includes(d.productId) && !familyBlocked.has(d.productId))
 
   // Fallback tipy — zobrazí se jen když žádné reálné slevy nejsou
   const dealsFiltered = filteredDeals.slice(0, 5)
@@ -251,7 +261,7 @@ export async function composeWeeklyDraft(): Promise<ComposedDraft> {
     tipProduct,
     deals: dealsFiltered,
     valuePicks,
-    newArrival: newArrival && !excludeIds.includes(newArrival.productId) ? newArrival : null,
+    newArrival: newArrival && !excludeIds.includes(newArrival.productId) && !familyBlocked.has(newArrival.productId) ? newArrival : null,
     recipe,
     fact,
   }
@@ -272,9 +282,11 @@ export async function composeWeeklyDraft(): Promise<ComposedDraft> {
   })
 
   // 4. Render React Email → HTML + plaintext
+  const { count: retailerCount } = await supabaseAdmin.from('retailers').select('id', { count: 'exact', head: true }).eq('is_active', true)
   const element = React.createElement(WeeklyEmail, {
     preheader,
     hook,
+    retailerCount: retailerCount ?? 0,
     blocks,
     unsubscribeUrl: '{{UNSUBSCRIBE_URL}}', // placeholder, nahrazuje se per recipient v sender
   })

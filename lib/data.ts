@@ -188,7 +188,7 @@ const PRODUCT_LISTING_COLUMNS =
 
 // Retailer subset pro offers join — vyloučeno: story (long text), xml_feed_*
 const RETAILER_PUBLIC_COLUMNS =
-  'id, name, slug, domain, affiliate_network, default_commission_pct, ' +
+  'id, name, slug, domain, affiliate_network, affiliate_ends_at, default_commission_pct, ' +
   'is_active, market, rating, rating_count, rating_source, ' +
   'tagline, founders, headquarters, founded_year, specialization, logo_url, ' +
   // Shipping/return data pro Google Merchant Listings rich snippet
@@ -325,8 +325,8 @@ export const getProductsWithOffers = cache(async (): Promise<Array<Product & { c
       currency: (row.currency as string) ?? 'CZK',
       inStock: (row.in_stock as boolean) ?? true,
       productUrl: (row.product_url as string) ?? '',
-      affiliateUrl: (row.affiliate_url as string) ?? '',
-      commissionPct: Number(row.commission_pct ?? 0),
+      affiliateUrl: affiliateActive(row.retailer) ? ((row.affiliate_url as string) ?? '') : '',
+      commissionPct: affiliateActive(row.retailer) ? Number(row.commission_pct ?? 0) : 0,
       pagePrice: row.page_price != null ? Number(row.page_price) : undefined,
       priceMismatch: (row.price_mismatch as boolean) ?? false,
       manualOverride: (row.manual_override as boolean) ?? false,
@@ -360,6 +360,12 @@ export function offerDisplayPrice(offer: ProductOffer): number {
 // Affiliate-priority sort: pokud má affiliate nabídka cenu do 5 % nad nejlevnější,
 // dostane přednost před non-affiliate. Ceny všech nabídek zůstávají viditelné.
 // Viz CLAUDE.md sekce 9: "Preferuj vyšší komisi při srovnatelné ceně (±5%)".
+// Po konci affiliate programu (retailers.affiliate_ends_at) se nabídka řadí jako bez provize — zobrazuje se dál.
+function affiliateActive(retailer: unknown): boolean {
+  const ends = (retailer as { affiliate_ends_at?: string | null } | null)?.affiliate_ends_at
+  return !ends || new Date(ends) > new Date()
+}
+
 export function sortOffersAffiliate(offers: ProductOffer[]): ProductOffer[] {
   if (offers.length <= 1) return offers
   const cheapestPrice = Math.min(...offers.map(o => o.price))
@@ -395,8 +401,8 @@ export async function getOffersForProduct(productId: string): Promise<ProductOff
       currency: (row.currency as string) ?? 'CZK',
       inStock: (row.in_stock as boolean) ?? true,
       productUrl: (row.product_url as string) ?? '',
-      affiliateUrl: (row.affiliate_url as string) ?? '',
-      commissionPct: Number(row.commission_pct ?? 0),
+      affiliateUrl: affiliateActive(row.retailer) ? ((row.affiliate_url as string) ?? '') : '',
+      commissionPct: affiliateActive(row.retailer) ? Number(row.commission_pct ?? 0) : 0,
       pagePrice: row.page_price != null ? Number(row.page_price) : undefined,
       priceMismatch: (row.price_mismatch as boolean) ?? false,
       manualOverride: (row.manual_override as boolean) ?? false,
@@ -1725,6 +1731,8 @@ export async function getBestsellers(opts: { limit?: number } = {}): Promise<Arr
     .from('affiliate_clicks')
     .select('product_id')
     .gte('clicked_at', thirtyDaysAgo)
+    .eq('is_test', false)
+    .eq('unverified', false)
 
   const clickCounts = new Map<string, number>()
   for (const row of (clicks ?? [])) {

@@ -65,6 +65,8 @@ async function getClickStats(): Promise<{
     .from('affiliate_clicks')
     .select('clicked_at, product_id')
     .gte('clicked_at', startPrev.toISOString())
+    .eq('is_test', false)
+    .eq('unverified', false)
 
   const clicks = rows ?? []
   const last = clicks.filter((c) => new Date(c.clicked_at as string) >= start7)

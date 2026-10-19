@@ -41,7 +41,7 @@ async function loadProductCatalog(keyword: string): Promise<string> {
   const kw = keyword.toLowerCase()
   let query = supabaseAdmin
     .from('products')
-    .select(`slug, name, olivator_score, polyphenols, acidity, volume_ml, certifications, origin_country, product_offers!inner(retailers!inner(base_tracking_url, slug))`)
+    .select(`slug, name, olivator_score, polyphenols, acidity, volume_ml, certifications, origin_country, product_offers!inner(in_stock, product_url, retailers!inner(is_active, slug))`)
     .eq('status', 'active')
     .eq('type', 'evoo')
     .limit(15)
@@ -63,13 +63,14 @@ async function loadProductCatalog(keyword: string): Promise<string> {
   const { data, error } = await query
   if (error) throw new Error('ProductCatalog: ' + error.message)
 
-  const withAffiliate = (data ?? []).filter((p: any) =>
-    (p.product_offers as any[]).some((o: any) => o.retailers?.base_tracking_url)
+  // Funkční odkaz = olej jde koupit; affiliate síť o zobrazení nerozhoduje.
+  const buyable = (data ?? []).filter((p: any) =>
+    (p.product_offers as any[]).some((o: any) => o.in_stock && o.product_url && o.retailers?.is_active)
   )
 
-  return withAffiliate.slice(0, 8).map((p: any) =>
+  return buyable.slice(0, 8).map((p: any) =>
     `${p.slug} | ${p.name} | score: ${p.olivator_score} | kyselost: ${p.acidity ?? '?'}% | polyfenoly: ${p.polyphenols ?? '?'} mg/kg | cert: ${JSON.stringify(p.certifications)} | země: ${p.origin_country}`
-  ).join('\n') || '(žádné produkty s eHUB affiliate)'
+  ).join('\n') || '(žádné dostupné produkty)'
 }
 
 async function loadLearnings(): Promise<string> {

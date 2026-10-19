@@ -11,6 +11,7 @@
 //  - Při 100+ subscribers: použít Resend Broadcasts API (taktéž má per-recipient
 //    personalizaci přes merge tags) — později.
 
+import { draftProductIds, familiesOf, recentFamiliesBySignup } from './newsletter-dedupe'
 import { supabaseAdmin } from './supabase'
 
 interface SendResult {
@@ -29,6 +30,7 @@ interface DraftRow {
   text_body: string | null
   status: string
   audience_filter: Record<string, unknown> | null
+  blocks: Record<string, unknown> | null
 }
 
 interface SignupRow {
@@ -97,7 +99,7 @@ export async function sendDraft(draftId: string): Promise<SendResult> {
   }
 
   // Filter: jen ti kdo mají preferenci pro tenhle campaign type
-  const targets = ((signups ?? []) as SignupRow[]).filter((s) => {
+  let targets = ((signups ?? []) as SignupRow[]).filter((s) => {
     const prefs = s.preferences ?? { weekly: true, deals: true, harvest: false, alerts: false }
     return prefs[prefKey] === true
   })
@@ -108,6 +110,19 @@ export async function sendDraft(draftId: string): Promise<SendResult> {
       .update({ status: 'sent', recipient_count: 0 })
       .eq('id', draftId)
     return { ok: true, totalSent: 0, totalFailed: 0, errors: ['No matching recipients'] }
+  }
+
+  // Stejný olej (i v jiném balení) stejnému odběrateli max 1× za 30 dní
+  const draftFamilies = new Set((await familiesOf(draftProductIds(d.blocks))).values())
+  if (draftFamilies.size > 0) {
+    const already = await recentFamiliesBySignup(targets.map((t) => t.id))
+    const before = targets.length
+    targets = targets.filter((t) => ![...(already.get(t.id) ?? [])].some((f) => draftFamilies.has(f)))
+    if (targets.length < before) console.log(`[newsletter-sender] přeskočeno ${before - targets.length} odběratelů — stejný olej dostali do 30 dní`)
+    if (targets.length === 0) {
+      await supabaseAdmin.from('newsletter_drafts').update({ status: 'failed' }).eq('id', draftId)
+      return { ok: false, totalSent: 0, totalFailed: 0, errors: ['Všichni odběratelé dostali stejný olej v posledních 30 dnech'] }
+    }
   }
 
   // 4. Loop send (Resend rate limit: 10/sec na free tier)
@@ -128,8 +143,9 @@ export async function sendDraft(draftId: string): Promise<SendResult> {
   for (const signup of targets) {
     // Personalizuj HTML — nahraď placeholder pro unsubscribe URL
     const unsubUrl = `${SITE_URL}/api/newsletter/unsubscribe?token=${signup.unsubscribe_token ?? ''}`
-    const personalizedHtml = d.html_body.replace(/\{\{UNSUBSCRIBE_URL\}\}/g, unsubUrl)
-    const personalizedText = (d.text_body ?? '').replace(/\{\{UNSUBSCRIBE_URL\}\}/g, unsubUrl)
+    const prefsUrl = `${SITE_URL}/newsletter/nastaveni?token=${signup.unsubscribe_token ?? ''}`
+    const personalizedHtml = d.html_body.replace(/\{\{UNSUBSCRIBE_URL\}\}/g, unsubUrl).replace(/\{\{PREFERENCES_URL\}\}/g, prefsUrl)
+    const personalizedText = (d.text_body ?? '').replace(/\{\{UNSUBSCRIBE_URL\}\}/g, unsubUrl).replace(/\{\{PREFERENCES_URL\}\}/g, prefsUrl)
 
     // Pre-create send row
     const { data: sendRow } = await supabaseAdmin
@@ -287,9 +303,8 @@ export async function sendTestEmail(opts: {
   return sendEmailViaResend({
     ...opts,
     subject: `[TEST] ${opts.subject}`,
-    html: opts.html.replace(
-      /\{\{UNSUBSCRIBE_URL\}\}/g,
-      `${SITE_URL}/api/newsletter/unsubscribe?token=test`
-    ),
+    html: opts.html
+      .replace(/\{\{UNSUBSCRIBE_URL\}\}/g, `${SITE_URL}/api/newsletter/unsubscribe?token=test`)
+      .replace(/\{\{PREFERENCES_URL\}\}/g, `${SITE_URL}/newsletter/nastaveni?token=test`),
   })
 }

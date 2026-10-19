@@ -32,6 +32,8 @@ async function buildUrlList(): Promise<string[]> {
   const { data: topProducts } = await supabaseAdmin
     .from('affiliate_clicks')
     .select('product_id')
+    .eq('is_test', false)
+    .eq('unverified', false)
     .order('clicked_at', { ascending: false })
     .limit(200)
 

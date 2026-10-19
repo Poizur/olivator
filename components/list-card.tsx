@@ -16,9 +16,35 @@ interface ListCardProps {
   compact?: boolean
   /** Per-segment value badge (server-computed): "★ Nejlepší hodnota do 200 Kč" etc. */
   segmentBadge?: string | null
+  /** Další dostupná balení stejného oleje (žebříčky: jeden olej = jedno místo). */
+  variants?: Array<{ slug: string; volumeMl: number; price: number }>
 }
 
-export function ListCard({ product, offer, rank, compact = false, segmentBadge }: ListCardProps) {
+function formatVolume(ml: number): string {
+  return ml >= 1000 && ml % 1000 === 0 ? `${ml / 1000} l` : ml >= 1000 ? `${(ml / 1000).toLocaleString('cs-CZ')} l` : `${ml} ml`
+}
+
+function VariantsRow({ variants, currentSlug }: { variants: NonNullable<ListCardProps['variants']>; currentSlug: string }) {
+  if (variants.length < 2) return null
+  return (
+    <div className="flex flex-wrap items-center gap-1 mt-1.5" onClick={(e) => e.stopPropagation()}>
+      <span className="text-[10px] text-text3 uppercase tracking-wider mr-0.5">Balení</span>
+      {variants.map((v) => (
+        <Link
+          key={v.slug}
+          href={`/olej/${v.slug}`}
+          className={`text-[11px] px-2 py-0.5 rounded-md border tabular-nums ${
+            v.slug === currentSlug ? 'border-olive text-olive-dark bg-olive-bg' : 'border-off2 text-text2 hover:border-olive-light'
+          }`}
+        >
+          {formatVolume(v.volumeMl)} · {formatPrice(v.price)}
+        </Link>
+      ))}
+    </div>
+  )
+}
+
+export function ListCard({ product, offer, rank, compact = false, segmentBadge, variants }: ListCardProps) {
   const router = useRouter()
   if (compact) {
     return <CompactCard product={product} offer={offer} rank={rank} />
@@ -65,6 +91,7 @@ export function ListCard({ product, offer, rank, compact = false, segmentBadge }
                   </span>
                 )}
               </div>
+              {variants && <VariantsRow variants={variants} currentSlug={product.slug} />}
             </div>
             <div className="text-center shrink-0 ml-1">
               {product.type === 'flavored' ? (
@@ -176,6 +203,7 @@ export function ListCard({ product, offer, rank, compact = false, segmentBadge }
                 </span>
               )}
             </div>
+            {variants && <VariantsRow variants={variants} currentSlug={product.slug} />}
           </div>
 
           <div className="text-center shrink-0">

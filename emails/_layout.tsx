@@ -25,6 +25,13 @@ import {
 } from '@react-email/components'
 import type { ReactNode } from 'react'
 
+// Odběratel si preference mění na veřejné stránce s tokenem z odhlašovacího odkazu — nikdy v adminu.
+export function preferencesUrlFor(unsubscribeUrl: string, baseUrl: string): string {
+  if (unsubscribeUrl === '{{UNSUBSCRIBE_URL}}') return '{{PREFERENCES_URL}}'
+  const token = unsubscribeUrl.match(/[?&]token=([^&]+)/)?.[1]
+  return token ? `${baseUrl}/newsletter/nastaveni?token=${token}` : `${baseUrl}/newsletter/nastaveni`
+}
+
 interface Props {
   preheader: string
   unsubscribeUrl: string
@@ -147,14 +154,17 @@ export function NewsletterLayout({
                 </Link>{' '}
                 ·{' '}
                 <Link
-                  href={`${baseUrl}/admin/nastaveni`}
+                  href={preferencesUrlFor(unsubscribeUrl, baseUrl)}
                   className="text-text3 underline"
                 >
                   Spravovat preference
                 </Link>
               </Text>
               <Text className="text-text3 text-[11px] mt-3 m-0">
-                © {new Date().getFullYear()} olivátor.cz · Praha, ČR
+                © {new Date().getFullYear()} Maky Outdoors s.r.o. · Brno ·{' '}
+                <Link href="mailto:info@makyoutdoors.com" className="text-text3 underline">
+                  info@makyoutdoors.com
+                </Link>
               </Text>
             </Section>
           </Container>

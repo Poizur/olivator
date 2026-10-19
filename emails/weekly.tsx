@@ -21,6 +21,8 @@ interface Props {
   preheader: string
   hook: string
   unsubscribeUrl: string
+  /** Počet aktivních prodejců z DB — nikdy natvrdo */
+  retailerCount: number
   blocks: {
     oilOfWeek: OilCardData | null
     tipProduct: OilCardData | null
@@ -32,7 +34,10 @@ interface Props {
   }
 }
 
-export function WeeklyEmail({ preheader, hook, unsubscribeUrl, blocks }: Props) {
+const oils = (n: number) => (n === 1 ? 'olej' : n >= 2 && n <= 4 ? 'oleje' : 'olejů')
+const retailers = (n: number) => (n === 1 ? 'prodejce' : 'prodejců')
+
+export function WeeklyEmail({ preheader, hook, unsubscribeUrl, retailerCount, blocks }: Props) {
   const { oilOfWeek, tipProduct, deals, valuePicks, newArrival, recipe, fact } = blocks
 
   return (
@@ -90,7 +95,7 @@ export function WeeklyEmail({ preheader, hook, unsubscribeUrl, blocks }: Props) 
           <EmailSectionHeader
             emoji="📉"
             title="Slevový radar"
-            lead={`${deals.length} olejů s reálným poklesem ceny — sledujeme od 18 prodejců.`}
+            lead={`${deals.length} ${oils(deals.length)} s reálným poklesem ceny — ceny sledujeme u ${retailerCount} ${retailers(retailerCount)}.`}
           />
           {deals.map((deal, i) => (
             <DealRow

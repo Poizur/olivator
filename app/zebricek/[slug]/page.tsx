@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { getRankings, getRankingBySlug as getStaticRankingBySlug } from '@/lib/static-content'
 import { getActiveRankings, getRankingBySlug as getDbRankingBySlug } from '@/lib/rankings-db'
 import { getProductsBySlugs, getOffersForProduct } from '@/lib/data'
+import { oilFamilyKey } from '@/lib/oil-family'
 import { ListCard } from '@/components/list-card'
 import { breadcrumbSchema, faqSchema } from '@/lib/schema'
 
@@ -89,11 +90,28 @@ export default async function RankingDetailPage({ params }: { params: Promise<{ 
       return { p, offer }
     }),
   )
-  const available = candidates
-    .filter(({ p, offer }) => offer && p.status === 'active' && p.olivatorScore != null && p.olivatorScore > 0)
-    .sort((a, b) => b.p.olivatorScore! - a.p.olivatorScore!)
-  const products = available.map((c) => c.p)
-  const offers = available.map((c) => c.offer!)
+  const available = candidates.filter(({ p, offer }) => offer && p.status === 'active' && p.olivatorScore != null && p.olivatorScore > 0)
+
+  // Jeden olej = jedno místo: balení stejného oleje se ukážou až na kartě.
+  // Zástupce rodiny = nejvyšší Score, při shodě nejnižší cena za 100 ml.
+  const per100 = (c: (typeof available)[number]) => c.offer!.price / Math.max(1, c.p.volumeMl ?? 1000)
+  const families = new Map<string, typeof available>()
+  for (const c of available) {
+    const key = oilFamilyKey(c.p.name)
+    families.set(key, [...(families.get(key) ?? []), c])
+  }
+  const ranked = [...families.values()]
+    .map((members) => {
+      const best = [...members].sort((a, b) => b.p.olivatorScore! - a.p.olivatorScore! || per100(a) - per100(b))[0]
+      const variants = [...members]
+        .sort((a, b) => (a.p.volumeMl ?? 0) - (b.p.volumeMl ?? 0) || a.offer!.price - b.offer!.price)
+        .filter((m, i, arr) => i === 0 || (m.p.volumeMl ?? 0) !== (arr[i - 1].p.volumeMl ?? 0))
+        .map((m) => ({ slug: m.p.slug, volumeMl: m.p.volumeMl ?? 0, price: m.offer!.price }))
+      return { ...best, variants }
+    })
+    .sort((a, b) => b.p.olivatorScore! - a.p.olivatorScore! || per100(a) - per100(b))
+  const products = ranked.map((c) => c.p)
+  const offers = ranked.map((c) => c.offer!)
   const fewAvailable = listed.length > 0 && products.length < 3
 
   const breadcrumbs = breadcrumbSchema([
@@ -216,6 +234,7 @@ export default async function RankingDetailPage({ params }: { params: Promise<{ 
               product={p}
               offer={offers[i] ?? undefined}
               rank={i + 1}
+              variants={ranked[i].variants}
             />
           ))}
         </div>

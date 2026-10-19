@@ -118,6 +118,8 @@ async function getClickAnalytics(rangeDays: number): Promise<{
     .from('affiliate_clicks')
     .select('id, clicked_at, product_id, retailer_id, session_id, ip_hash, user_agent, referrer, source_type, price_at_click')
     .gte('clicked_at', start.toISOString())
+    .eq('is_test', false)
+    .eq('unverified', false)
     .order('clicked_at', { ascending: false })
 
   const clicks = (rows ?? []) as ClickRow[]
@@ -380,6 +382,8 @@ async function getOlikStats(rangeDays: number): Promise<OlikStats> {
       .from('affiliate_clicks')
       .select('*', { count: 'exact', head: true })
       .eq('source_type', 'olik')
+      .eq('is_test', false)
+      .eq('unverified', false)
       .gte('clicked_at', since),
   ])
 

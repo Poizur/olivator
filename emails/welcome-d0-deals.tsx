@@ -43,7 +43,7 @@ export function WelcomeD0DealsEmail({
     <NewsletterLayout
       preheader={
         isDealMode
-          ? 'Tady jsou aktuální slevy přímo z 18 prodejců'
+          ? `Aktuální slevy: ${deals.length} ${deals.length === 1 ? 'olej' : deals.length <= 4 ? 'oleje' : 'olejů'} s ověřeným poklesem ceny`
           : 'Tři tipy na olivový olej, které stojí za pozornost'
       }
       unsubscribeUrl={unsubscribeUrl}

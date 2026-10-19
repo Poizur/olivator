@@ -136,8 +136,11 @@ async function collectCatalog(): Promise<object> {
 
 async function collectAffiliate(): Promise<object> {
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  // Lidské kliky = ne test/bot a s původem; kliky bez původu (unverified) se uvádějí zvlášť
   const { data: clicks, count: totalClicks } = await supabaseAdmin
-    .from('affiliate_clicks').select('product_id, retailer_id, source_type', { count: 'exact' }).gte('clicked_at', since).eq('is_test', false)
+    .from('affiliate_clicks').select('product_id, retailer_id, source_type', { count: 'exact' }).gte('clicked_at', since).eq('is_test', false).eq('unverified', false)
+  const { count: unverifiedClicks } = await supabaseAdmin
+    .from('affiliate_clicks').select('id', { count: 'exact', head: true }).gte('clicked_at', since).eq('is_test', false).eq('unverified', true)
 
   const productCounts: Record<string, number> = {}
   const retailerCounts: Record<string, number> = {}
@@ -185,6 +188,7 @@ async function collectAffiliate(): Promise<object> {
 
   return {
     totalClicks: total,
+    unverifiedClicks: unverifiedClicks ?? 0,
     topProducts,
     topRetailers,
     offersWithoutAffiliate: (noAffOffers ?? []).length,
@@ -708,6 +712,7 @@ Vygeneruj KOMPLETNÍ JSON brief (striktně valid JSON, ŽÁDNÉ markdown code bl
 PRAVIDLA:
 - tldr: přesně 1 věta + "X akcí čeká" — skenovatelné za 5 sekund
 - stav.metrics: přesně 4 položky v tomto pořadí (affiliate kliky, GSC kliky, nabídky bez affiliate, subscribers)
+- affiliate kliky = jen LIDSKÉ (totalClicks). Kliky bez původu (unverifiedClicks) uveď zvlášť v závorce, nikdy je nepřičítej.
 - nasel: přesně 3 body, jen nejpalčivější — žádná nízko-prioritní pozorování
 - posun: přesně 3 odrážky (•), každá max 1 věta
 - rozhodnuti: přesně 5, seřaď high → medium → low, každé s ROI a čas
@@ -855,6 +860,8 @@ async function collectOlik(): Promise<object> {
         .from('affiliate_clicks')
         .select('*', { count: 'exact', head: true })
         .eq('source_type', 'olik')
+        .eq('is_test', false)
+        .eq('unverified', false)
         .gte('clicked_at', since7d),
       supabaseAdmin
         .from('olik_conversations')
