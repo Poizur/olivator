@@ -50,7 +50,7 @@ export async function GET(
 
   const { data: retailer, error: rErr } = await supabaseAdmin
     .from('retailers')
-    .select('id, domain, base_tracking_url, affiliate_network, affiliate_ends_at')
+    .select('id, domain, base_tracking_url, affiliate_network, affiliate_ends_at, is_active')
     .eq('slug', retailerSlug)
     .maybeSingle()
   if (rErr || !retailer) {
@@ -63,7 +63,8 @@ export async function GET(
     .eq('product_id', product.id)
     .eq('retailer_id', retailer.id)
     .maybeSingle()
-  if (oErr || !offer) {
+  const quarantined = retailer.is_active === false
+  if (!quarantined && (oErr || !offer)) {
     return NextResponse.json({ error: 'No offer found' }, { status: 404 })
   }
 
@@ -88,6 +89,7 @@ export async function GET(
     recentClicksFromIp: recentCount ?? 0,
     testHeader: request.headers.get('x-olivator-test') === '1',
     productSlug,
+    productPageUrl: new URL(`/olej/${productSlug}`, reqUrl.origin).toString(),
     ean: (product.ean as string) ?? null,
   })
 
@@ -109,9 +111,10 @@ export async function GET(
     market: 'CZ',
     source_page: sourcePage,
     source_type: sourceType,
-    price_at_click: (offer.price as number | null) ?? null,
+    price_at_click: (offer?.price as number | null | undefined) ?? null,
     is_test: decision.isTest,
     unverified: decision.unverified,
+    quarantined: decision.quarantined,
     ...utm,
   })
   if (clickErr) {

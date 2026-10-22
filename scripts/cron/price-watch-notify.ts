@@ -144,7 +144,8 @@ async function run() {
 
     const { data: offerRows } = await supabaseAdmin
       .from('product_offers')
-      .select('price, retailers(name, slug)')
+      .select('price, retailers!inner(name, slug, is_active)')
+      .eq('retailers.is_active', true)
       .eq('product_id', watch.product_id)
       .eq('in_stock', true)
       .order('price', { ascending: true })

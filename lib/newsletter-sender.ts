@@ -74,6 +74,12 @@ export async function sendDraft(draftId: string): Promise<SendResult> {
     }
   }
 
+  const { findQuarantinedRetailerLinks } = await import('./newsletter-reviewer')
+  const quarantined = await findQuarantinedRetailerLinks(d.blocks)
+  if (quarantined.length > 0) {
+    return { ok: false, totalSent: 0, totalFailed: 0, errors: [`Odkazy na obchody mimo spolupráci: ${quarantined.join(', ')}`] }
+  }
+
   // 2. Označ draft jako sending
   await supabaseAdmin
     .from('newsletter_drafts')

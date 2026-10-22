@@ -7,6 +7,7 @@
 //   SUBJECT_FORMULA    — subject zapadá do formule 3+ z posledních 5
 //   DEALS_REPEAT       — stejný produkt v deals 2+ z posledních 5
 //   DEALS_EMPTY        — deals blok prázdný (0 produktů) → INFO
+//   QUARANTINED_RETAILER — /go/ odkaz na obchod v karanténě → BLOCK (deterministicky, bez AI)
 
 import { supabaseAdmin } from './supabase'
 import { runReview, type ReviewResult } from './ai-reviewer'
@@ -87,7 +88,32 @@ Vrať POUZE čistý JSON (bez markdown kódu, bez komentářů):
 }`
 }
 
+/** Odkazy /go/{obchod}/ na obchody mimo spolupráci (is_active=false) — draft s nimi nesmí odejít. */
+export async function findQuarantinedRetailerLinks(blocks: unknown): Promise<string[]> {
+  const slugs = [...new Set([...JSON.stringify(blocks ?? {}).replace(/\\\//g, '/').matchAll(/\/go\/([a-z0-9-]+)\//g)].map((m) => m[1]))]
+  if (slugs.length === 0) return []
+  const { data } = await supabaseAdmin.from('retailers').select('slug, is_active').in('slug', slugs)
+  const known = new Map((data ?? []).map((r) => [r.slug as string, r.is_active as boolean]))
+  return slugs.filter((s) => known.get(s) !== true)
+}
+
 export async function runNewsletterReview(draftId: string): Promise<ReviewResult> {
+  const { data: target } = await supabaseAdmin.from('newsletter_drafts').select('blocks').eq('id', draftId).maybeSingle()
+  const quarantined = await findQuarantinedRetailerLinks(target?.blocks)
+  const aiResult = await runAiNewsletterReview(draftId)
+  if (quarantined.length === 0) return aiResult
+  return {
+    ...aiResult,
+    verdict: 'block',
+    issues: [
+      { rule: 'QUARANTINED_RETAILER', severity: 'block', detail: `Odkazy na obchody mimo spolupráci: ${quarantined.join(', ')}` },
+      ...aiResult.issues,
+    ],
+    summary: `Draft odkazuje na obchody mimo spolupráci (${quarantined.join(', ')}) — nesmí odejít. ${aiResult.summary ?? ''}`.trim(),
+  }
+}
+
+async function runAiNewsletterReview(draftId: string): Promise<ReviewResult> {
   // Fetch current draft + posledních 8 (celkem max 9) + relevantní lekce
   const [draftsResult, relevantLearnings] = await Promise.all([
     supabaseAdmin

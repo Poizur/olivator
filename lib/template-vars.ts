@@ -112,8 +112,9 @@ export async function resolveProductTokens(body: string): Promise<{
     // Fetch cheapest in-stock offer + retailer slug (single query, cheapest first)
     const { data: offers } = await supabaseAdmin
       .from('product_offers')
-      .select('product_id, price, retailer:retailers(slug)')
+      .select('product_id, price, retailer:retailers!inner(slug, is_active)')
       .in('product_id', [...idToSlug.keys()])
+      .eq('retailer.is_active', true)
       .eq('in_stock', true)
       .not('retailer_id', 'is', null)
       .order('price', { ascending: true })

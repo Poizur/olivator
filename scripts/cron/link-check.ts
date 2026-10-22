@@ -6,6 +6,7 @@
  */
 import { runLinkRotCheck, checkFeedStaleness } from '@/lib/link-rot-checker'
 import { supabaseAdmin } from '@/lib/supabase'
+import { purgeOldOlikConversations } from '@/lib/olik'
 
 const MAX_RUNTIME_MS = 15 * 60 * 1000 // 15 min hard limit
 
@@ -55,6 +56,13 @@ async function main() {
       }
     } catch (err) {
       console.warn('[cron:link-check] feed staleness check failed:', err)
+    }
+
+    try {
+      const purged = await purgeOldOlikConversations()
+      console.log(`[cron:link-check] olik_conversations po době uchování (30 dní / 12 měsíců) smazáno: ${purged}`)
+    } catch (err) {
+      console.warn('[cron:link-check] olik retention purge failed:', err)
     }
 
     // Audit log (nice-to-have, jen do console pokud tabulka neexistuje)

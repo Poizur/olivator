@@ -69,7 +69,11 @@ function buildAffiliateUrl(retailerSlug: string, productSlug: string, utmContent
 // Důvod: Supabase nested select `retailers ( ... )` může vrátit null pokud
 // FK constraint není v DB schématu. Bezpečnější: 2 separate queries + Map.
 async function loadRetailerMap(): Promise<Map<string, { name: string; slug: string; is_active: boolean; commissionPct: number }>> {
-  const { data } = await supabaseAdmin.from('retailers').select('id, name, slug, is_active, default_commission_pct')
+  // Jen obchody, se kterými spolupracujeme — karanténní obchody newsletter vyřadí stejně jako web.
+  const { data } = await supabaseAdmin
+    .from('retailers')
+    .select('id, name, slug, is_active, default_commission_pct')
+    .eq('is_active', true)
   const map = new Map<string, { name: string; slug: string; is_active: boolean; commissionPct: number }>()
   for (const r of data ?? []) {
     map.set(r.id as string, {

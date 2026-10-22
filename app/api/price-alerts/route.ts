@@ -53,7 +53,8 @@ export async function POST(request: NextRequest) {
 
     const { data: offers } = await supabaseAdmin
       .from('product_offers')
-      .select('price, in_stock')
+      .select('price, in_stock, retailers!inner(is_active)')
+      .eq('retailers.is_active', true)
       .eq('product_id', productId)
       .eq('in_stock', true)
       .order('price', { ascending: true })

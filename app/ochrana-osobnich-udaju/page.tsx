@@ -20,7 +20,7 @@ export default function OchranaOsobnichUdajuPage() {
         Ochrana osobních údajů
       </h1>
       <p className="text-[14px] text-text3 mb-10">
-        Informace dle čl.&nbsp;13 nařízení GDPR (EU) 2016/679 · platné od&nbsp;24.&nbsp;7.&nbsp;2026
+        Informace dle čl.&nbsp;13 nařízení GDPR (EU) 2016/679 · platné od&nbsp;22.&nbsp;10.&nbsp;2026
       </p>
 
       {/* ── 1. Správce ── */}
@@ -116,10 +116,10 @@ export default function OchranaOsobnichUdajuPage() {
           </div>
           <div className="px-5 py-4 text-[13px] text-text2 space-y-2">
             <p><strong className="text-text">Jaké údaje:</strong> obsah chatové konverzace (dotazy a odpovědi). E-mailová adresa pouze pokud ji uživatel dobrovolně uvede v textu.</p>
-            <p><strong className="text-text">Účel:</strong> poskytnutí personalizovaného doporučení olivového oleje prostřednictvím AI asistenta.</p>
+            <p><strong className="text-text">Účel:</strong> poskytnutí personalizovaného doporučení olivového oleje prostřednictvím AI asistenta a zlepšování správnosti jeho odpovědí (kontrola, zda doporučuje jen oleje a obchody z našeho katalogu).</p>
             <p><strong className="text-text">Právní základ:</strong> souhlas subjektu údajů vyjádřený zahájením konverzace — čl. 6 odst. 1 písm. a) GDPR.</p>
             <p><strong className="text-text">Upozornění:</strong> obsah konverzace je zpracován AI modelem třetí strany (Anthropic, PBC). Nevkládejte do chatu citlivé osobní údaje (rodné číslo, platební informace).</p>
-            <p><strong className="text-text">Doba uchování:</strong> 30 dnů (pro zajištění kontinuity konverzace), poté automatické smazání.</p>
+            <p><strong className="text-text">Doba uchování:</strong> konverzace vedené od 22. 10. 2026 uchováváme 12 měsíců, poté je automaticky mažeme. Konverzace z doby před tímto datem mažeme po 30 dnech, jak uváděla předchozí verze zásad. Ukládáme dotazy a odpovědi bez vazby na vaši identitu (anonymní identifikátor relace); e-maily a telefonní čísla v textu před uložením automaticky maskujeme.</p>
             <p><strong className="text-text">Zpracovatel:</strong> Anthropic, PBC (AI model); Supabase, Inc. (dočasné uložení).</p>
           </div>
         </div>
@@ -250,7 +250,7 @@ export default function OchranaOsobnichUdajuPage() {
       </section>
 
       <div className="mt-12 pt-6 border-t border-off2 text-[12px] text-text3">
-        Tyto zásady jsou platné od 24. července 2026. Při podstatných změnách informujeme odběratele e-mailem.
+        Tyto zásady jsou platné od 22. října 2026. Při podstatných změnách informujeme odběratele e-mailem.
       </div>
     </div>
   )

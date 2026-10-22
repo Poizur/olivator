@@ -48,6 +48,30 @@ export async function autoSendWeeklyNewsletter(): Promise<AutoSendResult> {
     return { sent: false, reason: `reviewer_severity=${draft.reviewer_severity ?? 'null'}`, draftId: draft.id }
   }
 
+  // Fact-check je povinný: neprojde → nic neodejde, draft zůstane a pondělní rutina ho nahlásí.
+  const { factCheckDraft } = await import('./newsletter-fact-check')
+  const { data: full } = await supabaseAdmin
+    .from('newsletter_drafts')
+    .select('id, html_body, text_body, blocks, reviewer_notes')
+    .eq('id', draft.id)
+    .maybeSingle()
+  const factIssues = full ? await factCheckDraft(full) : ['draft nenalezen']
+  if (factIssues.length > 0) {
+    await supabaseAdmin
+      .from('newsletter_drafts')
+      .update({
+        reviewer_severity: 'block',
+        reviewer_notes: { ...((full?.reviewer_notes as Record<string, unknown>) ?? {}), fact_check: { at: new Date().toISOString(), issues: factIssues } },
+      })
+      .eq('id', draft.id)
+    await supabaseAdmin.from('agent_decisions').insert({
+      agent_name: 'newsletter-auto-send',
+      decision_type: 'fact_check_blocked',
+      payload: { draft_id: draft.id, subject: draft.subject, issues: factIssues },
+    })
+    return { sent: false, reason: `fact-check neprošel: ${factIssues.join('; ')}`, draftId: draft.id }
+  }
+
   if (draft.status === 'draft') {
     await supabaseAdmin
       .from('newsletter_drafts')

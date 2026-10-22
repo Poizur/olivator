@@ -91,7 +91,8 @@ async function buildEmail(num: number, unsubUrl: string): Promise<{ subject: str
 
     const { data: offers } = await supabaseAdmin
       .from('product_offers')
-      .select('product_id, retailer_id, price, products(slug,name,olivator_score), retailers(name)')
+      .select('product_id, retailer_id, price, products(slug,name,olivator_score), retailers!inner(name, is_active)')
+      .eq('retailers.is_active', true)
       .eq('in_stock', true)
       .not('affiliate_url', 'is', null)
       .limit(80)

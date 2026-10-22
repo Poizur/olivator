@@ -10,7 +10,7 @@ import { getDisplayName } from './product-display'
 const SITE = 'https://olivator.cz'
 
 function buildAffiliateUrl(retailerSlug: string, productSlug: string): string {
-  return `${SITE}/go/${retailerSlug}/${productSlug}`
+  return `${SITE}/go/${retailerSlug}/${productSlug}?utm_source=newsletter&utm_medium=email&utm_content=welcome`
 }
 
 function truncateName(name: string, max = 50): string {
@@ -43,7 +43,7 @@ export async function getWelcomeDeals(): Promise<{
       .eq('status', 'active')
       .gte('olivator_score', 70)
       .not('olivator_score', 'is', null),
-    supabaseAdmin.from('retailers').select('id, slug, name'),
+    supabaseAdmin.from('retailers').select('id, slug, name').eq('is_active', true),
     supabaseAdmin.from('brands').select('slug, name'),
   ])
 
@@ -61,6 +61,7 @@ export async function getWelcomeDeals(): Promise<{
   for (const o of offers) {
     const pid = o.product_id as string
     if (!productMap.has(pid)) continue
+    if (!retailerMap.has(o.retailer_id as string)) continue
     const existing = cheapestByProduct.get(pid)
     if (!existing || (o.price as number) < existing.price) {
       cheapestByProduct.set(pid, { price: o.price as number, retailerId: o.retailer_id as string })
@@ -263,7 +264,8 @@ async function buildFallback(): Promise<{ deals: WelcomeDeal[]; topPickIndex: nu
 
     const { data: offers } = await supabaseAdmin
       .from('product_offers')
-      .select('price, retailer_id, retailers!inner(slug, name)')
+      .select('price, retailer_id, retailers!inner(slug, name, is_active)')
+      .eq('retailers.is_active', true)
       .eq('product_id', p.id as string)
       .eq('in_stock', true)
       .order('price', { ascending: true })
@@ -339,7 +341,7 @@ export async function getSlevyDeals(limit = 20): Promise<SlevyPageData> {
       .select('id, slug, name, name_short, olivator_score, brand_slug, image_url, volume_ml, origin_country')
       .eq('status', 'active')
       .not('olivator_score', 'is', null),
-    supabaseAdmin.from('retailers').select('id, slug, name'),
+    supabaseAdmin.from('retailers').select('id, slug, name').eq('is_active', true),
     supabaseAdmin.from('brands').select('slug, name'),
   ])
 
@@ -399,6 +401,7 @@ export async function getSlevyDeals(limit = 20): Promise<SlevyPageData> {
   for (const o of offers) {
     const pid = o.product_id as string
     if (!productMap.has(pid)) continue
+    if (!retailerMap.has(o.retailer_id as string)) continue
     const key = `${pid}|${o.retailer_id}`
     offerByKey.set(key, {
       price: o.price as number,
@@ -526,6 +529,7 @@ async function getTopPicks(): Promise<TopPickProduct[]> {
   const { data: retailers } = await supabaseAdmin
     .from('retailers')
     .select('id, slug, name')
+    .eq('is_active', true)
 
   const retailerMap = new Map((retailers ?? []).map(r => [r.id as string, { slug: r.slug as string, name: r.name as string }]))
 
@@ -538,6 +542,7 @@ async function getTopPicks(): Promise<TopPickProduct[]> {
       .from('product_offers')
       .select('price, retailer_id')
       .eq('product_id', p.id)
+      .in('retailer_id', [...retailerMap.keys()])
       .eq('in_stock', true)
       .lte('price', 400)
       .order('price', { ascending: true })

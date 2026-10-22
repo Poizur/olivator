@@ -440,7 +440,8 @@ export async function getAlternativeProduct(
 
   const { data } = await supabaseAdmin
     .from('product_offers')
-    .select(`price, product_id, retailers(name), products!inner(id, name, slug, olivator_score, volume_ml, status)`)
+    .select(`price, product_id, retailers!inner(name, is_active), products!inner(id, name, slug, olivator_score, volume_ml, status)`)
+    .eq('retailers.is_active', true)
     .eq('in_stock', true)
     .neq('product_id', currentProductId)
     .limit(500)
@@ -1073,8 +1074,10 @@ export async function getVariantProducts(productId: string): Promise<VariantGrou
   if (ids.length > 0) {
     const { data: offers } = await supabaseAdmin
       .from('product_offers')
-      .select('product_id, price')
+      .select('product_id, price, retailers!inner(is_active)')
       .in('product_id', ids)
+      .eq('retailers.is_active', true)
+      .eq('in_stock', true)
       .order('price', { ascending: true })
     for (const o of offers ?? []) {
       const pid = o.product_id as string
@@ -1666,7 +1669,10 @@ export async function getFeaturedBrands(): Promise<BrandTile[]> {
       .select('id, slug, name, country_code')
       .eq('is_featured', true)
       .order('featured_order', { ascending: true }),
-    supabaseAdmin.from('products').select('brand_slug').eq('status', 'active'),
+    supabaseAdmin
+      .from('products')
+      .select('brand_slug, product_offers(in_stock, retailers(is_active))')
+      .eq('status', 'active'),
     supabaseAdmin
       .from('entity_images')
       .select('entity_id, url, image_role, is_primary, sort_order')
@@ -1675,9 +1681,14 @@ export async function getFeaturedBrands(): Promise<BrandTile[]> {
       .order('sort_order', { ascending: true }),
   ])
 
+  // Počítáme jen oleje koupitelné u obchodů, se kterými spolupracujeme — značka bez nich (např. jen u obchodu v karanténě) se na homepage nezobrazí.
   const counts: Record<string, number> = {}
-  for (const r of productsRes.data ?? []) {
-    if (r.brand_slug) counts[r.brand_slug] = (counts[r.brand_slug] ?? 0) + 1
+  for (const r of (productsRes.data ?? []) as unknown as Array<{
+    brand_slug: string | null
+    product_offers: Array<{ in_stock: boolean; retailers: { is_active: boolean } | null }> | null
+  }>) {
+    const buyable = (r.product_offers ?? []).some((o) => o.in_stock && o.retailers?.is_active === true)
+    if (r.brand_slug && buyable) counts[r.brand_slug] = (counts[r.brand_slug] ?? 0) + 1
   }
 
   const logoByEntity = new Map<string, string>()
@@ -1692,7 +1703,7 @@ export async function getFeaturedBrands(): Promise<BrandTile[]> {
     }
   }
 
-  return (brandsRes.data ?? []).map((b: { id: string; slug: string; name: string; country_code: string }) => {
+  return (brandsRes.data ?? []).filter((b: { slug: string }) => (counts[b.slug] ?? 0) > 0).map((b: { id: string; slug: string; name: string; country_code: string }) => {
     const logoUrl = logoByEntity.get(b.id) ?? null
     const heroUrl = heroByEntity.get(b.id) ?? null
     return {

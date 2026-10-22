@@ -35,7 +35,8 @@ export async function POST(req: Request) {
   if (body.maxPrice != null && slugs.length > 0) {
     const { data: offers } = await supabaseAdmin
       .from('product_offers')
-      .select('product_id, price, products!inner(slug)')
+      .select('product_id, price, products!inner(slug), retailers!inner(is_active)')
+      .eq('retailers.is_active', true)
       .lte('price', body.maxPrice)
       .in('products.slug', slugs)
 

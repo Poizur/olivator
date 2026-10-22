@@ -8,6 +8,7 @@ export interface GoRetailer {
   base_tracking_url: string | null
   affiliate_network: string | null
   affiliate_ends_at: string | null
+  is_active?: boolean | null
 }
 
 export interface GoOffer {
@@ -22,10 +23,12 @@ export interface GoContext {
   recentClicksFromIp: number
   testHeader: boolean
   productSlug: string
+  /** Absolutní URL stránky produktu na Olivátoru — cíl pro obchody v karanténě. */
+  productPageUrl: string
   ean: string | null
 }
 
-export type GoMode = 'affiliate' | 'direct_bot' | 'direct_affiliate_ended' | 'direct_no_network'
+export type GoMode = 'affiliate' | 'direct_bot' | 'direct_affiliate_ended' | 'direct_no_network' | 'quarantined'
 
 export interface GoDecision {
   target: string | null
@@ -33,6 +36,7 @@ export interface GoDecision {
   isTest: boolean
   unverified: boolean
   botReason: string | null
+  quarantined: boolean
 }
 
 export function safeParseUrl(raw: string | null | undefined): URL | null {
@@ -108,19 +112,26 @@ export function resolveAffiliateUrl(retailer: GoRetailer, offer: GoOffer, ctx: {
   return directUrl(retailer, offer)
 }
 
-export function decideGoTarget(retailer: GoRetailer, offer: GoOffer, ctx: GoContext): GoDecision {
+export function decideGoTarget(retailer: GoRetailer, offer: GoOffer | null, ctx: GoContext): GoDecision {
+  const rateLimitedQ = ctx.recentClicksFromIp >= RATE_LIMIT_PER_MIN
+  // Obchod v karanténě (bez smlouvy): nikdy do jeho e-shopu, jen na naši stránku produktu.
+  if (retailer.is_active === false) {
+    const reasonQ = rateLimitedQ ? `>${RATE_LIMIT_PER_MIN} kliků/min z jedné IP` : botReason(ctx.userAgent, ctx.hasOrigin, ctx.testHeader)
+    return { target: ctx.productPageUrl, mode: 'quarantined', isTest: Boolean(reasonQ), unverified: !reasonQ && !ctx.hasOrigin, botReason: reasonQ, quarantined: true }
+  }
+  if (!offer) return { target: null, mode: 'affiliate', isTest: false, unverified: false, botReason: null, quarantined: false }
   const rateLimited = ctx.recentClicksFromIp >= RATE_LIMIT_PER_MIN
   const reason = rateLimited ? `>${RATE_LIMIT_PER_MIN} kliků/min z jedné IP` : botReason(ctx.userAgent, ctx.hasOrigin, ctx.testHeader)
 
   // Boti nikdy přes eHUB (click fraud) a bez UTM (nenafukují prodejci GA4)
   if (reason) {
-    return { target: directUrl(retailer, offer), mode: 'direct_bot', isTest: true, unverified: false, botReason: reason }
+    return { target: directUrl(retailer, offer), mode: 'direct_bot', isTest: true, unverified: false, botReason: reason, quarantined: false }
   }
 
   const unverified = !ctx.hasOrigin
   if (isAffiliateEnded(retailer, ctx.now)) {
     const d = directUrl(retailer, offer)
-    return { target: d ? withReferralUtm(d) : null, mode: 'direct_affiliate_ended', isTest: false, unverified, botReason: null }
+    return { target: d ? withReferralUtm(d) : null, mode: 'direct_affiliate_ended', isTest: false, unverified, botReason: null, quarantined: false }
   }
 
   const target = resolveAffiliateUrl(retailer, offer, { productSlug: ctx.productSlug, ean: ctx.ean })
@@ -131,5 +142,6 @@ export function decideGoTarget(retailer: GoRetailer, offer: GoOffer, ctx: GoCont
     isTest: false,
     unverified,
     botReason: null,
+    quarantined: false,
   }
 }

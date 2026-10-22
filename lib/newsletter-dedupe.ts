@@ -48,13 +48,14 @@ export async function recentFamiliesBySignup(signupIds: string[]): Promise<Map<s
 }
 
 /** Rodiny olejů odeslané komukoli za 30 dní — composer je do nového vydání nevybírá. */
-export async function recentlySentFamilies(): Promise<Set<string>> {
+export async function recentlySentFamilies(excludeDraftId?: string): Promise<Set<string>> {
   const since = new Date(Date.now() - NEWSLETTER_REPEAT_WINDOW_DAYS * 86400000).toISOString()
   const { data: drafts } = await supabaseAdmin
     .from('newsletter_drafts')
     .select('blocks')
     .eq('status', 'sent')
     .gte('updated_at', since)
+    .neq('id', excludeDraftId ?? '00000000-0000-0000-0000-000000000000')
   const families = await familiesOf([...new Set((drafts ?? []).flatMap((d) => draftProductIds(d.blocks as Blocks)))])
   return new Set(families.values())
 }
