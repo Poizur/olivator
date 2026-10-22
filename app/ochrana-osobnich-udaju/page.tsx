@@ -120,6 +120,7 @@ export default function OchranaOsobnichUdajuPage() {
             <p><strong className="text-text">Právní základ:</strong> souhlas subjektu údajů vyjádřený zahájením konverzace — čl. 6 odst. 1 písm. a) GDPR.</p>
             <p><strong className="text-text">Upozornění:</strong> obsah konverzace je zpracován AI modelem třetí strany (Anthropic, PBC). Nevkládejte do chatu citlivé osobní údaje (rodné číslo, platební informace).</p>
             <p><strong className="text-text">Doba uchování:</strong> konverzace vedené od 22. 10. 2026 uchováváme 12 měsíců, poté je automaticky mažeme. Konverzace z doby před tímto datem mažeme po 30 dnech, jak uváděla předchozí verze zásad. Ukládáme dotazy a odpovědi bez vazby na vaši identitu (anonymní identifikátor relace); e-maily a telefonní čísla v textu před uložením automaticky maskujeme.</p>
+            <p><strong className="text-text">Ochrana před zneužitím:</strong> abychom omezili počet zpráv z jednoho místa, ukládáme na 24 hodin jednosměrný otisk (hash) IP adresy bez vazby na obsah konverzace; poté se automaticky maže.</p>
             <p><strong className="text-text">Zpracovatel:</strong> Anthropic, PBC (AI model); Supabase, Inc. (dočasné uložení).</p>
           </div>
         </div>

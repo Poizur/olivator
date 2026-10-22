@@ -4,6 +4,8 @@ import { supabaseAdmin } from '@/lib/supabase'
 // Sonnet: Haiku v regresním testu zkracoval názvy olejů a dělal jazykové chyby; objem je malý (jednotky dotazů týdně).
 export const OLIK_MODEL = 'claude-sonnet-4-6'
 export const OLIK_RETENTION_MONTHS = 12
+// Jazyková kontrola je „měkká“ (jen vyvolá přegenerování) — stačí levný model.
+const OLIK_LANGUAGE_MODEL = 'claude-haiku-4-5-20251001'
 const POLYPHENOL_RANKING = '/zebricek/nejlepsi-vysokopolyfenolovy-olej'
 /** Účinnost zásad s 12měsíčním uchováním. Starší konverzace byly sbírány pod slibem 30 dnů. */
 export const OLIK_12M_POLICY_FROM = '2026-10-22T00:00:00+02:00'
@@ -40,6 +42,8 @@ export interface ProductContext {
 
 export interface OlikContext {
   products: ProductContext[]
+  /** Nejlepší oleje podle Score — stálá (cachovaná) část promptu. */
+  topProducts: ProductContext[]
   nameMatches: ProductContext[]
   /** Hledaný název je v DB, ale žádný jeho olej teď nemá nabídku u obchodu, se kterým spolupracujeme. */
   unavailableNameMatches: string[]
@@ -179,7 +183,7 @@ async function searchByName(tokens: string[]): Promise<{ available: ProductConte
 export async function buildOlikContext(lastUserMsg: string): Promise<OlikContext> {
   const searchTokens = searchTokensOf(lastUserMsg)
   const [top, byName, { data: retailers }, { data: buyable }] = await Promise.all([
-    getTopProducts(80),
+    getTopProducts(40),
     searchByName(searchTokens),
     supabaseAdmin.from('retailers').select('name, slug, domain, is_active'),
     supabaseAdmin
@@ -201,6 +205,7 @@ export async function buildOlikContext(lastUserMsg: string): Promise<OlikContext
   const all = (retailers ?? []) as Array<{ name: string; slug: string; domain: string | null; is_active: boolean }>
   return {
     products,
+    topProducts: top,
     nameMatches: byName.available,
     unavailableNameMatches: byName.unavailable,
     searchTokens,
@@ -241,8 +246,12 @@ function searchNote(ctx: OlikContext): string {
   return ''
 }
 
-export function buildOlikSystemPrompt(ctx: OlikContext): string {
-  return `Jsi Olík — chatovací asistent webu Olivátor (olivator.cz). Ty JSI Olivátor: mluvíš za něj v 1. osobě množného čísla („v našem katalogu“, „naše Olivator Score“).
+/** Systémový prompt ve dvou blocích: stálý (pravidla + nejlepší oleje, cachovaný u Anthropicu — opakované čtení
+ *  stojí desetinu ceny) a proměnný (poznámka k vyhledávání + shody s dotazem). */
+export function buildOlikSystemPrompt(ctx: OlikContext): Array<{ type: 'text'; text: string; cache_control?: { type: 'ephemeral' } }> {
+  const topSlugs = new Set(ctx.topProducts.map((p) => p.slug))
+  const extra = ctx.products.filter((p) => !topSlugs.has(p.slug))
+  const stable = `Jsi Olík — chatovací asistent webu Olivátor (olivator.cz). Ty JSI Olivátor: mluvíš za něj v 1. osobě množného čísla („v našem katalogu“, „naše Olivator Score“).
 Když uživatel zmíní Olivátor, olivator.cz nebo překlep jako „olivatr“, mluví o NÁS — nikdy netvrď, že jde o jiný web nebo prodejce. Olivátor sám olej neprodává.
 Uživateli tykáš (stejně jako uvítací zpráva chatu).
 
@@ -285,10 +294,16 @@ FORMÁT
 - Kyselost a polyfenoly ber jen z údajů „kyselost X %“ a „X mg/kg“ v řádku katalogu, nikdy z čísla v názvu oleje.
 - Údaje (chuť, kyselost, cena) ber vždy z řádku TOHO oleje, který doporučuješ — různá balení stejného oleje mají v katalogu různé údaje.
 - Žádné nadpisy, emoji, horizontální čáry ani závěrečné „Můj tip“.
-${searchNote(ctx)}
 
-VÝBĚR Z KATALOGU (${ctx.products.length} z ${ctx.buyableCount} olejů — shody s dotazem a nejlepší podle Score; všechny skladem u obchodů, se kterými spolupracujeme):
-${ctx.products.map(catalogLine).join('\n')}`
+NEJLEPŠÍ OLEJE PODLE SCORE (${ctx.topProducts.length} z ${ctx.buyableCount} olejů skladem u obchodů, se kterými spolupracujeme):
+${ctx.topProducts.map(catalogLine).join('\n')}`
+  const variable = `${searchNote(ctx).trim() || 'Dotaz nehledá konkrétní název.'}${
+    extra.length > 0 ? `\n\nDALŠÍ OLEJE ODPOVÍDAJÍCÍ DOTAZU:\n${extra.map(catalogLine).join('\n')}` : ''
+  }`
+  return [
+    { type: 'text', text: stable, cache_control: { type: 'ephemeral' } },
+    { type: 'text', text: variable },
+  ]
 }
 
 const norm = (s: string) =>
@@ -385,13 +400,13 @@ async function languageCheck(text: string, ctx: OlikContext): Promise<string[]> 
   const prose = text.replace(/\*\*[^*]+\*\*/g, ' ').replace(/\S*\/(go|olej|zebricek|srovnavac|metodika|pruvodce)\S*/g, ' ')
   try {
     const res = await callClaude({
-      model: OLIK_MODEL,
+      model: OLIK_LANGUAGE_MODEL,
       max_tokens: 200,
       messages: [{
         role: 'user',
         content: `Jsi korektor češtiny. Najdi v textu níže JEN slova, která nejsou česká (cizí jazyk, slovenština) nebo jsou to neexistující/zkomolené české tvary. Ignoruj vlastní jména: názvy olejů, značek, odrůd, regionů, certifikací a obchodů (např. ${ctx.activeRetailers.map((r) => r.name).join(', ')}, Olivátor, Olivator Score, EARLY HARVEST, BIO, DOP, PDO). Hlásit jen skutečné chyby češtiny, ne styl. Vrať POUZE JSON {"chyby": ["slovo", ...]} — prázdné pole, pokud je vše v pořádku.\n\nTEXT:\n${prose}`,
       }],
-    })
+    }, 4, { source: 'olik-jazyk' })
     const raw = extractText(res)
     const j = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1)) as { chyby?: string[] }
     return (j.chyby ?? []).filter(Boolean).map((w) => `jazyk: „${w}“`)
@@ -437,7 +452,7 @@ export async function answerOlik(messages: OlikMessage[]): Promise<OlikResult> {
   let issues: string[] = []
   let convo = history
   for (let attempt = 1; attempt <= 2; attempt++) {
-    const res = await callClaude({ model: OLIK_MODEL, max_tokens: 700, system, messages: convo })
+    const res = await callClaude({ model: OLIK_MODEL, max_tokens: 700, system, messages: convo }, 4, { source: 'olik' })
     tokens += (res.usage?.input_tokens ?? 0) + (res.usage?.output_tokens ?? 0)
     const text = extractText(res).trim()
     issues = validateOlikReply(text, ctx, recentUserText)
@@ -484,6 +499,7 @@ export async function purgeOldOlikConversations(): Promise<number> {
       .delete({ count: 'exact' })
       .lt('created_at', cutoff.toISOString()),
   ])
+  await supabaseAdmin.from('olik_rate_events').delete().lt('created_at', new Date(Date.now() - 86400000).toISOString())
   if (legacy.error) throw new Error(legacy.error.message)
   if (current.error) throw new Error(current.error.message)
   return (legacy.count ?? 0) + (current.count ?? 0)

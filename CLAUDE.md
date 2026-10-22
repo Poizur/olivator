@@ -1481,6 +1481,32 @@ Příčina: `searchUnsplash()` v `generate-articles.ts` tiše selhává při chy
 
 ---
 
+## 26. ZDRAVOTNÍ TVRZENÍ V OBSAHU — REDAKČNÍ PRAVIDLA (Architekt, 22. 10. 2026)
+
+Platí pro průvodce, recepty, novinky, popisy produktů/odrůd/regionů, FAQ, newsletter i Olíka.
+
+**ZAKÁZÁNO:** „léčí“, „chrání před nemocí“, „prevence“, „snižuje riziko o X %“, „protizánětlivý“ ve smyslu léku,
+srovnání s léky (ibuprofen apod.), obecné sliby („zdravotní benefity“, „podporuje zdraví srdce/imunitu“).
+
+**POVOLENO:** popis studie s citací a opatrně, bez slibu čtenáři — „studie PREDIMED (Estruch et al., NEJM 2013)
+sledovala…, autoři pozorovali…“.
+
+**Schválená tvrzení (nařízení 432/2012) jen DOSLOVA a s podmínkou:**
+- Polyfenoly: „Polyfenoly z olivového oleje přispívají k ochraně krevních lipidů před oxidativním stresem.“ —
+  jen u olivového oleje s nejméně 5 mg hydroxytyrosolu a jeho derivátů (např. oleuropein komplex a tyrosol) na 20 g;
+  spotřebitel musí být informován, že příznivého účinku se dosáhne při přívodu 20 g olivového oleje denně.
+  Hydroxytyrosol v DB nemáme → u konkrétního oleje tvrzení NEUVÁDĚT (celkové polyfenoly mg/kg ≠ hydroxytyrosol).
+- Kyselina olejová: „Nahrazení nasycených tuků nenasycenými tuky ve stravě přispívá k udržení normální hladiny
+  cholesterolu v krvi. Kyselina olejová je nenasycený tuk.“ — jen u potravin s vysokým obsahem nenasycených
+  mastných kyselin (≥ 70 % mastných kyselin, > 20 % energie; olivový olej splňuje).
+
+**Žádné doporučení konkrétního oleje hned vedle zdravotního tvrzení** (ani token `{{product:slug}}`).
+
+**Při opravách článků:** neměnit strukturu, nadpisy, URL ani délku víc, než je nutné — měnit jen problematické věty.
+Postup: řadit podle GSC (kliky + zobrazení za 90 dní); po dávkách po 5 článcích, vždy s diffem ke schválení.
+
+---
+
 *Živý dokument. Aktualizuj datum při každé změně.*
 *Při každém bugu přidej lesson do sekce 21.*
 *Při aktivaci feature flagu aktualizuj checklist.*

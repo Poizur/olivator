@@ -3,15 +3,21 @@
  * Každou odpověď kontroluje deterministický validátor (oleje, ceny, obchody) a nezávislý posuzovatel (Sonnet:
  * jazyk, zdravotní tvrzení, vymyšlená fakta).
  *
- *   env -u ANTHROPIC_API_KEY npx tsx --env-file=.env.local scripts/olik-regression.ts [výstup.json]
+ *   env -u ANTHROPIC_API_KEY npx tsx --env-file=.env.local scripts/olik-regression.ts --potvrzuji [výstup.json] [filtr]
+ *
+ * POUZE RUČNĚ. Placené volání Claude API (~0,10 $ na otázku, celá sada ~7 $). Nikdy nepřidávat do prebuildu, buildu,
+ * cronů ani rutin. Bez --potvrzuji skript jen vypíše odhad ceny a skončí.
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { answerOlik, buildOlikContext, validateOlikReply, catalogLine, type OlikMessage } from '@/lib/olik'
 import { callClaude, extractText } from '@/lib/anthropic'
 
 const { rozhovory } = JSON.parse(readFileSync('scripts/olik-test-questions.json', 'utf8')) as { rozhovory: string[][] }
-const outPath = process.argv[2] ?? '/tmp/olik-regression.json'
-const only = process.argv[3]?.toLowerCase()
+const args = process.argv.slice(2)
+const confirmed = args.includes('--potvrzuji')
+const [outArg, onlyArg] = args.filter((a) => a !== '--potvrzuji')
+const outPath = outArg ?? '/tmp/olik-regression.json'
+const only = onlyArg?.toLowerCase()
 
 async function judge(q: string, a: string, catalog: string): Promise<Record<string, string[]>> {
   const res = await callClaude({
@@ -42,15 +48,25 @@ ${a}`,
 }
 
 ;(async () => {
+  const selected = rozhovory.filter((r) => !only || r.some((q) => q.toLowerCase().includes(only)))
+  const questions = selected.reduce((n, r) => n + r.length, 0)
+  if (!confirmed) {
+    console.log(`Regresní test: ${questions} otázek, odhad ~${(questions * 0.1).toFixed(1)} $. Spusť znovu s --potvrzuji.`)
+    process.exit(0)
+  }
   const out: Array<Record<string, unknown>> = []
-  for (const questions of rozhovory.filter((r) => !only || r.some((q) => q.toLowerCase().includes(only)))) {
+  for (const conv of selected) {
     const history: OlikMessage[] = []
-    for (const q of questions) {
+    for (const q of conv) {
       history.push({ role: 'user', content: q })
       const res = await answerOlik(history)
       history.push({ role: 'assistant', content: res.text })
       const ctx = await buildOlikContext(q)
-      const catalog = ctx.products.map(catalogLine).join('\n') + '\nObchody: ' + ctx.activeRetailers.map((r) => r.name).join(', ')
+      // Posuzovateli jen oleje, které odpověď zmiňuje (odkazem) — ne celý katalog.
+      const mentioned = new Set([...res.text.matchAll(/\/(?:go\/[\w-]+|olej)\/([\w-]+)/g)].map((m) => m[1]))
+      const catalog =
+        (ctx.products.filter((p) => mentioned.has(p.slug)).map(catalogLine).join('\n') || '(odpověď nedoporučuje žádný olej)') +
+        `\nCelkem v katalogu ${ctx.buyableCount} olejů skladem. Obchody: ${ctx.activeRetailers.map((r) => r.name).join(', ')}`
       out.push({
         q,
         a: res.text,

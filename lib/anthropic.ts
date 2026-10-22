@@ -5,6 +5,7 @@
 // Všechny Claude wrappery musí použít callClaude() místo client.messages.create().
 
 import Anthropic from '@anthropic-ai/sdk'
+import { supabaseAdmin } from './supabase'
 
 let _client: Anthropic | null = null
 
@@ -27,12 +28,15 @@ export function getAnthropic(): Anthropic {
  */
 export async function callClaude(
   params: Anthropic.Messages.MessageCreateParamsNonStreaming,
-  retries = 4
+  retries = 4,
+  opts: { source?: string } = {}
 ): Promise<Anthropic.Messages.Message> {
   const client = getAnthropic()
   for (let i = 0; i < retries; i++) {
     try {
-      return await client.messages.create(params)
+      const res = await client.messages.create(params)
+      await logApiUsage(res, opts.source)
+      return res
     } catch (err: unknown) {
       const status = (err as { status?: number }).status
       if (status === 529 && i < retries - 1) {
@@ -45,6 +49,39 @@ export async function callClaude(
     }
   }
   throw new Error('Claude API: max retries exceeded')
+}
+
+// USD za milion tokenů [vstup, výstup]. Cache: zápis 1,25× vstup, čtení 0,1× vstup.
+const PRICES: Array<[RegExp, number, number]> = [
+  [/opus/, 15, 75],
+  [/sonnet/, 3, 15],
+  [/haiku-4/, 1, 5],
+  [/haiku/, 0.8, 4],
+]
+
+export function estimateCostUsd(model: string, u: Anthropic.Messages.Usage): number {
+  const [, pin, pout] = PRICES.find(([re]) => re.test(model)) ?? [null, 3, 15]
+  const cacheWrite = u.cache_creation_input_tokens ?? 0
+  const cacheRead = u.cache_read_input_tokens ?? 0
+  return (u.input_tokens * pin + cacheWrite * pin * 1.25 + cacheRead * pin * 0.1 + u.output_tokens * pout) / 1e6
+}
+
+/** Zápis spotřeby do api_usage (denní přehled nákladů v pondělní rutině). Chyba zápisu nesmí shodit volání. */
+async function logApiUsage(res: Anthropic.Messages.Message, source?: string): Promise<void> {
+  try {
+    const u = res.usage
+    await supabaseAdmin.from('api_usage').insert({
+      source: (source ?? process.env.RAILWAY_SERVICE_NAME ?? 'local').slice(0, 80),
+      model: res.model.slice(0, 60),
+      input_tokens: u.input_tokens,
+      output_tokens: u.output_tokens,
+      cache_read_tokens: u.cache_read_input_tokens ?? 0,
+      cache_write_tokens: u.cache_creation_input_tokens ?? 0,
+      cost_usd: Number(estimateCostUsd(res.model, u).toFixed(5)),
+    })
+  } catch (err) {
+    console.warn('[anthropic] api_usage log failed', err)
+  }
 }
 
 /**
