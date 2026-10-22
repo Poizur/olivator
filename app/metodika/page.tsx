@@ -103,12 +103,12 @@ const COMPONENTS = [
     max: 25,
     img: 'https://images.unsplash.com/photo-1634736482829-e2d431eda121?crop=entropy&cs=tinysrgb&w=800&q=80',
     imgAlt: 'Zelené olivy zblízka — čím zelenější, tím více polyfenolů v oleji',
-    level1: 'Polyfenoly jsou přírodní antioxidanty které dělají olej zdravým. Čím víc, tím lepší.',
-    level2: 'Polyfenoly jsou skupina rostlinných látek které dělají olej zároveň zdravým, chuťově bohatým a trvanlivým. Když cítíš v krku to pálení po doušku kvalitního EVOO — to jsou polyfenoly. EU schválila zdravotní tvrzení: olej s 250+ mg/kg polyfenolů chrání tělo před oxidačním stresem. Top oleje mají 400–800 mg/kg.',
+    level1: 'Polyfenoly jsou přírodní látky z oliv, které dávají oleji hořkost, pálivost a trvanlivost. Čím víc, tím výraznější a stálejší olej.',
+    level2: 'Polyfenoly jsou skupina rostlinných látek, které dělají olej chuťově bohatým a trvanlivým. Když cítíš v krku to pálení po doušku kvalitního EVOO — to jsou polyfenoly. Jediné schválené zdravotní tvrzení EU (nařízení 432/2012) zní: „Polyfenoly z olivového oleje přispívají k ochraně krevních lipidů před oxidativním stresem.“ Tvrzení smí být použito pouze u olivového oleje, který obsahuje nejméně 5 mg hydroxytyrosolu a jeho derivátů (např. oleuropein komplex a tyrosol) na 20 g olivového oleje. Aby bylo možné tvrzení použít, musí být spotřebitel informován, že příznivého účinku se dosáhne při přívodu 20 g olivového oleje denně. Top oleje mají 400–800 mg/kg celkových polyfenolů.',
     level3Sections: [
       {
         heading: 'Tři klíčové polyfenoly',
-        body: 'Oleokantal — zodpovědný za pálivost a "kop v krku". Strukturálně podobný ibuprofenu. 50 g EVOO s vysokým obsahem oleokantalu = ~10 % protizánětlivého efektu ibuprofenu (Beauchamp et al., Nature, 2005).\n\nOleocein — nejsilnější antioxidant v EVOO. Inhibuje oxidaci LDL cholesterolu.\n\nHydroxytyrosol — mocnější antioxidant než vitamin E. EFSA schválila zdravotní tvrzení 432/2012: "Hydroxytyrosol a jeho deriváty chrání LDL cholesterol před oxidací." Minimum pro tvrzení: 250 mg/kg polyfenolů.',
+        body: 'Oleokantal — zodpovědný za pálivost a „kop v krku“ (Beauchamp et al., Nature, 2005).\n\nOleacein — jeden z nejhojnějších fenolů v čerstvém EVOO.\n\nHydroxytyrosol a jeho deriváty — na ně se váže jediné schválené zdravotní tvrzení EU pro olivový olej (nařízení 432/2012): „Polyfenoly z olivového oleje přispívají k ochraně krevních lipidů před oxidativním stresem.“ Tvrzení smí být použito pouze u olivového oleje, který obsahuje nejméně 5 mg hydroxytyrosolu a jeho derivátů (např. oleuropein komplex a tyrosol) na 20 g olivového oleje. Aby bylo možné tvrzení použít, musí být spotřebitel informován, že příznivého účinku se dosáhne při přívodu 20 g olivového oleje denně.\n\nOlivator Score pracuje s celkovým obsahem polyfenolů (mg/kg). Ten neříká, kolik je v oleji hydroxytyrosolu — proto zdravotní tvrzení u konkrétních olejů neuvádíme.',
       },
       {
         heading: 'Co ovlivňuje obsah polyfenolů',
@@ -204,7 +204,8 @@ async function getPageData() {
       .gt('olivator_score', 0),
     supabaseAdmin
       .from('product_offers')
-      .select('product_id')
+      .select('product_id, retailers!inner(is_active)')
+      .eq('retailers.is_active', true)
       .not('affiliate_url', 'is', null),
   ])
 
@@ -669,15 +670,15 @@ export default async function MetodikaPage() {
                   <ul className="space-y-2 text-[13px] text-text2">
                     <li>
                       <strong className="text-text">Beauchamp et al. (Nature, 2005)</strong><br />
-                      Objev oleokantalu jako protizánětlivého agentu s ibuprofen-like aktivitou.
+                      Popis oleokantalu jako látky, která v EVOO způsobuje pálení v krku.
                     </li>
                     <li>
                       <strong className="text-text">Estruch et al. PREDIMED (NEJM, 2013)</strong><br />
-                      Středomořská dieta s EVOO snižuje kardiovaskulární riziko o 30 %.
+                      Velká randomizovaná studie středomořské stravy doplněné extra panenským olivovým olejem.
                     </li>
                     <li>
-                      <strong className="text-text">EFSA Panel 432/2012</strong><br />
-                      Schválení zdravotního tvrzení: 250+ mg/kg polyfenolů = ochrana LDL před oxidací.
+                      <strong className="text-text">Nařízení Komise (EU) č. 432/2012</strong><br />
+                      „Polyfenoly z olivového oleje přispívají k ochraně krevních lipidů před oxidativním stresem.“ Tvrzení smí být použito pouze u olivového oleje, který obsahuje nejméně 5 mg hydroxytyrosolu a jeho derivátů (např. oleuropein komplex a tyrosol) na 20 g olivového oleje. Aby bylo možné tvrzení použít, musí být spotřebitel informován, že příznivého účinku se dosáhne při přívodu 20 g olivového oleje denně.
                     </li>
                   </ul>
                 </div>

@@ -4,6 +4,7 @@
 import { cache } from 'react'
 import { supabaseAdmin } from './supabase'
 import type { Product, ProductOffer, Retailer } from './types'
+import { oilFamilyKey } from './oil-family'
 
 // ── Product row mapping (snake_case DB → camelCase TS) ────────────────
 interface ProductRow {
@@ -36,6 +37,7 @@ interface ProductRow {
   meta_description: string | null
   status: string
   status_reason_code: string | null
+  seo_noindex?: boolean | null
   status_reason_note: string | null
   status_changed_by: string | null
   status_changed_at: string | null
@@ -96,6 +98,7 @@ function mapProduct(row: ProductRow): Product {
     metaDescription: row.meta_description ?? null,
     status: row.status as Product['status'],
     statusReasonCode: row.status_reason_code ?? null,
+    seoNoindex: row.seo_noindex === true,
     statusReasonNote: row.status_reason_note ?? null,
     statusChangedBy: (row.status_changed_by as 'admin' | 'auto' | null) ?? null,
     statusChangedAt: row.status_changed_at ?? null,
@@ -176,7 +179,7 @@ const PRODUCT_PUBLIC_COLUMNS =
   'volume_ml, packaging, olivator_score, score_breakdown, ' +
   'description_short, description_long, meta_title, meta_description, ' +
   'status, image_url, image_source, source_url, brand_slug, ' +
-  'acidity_source, polyphenols_source, source_note'
+  'acidity_source, polyphenols_source, source_note, seo_noindex'
 
 // Subset pro listing karty (homepage, srovnavac, sidebar) — bez description_long
 // (zobrazuje se pouze na detail stránce). Ušetří ~10-20 KB / produkt × 71.
@@ -296,6 +299,32 @@ export async function getProductsBySlugs(slugs: string[]): Promise<Product[]> {
 }
 
 // Returns all active products with their cheapest offer pre-joined
+/** 3 podobné oleje skladem u spolupracujících obchodů — pro stránku oleje, který žádný takový obchod nenabízí.
+ *  Podobnost: stejný region/země původu, shodné chuťové štítky, blízké Score. Jiná balení téhož oleje se vynechají. */
+export async function getSimilarInStock(product: Product, limit = 3): Promise<Array<Product & { cheapestOffer: ProductOffer }>> {
+  const family = oilFamilyKey(product.name)
+  const labels = new Set(product.flavorLabels ?? [])
+  const candidates = (await getProductsWithOffers()).filter(
+    (p): p is Product & { cheapestOffer: ProductOffer } =>
+      p.id !== product.id && p.cheapestOffer != null && p.cheapestOffer.inStock !== false && oilFamilyKey(p.name) !== family
+  )
+  const score = (p: Product) =>
+    (p.originCountry && p.originCountry === product.originCountry ? 3 : 0) +
+    (p.originRegion && p.originRegion === product.originRegion ? 2 : 0) +
+    (p.flavorLabels ?? []).filter((l) => labels.has(l)).length -
+    Math.abs((p.olivatorScore ?? 0) - (product.olivatorScore ?? 0)) / 10
+  const picked: Array<Product & { cheapestOffer: ProductOffer }> = []
+  const families = new Set<string>()
+  for (const p of candidates.sort((a, b) => score(b) - score(a))) {
+    const f = oilFamilyKey(p.name)
+    if (families.has(f)) continue
+    families.add(f)
+    picked.push(p)
+    if (picked.length >= limit) break
+  }
+  return picked
+}
+
 export const getProductsWithOffers = cache(async (): Promise<Array<Product & { cheapestOffer: ProductOffer | null }>> => {
   const products = await getProducts()
   const ids = products.map(p => p.id)
@@ -1773,21 +1802,23 @@ export async function getBestsellers(opts: { limit?: number } = {}): Promise<Arr
 export async function get5LSavingsPct(): Promise<{ savingPct: number; avg5LPpl: number; avg05LPpl: number }> {
   const { data: data5L } = await supabaseAdmin
     .from('products')
-    .select('volume_ml, product_offers(price)')
+    .select('volume_ml, product_offers(price, in_stock, retailers(is_active))')
     .eq('status', 'active')
     .eq('type', 'evoo')
     .gte('volume_ml', 4500)
     .lte('volume_ml', 5500)
   const { data: data05L } = await supabaseAdmin
     .from('products')
-    .select('volume_ml, product_offers(price)')
+    .select('volume_ml, product_offers(price, in_stock, retailers(is_active))')
     .eq('status', 'active')
     .eq('type', 'evoo')
     .gte('volume_ml', 400)
     .lte('volume_ml', 600)
   const ppl = (rows: typeof data5L) =>
     (rows ?? []).flatMap((p: any) =>
-      (p.product_offers as Array<{ price: number }>).map((o) => o.price / (p.volume_ml / 1000))
+      (p.product_offers as Array<{ price: number; in_stock: boolean; retailers: { is_active: boolean } | null }>)
+        .filter((o) => o.in_stock && o.retailers?.is_active === true)
+        .map((o) => o.price / (p.volume_ml / 1000))
     )
   const avg = (arr: number[]) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0
   const avg5L = avg(ppl(data5L))

@@ -200,8 +200,9 @@ export async function computeCurrentIndex(): Promise<IndexSnapshot> {
   for (let i = 0; i < productIds.length; i += 200) {
     const { data, error } = await supabaseAdmin
       .from('product_offers')
-      .select('product_id, retailer_id, price')
+      .select('product_id, retailer_id, price, retailers!inner(is_active)')
       .in('product_id', productIds.slice(i, i + 200))
+      .eq('retailers.is_active', true)
       .eq('in_stock', true)
       .gte('last_checked', cutoff)
     if (error) throw new Error(`offers batch ${i}: ${error.message}`)
@@ -245,7 +246,8 @@ export async function computeMonthFromHistory(targetMonth: string): Promise<Inde
     const batch = productIds.slice(i, i + 200)
     const { data: history } = await supabaseAdmin
       .from('price_history')
-      .select('product_id, retailer_id, price, in_stock, recorded_at')
+      .select('product_id, retailer_id, price, in_stock, recorded_at, retailers!inner(is_active)')
+      .eq('retailers.is_active', true)
       .in('product_id', batch)
       .gte('recorded_at', monthStart)
       .lt('recorded_at', monthEnd)

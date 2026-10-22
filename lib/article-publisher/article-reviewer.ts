@@ -33,7 +33,7 @@ ${bodyMarkdown.slice(0, 3000)}${bodyMarkdown.length > 3000 ? '\n[...zkráceno...
 KONTROLNÍ SEZNAM:
 1. Obsahuje vymyšlené produkty? (jména bez {{product:slug}} tokenu = červená vlajka)
 2. Obsahuje vymyšlené studie nebo konkrétní čísla bez zdroje?
-3. Pro zdravotní tvrzení: jsou kauzální výroky hedgované (naznačují, může přispívat)? EFSA schválené: "přispívá k ochraně LDL cholesterolu" (při ≥250 mg/kg). Zakázáno: "léčí", "chrání před rakovinou/cukrovkou/infarktem", "zaručeně pomáhá"
+3. Pro zdravotní tvrzení: jsou kauzální výroky hedgované (naznačují, může přispívat)? Jediné schválené tvrzení (432/2012, doslova): „Polyfenoly z olivového oleje přispívají k ochraně krevních lipidů před oxidativním stresem.“ — jen s podmínkou 5 mg hydroxytyrosolu a derivátů na 20 g oleje a přívodu 20 g denně. Zakázáno: "léčí", "chrání před rakovinou/cukrovkou/infarktem", "zaručeně pomáhá"
 4. Je minimálně 300 slov?
 5. Jsou affiliate CTA přirozené (ne "KLIKNI ZDE!")?
 6. Existují {{product:slug}} tokeny (alespoň 1)?

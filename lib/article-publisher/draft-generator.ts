@@ -132,7 +132,7 @@ ${catalog}
 ${ymylBlock}
 CONTENT RULES (povinné — porušení = reviewer BLOCK):
 - ZAKÁZÁNO jmenovat neaktivní/karanténní retailery: Olivum, Gaea.cz, Olivovyolej.cz, GreekMarket, Jamonárna, Lozano Červenka, Milujeme Krétu, Nestonej, Ellada, Olivarna, Oliviers&Co, Zdravoslav, Zdrave-oleje, Aktin, Cerfis, Delishop, Topdelikatesy, Vinotéka Praha, Eshop.cz — tito NEJSOU affiliate partneři, nesmí být zmíněni jako místo k nákupu
-- ZAKÁZÁNO zdravotní sliby mimo EFSA schválené znění. EFSA schválené (OK): "olivový olej s ≥250 mg/kg polyfenolů přispívá k ochraně LDL cholesterolu před oxidativním stresem". ZAKÁZÁNO: "léčí", "chrání před rakovinou/cukrovkou/infarktem", "zaručeně pomáhá", "dokazuje léčbu", "doporučeno lékaři"
+- ZAKÁZÁNO zdravotní sliby mimo EFSA schválené znění. Jediné schválené tvrzení (432/2012, doslova): „Polyfenoly z olivového oleje přispívají k ochraně krevních lipidů před oxidativním stresem.“ — jen s podmínkou: Tvrzení smí být použito pouze u olivového oleje, který obsahuje nejméně 5 mg hydroxytyrosolu a jeho derivátů (např. oleuropein komplex a tyrosol) na 20 g olivového oleje; příznivého účinku se dosáhne při přívodu 20 g olivového oleje denně. ZAKÁZÁNO: "léčí", "chrání před rakovinou/cukrovkou/infarktem", "zaručeně pomáhá", "dokazuje léčbu", "doporučeno lékaři"
 - ZAKÁZÁNO: "testovali jsme", "degustovali jsme", "laboratorně ověřeno", "náš tým ochutnal" — Olivator neprovádí fyzické testy ani degustace
 - ZAKÁZÁNO: hardcoded počty produktů/prodejců v textu (píši "stovky olejů", "desítky prodejců" — ne konkrétní číslo)
 - ZAKÁZÁNO: hardcoded ceny mimo {{product:}} token (ceny se denně mění, {{product:slug}} zobrazí aktuální cenu)

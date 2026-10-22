@@ -127,8 +127,22 @@ const PRODUCT_SELECT = `
   product_offers ( price, in_stock, affiliate_url, commission_pct, retailers ( name, slug, is_active ) )
 `
 
+// Přezdívky, cizí a bezdiakritické varianty názvů → tvar, jak je v názvech olejů v katalogu.
+const NAME_ALIASES: Record<string, string[]> = {
+  corfu: ['korfu'], kerkyra: ['korfu'], korfu: ['korfu'],
+  crete: ['kréta', 'krety', 'kréty'], kreta: ['kréta'], krety: ['kréty', 'kréta'], creta: ['kréta'],
+  peloponnese: ['peloponés'], peloponnes: ['peloponés'], pelopones: ['peloponés'], peloponez: ['peloponés'],
+  lesbos: ['lesvos'], lesvos: ['lesvos'], kalamon: ['kalamata'], calamata: ['kalamata'],
+  sicily: ['sicil'], sicilia: ['sicil'], sicilie: ['sicil'], apulia: ['puglia', 'apulie'], puglia: ['puglia', 'apulie'],
+  tuscany: ['toscana', 'toskán'], toscana: ['toscana', 'toskán'], andalusia: ['andalus'],
+  koronaiki: ['koroneiki'], koroneiki: ['koroneiki'], arbequina: ['arbequina'],
+  evolia: ['evolia'], evoilino: ['evoilino'], sitia: ['sitia'], famelian: ['famelian'],
+}
+
 export function searchTokensOf(query: string): string[] {
-  return [...new Set((query.match(/\p{L}{4,}/gu) ?? []).map((w) => w.toLowerCase()).filter((w) => !SKIP_TOKENS.has(w)))]
+  const words = (query.match(/\p{L}{4,}/gu) ?? []).map((w) => w.toLowerCase()).filter((w) => !SKIP_TOKENS.has(w))
+  const plain = (w: string) => w.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  return [...new Set(words.flatMap((w) => [w, ...(NAME_ALIASES[plain(w)] ?? [])]))]
 }
 
 async function getTopProducts(limit: number): Promise<ProductContext[]> {
@@ -151,6 +165,8 @@ async function searchByName(tokens: string[]): Promise<{ available: ProductConte
     .from('products')
     .select(PRODUCT_SELECT)
     .in('status', ['active', 'inactive'])
+    .not('name', 'ilike', '%poškozený obal%')
+    .not('name', 'ilike', '%outlet%')
     .or(orParts.join(','))
     .order('olivator_score', { ascending: false })
     .limit(40)
@@ -248,7 +264,7 @@ PRAVDIVOST — NEJDŮLEŽITĚJŠÍ
 ZDRAVÍ
 - Olivový olej není lék. Na „léčivý“, „léčí“, „pomáhá na nemoc“ odpověz, že olivový olej není lék a nenahrazuje léčbu; nabídni oleje s vysokým obsahem polyfenolů jako údaj z měření.
 - Nesmíš tvrdit žádné zdravotní účinky (srdce, cholesterol, rakovina, imunita, záněty, hubnutí, prevence nemocí, „antioxidační účinky“ apod.).
-- Jediné povolené zdravotní tvrzení (nařízení EU 432/2012), a jen obecně, nikdy o konkrétním oleji: „Polyfenoly olivového oleje přispívají k ochraně lipidů v krvi před oxidačním stresem — platí pro olej s alespoň 5 mg hydroxytyrosolu a jeho derivátů na 20 g, při denním příjmu 20 g.“ Hydroxytyrosol v katalogu nemáme, takže u žádného oleje netvrď, že podmínku splňuje. Obsah polyfenolů v mg/kg uvádět smíš.
+- Jediné povolené zdravotní tvrzení (nařízení EU 432/2012), a jen obecně, nikdy o konkrétním oleji: „Polyfenoly z olivového oleje přispívají k ochraně krevních lipidů před oxidativním stresem.“ Smí jen s podmínkou: platí pro olivový olej, který obsahuje nejméně 5 mg hydroxytyrosolu a jeho derivátů na 20 g oleje, a příznivého účinku se dosáhne při přívodu 20 g olivového oleje denně. Hydroxytyrosol v katalogu nemáme, takže u žádného oleje netvrď, že podmínku splňuje. Obsah polyfenolů v mg/kg uvádět smíš.
 
 MIMO OBOR
 - Věnuješ se jen olivovému oleji. Na jiné oleje a témata (lněný, kokosový olej, recepty bez oleje…) zdvořile odpověz, že se věnuješ jen olivovému oleji, a nabídni pomoc s ním.
@@ -282,7 +298,7 @@ const FOREIGN_WORDS = new RegExp(`(?<!\\p{L})(gebied|het|een|und|oder|nicht|sehr
 const NON_CZECH_LETTERS = /[Ѐ-ӿͰ-Ͽ一-鿿ľĺŕäôẞß]/
 const INVENTED_REASON = /(někdo\s+(ho|je|to)\s+koupil|vyprodal|vyprodan[ýáé]|stáhl[ia]?\s+z\s+prodeje|nahradil[ia]|aktualizoval\s+katalog|už\s+ho\s+nemáme\s+v\s+sortimentu|přestal[ia]?\s+prodávat)/i
 const HEALTH = /(léč|\blék(?!ař)|vyléč|uzdrav|prevenc|předcház|chrání\s+před|snižuje\s+(riziko|cholesterol|tlak)|cholesterol|rakovin|nádor|srdc|srdeční|kardio|cukrovk|diabet|imunit|zánět|detox|antioxida|omlaz|hubnut|zdravotní\s+účin|posiluje|prospěšn|blahodárn)/i
-const ALLOWED_HEALTH_SENTENCE = /((není|nemá|nejsou|nesmí\w*|netvrd\w*|nelze|neslibuj\w*)\s.{0,60}(léč|lék|účin)|není\s+lék|nenahrazuje\s+léčbu|ochran[ěy]\s+lipidů\s+v\s+krvi\s+před\s+oxidačním\s+stresem|432\/2012|hydroxytyrosol)/i
+const ALLOWED_HEALTH_SENTENCE = /((není|nemá|nejsou|nesmí\w*|netvrd\w*|nelze|neslibuj\w*)\s.{0,60}(léč|lék|účin)|není\s+lék|nenahrazuje\s+léčbu|ochran[ěy]\s+(krevních\s+lipidů|lipidů\s+v\s+krvi)\s+před\s+oxida\w*\s+stresem|432\/2012|hydroxytyrosol)/i
 
 /** Kontrola odpovědi: jazyk, existence olejů a obchodů v katalogu, vymyšlené důvody, zdravotní tvrzení. */
 export function validateOlikReply(text: string, ctx: OlikContext, userMsg = ''): string[] {

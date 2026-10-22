@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { getProducts, getProductBySlug, getProductByOldSlug, getOffersForProduct, getProductGallery, getProductCustomFAQs, getActiveGeneralFAQs, getVariantProducts, getProductEntityLinks, getRetailerPhotosLite, getAlternativeProduct } from '@/lib/data'
+import { getProducts, getProductBySlug, getProductByOldSlug, getOffersForProduct, getProductGallery, getProductCustomFAQs, getActiveGeneralFAQs, getVariantProducts, getProductEntityLinks, getRetailerPhotosLite, getAlternativeProduct, getSimilarInStock } from '@/lib/data'
 import { extractBrandSlug, extractRegionSlug } from '@/lib/entity-extractor'
 import { countryName, countryFlag, typeLabel, certLabel, formatPrice, formatPricePer100ml, regionGenitive } from '@/lib/utils'
 import { productSchema, breadcrumbSchema, faqSchema } from '@/lib/schema'
@@ -68,9 +68,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         : `${product.name}. Srovnání cen od partnerských e-shopů, certifikace a parametry.`)
   )
   const url = `https://olivator.cz/olej/${product.slug}`
+  // Bez nabídky u spolupracujícího obchodu a bez zobrazení v GSC → mimo index, dokud se nabídka nevrátí.
+  const noindex = product.seoNoindex === true && (await getOffersForProduct(product.id)).length === 0
 
   return {
     title,
+    ...(noindex ? { robots: { index: false, follow: true } } : {}),
     description,
     alternates: { canonical: url },
     openGraph: {
@@ -119,9 +122,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     (async () => {
       const { supabaseAdmin } = await import('@/lib/supabase')
       const since = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString()
+      // Jen ceny obchodů, se kterými spolupracujeme (karanténní obchody do grafu nepatří).
       const { data } = await supabaseAdmin
         .from('price_history')
-        .select('price, recorded_at')
+        .select('price, recorded_at, retailers!inner(is_active)')
+        .eq('retailers.is_active', true)
         .eq('product_id', product.id)
         .gte('recorded_at', since)
         .order('recorded_at', { ascending: true })
@@ -144,6 +149,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const alternative = allSoldOut
     ? await getAlternativeProduct(product.id, product.name, product.volumeMl)
     : null
+  const similarInStock = offers.length === 0 ? await getSimilarInStock(product) : []
   const hasScore = product.type !== 'flavored' && product.olivatorScore != null && product.olivatorScore > 0
   // Aliasy z VariantGroups — page kód níže dlouho používal `variants` array.
   // Po splitu Fáze UI (2026-05): sameOil = identický olej v jiných objemech,
@@ -487,6 +493,40 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           )}
 
           {/* Cena + CTA — viditelné hned bez scrollu */}
+          {offers.length === 0 && (
+            <div className="mb-4">
+              <div className="block w-full text-center py-3.5 px-3 text-[14px] font-medium text-text2 bg-off rounded-xl mb-3">
+                Momentálně ho nenabízí žádný obchod, se kterým spolupracujeme
+              </div>
+              {similarInStock.length > 0 && (
+                <div>
+                  <div className="text-[11px] text-olive-dark font-semibold uppercase tracking-wider mb-2">
+                    Podobné oleje skladem
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {similarInStock.map((p) => (
+                      <Link
+                        key={p.id}
+                        href={`/olej/${p.slug}`}
+                        className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl border border-off2 hover:border-olive transition-colors"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-[13px] font-medium text-text leading-snug">{p.name}</div>
+                          {p.olivatorScore ? (
+                            <div className="text-[11px] text-text3 mt-0.5">Score {p.olivatorScore}</div>
+                          ) : null}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="text-[15px] font-semibold text-text tabular-nums">{formatPrice(p.cheapestOffer.price)}</div>
+                          <div className="text-[12px] text-olive font-medium mt-0.5">Zobrazit →</div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           {cheapest && (
             <div className="mb-4">
               {allSoldOut ? (
@@ -958,7 +998,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                       value={`${product.oleocanthal} mg/kg`}
                       note={
                         product.oleocanthal >= 200
-                          ? 'výrazný pálivý vjem, silné protizánětlivé účinky'
+                          ? 'výrazný pálivý vjem v krku'
                           : product.oleocanthal >= 100
                           ? 'dobrý obsah oleokantalu'
                           : 'nižší obsah'

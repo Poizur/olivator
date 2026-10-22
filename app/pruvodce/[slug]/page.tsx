@@ -15,6 +15,7 @@ import { AuthorByline } from '@/components/article/author-byline'
 import { OlikAuthorBox } from '@/components/article/olik-author-box'
 import { AffiliateDisclosure } from '@/components/article/affiliate-disclosure'
 import { HealthDisclaimer, isHealthArticle } from '@/components/article/health-disclaimer'
+import { PolyphenolRankingCta, isPolyphenolArticle } from '@/components/article/polyphenol-ranking-cta'
 import { LeadMagnetCta } from '@/components/lead-magnet-cta'
 
 // force-dynamic: obsah článků se mění v DB — vždy fetchuj čerstvá data.
@@ -314,6 +315,8 @@ export default async function ArticleDetailPage({
             )}
           </div>
 
+          {isPolyphenolArticle(article.slug) && <PolyphenolRankingCta position="top" />}
+
           {resolvedBody ? (
             <ArticleBody body={resolvedBody} productMap={productMap} />
           ) : (
@@ -324,6 +327,8 @@ export default async function ArticleDetailPage({
               </p>
             </div>
           )}
+
+          {isPolyphenolArticle(article.slug) && <PolyphenolRankingCta position="bottom" />}
 
           {isHealthArticle(article.slug, article.title, article.category) && <HealthDisclaimer />}
 

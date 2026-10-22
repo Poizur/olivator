@@ -59,7 +59,8 @@
     "source_note",
     "flavor_labels",
     "completeness_score",
-    "delta_k"
+    "delta_k",
+    "seo_noindex"
   ],
   "retailers": [
     "id",

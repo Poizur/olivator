@@ -52,7 +52,8 @@ export const GENERAL_FAQS: FAQPair[] = [
     answer:
       'Středomořská dieta doporučuje 2–4 polévkové lžíce (30–60 ml) denně pro dospělého. EU health ' +
       'claim povoluje tvrzení o ochraně krevních lipidů při příjmu 20 g (2 lžíce) oleje s alespoň ' +
-      '5 mg hydroxytyrosolu na den (typicky obsažen v EVOO s 250+ mg/kg polyfenolů). Olivový olej ' +
+      '5 mg hydroxytyrosolu a jeho derivátů na 20 g. Celkové polyfenoly (mg/kg) o hydroxytyrosolu ' +
+      'přímo nevypovídají. Olivový olej ' +
       'má 884 kcal/100 g, takže to je kalorický doplněk — nahraď jím máslo nebo rafinované oleje, ' +
       'nepřidávej navíc.',
   },
@@ -99,8 +100,8 @@ export const GENERAL_FAQS: FAQPair[] = [
       'Polyfenoly jsou přírodní antioxidanty z oliv (oleocanthal, oleuropein, hydroxytyrosol). ' +
       'Dávají oleji typickou pálivost v hrdle a hořkost — to je signál kvality, ne defekt. ' +
       'EU health claim povoluje tvrzení "polyfenoly z olivového oleje přispívají k ochraně ' +
-      'krevních lipidů před oxidačním stresem" pouze u olejů s ≥ 250 mg hydroxytyrosolu/kg. ' +
-      'Studie spojují vysoké polyfenoly s ochranou srdce, sníženým zánětem a delší životností. ' +
+      'krevních lipidů před oxidativním stresem" pouze u olivového oleje s nejméně 5 mg ' +
+      'hydroxytyrosolu a jeho derivátů na 20 g oleje, při přívodu 20 g olivového oleje denně. ' +
       'Early harvest oleje (Koroneiki, Picual) mají typicky 400–800 mg/kg.',
   },
   {
@@ -115,12 +116,8 @@ export const GENERAL_FAQS: FAQPair[] = [
   {
     question: 'Pomáhá olivový olej hubnout?',
     answer:
-      'Sám o sobě ne — je to čistý tuk s 884 kcal/100 g. Ale ve studiích středomořské diety ' +
-      '(PREDIMED, Spanish Mediterranean Diet trial 2013) skupina jedoucí 4 lžíce EVOO denně ' +
-      'měla nižší riziko kardiovaskulárních příhod o 30 %, NIŽŠÍ obvod pasu a lepší inzulinovou ' +
-      'sensitivitu než nízkotučná dieta. Mononenasycené tuky a polyfenoly podporují sytost ' +
-      'a zdravější metabolismus. Klíč je nahradit jím horší tuky (máslo, rafinované oleje, ' +
-      'palmový tuk), ne přidávat navíc.',
+      'Ne — je to čistý tuk s 884 kcal/100 g. Do jídelníčku ho zařaď místo jiných tuků ' +
+      '(máslo, rafinované oleje, palmový tuk), ne navíc.',
   },
 ]
 

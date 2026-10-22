@@ -38,13 +38,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]
 
   const [productsRes, regions, brands, cultivars] = await Promise.all([
-    supabaseAdmin.from('products').select('slug, updated_at').eq('status', 'active'),
+    supabaseAdmin
+      .from('products')
+      .select('slug, updated_at, seo_noindex, product_offers(retailers(is_active))')
+      .eq('status', 'active'),
     supabaseAdmin.from('regions').select('slug, updated_at').eq('status', 'active'),
     supabaseAdmin.from('brands').select('slug, updated_at').eq('status', 'active'),
     supabaseAdmin.from('cultivars').select('slug, updated_at').eq('status', 'active'),
   ])
 
-  const products = (productsRes.data ?? []) as { slug: string; updated_at: string | null }[]
+  // Oleje s noindexem (bez nabídky u spolupracujícího obchodu a bez zobrazení v GSC) do sitemap nepatří.
+  const products = ((productsRes.data ?? []) as unknown as Array<{
+    slug: string
+    updated_at: string | null
+    seo_noindex: boolean | null
+    product_offers: Array<{ retailers: { is_active: boolean } | null }> | null
+  }>).filter((p) => !p.seo_noindex || (p.product_offers ?? []).some((o) => o.retailers?.is_active === true))
 
   function dt(iso: string | null | undefined): Date {
     if (!iso) return buildTime

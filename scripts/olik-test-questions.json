@@ -1,5 +1,5 @@
 {
-  "_popis": "Anonymní testovací sada pro Olíka: skutečné dotazy návštěvníků (červenec–říjen 2026), seskupené po rozhovorech kvůli kontextu navazujících otázek. Bez ID návštěv, stránek, časů a odpovědí.",
+  "_popis": "Anonymní testovací sada pro Olíka: skutečné dotazy návštěvníků (červenec–říjen 2026), seskupené po rozhovorech kvůli kontextu navazujících otázek. Bez ID návštěv, stránek, časů a odpovědí. Doplněno o kontrolní dotazy na přezdívky a cizí varianty názvů (22. 10. 2026).",
   "rozhovory": [
     [
       "🎁 Dárek pro tátu co rád vaří",
@@ -136,6 +136,21 @@
     ],
     [
       "250Kč"
+    ],
+    [
+      "Kerkyra olivový olej"
+    ],
+    [
+      "olej z Crete"
+    ],
+    [
+      "Peloponnese"
+    ],
+    [
+      "Sicilia olio"
+    ],
+    [
+      "koronaiki early harvest"
     ]
   ]
 }

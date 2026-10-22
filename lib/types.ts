@@ -38,6 +38,8 @@ export interface Product {
   status: 'draft' | 'active' | 'inactive' | 'excluded'
   // Audit stopa pro inactive / excluded — proč a kdo. Active / draft typicky null.
   statusReasonCode: string | null     // 'url_404' | 'out_of_stock' | 'duplicate' | …
+  /** Bez nabídky u spolupracujícího obchodu a bez zobrazení v GSC → noindex a mimo sitemap. */
+  seoNoindex?: boolean
   statusReasonNote: string | null     // free text (admin custom nebo detail)
   statusChangedBy: 'admin' | 'auto' | null
   statusChangedAt: string | null      // ISO timestamp
