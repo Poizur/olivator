@@ -24,6 +24,13 @@ function deriveSourceType(sourcePage: string | null, utmMedium?: string): string
   return 'unknown'
 }
 
+function publicOrigin(request: NextRequest): string {
+  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host')
+  if (!host || host.startsWith('localhost:8080')) return 'https://olivator.cz'
+  const proto = request.headers.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
+  return `${proto}://${host}`
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ retailer: string; slug: string }> }
@@ -89,7 +96,8 @@ export async function GET(
     recentClicksFromIp: recentCount ?? 0,
     testHeader: request.headers.get('x-olivator-test') === '1',
     productSlug,
-    productPageUrl: new URL(`/olej/${productSlug}`, reqUrl.origin).toString(),
+    // Za proxy Railway je reqUrl.origin interní (localhost:8080) — veřejnou adresu bereme z x-forwarded-host.
+    productPageUrl: new URL(`/olej/${productSlug}`, publicOrigin(request)).toString(),
     ean: (product.ean as string) ?? null,
   })
 
