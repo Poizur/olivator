@@ -1,0 +1,8 @@
+#!/bin/sh
+# Zablokuje commit, který přidává tajné klíče (Anthropic sk-ant-, Supabase sb_secret_/sbp_, JWT service role, Resend re_, GitHub gh*_).
+PATTERN='sk-ant-[A-Za-z0-9_-]{8,}|sb_secret_[A-Za-z0-9_-]{8,}|sbp_[a-f0-9]{20,}|eyJhbGciOi[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}|re_[A-Za-z0-9]{20,}|gh[pousr]_[A-Za-z0-9]{30,}|BEGIN (RSA |EC )?PRIVATE KEY'
+if git diff --cached -U0 --no-color | grep '^+' | grep -v '^+++' | grep -Eq "$PATTERN"; then
+  echo "✗ Commit zablokován: přidávané změny obsahují tajný klíč (sk-ant-, sb_secret_, sbp_, JWT, re_, gh*_ nebo privátní klíč)." >&2
+  echo "  Klíče patří jen do .env.local a proměnných na Railway." >&2
+  exit 1
+fi
