@@ -39,7 +39,7 @@ Olivator Score odměňuje nízkou kyselost — produkt s 0,2 % má v komponentě
 
 ## Polyfenoly — proč na nich záleží zdravotně
 
-Polyfenoly jsou látky zodpovědné za hořkou až pálivou chuť čerstvého oleje. Jediné schválené zdravotní tvrzení EU (nařízení 432/2012): „Polyfenoly z olivového oleje přispívají k ochraně krevních lipidů před oxidativním stresem.“ Tvrzení smí být použito pouze u olivového oleje, který obsahuje nejméně 5 mg hydroxytyrosolu a jeho derivátů (např. oleuropein komplex a tyrosol) na 20 g olivového oleje; příznivého účinku se dosáhne při přívodu 20 g olivového oleje denně.
+Polyfenoly jsou látky zodpovědné za hořkou až pálivou chuť čerstvého oleje. Schválené zdravotní tvrzení EU pro polyfenoly olivového oleje (nařízení 432/2012): „Polyfenoly z olivového oleje přispívají k ochraně krevních lipidů před oxidativním stresem.“ Tvrzení smí být použito pouze u olivového oleje, který obsahuje nejméně 5 mg hydroxytyrosolu a jeho derivátů (např. oleuropein komplex a tyrosol) na 20 g olivového oleje; příznivého účinku se dosáhne při přívodu 20 g olivového oleje denně.
 
 ### Co je dobrá hodnota
 - Pod 100 mg/kg = chudý na polyfenoly

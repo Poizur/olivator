@@ -99,7 +99,7 @@ export function generateProductFAQ(
   // Q9: Health benefits (always — universal)
   faqs.push({
     question: `Je extra panenský olivový olej zdravý?`,
-    answer: `Extra panenský olivový olej obsahuje převážně mononenasycené mastné kyseliny (hlavně kyselinu olejovou), vitamín E a polyfenoly. Jediné schválené zdravotní tvrzení EU pro olivový olej (nařízení 432/2012) zní: „Polyfenoly z olivového oleje přispívají k ochraně krevních lipidů před oxidativním stresem.“ Tvrzení smí být použito pouze u olivového oleje, který obsahuje nejméně 5 mg hydroxytyrosolu a jeho derivátů (např. oleuropein komplex a tyrosol) na 20 g olivového oleje; příznivého účinku se dosáhne při přívodu 20 g olivového oleje denně.`,
+    answer: `Extra panenský olivový olej obsahuje převážně mononenasycené mastné kyseliny (hlavně kyselinu olejovou), vitamín E a polyfenoly. Schválené zdravotní tvrzení EU pro polyfenoly olivového oleje (nařízení 432/2012) zní: „Polyfenoly z olivového oleje přispívají k ochraně krevních lipidů před oxidativním stresem.“ Tvrzení smí být použito pouze u olivového oleje, který obsahuje nejméně 5 mg hydroxytyrosolu a jeho derivátů (např. oleuropein komplex a tyrosol) na 20 g olivového oleje; příznivého účinku se dosáhne při přívodu 20 g olivového oleje denně.`,
   })
 
   return faqs
