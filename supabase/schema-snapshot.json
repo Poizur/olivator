@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated": "2026-10-22",
+    "generated": "2026-10-27",
     "note": "Spusť npm run schema:snapshot po každé aplikované SQL migraci."
   },
   "products": [
@@ -60,7 +60,11 @@
     "flavor_labels",
     "completeness_score",
     "delta_k",
-    "seo_noindex"
+    "seo_noindex",
+    "rescrape_attempts",
+    "rescrape_parked_at",
+    "rescrape_content_hash",
+    "rescrape_checked_at"
   ],
   "retailers": [
     "id",

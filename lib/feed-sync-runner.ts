@@ -14,7 +14,7 @@
 import { supabaseAdmin } from './supabase'
 import { syncRetailerFeed, type FeedSyncResult } from './feed-sync'
 import { researchRetailer } from './retailer-research'
-import { runRescrape } from './product-rescrape'
+import { runRescrape, pageContentHash } from './product-rescrape'
 import { linkAndRecomputeForProduct } from './entity-aggregator'
 import { inferOriginFromText } from './utils'
 import { syncReckonasbavyComplete } from './reckonasbavi-complete-sync'
@@ -132,7 +132,7 @@ export async function runFeedSyncForAllRetailers(): Promise<FeedSyncRunResult> {
     result.pendingDraftsRescraped = rescrapeStats.succeeded
     result.pendingDraftsFailed = rescrapeStats.failed
     if (rescrapeStats.succeeded + rescrapeStats.failed > 0) {
-      console.log(`[feed-sync] pending drafty: ${rescrapeStats.succeeded} OK, ${rescrapeStats.failed} failed`)
+      console.log(`[feed-sync] pending drafty: ${rescrapeStats.succeeded} OK, ${rescrapeStats.failed} failed, nově zaparkováno ${rescrapeStats.parked}, odparkováno (změna stránky) ${rescrapeStats.unparked}`)
     }
   } catch (err) {
     console.warn('[feed-sync] pending drafts stage failed:', err)
@@ -306,31 +306,78 @@ async function backfillEntityLinks(limit: number): Promise<number> {
   return done
 }
 
-/** Najde drafty bez Score / popisu (pre-existing nebo failed rescrape) a
- *  spustí runRescrape. Cap aby cron neutekl. */
-async function rescrapePendingDrafts(limit: number): Promise<{ succeeded: number; failed: number }> {
+const RESCRAPE_MAX_ATTEMPTS = 3
+const PARKED_RECHECK_DAYS = 7
+
+/** Najde drafty bez Score / popisu a spustí runRescrape (existující popis nepřepisuje).
+ *  Ochucené oleje se přeskakují (Score z principu nemají). Po 3 neúspěšných pokusech se draft
+ *  „zaparkuje“ — dál se nevolá API; nejvýš 1× týdně se jen stáhne stránka obchodu a při změně
+ *  obsahu (hash) se pokusy obnoví. */
+export async function rescrapePendingDrafts(limit: number): Promise<{ succeeded: number; failed: number; parked: number; unparked: number }> {
+  const stats = { succeeded: 0, failed: 0, parked: 0, unparked: 0 }
   const { data, error } = await supabaseAdmin
     .from('products')
-    .select('id, name')
+    .select('id, name, source_url, rescrape_attempts, rescrape_parked_at, rescrape_content_hash, rescrape_checked_at')
     .eq('status', 'draft')
+    .neq('type', 'flavored')
     .or('olivator_score.is.null,description_long.is.null')
     .not('source_url', 'is', null)
     .order('created_at', { ascending: true })
-    .limit(limit)
-  if (error || !data || data.length === 0) return { succeeded: 0, failed: 0 }
+    .limit(limit * 3)
+  if (error || !data || data.length === 0) return stats
 
-  let succeeded = 0
-  let failed = 0
+  const recheckBefore = Date.now() - PARKED_RECHECK_DAYS * 86400000
+  let processed = 0
   for (const p of data) {
+    if (processed >= limit) break
+    const id = p.id as string
     try {
-      await runRescrape(p.id as string)
-      succeeded++
+      if (p.rescrape_parked_at) {
+        if (p.rescrape_checked_at && new Date(p.rescrape_checked_at as string).getTime() > recheckBefore) continue
+        const hash = await pageContentHash(p.source_url as string)
+        // Bez uloženého otisku (zaparkováno ručně / poprvé) jen otisk uložíme — pokusy se obnoví až při další změně.
+        if (!p.rescrape_content_hash || hash === p.rescrape_content_hash) {
+          await supabaseAdmin
+            .from('products')
+            .update({ rescrape_checked_at: new Date().toISOString(), rescrape_content_hash: hash })
+            .eq('id', id)
+          continue
+        }
+        await supabaseAdmin
+          .from('products')
+          .update({ rescrape_parked_at: null, rescrape_attempts: 0, rescrape_checked_at: new Date().toISOString() })
+          .eq('id', id)
+        p.rescrape_attempts = 0
+        stats.unparked++
+      }
+
+      processed++
+      const result = await runRescrape(id, { keepExistingDescription: true })
+      const { data: after } = await supabaseAdmin
+        .from('products')
+        .select('olivator_score, description_long')
+        .eq('id', id)
+        .maybeSingle()
+      const complete = after?.olivator_score != null && Boolean(after?.description_long)
+      const attempts = complete ? 0 : ((p.rescrape_attempts as number) ?? 0) + 1
+      const park = !complete && attempts >= RESCRAPE_MAX_ATTEMPTS
+      await supabaseAdmin
+        .from('products')
+        .update({
+          rescrape_attempts: attempts,
+          rescrape_content_hash: result.contentHash,
+          rescrape_checked_at: new Date().toISOString(),
+          rescrape_parked_at: park ? new Date().toISOString() : null,
+        })
+        .eq('id', id)
+      if (park) stats.parked++
+      stats.succeeded++
     } catch (err) {
-      failed++
-      console.warn(`[pending-rescrape] ${p.id} failed:`, err instanceof Error ? err.message : err)
+      stats.failed++
+      console.warn(`[pending-rescrape] ${id} failed:`, err instanceof Error ? err.message : err)
     }
   }
-  return { succeeded, failed }
+  return stats
 }
 
 /** Doplní origin_country pro produkty kde je NULL — inferuje ze jména + popisu.

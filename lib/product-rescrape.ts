@@ -7,6 +7,7 @@
 // Cíl: po vytvoření draftu (z feedu nebo manuálně) má admin kompletní data
 // hned — Score, popisy, fotky, lab report values. Stačí zkontrolovat a publikovat.
 
+import { createHash } from 'node:crypto'
 import { supabaseAdmin } from './supabase'
 import { scrapeProductPage } from './product-scraper'
 import { applyRescrapePatch, updateProductFacts } from './data'
@@ -36,10 +37,14 @@ export interface RescrapeResult {
   labScansRun: number       // kolik lab reportů scanoval
   labScansFilled: number    // kolik přineslo nová data
   rawDescriptionLength: number
+  /** Otisk obsahu stránky obchodu — noční cron podle něj pozná, že se stránka změnila. */
+  contentHash: string
 }
 
 interface RunRescrapeOptions {
   url?: string  // override source_url
+  /** Existující popis nepřepisovat (noční cron) — šetří volání Sonnetu. */
+  keepExistingDescription?: boolean
 }
 
 export async function runRescrape(
@@ -62,7 +67,7 @@ export async function runRescrape(
 
   const { data: product, error } = await supabaseAdmin
     .from('products')
-    .select('source_url')
+    .select('source_url, description_long')
     .eq('id', productId)
     .maybeSingle()
   if (error) throw error
@@ -74,6 +79,9 @@ export async function runRescrape(
   // ── 1. Scrape ───────────────────────────────────────────────────────────
   const scraped = await scrapeProductPage(url)
   rawDescriptionLength = scraped.rawDescription?.length ?? 0
+  const contentHash = createHash('sha256')
+    .update(JSON.stringify([scraped.name, scraped.rawDescription, scraped.acidity, scraped.polyphenols]))
+    .digest('hex')
   steps.push(`scrape (${rawDescriptionLength} znaků)`)
 
   // ── 2. Patch NULL fields + uloží lab values + parameter table ──────────
@@ -274,7 +282,9 @@ export async function runRescrape(
   steps.push(`použití: ${derived.useCases.join(', ')}`)
 
   // ── 7. AI rewrite (Sonnet) ──────────────────────────────────────────────
-  if (scraped.rawDescription && scraped.rawDescription.length > 100) {
+  const keepDescription = opts.keepExistingDescription === true && Boolean(product.description_long)
+  if (keepDescription) steps.push('popis ponechán (už existuje)')
+  if (!keepDescription && scraped.rawDescription && scraped.rawDescription.length > 100) {
     try {
       const { data: factsRow } = await supabaseAdmin
         .from('products')
@@ -378,5 +388,14 @@ export async function runRescrape(
     labScansRun,
     labScansFilled,
     rawDescriptionLength,
+    contentHash,
   }
+}
+
+/** Otisk obsahu stránky obchodu bez volání API (jen stažení stránky) — pro zaparkované drafty. */
+export async function pageContentHash(url: string): Promise<string> {
+  const scraped = await scrapeProductPage(url)
+  return createHash('sha256')
+    .update(JSON.stringify([scraped.name, scraped.rawDescription, scraped.acidity, scraped.polyphenols]))
+    .digest('hex')
 }

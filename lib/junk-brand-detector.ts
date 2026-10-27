@@ -277,6 +277,7 @@ interface BrandRow {
   slug: string
   name: string
   status: string
+  junk_checked_at?: string | null
 }
 
 interface ProductRow {
@@ -489,9 +490,11 @@ export async function runJunkBrandCleanup(options: {
 
   const { data: brands } = await supabaseAdmin
     .from('brands')
-    .select('id, slug, name, status')
+    .select('id, slug, name, status, junk_checked_at')
     .eq('status', 'draft')
 
+  // Značku, kterou se nepodařilo vyřešit, posíláme Claude znovu nejvýš 1× za 30 dní (jinak každou noc stejná volání).
+  const recheckBefore = Date.now() - 30 * 86400000
   const allDrafts = (brands ?? []) as BrandRow[]
   const summary: JunkCleanupSummary = {
     totalBrandsScanned: allDrafts.length,
@@ -509,7 +512,9 @@ export async function runJunkBrandCleanup(options: {
     results: [],
   }
 
-  const junkBrands = allDrafts.filter(b => isJunkBrand(b.name).isJunk)
+  const junkBrands = allDrafts.filter(
+    b => isJunkBrand(b.name).isJunk && !(b.junk_checked_at && new Date(b.junk_checked_at).getTime() > recheckBefore)
+  )
   summary.junkDetected = junkBrands.length
 
   const processList = limit ? junkBrands.slice(0, limit) : junkBrands
@@ -542,6 +547,10 @@ export async function runJunkBrandCleanup(options: {
       }
     } else {
       result = await reassignAndDeleteJunkBrand(brand, costTracker)
+    }
+
+    if (!dryRun && result.action !== 'deleted_empty' && result.action !== 'deleted_after_reassign') {
+      await supabaseAdmin.from('brands').update({ junk_checked_at: new Date().toISOString() }).eq('id', brand.id)
     }
 
     summary.results.push(result)
