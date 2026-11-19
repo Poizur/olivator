@@ -84,10 +84,10 @@ export function deriveUseCases(input: DeriveInput): DeriveResult {
     reasoning.push('meat: výrazný olej s pálivostí — hodí se na maso a grilování')
   }
 
-  // ── Health — only real EVOO with high polyphenols (EU claim: ≥250 mg/kg) ──
+  // ── Health — štítek pro vyhledávání podle vysokého obsahu polyfenolů (EVOO ≥250 mg/kg); není to zdravotní tvrzení ──
   if (isEvoo && (input.polyphenols ?? 0) >= 250) {
     tags.add('health')
-    reasoning.push(`health: polyfenoly ${input.polyphenols} mg/kg — splňuje EU health claim (≥250)`)
+    reasoning.push(`health: polyfenoly ${input.polyphenols} mg/kg — vysoký obsah (≥250)`)
   }
 
   // ── Gift — premium-ish price + nice packaging ──

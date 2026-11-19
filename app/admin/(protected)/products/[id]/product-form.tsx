@@ -389,7 +389,7 @@ export function ProductForm({
           )}
           <div className="text-[11px] text-text3 mt-1.5">
             Každý kvalitní EVOO je „na všechno" — proto ručně nezaškrtáváme. Odvozeno z dat:
-            rafinované = smažení, jemné = ryby/salát, výrazné = maso, polyfenoly ≥ 250 mg/kg = zdraví,
+            rafinované = smažení, jemné = ryby/salát, výrazné = maso, polyfenoly ≥ 250 mg/kg = vysoký obsah (štítek „health“ = hledání podle polyfenolů, bez zdravotních tvrzení),
             cena + obal = dárek.
           </div>
         </Field>

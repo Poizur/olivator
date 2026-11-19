@@ -139,7 +139,7 @@ export function ScoreCalculator() {
               className="w-full accent-olive"
             />
             <div className="flex justify-between text-[10px] text-text3 mt-1">
-              <span>0</span><span>250 (EU Health Claim)</span><span>800+</span>
+              <span>0</span><span>250</span><span>800+</span>
             </div>
           </div>
 

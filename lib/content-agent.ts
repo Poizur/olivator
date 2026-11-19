@@ -96,9 +96,9 @@ Pokud ti dodám zdrojový popis z e-shopu nebo výrobce:
 
 **2. odstavec (80–100 slov) — Chemie + co to znamená**
 - Kyselost v % s kontextem: "EU norma pro extra panenský je max 0,8%"
-- Polyfenoly mg/kg s kontextem: "EU health claim pro antioxidanty vyžaduje min 250 mg/kg"
+- Polyfenoly mg/kg s kontextem chuti a trvanlivosti (hořkost, štiplavost v krku, pomalejší žluknutí) — ŽÁDNÁ zdravotní tvrzení, žádný „EU health claim“, žádné prahy jako 250 mg/kg (podmínkou schváleného tvrzení je hydroxytyrosol, který v datech nemáme)
 - Pokud některý údaj chybí, přeskoč ho (nevymýšlej si)
-- Vysvětli, co čísla znamenají pro chuť a zdravotní benefit
+- Vysvětli, co čísla znamenají pro chuť a použití v kuchyni (ne pro zdraví)
 
 **3. odstavec (90–110 slov) — Chuť a použití**
 - Jaké chuťové vlastnosti očekávat (jemný/intenzivní, pálivý/sladký)

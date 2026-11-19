@@ -984,10 +984,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                       value={`${product.polyphenols} mg/kg`}
                       note={
                         product.polyphenols >= 500
-                          ? 'splňuje EU health claim (≥250)'
+                          ? 'velmi vysoký obsah (dle výrobce)'
                           : product.polyphenols >= 250
-                          ? 'splňuje EU health claim'
-                          : 'nižší obsah'
+                          ? 'vysoký obsah (dle výrobce)'
+                          : 'nižší obsah (dle výrobce)'
                       }
                     />
                   )}
