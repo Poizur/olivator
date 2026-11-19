@@ -1,6 +1,7 @@
 // Obnova stránek s cenami po feed-syncu, complete-syncu, discovery a po nasazení — první návštěvník
-// nesmí dostat včerejší ceny. revalidatePath v route handleru stránku jen označí (přegeneruje se až při
-// další návštěvě), proto ji hned načteme i sami (warm-up přes localhost = stejná instance a stejná cache).
+// nesmí dostat včerejší ceny. revalidatePath v route handleru stránku jen označí a Next to uplatní až po
+// skončení handleru; proto warm-up (načtení přes localhost = stejná instance a stejná cache) běží až chvíli
+// po odpovědi, mimo požadavek. Ověřeno na produkci 19. 11.: warm-up uvnitř handleru načítal ještě starou cache.
 // Volat jen z Next request kontextu (route handler); cron skripty volají /api/cron/revalidate-prices.
 
 import { revalidatePath } from 'next/cache'
@@ -10,15 +11,14 @@ import { warnIfCapped } from './price'
 const FIXED_PATHS = ['/', '/slevy', '/zebricek', '/olivovy-olej-5l', '/nejprodavanejsi']
 const IN_BATCH = 60
 const WARM_CONCURRENCY = 4
+const WARM_DELAY_MS = 3000
 
 export interface PriceRevalidationResult {
   reason: string
   since: string
   paths: number
   productPages: number
-  warmed: number
-  warmFailed: string[]
-  ms: number
+  warm: 'scheduled'
 }
 
 async function changedProductSlugs(since: string): Promise<string[]> {
@@ -63,8 +63,19 @@ async function warm(origin: string, path: string): Promise<boolean> {
   return false
 }
 
-export async function revalidatePricePages(opts: { since: string; reason: string; origin?: string }): Promise<PriceRevalidationResult> {
+async function warmAll(origin: string, paths: string[], reason: string): Promise<void> {
   const t0 = Date.now()
+  const failed: string[] = []
+  let warmed = 0
+  for (let i = 0; i < paths.length; i += WARM_CONCURRENCY) {
+    const chunk = paths.slice(i, i + WARM_CONCURRENCY)
+    const results = await Promise.all(chunk.map((p) => warm(origin, p)))
+    results.forEach((ok, j) => (ok ? warmed++ : failed.push(chunk[j])))
+  }
+  console.log('[price-revalidation] warm-up', JSON.stringify({ reason, paths: paths.length, warmed, failed: failed.slice(0, 20), ms: Date.now() - t0 }))
+}
+
+export async function revalidatePricePages(opts: { since: string; reason: string; origin?: string }): Promise<PriceRevalidationResult> {
   const origin = opts.origin ?? `http://127.0.0.1:${process.env.PORT ?? 3000}`
   const [products, rankings] = await Promise.all([changedProductSlugs(opts.since), rankingPaths()])
   const paths = [...FIXED_PATHS, ...rankings, ...products.map((s) => `/olej/${s}`)]
@@ -77,23 +88,12 @@ export async function revalidatePricePages(opts: { since: string; reason: string
     }
   }
 
-  const warmFailed: string[] = []
-  let warmed = 0
-  for (let i = 0; i < paths.length; i += WARM_CONCURRENCY) {
-    const chunk = paths.slice(i, i + WARM_CONCURRENCY)
-    const results = await Promise.all(chunk.map((p) => warm(origin, p)))
-    results.forEach((ok, j) => (ok ? warmed++ : warmFailed.push(chunk[j])))
-  }
+  // Warm-up až po skončení požadavku (dlouho běžící Node server na Railway, ne serverless).
+  setTimeout(() => {
+    warmAll(origin, paths, opts.reason).catch((err: Error) => console.error('[price-revalidation] warm-up selhal:', err.message))
+  }, WARM_DELAY_MS)
 
-  const result = {
-    reason: opts.reason,
-    since: opts.since,
-    paths: paths.length,
-    productPages: products.length,
-    warmed,
-    warmFailed: warmFailed.slice(0, 20),
-    ms: Date.now() - t0,
-  }
+  const result: PriceRevalidationResult = { reason: opts.reason, since: opts.since, paths: paths.length, productPages: products.length, warm: 'scheduled' }
   console.log('[price-revalidation]', JSON.stringify(result))
   return result
 }
