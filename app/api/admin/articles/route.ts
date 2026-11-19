@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { guardPublicText } from '@/lib/text-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,6 +34,9 @@ export async function POST(request: NextRequest) {
       .eq('slug', slug)
       .maybeSingle()
     if (existing) slug = `${slug}-${Date.now().toString().slice(-5)}`
+
+    const guard = guardPublicText({ title, excerpt: body.excerpt, body_markdown: body.bodyMarkdown }, 'article')
+    if (guard.length > 0) return NextResponse.json({ error: `Text neprošel redakční kontrolou: ${guard.join(' | ')}` }, { status: 422 })
 
     const { data, error } = await supabaseAdmin
       .from('articles')

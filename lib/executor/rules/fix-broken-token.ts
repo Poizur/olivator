@@ -41,17 +41,24 @@ async function findReplacement(
 
   const { data: candidates } = await supabaseAdmin
     .from('products')
-    .select('slug, olivator_score, product_offers(price, in_stock, product_url)')
+    .select('slug, olivator_score, seo_noindex, product_offers(price, in_stock, product_url, retailers(is_active))')
     .eq('type', broken.type)
     .eq('status', 'active')
     .gte('olivator_score', 60)
     .neq('slug', brokenSlug)
     .order('olivator_score', { ascending: false })
-    .limit(10)
+    .limit(20)
 
-  if (!candidates || candidates.length < 2) return null
+  if (!candidates) return null
 
-  let filtered = candidates
+  // Náhrada musí být koupitelná: skladem u obchodu, se kterým spolupracujeme (2026-10-24 executor dosadil olej jen s karanténní nabídkou).
+  const buyable = candidates.filter((c) =>
+    !c.seo_noindex &&
+    ((c.product_offers as any[]) ?? []).some((o: any) => o.in_stock && o.retailers?.is_active === true)
+  )
+  if (buyable.length < 2) return null
+
+  let filtered = buyable
   if (brokenPrice) {
     filtered = candidates.filter(c => {
       const price = (c.product_offers as any[])?.find((o: any) => o.price > 0)?.price

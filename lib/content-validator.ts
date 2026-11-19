@@ -2,6 +2,8 @@
 // Catches hallucinations + banned marketing phrases + missing required data.
 // Runs after each Claude rewrite. Admin sees color-coded issues.
 
+import { findEditorialIssues, formatEditorialIssues } from './editorial-rules'
+
 export type Severity = 'error' | 'warning' | 'info'
 export type Category =
   | 'banned_phrase'
@@ -121,6 +123,10 @@ export function validateContent(input: ValidationInput): ValidationResult {
         matched: m[0],
       })
     }
+  }
+  // 1b. §26 zdravotní tvrzení, „testovali jsme“, počty natvrdo → ERROR
+  for (const e of findEditorialIssues(full)) {
+    issues.push({ severity: 'error', category: 'banned_phrase', message: formatEditorialIssues([e]), matched: e.sentence.slice(0, 80) })
   }
 
   // 2. Hallucination risks → WARNING (admin check)

@@ -10,6 +10,7 @@
 // (< MIN_APPLY_CONFIDENCE) NIC neukládá do brand row, jen vrátí návrh.
 
 import { supabaseAdmin } from './supabase'
+import { assertPublicText } from './text-guard'
 import { callClaude, extractText } from './anthropic'
 import { findProducerUrl, type ProducerUrlCandidate } from './brand-url-finder'
 import { researchBrand, type BrandResearchResult } from './brand-research'
@@ -330,6 +331,7 @@ async function applyDraftToBrand(brand: BrandRow, draft: PolishedDraft): Promise
 
   if (Object.keys(patch).length === 1) return applied // jen updated_at
 
+  assertPublicText(patch, 'brand.autofill')
   const { error } = await supabaseAdmin.from('brands').update(patch).eq('id', brand.id)
   if (error) throw new Error(`Brand update failed: ${error.message}`)
   return applied

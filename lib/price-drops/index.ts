@@ -1,15 +1,12 @@
 // lib/price-drops/index.ts
-// Detekuje cenové poklesy za posledních 7 dní (aktuální cena vs baseline z ~7 dní před).
-// Použití: /poklesy-cen stránka, newsletter sekce "co zlevnilo", executive brief.
-//
-// Rozdíl od getSlevyDeals (/slevy): tamto srovnává aktuální vs 30d maximum.
-// Tady srovnáváme aktuální vs cena před 7 dny — co se TENTO TÝDEN změnilo.
+// „Nové poklesy tento týden“ = potvrzené slevy (SQL view weekly_price_drops), jejichž současná cena začala v posledních 7 dnech.
+// Referenční cena = nejnižší cena za 30 dní před začátkem současné ceny (stejná definice jako /slevy, confirmed_deals).
+// Použití: /slevy, newsletter sekce „co zlevnilo“, executive brief.
 
 import { supabaseAdmin } from '@/lib/supabase'
+import { warnIfCapped } from '@/lib/price'
 
 const SITE = 'https://olivator.cz'
-const DROP_PCT_THRESHOLD = 5    // % — konzistentní s price-watch-notify.ts
-const DROP_CZK_THRESHOLD = 20   // Kč — konzistentní s price-watch-notify.ts
 const ANOMALY_WINDOW_DAYS = 14  // exclude produkty s price_anomaly za posledních 14 dní
 
 export interface WeeklyPriceDrop {
@@ -36,157 +33,73 @@ export interface WeeklyPriceDropsResult {
   totalCount: number
 }
 
+interface DropRow {
+  product_id: string
+  retailer_id: string
+  current_price: number
+  baseline_price: number
+  drop_pct: number
+}
+
 export async function getWeeklyPriceDrops(limit = 30): Promise<WeeklyPriceDropsResult> {
-  const now = Date.now()
-  // Baseline okno: cena zaznamenaná 5–10 dní před dneškem = "cena začátku týdne"
-  const baselineFrom = new Date(now - 10 * 86400_000).toISOString()
-  const baselineTo = new Date(now - 5 * 86400_000).toISOString()
+  const updatedAt = new Date().toISOString()
+  const { data: rows, error } = await supabaseAdmin
+    .from('weekly_price_drops')
+    .select('product_id, retailer_id, current_price, baseline_price, drop_pct')
+    .order('drop_pct', { ascending: false })
+  if (error) {
+    console.error('[price-drops] weekly_price_drops:', error.message)
+    return { drops: [], updatedAt, totalCount: 0 }
+  }
+  const drops = warnIfCapped(rows as DropRow[] | null, 'weekly_price_drops')
+  if (drops.length === 0) return { drops: [], updatedAt, totalCount: 0 }
 
-  // 1. Načti aktuální nabídky + metadata produktů + retailery paralelně
-  const [offersRes, productsRes, retailersRes] = await Promise.all([
-    supabaseAdmin
-      .from('product_offers')
-      .select('product_id, retailer_id, price, affiliate_url')
-      .eq('in_stock', true),
-    supabaseAdmin
-      .from('products')
-      .select('id, slug, name, name_short, olivator_score, image_url, volume_ml, origin_country')
-      .eq('status', 'active'),
-    supabaseAdmin
-      .from('retailers')
-      .select('id, slug, name')
-      .eq('is_active', true),
+  const productIds = [...new Set(drops.map((d) => d.product_id))]
+  const [productsRes, retailersRes, anomalyRes, imagesRes, offersRes] = await Promise.all([
+    supabaseAdmin.from('products').select('id, slug, name, name_short, olivator_score, image_url, volume_ml, origin_country').in('id', productIds),
+    supabaseAdmin.from('retailers').select('id, slug, name').eq('is_active', true),
+    supabaseAdmin.from('agent_decisions').select('payload').eq('decision_type', 'price_anomaly').gte('created_at', new Date(Date.now() - ANOMALY_WINDOW_DAYS * 86400_000).toISOString()),
+    supabaseAdmin.from('product_images').select('product_id, url').in('product_id', productIds).eq('is_primary', true),
+    supabaseAdmin.from('product_offers').select('product_id, retailer_id, affiliate_url').in('product_id', productIds),
   ])
-
-  const offers = offersRes.data ?? []
-  if (offers.length === 0) return { drops: [], updatedAt: new Date().toISOString(), totalCount: 0 }
-
-  const productMap = new Map(
-    (productsRes.data ?? []).map(p => [p.id as string, p])
-  )
-  const retailerMap = new Map(
-    (retailersRes.data ?? []).map(r => [r.id as string, { slug: r.slug as string, name: r.name as string }])
-  )
-
-  // Omez na produkty co jsou active + mají retailera
-  const qualifyingOffers = offers.filter(o =>
-    productMap.has(o.product_id as string) && retailerMap.has(o.retailer_id as string)
-  )
-  if (qualifyingOffers.length === 0) return { drops: [], updatedAt: new Date().toISOString(), totalCount: 0 }
-
-  const qualifyingProductIds = Array.from(new Set(qualifyingOffers.map(o => o.product_id as string)))
-
-  // 2. Baseline ceny (5–10 dní starý záznam z price_history) + anomálie paralelně
-  const [historyRes, anomalyRes, imagesRes] = await Promise.all([
-    supabaseAdmin
-      .from('price_history')
-      .select('product_id, retailer_id, price, recorded_at')
-      .in('product_id', qualifyingProductIds)
-      .gte('recorded_at', baselineFrom)
-      .lte('recorded_at', baselineTo)
-      .limit(20000),
-    supabaseAdmin
-      .from('agent_decisions')
-      .select('payload')
-      .eq('decision_type', 'price_anomaly')
-      .gte('created_at', new Date(now - ANOMALY_WINDOW_DAYS * 86400_000).toISOString()),
-    supabaseAdmin
-      .from('product_images')
-      .select('product_id, url')
-      .in('product_id', qualifyingProductIds)
-      .eq('is_primary', true)
-      .limit(500),
-  ])
-
-  const historyData = historyRes.data ?? []
-  const primaryImageMap = new Map(
-    (imagesRes.data ?? []).map(img => [img.product_id as string, img.url as string])
-  )
-
-  // Sestavit sadu anomálních (product_slug, retailer_slug) párů
+  const productMap = new Map((productsRes.data ?? []).map((p) => [p.id as string, p]))
+  const retailerMap = new Map((retailersRes.data ?? []).map((r) => [r.id as string, { slug: r.slug as string, name: r.name as string }]))
+  const primaryImageMap = new Map((imagesRes.data ?? []).map((img) => [img.product_id as string, img.url as string]))
+  const affiliateByKey = new Map((offersRes.data ?? []).map((o) => [`${o.product_id}|${o.retailer_id}`, Boolean(o.affiliate_url)]))
   const anomalyKeys = new Set<string>()
   for (const row of anomalyRes.data ?? []) {
     const p = row.payload as { product_slug?: string; retailer_slug?: string } | null
-    if (p?.product_slug && p?.retailer_slug) {
-      anomalyKeys.add(`${p.product_slug}|${p.retailer_slug}`)
-    }
+    if (p?.product_slug && p?.retailer_slug) anomalyKeys.add(`${p.product_slug}|${p.retailer_slug}`)
   }
 
-  // 3. Per (product, retailer): najdi NEJNOVĚJŠÍ baseline záznam (closest to 7d ago)
-  //    Klíč: "productId|retailerId"
-  const baselineByKey = new Map<string, number>()
-  for (const h of historyData as Array<{ product_id: string; retailer_id: string; price: number; recorded_at: string }>) {
-    const key = `${h.product_id}|${h.retailer_id}`
-    // Preferuj nejnovější v okně (nejblíže dnešku = nejbližší "7 dní zpět")
-    const existing = baselineByKey.get(key)
-    if (existing === undefined) {
-      baselineByKey.set(key, h.price as number)
-    } else {
-      // Bereme maximální cenu z okna — konzervativnější než průměr, méně false positives
-      if ((h.price as number) > existing) baselineByKey.set(key, h.price as number)
-    }
-  }
-
-  // 4. Najdi poklesy
-  const drops: WeeklyPriceDrop[] = []
-
-  for (const offer of qualifyingOffers) {
-    const productId = offer.product_id as string
-    const retailerId = offer.retailer_id as string
-    const key = `${productId}|${retailerId}`
-
-    const baselinePrice = baselineByKey.get(key)
-    if (baselinePrice === undefined) continue  // nemáme baseline → přeskočit
-
-    const priceNow = offer.price as number
-    if (priceNow >= baselinePrice) continue  // cena nestoupla nebo se nezměnila → přeskočit
-
-    const dropCzk = Math.round(baselinePrice - priceNow)
-    const dropPct = Math.round(((baselinePrice - priceNow) / baselinePrice) * 100)
-
-    if (dropCzk < DROP_CZK_THRESHOLD && dropPct < DROP_PCT_THRESHOLD) continue
-
-    const product = productMap.get(productId)!
-    const retailer = retailerMap.get(retailerId)!
-
-    // Exclude anomálie
+  const out: WeeklyPriceDrop[] = []
+  for (const d of drops) {
+    const product = productMap.get(d.product_id)
+    const retailer = retailerMap.get(d.retailer_id)
+    if (!product || !retailer) continue
     if (anomalyKeys.has(`${product.slug}|${retailer.slug}`)) continue
-
-    // Cap 50 % — vyšší hodnoty jsou téměř vždy datová anomálie (konzistentní s pickDeals)
-    if (dropPct > 50) continue
-
-    const imageUrl = (product.image_url as string | null) ?? primaryImageMap.get(productId) ?? null
-
-    drops.push({
-      productId,
+    const dropPct = Number(d.drop_pct)
+    if (dropPct > 50) continue  // téměř vždy datová anomálie
+    const priceNow = Number(d.current_price)
+    const priceBefore = Number(d.baseline_price)
+    out.push({
+      productId: d.product_id,
       slug: product.slug as string,
       name: (product.name_short as string | null) ?? (product.name as string),
-      imageUrl,
+      imageUrl: (product.image_url as string | null) ?? primaryImageMap.get(d.product_id) ?? null,
       olivatorScore: (product.olivator_score as number | null) ?? null,
       originCountry: (product.origin_country as string | null) ?? null,
       volumeMl: (product.volume_ml as number | null) ?? null,
       retailerSlug: retailer.slug,
       retailerName: retailer.name,
-      priceBefore: Math.round(baselinePrice),
+      priceBefore: Math.round(priceBefore),
       priceNow: Math.round(priceNow),
-      dropCzk,
+      dropCzk: Math.round(priceBefore - priceNow),
       dropPct,
-      hasAffiliateUrl: !!(offer.affiliate_url as string | null),
+      hasAffiliateUrl: affiliateByKey.get(`${d.product_id}|${d.retailer_id}`) ?? false,
       ctaUrl: `${SITE}/go/${retailer.slug}/${product.slug as string}`,
     })
   }
-
-  // 5. Seřadit: % pokles DESC, pak olivator_score DESC
-  drops.sort((a, b) => {
-    if (b.dropPct !== a.dropPct) return b.dropPct - a.dropPct
-    return (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0)
-  })
-
-  const topDrops = drops.slice(0, limit)
-
-  return {
-    drops: topDrops,
-    updatedAt: new Date().toISOString(),
-    totalCount: drops.length,
-  }
+  out.sort((a, b) => (b.dropPct !== a.dropPct ? b.dropPct - a.dropPct : (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0)))
+  return { drops: out.slice(0, limit), updatedAt, totalCount: out.length }
 }

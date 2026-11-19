@@ -26,6 +26,7 @@
 // Pro HTML rendering: za <a href="path">text</a>
 
 import { supabaseAdmin } from './supabase'
+import { effectivePrice } from './price'
 
 // ── Produktové karty ──────────────────────────────────────────────────────────
 
@@ -112,7 +113,7 @@ export async function resolveProductTokens(body: string): Promise<{
     // Fetch cheapest in-stock offer + retailer slug (single query, cheapest first)
     const { data: offers } = await supabaseAdmin
       .from('product_offers')
-      .select('product_id, price, retailer:retailers!inner(slug, is_active)')
+      .select('product_id, price, action_price, retailer:retailers!inner(slug, is_active)')
       .in('product_id', [...idToSlug.keys()])
       .eq('retailer.is_active', true)
       .eq('in_stock', true)
@@ -120,12 +121,13 @@ export async function resolveProductTokens(body: string): Promise<{
       .order('price', { ascending: true })
 
     const seen = new Set<string>()
-    for (const o of (offers ?? []) as any[]) {
+    const sortedOffers = [...((offers ?? []) as any[])].sort((a, b) => effectivePrice(a.price, a.action_price) - effectivePrice(b.price, b.action_price))
+    for (const o of sortedOffers) {
       if (seen.has(o.product_id)) continue
       seen.add(o.product_id)
       const d = idToData.get(o.product_id)
       if (!d) continue
-      d.cheapestPrice = Number(o.price)
+      d.cheapestPrice = effectivePrice(o.price, o.action_price)
       const rSlug = (o.retailer as any)?.slug ?? null
       if (!rSlug) {
         console.error(`[article-token] product_offers row bez retailer slug, product_id=${o.product_id}`)

@@ -1,6 +1,7 @@
 import { render } from '@react-email/render'
 import React from 'react'
 import { supabaseAdmin } from './supabase'
+import { effectivePrice, warnIfCapped } from './price'
 import { sendTransactionalEmail } from './newsletter-sender'
 import { Welcome2MethodologyEmail } from '@/emails/welcome-2-methodology'
 import { Welcome3TopPicksEmail, type TopPickProduct } from '@/emails/welcome-3-top-picks'
@@ -26,170 +27,29 @@ export async function getWelcomeDeals(): Promise<{
   topPickReason: string
   mode: 'deals' | 'tips'
 }> {
-  const { data: offers } = await supabaseAdmin
-    .from('product_offers')
-    .select('product_id, price, retailer_id')
-    .eq('in_stock', true)
-
-  if (!offers || offers.length === 0) return buildFallback()
-
-  const productIds = Array.from(new Set(offers.map(o => o.product_id as string)))
-
-  const [productsResult, retailersResult, brandsResult] = await Promise.all([
-    supabaseAdmin
-      .from('products')
-      .select('id, slug, name, name_short, olivator_score, brand_slug, image_url, volume_ml, origin_region')
-      .in('id', productIds)
-      .eq('status', 'active')
-      .gte('olivator_score', 70)
-      .not('olivator_score', 'is', null),
-    supabaseAdmin.from('retailers').select('id, slug, name').eq('is_active', true),
-    supabaseAdmin.from('brands').select('slug, name'),
-  ])
-
-  const productMap = new Map(
-    (productsResult.data ?? []).map(p => [p.id as string, p])
-  )
-  const retailerMap = new Map(
-    (retailersResult.data ?? []).map(r => [r.id as string, { slug: r.slug as string, name: r.name as string }])
-  )
-  const brandNameMap = new Map(
-    (brandsResult.data ?? []).map(b => [b.slug as string, b.name as string])
-  )
-
-  const cheapestByProduct = new Map<string, { price: number; retailerId: string }>()
-  for (const o of offers) {
-    const pid = o.product_id as string
-    if (!productMap.has(pid)) continue
-    if (!retailerMap.has(o.retailer_id as string)) continue
-    const existing = cheapestByProduct.get(pid)
-    if (!existing || (o.price as number) < existing.price) {
-      cheapestByProduct.set(pid, { price: o.price as number, retailerId: o.retailer_id as string })
+  // Slevy jen potvrzené historií (confirmed_deals) — stejná definice jako /slevy. Bez potvrzené slevy → tipy z katalogu.
+  const { deals: slevy } = await getSlevyDeals(12)
+  const selected: SlevyDeal[] = []
+  const brands = new Set<string>()
+  const pick = (volFilter: ((v: number | null) => boolean) | null) => {
+    for (const c of slevy) {
+      if (selected.length >= 3) break
+      if (volFilter && !volFilter(c.volumeMl)) continue
+      const key = c.brandName ?? c.name
+      if (brands.has(key)) continue
+      brands.add(key)
+      selected.push(c)
     }
   }
-
-  interface Candidate {
-    productId: string
-    slug: string
-    name: string
-    brandSlug: string | null
-    brandName: string | null
-    variantInfo: string | null
-    volumeMl: number | null
-    imageUrl: string | null
-    score: number
-    currentPrice: number
-    oldPrice: number | null
-    dropPct: number | null
-    retailerSlug: string
-    retailerName: string
-    rankScore: number
-  }
-
-  const candidates: Candidate[] = []
-
-  for (const [productId, offer] of cheapestByProduct.entries()) {
-    const product = productMap.get(productId)
-    if (!product) continue
-    const retailer = retailerMap.get(offer.retailerId)
-    if (!retailer) continue
-
-    const { data: history } = await supabaseAdmin
-      .from('price_history')
-      .select('price')
-      .eq('product_id', productId)
-      .gte('recorded_at', new Date(Date.now() - 30 * 86400_000).toISOString())
-      .order('price', { ascending: false })
-      .limit(1)
-
-    const maxPrice = (history?.[0]?.price as number | undefined) ?? null
-    const score = product.olivator_score as number
-    let dropPct: number | null = null
-    let oldPrice: number | null = null
-
-    if (maxPrice && maxPrice > offer.price) {
-      dropPct = Math.round(((maxPrice - offer.price) / maxPrice) * 100)
-      if (dropPct >= 15) oldPrice = Math.round(maxPrice)
-      else dropPct = null
-    }
-
-    const brandSlug = product.brand_slug as string | null
-    const brandName = brandSlug ? (brandNameMap.get(brandSlug) ?? null) : null
-    const rawName = getDisplayName(product as { name_short: string | null; name: string })
-
-    candidates.push({
-      productId,
-      slug: product.slug as string,
-      name: truncateName(rawName),
-      brandSlug,
-      brandName,
-      variantInfo: (product.origin_region as string | null),
-      volumeMl: (product.volume_ml as number | null),
-      imageUrl: (product.image_url as string | null),
-      score,
-      currentPrice: Math.round(offer.price),
-      oldPrice,
-      dropPct,
-      retailerSlug: retailer.slug,
-      retailerName: retailer.name,
-      rankScore: dropPct ? dropPct * 0.4 + score * 0.6 : score * 0.6,
-    })
-  }
-
-  const withDeals = candidates
-    .filter(c => c.dropPct !== null)
-    .sort((a, b) => b.rankScore - a.rankScore)
-
-  // Volume filter — 3 passes: retail (250-1000ml) → wide (≤2000ml) → any
-  function selectWithVolumeFilter(
-    pool: Candidate[],
-    volFilter: ((v: number | null) => boolean) | null,
-    existing: Candidate[],
-    existingBrands: Set<string>,
-  ): Candidate[] {
-    const result = [...existing]
-    const brands = new Set(existingBrands)
-    const filtered = volFilter ? pool.filter(c => volFilter(c.volumeMl)) : pool
-    for (const c of filtered) {
-      if (result.length >= 3) break
-      const brandKey = c.brandSlug ?? c.name
-      if (brands.has(brandKey)) continue
-      brands.add(brandKey)
-      result.push(c)
-    }
-    return result
-  }
-
-  let selected: Candidate[] = []
-  const usedBrands = new Set<string>()
-
-  // Pass 1: deals, retail size 250-1000ml
-  selected = selectWithVolumeFilter(withDeals, v => v !== null && v >= 250 && v <= 1000, [], usedBrands)
-  // Pass 2: deals, wider ≤2000ml
-  if (selected.length < 3) selected = selectWithVolumeFilter(withDeals, v => v !== null && v <= 2000, selected, new Set(selected.map(c => c.brandSlug ?? c.name)))
-  // Pass 3: deals, any size
-  if (selected.length < 3) selected = selectWithVolumeFilter(withDeals, null, selected, new Set(selected.map(c => c.brandSlug ?? c.name)))
-
-  // Same 3-pass fallback with top-score (no deals)
-  if (selected.length < 3) {
-    const topScore = candidates
-      .filter(c => c.dropPct === null && !selected.find(s => s.productId === c.productId))
-      .sort((a, b) => b.score - a.score)
-    const selectedBrands = new Set(selected.map(c => c.brandSlug ?? c.name))
-    selected = selectWithVolumeFilter(topScore, v => v !== null && v >= 250 && v <= 1000, selected, selectedBrands)
-    if (selected.length < 3) selected = selectWithVolumeFilter(topScore, v => v !== null && v <= 2000, selected, new Set(selected.map(c => c.brandSlug ?? c.name)))
-    if (selected.length < 3) selected = selectWithVolumeFilter(topScore, null, selected, new Set(selected.map(c => c.brandSlug ?? c.name)))
-  }
-
+  pick((v) => v !== null && v >= 250 && v <= 1000)
+  pick((v) => v !== null && v <= 2000)
+  pick(null)
   if (selected.length === 0) return buildFallback()
 
-  const hasTrueDeals = selected.some(c => c.dropPct !== null)
-  const mode: 'deals' | 'tips' = hasTrueDeals ? 'deals' : 'tips'
-
-  const deals: WelcomeDeal[] = selected.map(c => ({
+  const deals: WelcomeDeal[] = selected.map((c) => ({
     name: c.name,
     brandName: c.brandName,
-    variantInfo: c.variantInfo,
+    variantInfo: null,
     volumeMl: c.volumeMl,
     imageUrl: c.imageUrl,
     score: c.score,
@@ -198,18 +58,16 @@ export async function getWelcomeDeals(): Promise<{
     dropPct: c.dropPct,
     retailerName: c.retailerName,
     ctaUrl: buildAffiliateUrl(c.retailerSlug, c.slug),
-    isFallback: c.dropPct === null,
+    isFallback: false,
   }))
-
   const topPick = selected[0]
   const tpRef = `${topPick.name}${topPick.brandName ? ` od ${topPick.brandName}` : ''}`
-  const topPickReason = topPick.dropPct
-    ? `Z těchto tří bych šel po ${tpRef}. Score ${topPick.score} a aktuálně ${topPick.dropPct} % pod měsíčním maximem — dobrá kombinace.`
-    : `Z těchto tří bych šel po ${tpRef}. Score ${topPick.score} je top v katalogu, cena dobrá.`
-
-  flagGenericNames(selected.map(c => ({ id: c.productId, name_short: c.brandSlug ? null : c.name }))).catch(() => null)
-
-  return { deals, topPickIndex: 0, topPickReason, mode }
+  return {
+    deals,
+    topPickIndex: 0,
+    topPickReason: `Z těchto tří bych šel po ${tpRef}. Score ${topPick.score} a aktuálně ${topPick.dropPct} % pod nejnižší cenou z posledních 30 dní — dobrá kombinace.`,
+    mode: 'deals',
+  }
 }
 
 async function flagGenericNames(items: { id: string; name_short: string | null }[]): Promise<void> {
@@ -318,6 +176,24 @@ export interface SlevyDeal {
   retailerName: string
   ctaUrl: string
   rankScore: number
+  /** Od kdy se současná cena drží (price_history). */
+  since: string
+}
+
+/** Akční cena z feedu obchodu, kterou naše historie cen zatím nepotvrdila jako pokles. Bez přeškrtnuté ceny a bez procent. */
+export interface ActionPriceNotice {
+  productId: string
+  slug: string
+  name: string
+  brandName: string | null
+  imageUrl: string | null
+  score: number | null
+  volumeMl: number | null
+  currentPrice: number
+  listPrice: number
+  since: string
+  retailerSlug: string
+  retailerName: string
 }
 
 export interface SlevyPageData {
@@ -329,174 +205,122 @@ export interface SlevyPageData {
   }
 }
 
-export async function getSlevyDeals(limit = 20): Promise<SlevyPageData> {
-  // Fetch offers + qualifying products in parallel — avoid .in() with 400+ IDs (URL length limit)
-  const [offersResult, productsResult, retailersResult, brandsResult] = await Promise.all([
-    supabaseAdmin
-      .from('product_offers')
-      .select('product_id, price, action_price, retailer_id')
-      .eq('in_stock', true),
-    supabaseAdmin
-      .from('products')
-      .select('id, slug, name, name_short, olivator_score, brand_slug, image_url, volume_ml, origin_country')
-      .eq('status', 'active')
-      .not('olivator_score', 'is', null),
+interface ConfirmedDealRow {
+  product_id: string
+  retailer_id: string
+  current_price: number
+  reference_price: number
+  drop_pct: number
+  current_since: string
+}
+
+async function loadDealContext(productIds: string[]) {
+  const [productsRes, retailersRes, brandsRes, imagesRes] = await Promise.all([
+    supabaseAdmin.from('products').select('id, slug, name, name_short, olivator_score, brand_slug, image_url, volume_ml, origin_country').in('id', productIds).eq('status', 'active'),
     supabaseAdmin.from('retailers').select('id, slug, name').eq('is_active', true),
     supabaseAdmin.from('brands').select('slug, name'),
+    supabaseAdmin.from('product_images').select('product_id, url').in('product_id', productIds).eq('is_primary', true),
   ])
-
-  const offers = offersResult.data ?? []
-  if (offers.length === 0) return { deals: [], stats: { totalDeals: 0, avgDropPct: 0, retailerCount: 0 } }
-
-  // Intersect: only qualifying products that actually have offers
-  const offerProductIds = new Set(offers.map(o => o.product_id as string))
-  const qualifyingProducts = (productsResult.data ?? []).filter(p => offerProductIds.has(p.id as string))
-  const qualifyingIds = qualifyingProducts.map(p => p.id as string)
-
-  // History + primary images for qualifying products (small set, safe URL length)
-  // DŮLEŽITÉ: select retailer_id — srovnáváme per-retailer, ne cross-retailer.
-  // Cross-retailer srovnání způsobuje falešné slevy: max(retailerA) vs current(retailerB).
-  const MIN_HISTORY_DAYS = 3  // min. počet různých dní záznamu pro spolehlivý baseline
-  const [historyResult, imagesResult] = await Promise.all([
-    qualifyingIds.length > 0
-      ? supabaseAdmin
-          .from('price_history')
-          .select('product_id, retailer_id, price, recorded_at')
-          .in('product_id', qualifyingIds)
-          .gte('recorded_at', new Date(Date.now() - 30 * 86400_000).toISOString())
-          .limit(10000)
-      : Promise.resolve({ data: [] }),
-    qualifyingIds.length > 0
-      ? supabaseAdmin
-          .from('product_images')
-          .select('product_id, url')
-          .in('product_id', qualifyingIds)
-          .eq('is_primary', true)
-          .limit(500)
-      : Promise.resolve({ data: [] }),
-  ])
-  const historyData = historyResult.data ?? []
-  const primaryImageMap = new Map(
-    (imagesResult.data ?? []).map(img => [img.product_id as string, img.url as string])
-  )
-
-  const productMap = new Map(qualifyingProducts.map(p => [p.id as string, p]))
-  const retailerMap = new Map((retailersResult.data ?? []).map(r => [r.id as string, { slug: r.slug as string, name: r.name as string }]))
-  const brandNameMap = new Map((brandsResult.data ?? []).map(b => [b.slug as string, b.name as string]))
-
-  // Per-retailer aggregace: klíč = "productId|retailerId"
-  // Sledujeme max cenu A počet distinct dní — bez dostatečné historie nelze ověřit slevu.
-  const historyByKey = new Map<string, { maxPrice: number; days: Set<string> }>()
-  for (const h of historyData as Array<{ product_id: string; retailer_id: string; price: number; recorded_at: string }>) {
-    const key = `${h.product_id}|${h.retailer_id}`
-    const day = h.recorded_at.slice(0, 10)  // YYYY-MM-DD
-    const entry = historyByKey.get(key) ?? { maxPrice: 0, days: new Set() }
-    if (h.price > entry.maxPrice) entry.maxPrice = h.price
-    entry.days.add(day)
-    historyByKey.set(key, entry)
+  return {
+    productMap: new Map((productsRes.data ?? []).map((p) => [p.id as string, p])),
+    retailerMap: new Map((retailersRes.data ?? []).map((r) => [r.id as string, { slug: r.slug as string, name: r.name as string }])),
+    brandNameMap: new Map((brandsRes.data ?? []).map((b) => [b.slug as string, b.name as string])),
+    primaryImageMap: new Map((imagesRes.data ?? []).map((img) => [img.product_id as string, img.url as string])),
   }
+}
 
-  // Index aktuálních nabídek per (product, retailer) pro per-retailer srovnání
-  const offerByKey = new Map<string, { price: number; actionPrice: number | null; retailerId: string }>()
-  for (const o of offers) {
-    const pid = o.product_id as string
-    if (!productMap.has(pid)) continue
-    if (!retailerMap.has(o.retailer_id as string)) continue
-    const key = `${pid}|${o.retailer_id}`
-    offerByKey.set(key, {
-      price: o.price as number,
-      actionPrice: (o.action_price as number | null) ?? null,
-      retailerId: o.retailer_id as string,
-    })
+/**
+ * Skutečné slevy: SQL view confirmed_deals — cena, kterou zákazník zaplatí, je aspoň 5 % pod NEJNIŽŠÍ cenou
+ * za 30 dní před začátkem současné ceny (price_history téhož obchodu) a současná cena začala v posledních 30 dnech.
+ * Výpočet je v DB (žádné načítání tisíců řádků historie — PostgREST ořezává na 1 000).
+ */
+export async function getSlevyDeals(limit = 20): Promise<SlevyPageData> {
+  const { data: rows, error } = await supabaseAdmin
+    .from('confirmed_deals')
+    .select('product_id, retailer_id, current_price, reference_price, drop_pct, current_since')
+  if (error) {
+    console.error('[slevy] confirmed_deals:', error.message)
+    return { deals: [], stats: { totalDeals: 0, avgDropPct: 0, retailerCount: 0 } }
   }
+  const confirmed = warnIfCapped(rows as ConfirmedDealRow[] | null, 'confirmed_deals')
+  if (confirmed.length === 0) return { deals: [], stats: { totalDeals: 0, avgDropPct: 0, retailerCount: 0 } }
 
-  // Nejlepší per-product deal — porovnáváme current vs STEJNÝ retailer 30d max
-  const bestDealByProduct = new Map<string, { price: number; retailerId: string; maxPrice: number; dropPct: number }>()
-
-  // 1. History-based deals (30d price max > current price)
-  for (const [key, offer] of offerByKey.entries()) {
-    const [productId] = key.split('|')
-    const hist = historyByKey.get(key)
-    // Přeskočit: žádná nebo nedostatečná historie pro tento (produkt, retailer)
-    if (!hist || hist.days.size < MIN_HISTORY_DAYS) continue
-    // Effectivní cena = action_price pokud je nižší než price
-    const effectivePrice = offer.actionPrice != null && offer.actionPrice < offer.price
-      ? offer.actionPrice
-      : offer.price
-    if (hist.maxPrice <= effectivePrice) continue
-    const dropPct = Math.round(((hist.maxPrice - effectivePrice) / hist.maxPrice) * 100)
-    if (dropPct < 5) continue
-
-    const existing = bestDealByProduct.get(productId)
-    if (!existing || dropPct > existing.dropPct) {
-      bestDealByProduct.set(productId, { price: effectivePrice, retailerId: offer.retailerId, maxPrice: hist.maxPrice, dropPct })
-    }
-  }
-
-  // 2. Explicit action_price deals — action_price < price (z Complete XML feedu)
-  //    Tyto nemusí mít dostatečnou historii, ale retailer explicitně oznámil akci.
-  for (const [key, offer] of offerByKey.entries()) {
-    const [productId] = key.split('|')
-    if (!offer.actionPrice || offer.actionPrice >= offer.price) continue
-    const dropPct = Math.round(((offer.price - offer.actionPrice) / offer.price) * 100)
-    if (dropPct < 5) continue
-    // Nepřepisujeme history-based deal pokud je výhodnější
-    const existing = bestDealByProduct.get(productId)
-    if (existing && existing.dropPct >= dropPct) continue
-    bestDealByProduct.set(productId, {
-      price: offer.actionPrice,
-      retailerId: offer.retailerId,
-      maxPrice: offer.price,
-      dropPct,
-    })
+  const ctx = await loadDealContext([...new Set(confirmed.map((r) => r.product_id))])
+  // Jeden produkt = jedna (nejlepší) sleva
+  const bestByProduct = new Map<string, ConfirmedDealRow>()
+  for (const r of confirmed) {
+    const prev = bestByProduct.get(r.product_id)
+    if (!prev || Number(r.drop_pct) > Number(prev.drop_pct)) bestByProduct.set(r.product_id, r)
   }
 
   const deals: SlevyDeal[] = []
-  for (const [productId, deal] of bestDealByProduct.entries()) {
-    const product = productMap.get(productId)
-    if (!product) continue
-    const retailer = retailerMap.get(deal.retailerId)
-    if (!retailer) continue
-
-    const { price: offerPrice, maxPrice, dropPct } = deal
-    // alias pro zbytek bloku
-    const offer = { price: offerPrice, retailerId: deal.retailerId }
-
+  for (const r of bestByProduct.values()) {
+    const product = ctx.productMap.get(r.product_id)
+    const retailer = ctx.retailerMap.get(r.retailer_id)
+    if (!product || !retailer) continue
+    const score = product.olivator_score as number | null
+    if (score == null) continue
     const brandSlug = product.brand_slug as string | null
-    const rawName = getDisplayName(product as { name_short: string | null; name: string })
-    const score = product.olivator_score as number
-
+    const dropPct = Number(r.drop_pct)
     deals.push({
-      productId,
+      productId: r.product_id,
       slug: product.slug as string,
-      name: truncateName(rawName),
-      brandName: brandSlug ? (brandNameMap.get(brandSlug) ?? null) : null,
+      name: truncateName(getDisplayName(product as { name_short: string | null; name: string })),
+      brandName: brandSlug ? (ctx.brandNameMap.get(brandSlug) ?? null) : null,
       originCountry: product.origin_country as string | null,
-      imageUrl: (product.image_url as string | null) ?? primaryImageMap.get(productId) ?? null,
+      imageUrl: (product.image_url as string | null) ?? ctx.primaryImageMap.get(r.product_id) ?? null,
       score,
-      currentPrice: Math.round(offer.price),
-      oldPrice: Math.round(maxPrice),
+      currentPrice: Math.round(Number(r.current_price)),
+      oldPrice: Math.round(Number(r.reference_price)),
       dropPct,
       volumeMl: product.volume_ml as number | null,
       retailerSlug: retailer.slug,
       retailerName: retailer.name,
-      ctaUrl: buildAffiliateUrl(retailer.slug, product.slug as string),
+      ctaUrl: `/go/${retailer.slug}/${product.slug as string}`,
       rankScore: dropPct * 0.4 + score * 0.6,
+      since: r.current_since,
     })
   }
-
   deals.sort((a, b) => b.rankScore - a.rankScore)
   const topDeals = deals.slice(0, limit)
+  const avgDropPct = topDeals.length > 0 ? Math.round(topDeals.reduce((s, d) => s + d.dropPct, 0) / topDeals.length) : 0
+  return { deals: topDeals, stats: { totalDeals: deals.length, avgDropPct, retailerCount: new Set(topDeals.map((d) => d.retailerSlug)).size } }
+}
 
-  const retailerCount = new Set(topDeals.map(d => d.retailerSlug)).size
-  const avgDropPct = topDeals.length > 0
-    ? Math.round(topDeals.reduce((s, d) => s + d.dropPct, 0) / topDeals.length)
-    : 0
-
-  return {
-    deals: topDeals,
-    stats: { totalDeals: deals.length, avgDropPct, retailerCount },
+/** Akční ceny z feedu, které historie nepotvrdila (SQL view action_price_notices). */
+export async function getActionPriceNotices(): Promise<ActionPriceNotice[]> {
+  const { data: rows, error } = await supabaseAdmin
+    .from('action_price_notices')
+    .select('product_id, retailer_id, list_price, action_price, current_price, current_since')
+  if (error) {
+    console.error('[slevy] action_price_notices:', error.message)
+    return []
   }
+  const notices = rows ?? []
+  if (notices.length === 0) return []
+  const ctx = await loadDealContext([...new Set(notices.map((r) => r.product_id as string))])
+  const out: ActionPriceNotice[] = []
+  for (const r of notices) {
+    const product = ctx.productMap.get(r.product_id as string)
+    const retailer = ctx.retailerMap.get(r.retailer_id as string)
+    if (!product || !retailer) continue
+    const brandSlug = product.brand_slug as string | null
+    out.push({
+      productId: r.product_id as string,
+      slug: product.slug as string,
+      name: truncateName(getDisplayName(product as { name_short: string | null; name: string })),
+      brandName: brandSlug ? (ctx.brandNameMap.get(brandSlug) ?? null) : null,
+      imageUrl: (product.image_url as string | null) ?? ctx.primaryImageMap.get(r.product_id as string) ?? null,
+      score: product.olivator_score as number | null,
+      volumeMl: product.volume_ml as number | null,
+      currentPrice: Math.round(Number(r.current_price)),
+      listPrice: Math.round(Number(r.list_price)),
+      since: r.current_since as string,
+      retailerSlug: retailer.slug,
+      retailerName: retailer.name,
+    })
+  }
+  return out.sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
 }
 
 export async function enqueueWelcomeSeries(subscriberId: string): Promise<void> {

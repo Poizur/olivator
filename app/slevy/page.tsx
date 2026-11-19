@@ -4,7 +4,8 @@ import type { Metadata } from 'next'
 import { NewsletterSignup } from '@/components/newsletter-signup'
 import { LeadMagnetCta } from '@/components/lead-magnet-cta'
 import { PriceWatchButton } from '@/components/price-watch-button'
-import { getSlevyDeals, type SlevyDeal } from '@/lib/welcome-series'
+import { getSlevyDeals, getActionPriceNotices, type SlevyDeal, type ActionPriceNotice } from '@/lib/welcome-series'
+import { AffiliateLink } from '@/components/affiliate-link'
 import { getWeeklyPriceDrops, type WeeklyPriceDrop } from '@/lib/price-drops'
 import { countryFlag } from '@/lib/utils'
 
@@ -13,7 +14,7 @@ export const revalidate = 600
 export const metadata: Metadata = {
   title: 'Olivový olej — akce a slevy dnes | Olivátor',
   description:
-    'Přehled aktuálních slev a akcí na olivový olej od partnerských e-shopů. Pouze ověřené slevy porovnané s 30denním maximem ceny.',
+    'Přehled skutečných slev na olivový olej od partnerských e-shopů. Slevu ukazujeme jen tehdy, když ji potvrdí naše historie cen: aspoň 5 % pod nejnižší cenou za 30 dní před začátkem současné ceny.',
   alternates: { canonical: 'https://olivator.cz/slevy' },
   openGraph: {
     title: 'Olivový olej — akce a slevy dnes | Olivátor',
@@ -25,10 +26,14 @@ export const metadata: Metadata = {
 const SITE = 'https://olivator.cz'
 const UTM = 'utm_source=web&utm_medium=slevy&utm_campaign=deals_page'
 
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric', year: 'numeric' })
+}
+
 const FAQ_ITEMS = [
   {
     q: 'Jak Olivátor ověřuje, že jde o skutečnou slevu?',
-    a: 'Sledujeme ceny od partnerských e-shopů každý den. Slevu zobrazujeme pouze tehdy, pokud je aktuální cena alespoň 5 % pod maximální cenou za posledních 30 dní u konkrétního prodejce.',
+    a: 'Sledujeme ceny od partnerských e-shopů každý den. Slevu zobrazujeme pouze tehdy, pokud je aktuální cena alespoň 5 % pod nejnižší cenou, za kterou prodejce olej nabízel v 30 dnech před začátkem současné ceny, a současná cena začala v posledních 30 dnech. Akční ceny, které obchod uvádí, ale naše historie je nepotvrdila, ukazujeme zvlášť bez přeškrtnuté ceny.',
   },
   {
     q: 'Jak často se přehled aktualizuje?',
@@ -40,7 +45,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Jak jsou slevy seřazeny?',
-    a: 'Slevy řadíme kombinací výše slevy (40 %) a Olivator Score (60 %). Takže olej s vysokým skóre a menší slevou může být výše než levný olej s obří slevou — jde nám o nejlepší deal celkově.',
+    a: 'Slevy řadíme kombinací výše slevy (40 %) a Olivator Score (60 %). Takže olej s vysokým skóre a menší slevou může být výše než levný olej s obří slevou — jde nám o nejlepší poměr celkově.',
   },
   {
     q: 'Jsou tu oleje ze Španělska, Řecka i Itálie?',
@@ -91,13 +96,14 @@ function WeeklyDropCard({ drop }: { drop: WeeklyPriceDrop }) {
         </div>
       </Link>
       <div className="px-4 pb-4 flex items-center gap-3">
-        <Link
-          href={`${drop.ctaUrl}?${UTM}&utm_content=weekly_drop`}
+        <AffiliateLink
+          data={{ productSlug: drop.slug, productName: drop.name, retailerSlug: drop.retailerSlug, retailerName: drop.retailerName, price: drop.priceNow, source: 'slevy' }}
+          extraParams={`${UTM}&utm_content=weekly_drop`}
           className="flex-1 flex items-center justify-between bg-olive hover:bg-olive2 text-white text-[12px] font-semibold px-4 py-2.5 rounded-full transition-colors"
         >
           <span>Koupit u {drop.retailerName}</span>
           <span>→</span>
-        </Link>
+        </AffiliateLink>
         <PriceWatchButton productId={drop.productId} productName={drop.name} />
       </div>
     </div>
@@ -163,28 +169,75 @@ function DealCard({ deal, rank }: { deal: SlevyDeal; rank: number }) {
               <span className="text-[11px] text-text3">{per100ml}</span>
             )}
           </div>
+          <p className="text-[10px] text-text3 mt-1">Za {deal.currentPrice} Kč od {formatDate(deal.since)} · před tím nejméně {deal.oldPrice} Kč</p>
         </div>
       </Link>
 
       {/* CTA row */}
       <div className="px-4 pb-4 flex items-center gap-3">
-        <Link
-          href={`${deal.ctaUrl}?${UTM}&utm_content=deal_${rank}`}
+        <AffiliateLink
+          data={{ productSlug: deal.slug, productName: deal.name, retailerSlug: deal.retailerSlug, retailerName: deal.retailerName, price: deal.currentPrice, source: 'slevy' }}
+          extraParams={`${UTM}&utm_content=deal_${rank}`}
           className="flex-1 flex items-center justify-between bg-olive hover:bg-olive2 text-white text-[12px] font-semibold px-4 py-2.5 rounded-full transition-colors"
         >
           <span>Koupit u {deal.retailerName}</span>
           <span>→</span>
-        </Link>
+        </AffiliateLink>
         <PriceWatchButton productId={deal.productId} productName={deal.name} />
       </div>
     </div>
   )
 }
 
+function NoticeCard({ notice }: { notice: ActionPriceNotice }) {
+  const per100ml = formatPer100ml(notice.currentPrice, notice.volumeMl)
+  return (
+    <div className="bg-white border border-off2 rounded-[var(--radius-card)] overflow-hidden">
+      <Link href={`/olej/${notice.slug}`} className="flex gap-4 p-4 group">
+        <div className="shrink-0 w-16 h-16 rounded-lg bg-off overflow-hidden flex items-center justify-center relative">
+          {notice.imageUrl ? (
+            <Image src={notice.imageUrl} alt={notice.name} fill sizes="64px" className="object-contain" />
+          ) : (
+            <span className="text-2xl">🫒</span>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          {notice.brandName && (
+            <p className="text-[10px] font-bold tracking-widest uppercase text-text3 mb-0.5">{notice.brandName}</p>
+          )}
+          <p className="text-[13px] font-semibold text-text leading-snug line-clamp-2 group-hover:text-olive transition-colors">{notice.name}</p>
+          <div className="flex items-baseline gap-2 mt-1.5">
+            <span className="text-[16px] font-bold text-text">{notice.currentPrice} Kč</span>
+            {per100ml && <span className="text-[11px] text-text3">{per100ml}</span>}
+            {notice.score != null && (
+              <span className="text-[10px] bg-olive4 text-[#1b4332] px-2 py-0.5 rounded-full">Score {notice.score}</span>
+            )}
+          </div>
+          <p className="text-[11px] text-text2 mt-1.5 leading-snug">
+            Obchod uvádí běžnou cenu {notice.listPrice} Kč. Za tuhle cenu ho evidujeme od {formatDate(notice.since)}.
+          </p>
+        </div>
+      </Link>
+      <div className="px-4 pb-4 flex items-center gap-3">
+        <AffiliateLink
+          data={{ productSlug: notice.slug, productName: notice.name, retailerSlug: notice.retailerSlug, retailerName: notice.retailerName, price: notice.currentPrice, source: 'slevy' }}
+          extraParams={`${UTM}&utm_content=action_price`}
+          className="flex-1 flex items-center justify-between bg-off hover:bg-off2 text-text text-[12px] font-semibold px-4 py-2.5 rounded-full transition-colors"
+        >
+          <span>Zobrazit u {notice.retailerName}</span>
+          <span>→</span>
+        </AffiliateLink>
+        <PriceWatchButton productId={notice.productId} productName={notice.name} />
+      </div>
+    </div>
+  )
+}
+
 export default async function SlevyPage() {
-  const [{ deals, stats }, weeklyResult] = await Promise.all([
+  const [{ deals, stats }, weeklyResult, notices] = await Promise.all([
     getSlevyDeals(20),
     getWeeklyPriceDrops(6),
+    getActionPriceNotices(),
   ])
   const weeklyDrops = weeklyResult.drops
 
@@ -239,8 +292,8 @@ export default async function SlevyPage() {
             Olivový olej — akce a slevy dnes
           </h1>
           <p className="text-[16px] text-text2 leading-relaxed max-w-xl mb-8">
-            Jenom ověřené slevy — porovnáváme s 30denním maximem ceny
-            u každého prodejce. Žádné nafouklé „původní" ceny.
+            Jenom slevy potvrzené naší historií cen: aspoň 5 % pod nejnižší cenou,
+            za kterou prodejce olej nabízel v 30 dnech před začátkem současné ceny. Žádné nafouklé „původní" ceny.
           </p>
 
           {/* Stats chips */}
@@ -258,7 +311,7 @@ export default async function SlevyPage() {
               <span className="text-[12px] text-text2 ml-1.5">prodejců</span>
             </div>
             <div className="bg-off rounded-full px-4 py-2 flex items-center">
-              <span className="text-[12px] text-text2">Ověřené srovnáním s 30d max</span>
+              <span className="text-[12px] text-text2">Ověřené historií cen (30 dní)</span>
             </div>
           </div>
         </section>
@@ -278,7 +331,7 @@ export default async function SlevyPage() {
               </span>
             </div>
             <p className="text-[13px] text-text3 mb-5">
-              Ceny které klesly za posledních 7 dní — čerstvé poklesy, ne historická maxima.
+              Potvrzené slevy, jejichž současná cena začala v posledních 7 dnech.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {weeklyDrops.map(drop => (
@@ -304,8 +357,8 @@ export default async function SlevyPage() {
           ) : (
             <div className="bg-off rounded-2xl p-8 text-center">
               <p className="text-[16px] text-text2 mb-4">
-                Aktuálně nemáme žádné slevy na kvalitní oleje.<br />
-                Zkuste to znovu za pár dní — sezóna akcí přichází.
+                Teď žádnou slevu nemáme potvrzenou historií cen.<br />
+                Akční ceny, které uvádějí obchody, najdete níže; zkuste to znovu za pár dní.
               </p>
               <Link
                 href="/srovnavac"
@@ -373,16 +426,32 @@ export default async function SlevyPage() {
           </section>
         )}
 
+        {/* ── Akční ceny podle obchodu (nepotvrzené historií) ── */}
+        {notices.length > 0 && (
+          <section className="mb-14">
+            <h2 className="text-[20px] font-bold text-text mb-2">Akční ceny podle obchodu</h2>
+            <p className="text-[13px] text-text3 mb-5 max-w-2xl">
+              Obchod tyto ceny označuje jako akční, ale naše historie cen pokles nepotvrdila — za stejnou cenu
+              jsme olej evidovali už dřív. Proto bez přeškrtnuté ceny a bez procent.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {notices.map((n) => (
+                <NoticeCard key={`${n.productId}|${n.retailerSlug}`} notice={n} />
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* ── Educational block ── */}
         <section className="mb-14 bg-off rounded-2xl p-6 md:p-8">
           <h2 className="text-[18px] font-bold text-text mb-5">Jak poznám skutečnou slevu?</h2>
           <div className="grid md:grid-cols-3 gap-6">
             <div>
               <div className="text-[28px] mb-2">📊</div>
-              <h3 className="text-[14px] font-semibold text-text mb-1">30denní maximum</h3>
+              <h3 className="text-[14px] font-semibold text-text mb-1">Nejnižší cena za 30 dní</h3>
               <p className="text-[13px] text-text2 leading-relaxed">
-                Srovnáváme aktuální cenu s maximem za posledních 30 dní.
-                Zobrazujeme i menší slevy — důležité je, že jde o reálný pokles ceny.
+                Referenční cena je nejnižší cena, za kterou prodejce olej nabízel v 30 dnech
+                před začátkem současné ceny. Sleva musí být aspoň 5 % a současná cena mladší než 30 dní.
               </p>
             </div>
             <div>
@@ -390,14 +459,14 @@ export default async function SlevyPage() {
               <h3 className="text-[14px] font-semibold text-text mb-1">Řazení dle hodnoty</h3>
               <p className="text-[13px] text-text2 leading-relaxed">
                 Výše slevy × Olivator Score. Nejlepší poměr kvality a
-                ceny vždy nahoře — ne jen největší slevový procento.
+                ceny vždy nahoře — ne jen největší procento slevy.
               </p>
             </div>
             <div>
               <div className="text-[28px] mb-2">🔄</div>
               <h3 className="text-[14px] font-semibold text-text mb-1">Denní aktualizace</h3>
               <p className="text-[13px] text-text2 leading-relaxed">
-                Ceny u partnerských e-shopů scrapujeme každý den ráno. Co vidíte,
+                Ceny u partnerských e-shopů načítáme každý den ráno z jejich feedů. Co vidíte,
                 to je dnešní stav — ne zastaralá data z minulého týdne.
               </p>
             </div>
@@ -427,8 +496,8 @@ export default async function SlevyPage() {
               Slevy každý čtvrtek ráno do emailu
             </h2>
             <p className="text-[14px] text-text2 mb-6 leading-relaxed">
-              Přihlaste se a dostanete hned email s aktuálními slevami.
-              Pak každý čtvrtek v 8:00 nový přehled — bez spamu.
+              Přihlaste se a dostanete hned email s aktuálními slevami nebo tipy z katalogu.
+              Pak každý čtvrtek ráno nový přehled — bez spamu.
             </p>
             <NewsletterSignup source="price_alert" variant="inline" />
           </div>
@@ -439,7 +508,7 @@ export default async function SlevyPage() {
           <Link href="/srovnavac" className="text-[13px] text-olive font-medium hover:underline">
             → Celý katalog olejů
           </Link>
-          <Link href="/zebricek/nejlepsi" className="text-[13px] text-olive font-medium hover:underline">
+          <Link href="/zebricek" className="text-[13px] text-olive font-medium hover:underline">
             → Žebříček nejlepších olejů
           </Link>
           <Link href="/metodika" className="text-[13px] text-olive font-medium hover:underline">

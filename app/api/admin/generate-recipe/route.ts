@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { assertPublicText } from '@/lib/text-guard'
 import { generateRecipe, type RecipeContext } from '@/lib/recipe-generator'
 
 export const dynamic = 'force-dynamic'
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
     if (existing) recipeSlug = `${recipeSlug}-${Date.now().toString().slice(-5)}`
 
+    assertPublicText({ recipe }, 'recipe')
     const { error } = await supabaseAdmin.from('recipes').insert({
       slug: recipeSlug,
       title: recipe.title,

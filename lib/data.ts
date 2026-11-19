@@ -5,6 +5,7 @@ import { cache } from 'react'
 import { supabaseAdmin } from './supabase'
 import type { Product, ProductOffer, Retailer } from './types'
 import { oilFamilyKey } from './oil-family'
+import { effectivePrice } from './price'
 
 // ── Product row mapping (snake_case DB → camelCase TS) ────────────────
 interface ProductRow {
@@ -332,7 +333,7 @@ export const getProductsWithOffers = cache(async (): Promise<Array<Product & { c
 
   const { data, error } = await supabaseAdmin
     .from('product_offers')
-    .select(`id, product_id, retailer_id, price, currency, in_stock, product_url, affiliate_url, commission_pct, page_price, price_mismatch, manual_override, retailer:retailers(${RETAILER_PUBLIC_COLUMNS})`)
+    .select(`id, product_id, retailer_id, price, action_price, currency, in_stock, product_url, affiliate_url, commission_pct, page_price, price_mismatch, manual_override, retailer:retailers(${RETAILER_PUBLIC_COLUMNS})`)
     .not('price', 'is', null)
     .order('price', { ascending: true })
   if (error) throw error
@@ -350,7 +351,9 @@ export const getProductsWithOffers = cache(async (): Promise<Array<Product & { c
       productId: pid,
       retailerId: row.retailer_id as string,
       retailer: mapRetailer(row.retailer as Record<string, unknown>),
-      price: Number(row.price),
+      price: effectivePrice(row.price as number, row.action_price as number | null),
+      listPrice: Number(row.price),
+      actionPrice: row.action_price != null ? Number(row.action_price) : null,
       currency: (row.currency as string) ?? 'CZK',
       inStock: (row.in_stock as boolean) ?? true,
       productUrl: (row.product_url as string) ?? '',
@@ -412,7 +415,7 @@ export function sortOffersAffiliate(offers: ProductOffer[]): ProductOffer[] {
 export async function getOffersForProduct(productId: string): Promise<ProductOffer[]> {
   const { data, error } = await supabaseAdmin
     .from('product_offers')
-    .select(`id, product_id, retailer_id, price, currency, in_stock, product_url, affiliate_url, commission_pct, page_price, price_mismatch, manual_override, retailer:retailers(${RETAILER_PUBLIC_COLUMNS})`)
+    .select(`id, product_id, retailer_id, price, action_price, currency, in_stock, product_url, affiliate_url, commission_pct, page_price, price_mismatch, manual_override, retailer:retailers(${RETAILER_PUBLIC_COLUMNS})`)
     .eq('product_id', productId)
     .order('price', { ascending: true })
   if (error) throw error
@@ -426,7 +429,9 @@ export async function getOffersForProduct(productId: string): Promise<ProductOff
       productId: row.product_id as string,
       retailerId: row.retailer_id as string,
       retailer: mapRetailer(row.retailer as Record<string, unknown>),
-      price: Number(row.price),
+      price: effectivePrice(row.price as number, row.action_price as number | null),
+      listPrice: Number(row.price),
+      actionPrice: row.action_price != null ? Number(row.action_price) : null,
       currency: (row.currency as string) ?? 'CZK',
       inStock: (row.in_stock as boolean) ?? true,
       productUrl: (row.product_url as string) ?? '',
@@ -469,7 +474,7 @@ export async function getAlternativeProduct(
 
   const { data } = await supabaseAdmin
     .from('product_offers')
-    .select(`price, product_id, retailers!inner(name, is_active), products!inner(id, name, slug, olivator_score, volume_ml, status)`)
+    .select(`price, action_price, product_id, retailers!inner(name, is_active), products!inner(id, name, slug, olivator_score, volume_ml, status)`)
     .eq('retailers.is_active', true)
     .eq('in_stock', true)
     .neq('product_id', currentProductId)
@@ -479,6 +484,7 @@ export async function getAlternativeProduct(
 
   type Row = {
     price: number
+    action_price: number | null
     product_id: string
     retailers: { name: string } | null
     products: { id: string; name: string; slug: string; olivator_score: number | null; volume_ml: number | null; status: string }
@@ -506,7 +512,7 @@ export async function getAlternativeProduct(
     slug: best.products.slug,
     olivatorScore: best.products.olivator_score,
     volumeMl: best.products.volume_ml,
-    price: best.price,
+    price: effectivePrice(best.price, best.action_price),
     retailerName: best.retailers?.name ?? null,
   }
 }
@@ -1103,16 +1109,15 @@ export async function getVariantProducts(productId: string): Promise<VariantGrou
   if (ids.length > 0) {
     const { data: offers } = await supabaseAdmin
       .from('product_offers')
-      .select('product_id, price, retailers!inner(is_active)')
+      .select('product_id, price, action_price, retailers!inner(is_active)')
       .in('product_id', ids)
       .eq('retailers.is_active', true)
       .eq('in_stock', true)
-      .order('price', { ascending: true })
     for (const o of offers ?? []) {
       const pid = o.product_id as string
-      if (!cheapestByProduct.has(pid)) {
-        cheapestByProduct.set(pid, Number(o.price))
-      }
+      const eff = effectivePrice(o.price as number, o.action_price as number | null)
+      const cur = cheapestByProduct.get(pid)
+      if (cur === undefined || eff < cur) cheapestByProduct.set(pid, eff)
     }
   }
 
@@ -1802,23 +1807,23 @@ export async function getBestsellers(opts: { limit?: number } = {}): Promise<Arr
 export async function get5LSavingsPct(): Promise<{ savingPct: number; avg5LPpl: number; avg05LPpl: number }> {
   const { data: data5L } = await supabaseAdmin
     .from('products')
-    .select('volume_ml, product_offers(price, in_stock, retailers(is_active))')
+    .select('volume_ml, product_offers(price, action_price, in_stock, retailers(is_active))')
     .eq('status', 'active')
     .eq('type', 'evoo')
     .gte('volume_ml', 4500)
     .lte('volume_ml', 5500)
   const { data: data05L } = await supabaseAdmin
     .from('products')
-    .select('volume_ml, product_offers(price, in_stock, retailers(is_active))')
+    .select('volume_ml, product_offers(price, action_price, in_stock, retailers(is_active))')
     .eq('status', 'active')
     .eq('type', 'evoo')
     .gte('volume_ml', 400)
     .lte('volume_ml', 600)
   const ppl = (rows: typeof data5L) =>
     (rows ?? []).flatMap((p: any) =>
-      (p.product_offers as Array<{ price: number; in_stock: boolean; retailers: { is_active: boolean } | null }>)
+      (p.product_offers as Array<{ price: number; action_price: number | null; in_stock: boolean; retailers: { is_active: boolean } | null }>)
         .filter((o) => o.in_stock && o.retailers?.is_active === true)
-        .map((o) => o.price / (p.volume_ml / 1000))
+        .map((o) => effectivePrice(o.price, o.action_price) / (p.volume_ml / 1000))
     )
   const avg = (arr: number[]) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0
   const avg5L = avg(ppl(data5L))

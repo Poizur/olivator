@@ -131,9 +131,9 @@ const COMPONENTS = [
     scales: [
       { label: 'Nad 500 mg/kg', desc: 'Vynikající', color: 'green' },
       { label: '300–500 mg/kg', desc: 'Výborná', color: 'green' },
-      { label: '250–300 mg/kg', desc: 'Splňuje EU Health Claim', color: 'yellow' },
+      { label: '250–300 mg/kg', desc: 'Vysoký obsah', color: 'yellow' },
       { label: '150–250 mg/kg', desc: 'Standardní', color: 'yellow' },
-      { label: 'Pod 150 mg/kg', desc: 'Slabší antioxidační efekt', color: 'red' },
+      { label: 'Pod 150 mg/kg', desc: 'Nízký obsah', color: 'red' },
     ],
   },
   {

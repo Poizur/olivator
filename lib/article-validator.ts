@@ -12,6 +12,7 @@
 //   if (!result.ok) return 422
 
 import { supabaseAdmin } from './supabase'
+import { effectivePrice } from './price'
 
 export type IssueType =
   | 'missing_product'        // /olej/slug odkaz — slug neexistuje v DB
@@ -183,7 +184,7 @@ export async function validateArticle(articleSlug: string, markdownOverride?: st
   const { data: offers } = productIds.length
     ? await supabaseAdmin
         .from('product_offers')
-        .select('product_id, price')
+        .select('product_id, price, action_price')
         .in('product_id', productIds)
         .eq('in_stock', true)
         .order('price', { ascending: true })
@@ -193,9 +194,12 @@ export async function validateArticle(articleSlug: string, markdownOverride?: st
   for (const [slug, p] of dbMap) idToSlug.set(p.id, slug)
 
   const cheapest = new Map<string, number>()
-  for (const o of (offers ?? []) as Array<{ product_id: string; price: number }>) {
+  for (const o of (offers ?? []) as Array<{ product_id: string; price: number; action_price: number | null }>) {
     const slug = idToSlug.get(o.product_id)
-    if (slug && !cheapest.has(slug)) cheapest.set(slug, o.price)
+    if (!slug) continue
+    const eff = effectivePrice(o.price, o.action_price)
+    const cur = cheapest.get(slug)
+    if (cur === undefined || eff < cur) cheapest.set(slug, eff)
   }
 
   // ── 4. Validace každé zmínky ──────────────────────────────────────────────

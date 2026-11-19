@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { validateArticle } from '@/lib/article-validator'
+import { findEditorialIssues, formatEditorialIssues } from '@/lib/editorial-rules'
+import { findQuarantinedShopMentions } from '@/lib/quarantine-mentions'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,6 +35,17 @@ export async function PATCH(
     for (const [k, v] of Object.entries(body)) {
       const key = SNAKE[k] ?? k
       if (ALLOWED.includes(key)) payload[key] = v
+    }
+    // Redakční pravidla platí pro každý zápis textu (i u už aktivního článku) — §26, žádné „testovali jsme“, počty jen tokenem.
+    const textFields = ['title', 'excerpt', 'body_markdown', 'meta_title', 'meta_description']
+    for (const f of textFields) {
+      if (typeof payload[f] !== 'string') continue
+      const editorial = findEditorialIssues(payload[f] as string)
+      const quarantined = await findQuarantinedShopMentions(payload[f] as string)
+      if (editorial.length > 0 || quarantined.length > 0) {
+        const parts = [editorial.length ? formatEditorialIssues(editorial) : '', quarantined.length ? `obchody mimo spolupráci jako místo nákupu: ${quarantined.join(', ')}` : ''].filter(Boolean)
+        return NextResponse.json({ error: `Pole ${f} porušuje redakční pravidla: ${parts.join('; ')}` }, { status: 422 })
+      }
     }
     if (payload.status === 'active') {
       // Validace produktových dat — blokuje publish pokud jsou v článku nefunkční linky

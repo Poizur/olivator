@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { assertPublicText } from '@/lib/text-guard'
 import { generateRegionContent, generateBrandContent, generateCultivarContent } from '@/lib/entity-content-generator'
 import { generateRegionExtras, generateBrandExtras, generateCultivarExtras } from '@/lib/entity-extras-generator'
 import { getCheapestOffer } from '@/lib/data'
@@ -115,6 +116,8 @@ export async function POST(req: Request) {
           commonCultivars: cultivarNames,
         })
 
+        assertPublicText({ description_long: description }, 'regions')
+
         await supabaseAdmin
           .from('regions')
           .update({ description_long: description, updated_at: new Date().toISOString() })
@@ -132,6 +135,7 @@ export async function POST(req: Request) {
               productCount: products.length,
               topProducts,
             })
+            assertPublicText({ tldr: extras.tldr, terroir: extras.terroir, faqs: extras.faqs }, 'region.extras')
             // Save tldr + terroir
             await supabaseAdmin
               .from('regions')
@@ -254,6 +258,8 @@ export async function POST(req: Request) {
           commonCultivars: cultivarNames,
         })
 
+        assertPublicText({ description_long: description }, 'brands')
+
         await supabaseAdmin
           .from('brands')
           .update({ description_long: description, updated_at: new Date().toISOString() })
@@ -272,6 +278,7 @@ export async function POST(req: Request) {
               topProducts,
               foundedYear: brand.founded_year ?? null,
             })
+            assertPublicText({ tldr: extras.tldr, timeline: extras.timeline, faqs: extras.faqs }, 'brand.extras')
             await supabaseAdmin
               .from('brands')
               .update({
@@ -398,6 +405,8 @@ export async function POST(req: Request) {
           productCount: products.length,
           topProducts,
         })
+
+        assertPublicText({ description_long: description }, 'cultivars')
 
         await supabaseAdmin
           .from('cultivars')

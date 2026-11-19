@@ -6,6 +6,7 @@ import { useWishlist } from '@/lib/wishlist-context'
 import { formatPrice, formatPricePer100ml } from '@/lib/utils'
 import { WishlistButton } from '@/components/wishlist-button'
 import { ScoreBadge } from '@/components/score-badge'
+import { AffiliateLink } from '@/components/affiliate-link'
 import type { Product, ProductOffer } from '@/lib/types'
 
 type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
@@ -101,14 +102,13 @@ export function OblibeneContent({ allProducts }: Props) {
                   Detail
                 </Link>
                 {offer && (
-                  <Link
-                    href={`/go/${offer.retailer.slug}/${p.slug}`}
+                  <AffiliateLink
+                    data={{ productSlug: p.slug, productName: p.name, retailerSlug: offer.retailer.slug, retailerName: offer.retailer.name, price: offer.price, source: 'oblibene' }}
                     target="_blank"
-                    rel="nofollow noopener sponsored"
                     className="text-[12px] font-semibold px-3 py-1.5 rounded-full bg-olive text-white hover:bg-olive2 transition-colors"
                   >
                     Koupit
-                  </Link>
+                  </AffiliateLink>
                 )}
               </div>
             </div>

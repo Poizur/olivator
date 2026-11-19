@@ -7,6 +7,7 @@ import { formatPrice, formatPricePer100ml } from '@/lib/utils'
 import type { Product, ProductOffer } from '@/lib/types'
 import { ScoreBadge } from './score-badge'
 import { NewsletterSignup } from './newsletter-signup'
+import { AffiliateLink } from './affiliate-link'
 
 type ProductWithOffer = Product & { cheapestOffer: ProductOffer | null }
 
@@ -262,14 +263,13 @@ function QuizResults({
                         Detail
                       </Link>
                       {offer && (
-                        <Link
-                          href={`/go/${offer.retailer.slug}/${p.slug}`}
+                        <AffiliateLink
+                          data={{ productSlug: p.slug, productName: p.name, retailerSlug: offer.retailer.slug, retailerName: offer.retailer.name, price: offer.price, source: 'quiz' }}
                           className="px-3 py-1.5 text-[12px] font-semibold bg-olive text-white rounded-full hover:bg-olive2 transition-colors"
                           target="_blank"
-                          rel="nofollow noopener sponsored"
                         >
                           Koupit
-                        </Link>
+                        </AffiliateLink>
                       )}
                     </div>
                   </div>

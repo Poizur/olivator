@@ -3,6 +3,7 @@
 // Vstup: EVOO + virgin, status=active, volume_ml nastaven, cena max 14 dní stará.
 // Medián = hlavní publikované číslo. Průměr = doplněk v metodice.
 import { supabaseAdmin } from '../supabase'
+import { effectivePrice } from '../price'
 
 export interface IndexSegment {
   segment: string
@@ -200,7 +201,7 @@ export async function computeCurrentIndex(): Promise<IndexSnapshot> {
   for (let i = 0; i < productIds.length; i += 200) {
     const { data, error } = await supabaseAdmin
       .from('product_offers')
-      .select('product_id, retailer_id, price, retailers!inner(is_active)')
+      .select('product_id, retailer_id, price, action_price, retailers!inner(is_active)')
       .in('product_id', productIds.slice(i, i + 200))
       .eq('retailers.is_active', true)
       .eq('in_stock', true)
@@ -211,8 +212,9 @@ export async function computeCurrentIndex(): Promise<IndexSnapshot> {
 
   const cheapest = new Map<string, { price: number; retailerId: string }>()
   for (const o of allOffers) {
+    const price = effectivePrice(o.price, (o as { action_price?: number | null }).action_price)
     const ex = cheapest.get(o.product_id)
-    if (!ex || o.price < ex.price) cheapest.set(o.product_id, { price: o.price, retailerId: o.retailer_id })
+    if (!ex || price < ex.price) cheapest.set(o.product_id, { price, retailerId: o.retailer_id })
   }
 
   return computeFromCheapestMap(cheapest, productMap, month, allOffers.length, productIds.length - cheapest.size, 'product_offers')

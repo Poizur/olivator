@@ -47,13 +47,10 @@ export function generateProductFAQ(
 
   // Q3: Polyphenols — only if we have them
   if (product.polyphenols != null && product.polyphenols > 0) {
-    const healthClaim =
-      product.polyphenols >= 250
-        ? ' Splňuje EU health claim (min 250 mg/kg polyfenolů) — polyfenoly z olivového oleje přispívají k ochraně krevních lipidů před oxidačním stresem.'
-        : ''
+    // §26: u konkrétního oleje žádné zdravotní tvrzení — hydroxytyrosol (podmínka tvrzení 432/2012) v datech nemáme.
     faqs.push({
       question: `Kolik obsahuje olej polyfenolů?`,
-      answer: `${product.polyphenols} mg/kg polyfenolů.${healthClaim} Polyfenoly jsou přírodní antioxidanty, které dávají oleji lehce hořkou a pálivou chuť. Vyšší obsah = více zdravotních benefitů i intenzivnější chuť.`,
+      answer: `${product.polyphenols} mg/kg polyfenolů podle údajů výrobce. Polyfenoly dávají oleji hořkost a štiplavost v krku a zpomalují jeho žluknutí; čím vyšší obsah, tím výraznější a trvanlivější olej. Obsah klesá s časem od sklizně, proto se vyplatí kupovat čerstvý ročník.`,
     })
   }
 

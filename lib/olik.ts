@@ -1,5 +1,7 @@
 import { callClaude, extractText } from '@/lib/anthropic'
 import { supabaseAdmin } from '@/lib/supabase'
+import { effectivePrice } from '@/lib/price'
+import { HEALTH_RE, ALLOWED_HEALTH_RE } from '@/lib/editorial-rules'
 
 // Sonnet: Haiku v regresním testu zkracoval názvy olejů a dělal jazykové chyby; objem je malý (jednotky dotazů týdně).
 export const OLIK_MODEL = 'claude-sonnet-4-6'
@@ -91,6 +93,7 @@ function pickBestOffer(offers: OfferContext[]): OfferContext | null {
 function mapToProductContext(p: any): ProductContext | null {
   const rawOffers = (p.product_offers ?? []) as Array<{
     price: number
+    action_price: number | null
     in_stock: boolean
     affiliate_url: string | null
     commission_pct: number | null
@@ -100,7 +103,7 @@ function mapToProductContext(p: any): ProductContext | null {
   const offers: OfferContext[] = rawOffers
     .filter((o) => o.retailers?.is_active === true)
     .map((o) => ({
-      price: Number(o.price) || 0,
+      price: effectivePrice(o.price, o.action_price),
       in_stock: Boolean(o.in_stock),
       affiliate_url: o.affiliate_url ?? null,
       commission_pct: o.commission_pct != null ? Number(o.commission_pct) : null,
@@ -128,7 +131,7 @@ function mapToProductContext(p: any): ProductContext | null {
 const PRODUCT_SELECT = `
   name, slug, olivator_score, origin_country,
   polyphenols, acidity, certifications, flavor_labels,
-  product_offers ( price, in_stock, affiliate_url, commission_pct, retailers ( name, slug, is_active ) )
+  product_offers ( price, action_price, in_stock, affiliate_url, commission_pct, retailers ( name, slug, is_active ) )
 `
 
 // Přezdívky, cizí a bezdiakritické varianty názvů → tvar, jak je v názvech olejů v katalogu.
@@ -312,8 +315,9 @@ const norm = (s: string) =>
 const FOREIGN_WORDS = new RegExp(`(?<!\\p{L})(gebied|het|een|und|oder|nicht|sehr|mit|der|die|das|the|and|with|very|for|you|your|is|are|this|that|olejury|velmi\\s+dobre|ďakujem|veľmi|ktorý|ktorá|tiež|lebo|som|sú|olivový\\s+olej\\s+je\\s+veľ)(?!\\p{L})`, 'iu')
 const NON_CZECH_LETTERS = /[Ѐ-ӿͰ-Ͽ一-鿿ľĺŕäôẞß]/
 const INVENTED_REASON = /(někdo\s+(ho|je|to)\s+koupil|vyprodal|vyprodan[ýáé]|stáhl[ia]?\s+z\s+prodeje|nahradil[ia]|aktualizoval\s+katalog|už\s+ho\s+nemáme\s+v\s+sortimentu|přestal[ia]?\s+prodávat)/i
-const HEALTH = /(léč|\blék(?!ař)|vyléč|uzdrav|prevenc|předcház|chrání\s+před|snižuje\s+(riziko|cholesterol|tlak)|cholesterol|rakovin|nádor|srdc|srdeční|kardio|cukrovk|diabet|imunit|zánět|detox|antioxida|omlaz|hubnut|zdravotní\s+účin|posiluje|prospěšn|blahodárn)/i
-const ALLOWED_HEALTH_SENTENCE = /((není|nemá|nejsou|nesmí\w*|netvrd\w*|nelze|neslibuj\w*)\s.{0,60}(léč|lék|účin)|není\s+lék|nenahrazuje\s+léčbu|ochran[ěy]\s+(krevních\s+lipidů|lipidů\s+v\s+krvi)\s+před\s+oxida\w*\s+stresem|432\/2012|hydroxytyrosol)/i
+// Sdílené s newsletterem, generátory a admin editorem (lib/editorial-rules.ts).
+const HEALTH = HEALTH_RE
+const ALLOWED_HEALTH_SENTENCE = ALLOWED_HEALTH_RE
 
 /** Kontrola odpovědi: jazyk, existence olejů a obchodů v katalogu, vymyšlené důvody, zdravotní tvrzení. */
 export function validateOlikReply(text: string, ctx: OlikContext, userMsg = ''): string[] {

@@ -3,6 +3,7 @@
 import { supabaseAdmin } from './supabase'
 import { findQuarantinedRetailerLinks } from './newsletter-reviewer'
 import { draftProductIds, familiesOf, recentlySentFamilies } from './newsletter-dedupe'
+import { findEditorialIssues, formatEditorialIssues } from './editorial-rules'
 
 export interface FactCheckDraft {
   id: string
@@ -36,6 +37,10 @@ export async function factCheckDraft(draft: FactCheckDraft): Promise<string[]> {
     if (!text.includes(part)) issues.push(`patička: chybí „${part}“`)
   }
   if (/Praha/.test(text)) issues.push('patička/text: „Praha“ (sídlo je Brno)')
+
+  // §26 + Olivátor netestuje: stejný filtr jako Olík, blokující.
+  const editorial = findEditorialIssues(`${text}\n${draft.text_body ?? ''}`).filter((i) => i.rule !== 'hard_count')
+  if (editorial.length > 0) issues.push(`redakční pravidla: ${formatEditorialIssues(editorial)}`)
 
   const { count: activeRetailers } = await supabaseAdmin
     .from('retailers')

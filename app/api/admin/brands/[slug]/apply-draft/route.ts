@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAdminAuthenticated } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { guardPublicText } from '@/lib/text-guard'
 
 // Aplikuje pending draft z brand_research_drafts do brands row.
 // Volá se z admin UI tlačítkem „Schválit a aplikovat" u low-confidence
@@ -75,6 +76,8 @@ export async function POST(
     applied.push('timeline')
   }
 
+  const guard = guardPublicText(patch, 'brand')
+  if (guard.length > 0) return NextResponse.json({ error: `Draft neprošel redakční kontrolou: ${guard.join(' | ')}` }, { status: 422 })
   const { error } = await supabaseAdmin.from('brands').update(patch).eq('id', brand.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

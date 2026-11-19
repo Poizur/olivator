@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { enqueueWelcomeSeries } from '@/lib/welcome-series'
 import crypto from 'crypto'
+import { isAdminAuthenticated, verifyPassword } from '@/lib/admin-auth'
 
 export async function POST(req: NextRequest) {
   const adminKey = req.headers.get('x-admin-key')
-  if (adminKey !== process.env.ADMIN_SECRET_KEY) {
+  const viaHeader = adminKey != null && verifyPassword(adminKey)
+  if (!viaHeader && !(await isAdminAuthenticated())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

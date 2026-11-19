@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "tsx scripts/check-secrets.ts && tsx scripts/check-schema.ts && tsx scripts/check-prices.ts",
+    "prebuild": "tsx scripts/check-secrets.ts && tsx scripts/check-go-links.ts && tsx scripts/check-admin-auth.ts && tsx scripts/check-schema.ts && tsx scripts/check-prices.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -39,7 +39,8 @@
     "cron:lead-magnet-drip": "tsx scripts/cron/lead-magnet-drip.ts",
     "gen:lead-magnet-pdf": "tsx scripts/generate-lead-magnet-pdf.ts",
     "cron:price-watch": "tsx scripts/cron/price-watch-notify.ts",
-    "cron:price-index": "tsx scripts/cron/price-index.ts"
+    "cron:price-index": "tsx scripts/cron/price-index.ts",
+    "qa:prefetch-impact": "tsx --env-file=.env.local scripts/qa/prefetch-impact.ts"
   },
   "engines": {
     "node": ">=20.18.0"

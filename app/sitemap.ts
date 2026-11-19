@@ -100,7 +100,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .select('slug, category, updated_at')
     .eq('status', 'active')
 
-  const dbArticleSlugs = new Set((dbArticlesRes.data ?? []).map((a: { slug: string }) => a.slug))
+  // Static fallbacky vynecháme i pro slugy, které už žijí v DB receptech (jinak 2× <loc>).
+  const dbArticleSlugs = new Set([
+    ...(dbArticlesRes.data ?? []).map((a: { slug: string }) => a.slug),
+    ...(dbRecipesRes.data ?? []).map((r: { slug: string }) => r.slug),
+  ])
 
   const dbArticlePages: MetadataRoute.Sitemap = (dbArticlesRes.data ?? []).map(
     (a: { slug: string; category: string; updated_at: string | null }) => ({

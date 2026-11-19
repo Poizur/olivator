@@ -4,6 +4,7 @@
 // Princip: každý generator vrátí typed data — ne HTML. Render jde v emails/*.tsx.
 
 import { supabaseAdmin } from './supabase'
+import { effectivePrice as customerPrice } from './price'
 import { getDisplayName } from './product-display'
 
 const SITE_URL = 'https://olivator.cz'
@@ -164,7 +165,7 @@ export async function pickOilOfTheWeek(
     // Načti všechny in_stock offers pro tento produkt
     const { data: offers } = await supabaseAdmin
       .from('product_offers')
-      .select('price, currency, in_stock, retailer_id')
+      .select('price, action_price, currency, in_stock, retailer_id')
       .eq('product_id', p.id)
       .eq('in_stock', true)
       .order('price', { ascending: true })
@@ -174,7 +175,7 @@ export async function pickOilOfTheWeek(
     // Přilep retailer info z mapy
     const enriched = offers
       .map((o) => ({
-        price: o.price as number,
+        price: customerPrice(o.price as number | null, o.action_price as number | null),
         retailer: retailerMap.get(o.retailer_id as string) ?? null,
       }))
       .filter((o) => o.retailer !== null) as Array<{
@@ -330,7 +331,7 @@ export async function pickDeals(
     const candidate: OfferData = {
       product_id: productId,
       retailer_id: o.retailer_id as string,
-      price: o.price as number,
+      price: customerPrice(o.price as number | null, (o as { action_price?: number | null }).action_price),
       retailer,
       product: {
         slug: product.slug,

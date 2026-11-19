@@ -4,12 +4,25 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
   ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
   : 'dyaloliwynmfnpjemzrh.supabase.co'
 
+const SECURITY_HEADERS = [
+  { key: 'Strict-Transport-Security', value: 'max-age=15552000' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+]
+
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   // Default 60s nestačí, když ~30 Railway služeb buildí paralelně a dotazují Supabase
   // (feed-sync build 2026-09-23 spadl na /olej/[slug] timeoutu → cron běžel týden se starým kódem).
   staticPageGenerationTimeout: 180,
+  async headers() {
+    return [{ source: '/:path*', headers: SECURITY_HEADERS }]
+  },
   async redirects() {
     return [
+      // Legacy statický článek se zdravotními tvrzeními zrušen (2026-11-19) → kanonický žebříček
+      { source: '/pruvodce/nejlepsi-olivovy-olej-2025', destination: '/zebricek/nejlepsi-olivovy-olej-2026', statusCode: 301 },
       // Sloučení /pruvodce × /zebricek (2026-10-19): kanonická verze podle GSC
       { source: '/pruvodce/nejlepsi-recky-olivovy-olej', destination: '/zebricek/nejlepsi-recky-olivovy-olej', statusCode: 301 },
       { source: '/pruvodce/nejlepsi-bio-olivovy-olej', destination: '/zebricek/nejlepsi-bio-olivovy-olej', statusCode: 301 },

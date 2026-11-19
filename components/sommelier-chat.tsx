@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useCompare } from '@/lib/compare-context'
+import { AffiliateLink } from './affiliate-link'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -54,10 +55,16 @@ function inlineParts(text: string, keyPrefix: string) {
   const parts = text.split(/(\/go\/[\w-]+\/[\w-]+(?:\?[^\s\n]*)?|\/olej\/[\w-]+|\*\*[^*]+\*\*)/g)
   return parts.map((part, i) => {
     if (part.startsWith('/go/')) {
+      const m = part.match(/^\/go\/([\w-]+)\/([\w-]+)/)
+      if (!m) return <span key={`${keyPrefix}-${i}`}>{part}</span>
       return (
-        <Link key={`${keyPrefix}-${i}`} href={part} className="inline-flex items-center gap-0.5 text-olive underline hover:text-olive2 text-[12px]">
+        <AffiliateLink
+          key={`${keyPrefix}-${i}`}
+          data={{ productSlug: m[2], productName: m[2], retailerSlug: m[1], retailerName: m[1], price: 0, source: 'olik' }}
+          className="inline-flex items-center gap-0.5 text-olive underline hover:text-olive2 text-[12px]"
+        >
           → koupit
-        </Link>
+        </AffiliateLink>
       )
     }
     if (part.startsWith('/olej/')) {

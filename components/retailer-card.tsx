@@ -4,9 +4,9 @@
 //
 // Příklad: reckonasbavi.cz založili Zdeněk a Marcelka, vášniví cestovatelé z Řecka.
 
-import Link from 'next/link'
 import Image from 'next/image'
 import type { Retailer } from '@/lib/types'
+import { AffiliateLink } from './affiliate-link'
 
 export interface RetailerPhotoLite {
   url: string
@@ -16,11 +16,12 @@ export interface RetailerPhotoLite {
 interface Props {
   retailer: Retailer
   productSlug: string
+  productName: string
   price: number
   photos?: RetailerPhotoLite[]  // 0-2 atmosférické fotky pod logem
 }
 
-export function RetailerCard({ retailer, productSlug, price, photos = [] }: Props) {
+export function RetailerCard({ retailer, productSlug, productName, price, photos = [] }: Props) {
   const hasStory = !!(retailer.tagline || retailer.story || retailer.founders)
   if (!hasStory) return null
 
@@ -136,16 +137,15 @@ export function RetailerCard({ retailer, productSlug, price, photos = [] }: Prop
             </div>
           )}
 
-          {/* CTA — affiliate redirect */}
-          <Link
-            href={`/go/${retailer.slug}/${productSlug}`}
+          {/* CTA — affiliate redirect (plain <a>, ne next/link — viz AffiliateLink) */}
+          <AffiliateLink
+            data={{ productSlug, productName, retailerSlug: retailer.slug, retailerName: retailer.name, price, source: 'retailer_card' }}
             target="_blank"
-            rel="nofollow noopener sponsored"
             className="inline-flex items-center gap-1.5 bg-olive text-white rounded-full px-5 py-2.5 text-[13px] font-semibold hover:bg-olive-dark transition-colors"
           >
             Otevřít u {retailer.name} — {Math.round(price)} Kč
             <span className="text-[11px]">↗</span>
-          </Link>
+          </AffiliateLink>
         </div>
       </div>
     </section>

@@ -650,16 +650,15 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               <div key={s.key} className="flex justify-between py-2.5 border-b border-off last:border-b-0">
                 <span className="text-[13px] text-text3">{s.key}</span>
                 {s.missing && cheapest ? (
-                  <Link
-                    href={`/go/${cheapest.retailer.slug}/${product.slug}`}
+                  <AffiliateLink
+                    data={{ productSlug: product.slug, productName: product.name, retailerSlug: cheapest.retailer.slug, retailerName: cheapest.retailer.name, price: cheapest.price, source: 'product_page' }}
                     target="_blank"
-                    rel="nofollow noopener sponsored"
                     className="text-[13px] text-olive italic hover:text-olive2 hover:underline inline-flex items-center gap-1"
                     title={`Otevřít detail u ${cheapest.retailer.name}`}
                   >
                     Zjistit u {cheapest.retailer.name}
                     <span className="text-[10px]">↗</span>
-                  </Link>
+                  </AffiliateLink>
                 ) : (
                   <span className="text-right">
                     <span className={`text-[13px] ${s.missing ? 'text-text3 italic' : 'font-medium text-text'}`}>
@@ -1152,6 +1151,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         <RetailerCard
           retailer={cheapest.retailer}
           productSlug={product.slug}
+          productName={product.name}
           price={cheapest.price}
           photos={await getRetailerPhotosLite(cheapest.retailer.id)}
         />

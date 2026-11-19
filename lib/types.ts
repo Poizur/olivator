@@ -119,7 +119,9 @@ export interface ProductOffer {
   productId: string
   retailerId: string
   retailer: Retailer
-  price: number
+  price: number             // cena, kterou zákazník zaplatí (akční, pokud je nižší než běžná) — lib/price.ts
+  listPrice?: number        // běžná cena z feedu (price), když se liší od price = obchod má akci
+  actionPrice?: number | null
   currency: string
   inStock: boolean
   productUrl: string

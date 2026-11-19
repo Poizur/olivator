@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createHash } from 'node:crypto'
 import { supabaseAdmin } from '@/lib/supabase'
 import { decideGoTarget } from '@/lib/go-target'
+import { isPrefetchRequest } from '@/lib/go-prefetch'
 
 /**
  * Odvodí typ stránky z URL cesty refereru.
@@ -18,6 +19,8 @@ function deriveSourceType(sourcePage: string | null, utmMedium?: string): string
     if (path.startsWith('/srovnavac')) return 'srovnavac'
     if (path.startsWith('/slevy')) return 'slevy'
     if (path.startsWith('/pruvodce/') || path.startsWith('/recept/')) return 'clanek'
+    if (path.startsWith('/quiz')) return 'quiz'
+    if (path.startsWith('/oblibene')) return 'oblibene'
   } catch {
     // neparsovatelná URL → unknown
   }
@@ -35,6 +38,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ retailer: string; slug: string }> }
 ) {
+  if (isPrefetchRequest(request)) {
+    return new Response(null, { status: 204, headers: { 'cache-control': 'no-store' } })
+  }
   const { retailer: retailerSlug, slug: productSlug } = await params
   const reqUrl = request.nextUrl
 
@@ -94,7 +100,7 @@ export async function GET(
     userAgent,
     hasOrigin: Boolean(spParam || stParam || referrer || utm.utm_source),
     recentClicksFromIp: recentCount ?? 0,
-    testHeader: request.headers.get('x-olivator-test') === '1',
+    testHeader: request.headers.get('x-olivator-test') === '1' || reqUrl.searchParams.get('test') === '1',
     productSlug,
     // Za proxy Railway je reqUrl.origin interní (localhost:8080) — veřejnou adresu bereme z x-forwarded-host.
     productPageUrl: new URL(`/olej/${productSlug}`, publicOrigin(request)).toString(),
