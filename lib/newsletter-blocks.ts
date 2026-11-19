@@ -4,7 +4,8 @@
 // Princip: každý generator vrátí typed data — ne HTML. Render jde v emails/*.tsx.
 
 import { supabaseAdmin } from './supabase'
-import { effectivePrice as customerPrice } from './price'
+import { effectivePrice as customerPrice, formatDealDate } from './price'
+import { getSlevyDeals } from './welcome-series'
 import { getDisplayName } from './product-display'
 
 const SITE_URL = 'https://olivator.cz'
@@ -176,10 +177,12 @@ export async function pickOilOfTheWeek(
     const enriched = offers
       .map((o) => ({
         price: customerPrice(o.price as number | null, o.action_price as number | null),
+        retailer_id: o.retailer_id as string,
         retailer: retailerMap.get(o.retailer_id as string) ?? null,
       }))
       .filter((o) => o.retailer !== null) as Array<{
         price: number
+        retailer_id: string
         retailer: { name: string; slug: string; is_active: boolean; commissionPct: number }
       }>
 
@@ -191,23 +194,22 @@ export async function pickOilOfTheWeek(
       (a, b) => effectivePrice(a.price, a.retailer.commissionPct) - effectivePrice(b.price, b.retailer.commissionPct)
     )[0]
 
-    // Min cena 30d (drop kontext)
-    const { data: history } = await supabaseAdmin
-      .from('price_history')
-      .select('price')
+    // Sleva jen podle stejného pravidla jako /slevy (confirmed_deals u obchodu, kde je olej nejlevnější)
+    const { data: deal } = await supabaseAdmin
+      .from('confirmed_deals')
+      .select('reference_price, current_price, drop_pct, current_since')
       .eq('product_id', p.id)
-      .gte('recorded_at', new Date(Date.now() - 30 * 86400000).toISOString())
-      .order('price', { ascending: false })
-      .limit(1)
+      .eq('retailer_id', cheapest.retailer_id)
+      .maybeSingle()
 
-    const oldPrice = (history?.[0]?.price as number | undefined) ?? null
-    const hasDrop = oldPrice && oldPrice > cheapest.price && (oldPrice - cheapest.price) / oldPrice > 0.05
+    const oldPrice = deal ? Math.round(Number(deal.reference_price)) : null
+    const hasDrop = Boolean(deal && Number(deal.current_price) === Number(cheapest.price))
 
     const brand = p.brand_slug ? brandMap.get(p.brand_slug as string) ?? null : null
     const productName = getDisplayName(p as { name_short: string | null; name: string })
 
     const reasoning = hasDrop
-      ? `Score ${p.olivator_score} a aktuálně sleva ${Math.round(((oldPrice! - cheapest.price) / oldPrice!) * 100)} % oproti měsíčnímu maximu — silný moment k vyzkoušení.`
+      ? `Score ${p.olivator_score} a od ${formatDealDate(deal!.current_since as string)} sleva ${Number(deal!.drop_pct)} % proti nejnižší ceně za 30 dní před zlevněním.`
       : (p.olivator_score as number) >= 80
       ? `Patří mezi nejlépe hodnocené v katalogu. Kvalita ověřená Olivator Score ${p.olivator_score}.`
       : `Aktuálně Score ${p.olivator_score} — solidní volba k danému typu pokrmů.`
@@ -241,202 +243,40 @@ export async function pickDeals(
   excludeBrandSlugs: string[] = [],
   excludeCultivarSlugs: string[] = []
 ): Promise<DealData[]> {
-  const retailerMap = await loadRetailerMap()
-
-  // Pull aktuální in_stock offers
-  const { data: offers } = await supabaseAdmin
-    .from('product_offers')
-    .select('product_id, price, retailer_id')
-    .eq('in_stock', true)
-
-  if (!offers || offers.length === 0) return []
-
-  // Načti products data (status + name) jednou — po dávkách (Supabase .in() limit ~60 UUID)
-  const productIds = Array.from(new Set(offers.map((o) => o.product_id as string)))
-  const BATCH = 60
-  const allProductsData: Record<string, unknown>[] = []
-  for (let i = 0; i < productIds.length; i += BATCH) {
-    const { data } = await supabaseAdmin
-      .from('products')
-      .select('id, slug, name, name_short, status, olivator_score, image_url, brand_slug')
-      .in('id', productIds.slice(i, i + BATCH))
-    if (data) allProductsData.push(...(data as Record<string, unknown>[]))
-  }
-  const productsData = allProductsData
-  const productMap = new Map<string, {
-    slug: string
-    name: string
-    name_short: string | null
-    status: string
-    olivator_score: number
-    image_url: string | null
-    brand_slug: string | null
-  }>()
-  for (const p of productsData ?? []) {
-    productMap.set(p.id as string, {
-      slug: p.slug as string,
-      name: p.name as string,
-      name_short: p.name_short as string | null,
-      status: p.status as string,
-      olivator_score: p.olivator_score as number,
-      image_url: (p.image_url as string | null) ?? null,
-      brand_slug: (p.brand_slug as string | null) ?? null,
+  // Stejný seznam jako /slevy, homepage a uvítací e-mail (confirmed_deals): sleva = cena aspoň o 5 % nižší
+  // než nejnižší cena za 30 dní před zlevněním, zlevnění max. 90 dní staré. Žádné „poklesy proti maximu“.
+  const { deals } = await getSlevyDeals(100)
+  let pool = deals.filter((d) => d.dropPct >= minDropPct && !excludeProductIds.includes(d.productId))
+  if (pool.length > 0 && (excludeBrandSlugs.length > 0 || excludeCultivarSlugs.length > 0)) {
+    const ids = pool.map((d) => d.productId)
+    const [{ data: prods }, { data: links }] = await Promise.all([
+      supabaseAdmin.from('products').select('id, brand_slug').in('id', ids),
+      excludeCultivarSlugs.length > 0
+        ? supabaseAdmin.from('product_cultivars').select('product_id, cultivar_slug').in('product_id', ids)
+        : Promise.resolve({ data: [] as { product_id: string; cultivar_slug: string }[] }),
+    ])
+    const brandById = new Map((prods ?? []).map((p) => [p.id as string, p.brand_slug as string | null]))
+    const excludedByCultivar = new Set(
+      (links ?? []).filter((l) => excludeCultivarSlugs.includes(l.cultivar_slug as string)).map((l) => l.product_id as string)
+    )
+    pool = pool.filter((d) => {
+      const brand = brandById.get(d.productId)
+      if (brand && excludeBrandSlugs.includes(brand)) return false
+      return !excludedByCultivar.has(d.productId)
     })
   }
-
-  interface OfferData {
-    product_id: string
-    retailer_id: string
-    price: number
-    retailer: { name: string; slug: string; is_active: boolean; commissionPct: number }
-    product: { slug: string; name: string; name_short: string | null; olivator_score: number; image_url: string | null }
-  }
-
-  // T-18: Pre-load cultivar links pro deals kandidáty (batched — stejný limit jako products)
-  const dealCultivarMap = new Map<string, string[]>()
-  if (excludeCultivarSlugs.length > 0 && productIds.length > 0) {
-    for (let i = 0; i < productIds.length; i += BATCH) {
-      const { data: cultivarLinks } = await supabaseAdmin
-        .from('product_cultivars')
-        .select('product_id, cultivar_slug')
-        .in('product_id', productIds.slice(i, i + BATCH))
-      for (const link of cultivarLinks ?? []) {
-        const pid = link.product_id as string
-        const cslug = link.cultivar_slug as string
-        if (!dealCultivarMap.has(pid)) dealCultivarMap.set(pid, [])
-        dealCultivarMap.get(pid)!.push(cslug)
-      }
-    }
-  }
-
-  const candidates: DealData[] = []
-
-  // Group by product_id, pick cheapest offer (preferuj is_active retailer)
-  const byProduct = new Map<string, OfferData>()
-  for (const o of offers) {
-    const productId = o.product_id as string
-    const product = productMap.get(productId)
-    const retailer = retailerMap.get(o.retailer_id as string)
-    if (!product || !retailer) continue
-    if (product.status !== 'active') continue
-    if (excludeProductIds.includes(productId)) continue
-    // T-18: Brand exclusion pro deals
-    if (excludeBrandSlugs.length > 0 && product.brand_slug && excludeBrandSlugs.includes(product.brand_slug)) continue
-    // T-18: Cultivar exclusion pro deals (fallback pro brand_slug=null)
-    if (excludeCultivarSlugs.length > 0) {
-      const pCultivars = dealCultivarMap.get(productId) ?? []
-      if (pCultivars.some((c) => excludeCultivarSlugs.includes(c))) continue
-    }
-
-    const candidate: OfferData = {
-      product_id: productId,
-      retailer_id: o.retailer_id as string,
-      price: customerPrice(o.price as number | null, (o as { action_price?: number | null }).action_price),
-      retailer,
-      product: {
-        slug: product.slug,
-        name: product.name,
-        name_short: product.name_short,
-        olivator_score: product.olivator_score,
-        image_url: product.image_url,
-      },
-    }
-
-    const existing = byProduct.get(productId)
-    if (!existing) {
-      byProduct.set(productId, candidate)
-    } else {
-      // Preferuj active retailer; pak efektivní cena (komise-weighted)
-      const existingActive = existing.retailer.is_active
-      const newActive = candidate.retailer.is_active
-      const newEffective = effectivePrice(candidate.price, candidate.retailer.commissionPct)
-      const existingEffective = effectivePrice(existing.price, existing.retailer.commissionPct)
-      if ((newActive && !existingActive) || (newActive === existingActive && newEffective < existingEffective)) {
-        byProduct.set(productId, candidate)
-      }
-    }
-  }
-
-  const week7ago = new Date(Date.now() - 7 * 86400000).toISOString()
-
-  for (const offer of byProduct.values()) {
-    // Aktivita check — produkt musí mít ≥2 záznamy za posledních 7 dní u tohoto retailera.
-    // Filtruje phantom listingy kde retailer drží in_stock=true ale produkt je fakticky nedostupný.
-    const { count: recentCount } = await supabaseAdmin
-      .from('price_history')
-      .select('*', { count: 'exact', head: true })
-      .eq('product_id', offer.product_id)
-      .eq('retailer_id', offer.retailer_id)
-      .gte('recorded_at', week7ago)
-    if ((recentCount ?? 0) < 2) continue
-
-    // Najdi 90d max cenu u STEJNÉHO retailera — cross-retailer srovnání by vyvolalo
-    // falešné "poklesy" (jiný retailer měl vždy jinou cenu, není to sleva)
-    const { data: history } = await supabaseAdmin
-      .from('price_history')
-      .select('price, recorded_at')
-      .eq('product_id', offer.product_id)
-      .eq('retailer_id', offer.retailer_id)
-      .gte('recorded_at', new Date(Date.now() - 90 * 86400000).toISOString())
-      .order('price', { ascending: false })
-      .limit(1)
-
-    if (!history || history.length === 0) continue
-    const maxPrice = history[0].price as number
-    if (maxPrice <= offer.price) continue
-
-    const dropPct = ((maxPrice - offer.price) / maxPrice) * 100
-    if (dropPct < minDropPct) continue
-    // Cap 50 % — vyšší hodnoty jsou téměř vždy datová anomálie (jiný objem, chybný import)
-    // Permanent sale filter — pokud cena nebyla >10 % nad aktuální déle než 21 dní,
-    // považujeme tuto "slevu" za trvalou (normální cena), ne reálný pokles.
-    const { data: lastHighRecord } = await supabaseAdmin
-      .from('price_history')
-      .select('recorded_at')
-      .eq('product_id', offer.product_id)
-      .eq('retailer_id', offer.retailer_id)
-      .gt('price', (offer.price as number) * 1.10)
-      .order('recorded_at', { ascending: false })
-      .limit(1)
-    if (lastHighRecord?.[0]) {
-      const daysSinceHigh = (Date.now() - new Date(lastHighRecord[0].recorded_at as string).getTime()) / 86400000
-      if (daysSinceHigh > 21) continue  // permanent deal — this is the normal price now
-    }
-    if (dropPct > 50) continue
-
-    // Najdi 90d minimum u stejného retailera
-    const { data: minHistory } = await supabaseAdmin
-      .from('price_history')
-      .select('price')
-      .eq('product_id', offer.product_id)
-      .eq('retailer_id', offer.retailer_id)
-      .gte('recorded_at', new Date(Date.now() - 90 * 86400000).toISOString())
-      .order('price', { ascending: true })
-      .limit(1)
-    const minPrice = (minHistory?.[0]?.price as number) ?? offer.price
-    const isAtMin = offer.price <= minPrice * 1.02
-
-    const productName = getDisplayName(offer.product as { name_short: string | null; name: string })
-
-    candidates.push({
-      productId: offer.product_id,
-      name: productName,
-      imageUrl: offer.product.image_url,
-      oldPrice: maxPrice,
-      newPrice: offer.price,
-      dropPct: Math.round(dropPct),
-      retailerName: offer.retailer.name,
-      retailerSlug: offer.retailer.slug,
-      ctaUrl: buildAffiliateUrl(offer.retailer.slug, offer.product.slug, 'deal_radar'),
-      context: isAtMin
-        ? '90denní minimum'
-        : `Klesla z ${Math.round(maxPrice)} Kč za poslední měsíc`,
-    })
-  }
-
-  return candidates
-    .sort((a, b) => b.dropPct - a.dropPct)
-    .slice(0, limit)
+  return pool.slice(0, limit).map((d) => ({
+    productId: d.productId,
+    name: d.name,
+    imageUrl: d.imageUrl,
+    oldPrice: d.oldPrice,
+    newPrice: d.currentPrice,
+    dropPct: d.dropPct,
+    retailerName: d.retailerName,
+    retailerSlug: d.retailerSlug,
+    ctaUrl: buildAffiliateUrl(d.retailerSlug, d.slug, 'deal_radar'),
+    context: `zlevněno ${formatDealDate(d.since)} · nejnižší cena za 30 dní před tím ${d.oldPrice} Kč`,
+  }))
 }
 
 // ── 2b. Náš tip — admin-pinned produkt s vlastní zprávou ──────────────────

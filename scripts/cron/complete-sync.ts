@@ -14,6 +14,7 @@
  */
 import { syncReckonasbavyComplete } from '@/lib/reckonasbavi-complete-sync'
 import { supabaseAdmin } from '@/lib/supabase'
+import { requestPriceRevalidation } from '@/lib/request-price-revalidation'
 
 const MAX_RUNTIME_MS = 5 * 60 * 1000 // 5 min — feed ~53 MB + DB updates
 
@@ -62,6 +63,9 @@ async function main() {
     if (result.errors.length > 0) {
       console.warn('[cron:complete-sync] errors:', result.errors)
     }
+
+    // Akční ceny se změnily → obnov stránky s cenami (nefatální).
+    await requestPriceRevalidation(new Date(startedAt), 'cron:complete-sync')
 
     process.exit(0)
   } catch (err) {

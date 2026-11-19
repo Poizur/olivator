@@ -26,4 +26,18 @@ export function register() {
   }, RESTART_AFTER_MS)
 
   console.log('[instrumentation] daily restart timer armed (24h from now)')
+
+  // Po startu (nasazení, restart) obnov stránky s cenami: /, /slevy, žebříčky a oleje se změnou ceny za 24 h.
+  // Build je předgeneroval v čase buildu; tohle zaručí, že první návštěvník nedostane starší kopii.
+  setTimeout(() => {
+    const port = process.env.PORT ?? '3000'
+    fetch(`http://127.0.0.1:${port}/api/cron/revalidate-prices`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-cron-secret': process.env.CRON_SECRET ?? '' },
+      body: JSON.stringify({ reason: 'deploy' }),
+      signal: AbortSignal.timeout(280_000),
+    })
+      .then(async (res) => console.log(`[instrumentation] obnova stránek po startu: HTTP ${res.status} ${(await res.text()).slice(0, 300)}`))
+      .catch((err: Error) => console.error('[instrumentation] obnova stránek po startu selhala:', err.message))
+  }, 20_000).unref()
 }

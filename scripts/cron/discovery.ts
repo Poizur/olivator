@@ -8,6 +8,7 @@
  */
 import { runDiscoveryAgent } from '@/lib/discovery-agent'
 import { sendDiscoverySummary } from '@/lib/email'
+import { requestPriceRevalidation } from '@/lib/request-price-revalidation'
 
 // Discovery crawluje N shopů × Playwright na každém produktu (~30s).
 // Bez kill timeru může viset (TCP stall, infinite redirect, browser crash)
@@ -36,6 +37,8 @@ async function main() {
       needsReview: result.needsReview,
       failed: result.failed,
     })
+
+    await requestPriceRevalidation(new Date(startedAt), 'cron:discovery')
 
     try {
       await sendDiscoverySummary(result)

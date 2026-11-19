@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import crypto from 'crypto'
+import { cheapestEffectiveOffer } from '@/lib/price-watch'
 
 export const dynamic = 'force-dynamic'
 
@@ -92,16 +93,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Produkt nenalezen.' }, { status: 404 })
   }
 
-  const { data: cheapestOffer } = await supabaseAdmin
-    .from('product_offers')
-    .select('price, retailers!inner(is_active)')
-    .eq('retailers.is_active', true)
-    .eq('product_id', productId)
-    .eq('in_stock', true)
-    .order('price', { ascending: true })
-    .limit(1)
-    .maybeSingle()
-
+  // Výchozí cena = cena, kterou zákazník teď zaplatí (akční, je-li nižší) — stejná, jakou vidí na webu.
+  const cheapestOffer = await cheapestEffectiveOffer(productId)
   const priceAtSignup = cheapestOffer?.price ?? null
 
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null

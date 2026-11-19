@@ -1,7 +1,7 @@
 import { render } from '@react-email/render'
 import React from 'react'
 import { supabaseAdmin } from './supabase'
-import { effectivePrice, warnIfCapped } from './price'
+import { effectivePrice, warnIfCapped, formatDealDate } from './price'
 import { sendTransactionalEmail } from './newsletter-sender'
 import { Welcome2MethodologyEmail } from '@/emails/welcome-2-methodology'
 import { Welcome3TopPicksEmail, type TopPickProduct } from '@/emails/welcome-3-top-picks'
@@ -10,8 +10,9 @@ import { getDisplayName } from './product-display'
 
 const SITE = 'https://olivator.cz'
 
+// UTM přidává šablona e-mailu (jinak by URL měla dva „?“).
 function buildAffiliateUrl(retailerSlug: string, productSlug: string): string {
-  return `${SITE}/go/${retailerSlug}/${productSlug}?utm_source=newsletter&utm_medium=email&utm_content=welcome`
+  return `${SITE}/go/${retailerSlug}/${productSlug}`
 }
 
 function truncateName(name: string, max = 50): string {
@@ -27,23 +28,18 @@ export async function getWelcomeDeals(): Promise<{
   topPickReason: string
   mode: 'deals' | 'tips'
 }> {
-  // Slevy jen potvrzené historií (confirmed_deals) — stejná definice jako /slevy. Bez potvrzené slevy → tipy z katalogu.
-  const { deals: slevy } = await getSlevyDeals(12)
+  // Stejný seznam a pořadí jako /slevy a homepage (getSlevyDeals: od nejnovějšího zlevnění), jen bez opakování značky.
+  // Bez ověřené slevy → tipy z katalogu.
+  const { deals: slevy } = await getSlevyDeals(20)
   const selected: SlevyDeal[] = []
   const brands = new Set<string>()
-  const pick = (volFilter: ((v: number | null) => boolean) | null) => {
-    for (const c of slevy) {
-      if (selected.length >= 3) break
-      if (volFilter && !volFilter(c.volumeMl)) continue
-      const key = c.brandName ?? c.name
-      if (brands.has(key)) continue
-      brands.add(key)
-      selected.push(c)
-    }
+  for (const c of slevy) {
+    if (selected.length >= 3) break
+    const key = c.brandName ?? c.name
+    if (brands.has(key)) continue
+    brands.add(key)
+    selected.push(c)
   }
-  pick((v) => v !== null && v >= 250 && v <= 1000)
-  pick((v) => v !== null && v <= 2000)
-  pick(null)
   if (selected.length === 0) return buildFallback()
 
   const deals: WelcomeDeal[] = selected.map((c) => ({
@@ -59,13 +55,15 @@ export async function getWelcomeDeals(): Promise<{
     retailerName: c.retailerName,
     ctaUrl: buildAffiliateUrl(c.retailerSlug, c.slug),
     isFallback: false,
+    since: c.since,
   }))
-  const topPick = selected[0]
+  const topPickIndex = selected.reduce((best, c, i) => (c.score > selected[best].score ? i : best), 0)
+  const topPick = selected[topPickIndex]
   const tpRef = `${topPick.name}${topPick.brandName ? ` od ${topPick.brandName}` : ''}`
   return {
     deals,
-    topPickIndex: 0,
-    topPickReason: `Z těchto tří bych šel po ${tpRef}. Score ${topPick.score} a aktuálně ${topPick.dropPct} % pod nejnižší cenou z posledních 30 dní — dobrá kombinace.`,
+    topPickIndex,
+    topPickReason: `${selected.length === 1 ? 'Tady bych šel po' : selected.length === 2 ? 'Z těchto dvou bych šel po' : 'Z těchto tří bych šel po'} ${tpRef}. ${selected.length > 1 ? `Má nejvyšší Score (${topPick.score})` : `Score ${topPick.score}`} a od ${formatDealDate(topPick.since)} stojí o ${topPick.dropPct} % méně než nejnižší cena za 30 dní před zlevněním.`,
     mode: 'deals',
   }
 }
@@ -146,6 +144,7 @@ async function buildFallback(): Promise<{ deals: WelcomeDeal[]; topPickIndex: nu
       retailerName: o.retailers.name,
       ctaUrl: buildAffiliateUrl(o.retailers.slug, p.slug as string),
       isFallback: true,
+      since: null,
     })
   }
 
@@ -175,8 +174,7 @@ export interface SlevyDeal {
   retailerSlug: string
   retailerName: string
   ctaUrl: string
-  rankScore: number
-  /** Od kdy se současná cena drží (price_history). */
+  /** Kdy obchod zlevnil (začátek současné ceny v price_history). Seznam je řazený od nejnovějšího. */
   since: string
 }
 
@@ -231,7 +229,8 @@ async function loadDealContext(productIds: string[]) {
 
 /**
  * Skutečné slevy: SQL view confirmed_deals — cena, kterou zákazník zaplatí, je aspoň 5 % pod NEJNIŽŠÍ cenou
- * za 30 dní před začátkem současné ceny (price_history téhož obchodu) a současná cena začala v posledních 30 dnech.
+ * za 30 dní před začátkem současné ceny (price_history téhož obchodu) a zlevnění není starší než 90 dní.
+ * Jeden seznam pro /slevy, homepage, uvítací e-mail i týdenní newsletter; řazení od nejnovějšího zlevnění.
  * Výpočet je v DB (žádné načítání tisíců řádků historie — PostgREST ořezává na 1 000).
  */
 export async function getSlevyDeals(limit = 20): Promise<SlevyPageData> {
@@ -277,11 +276,10 @@ export async function getSlevyDeals(limit = 20): Promise<SlevyPageData> {
       retailerSlug: retailer.slug,
       retailerName: retailer.name,
       ctaUrl: `/go/${retailer.slug}/${product.slug as string}`,
-      rankScore: dropPct * 0.4 + score * 0.6,
       since: r.current_since,
     })
   }
-  deals.sort((a, b) => b.rankScore - a.rankScore)
+  deals.sort((a, b) => b.since.localeCompare(a.since) || b.dropPct - a.dropPct)
   const topDeals = deals.slice(0, limit)
   const avgDropPct = topDeals.length > 0 ? Math.round(topDeals.reduce((s, d) => s + d.dropPct, 0) / topDeals.length) : 0
   return { deals: topDeals, stats: { totalDeals: deals.length, avgDropPct, retailerCount: new Set(topDeals.map((d) => d.retailerSlug)).size } }

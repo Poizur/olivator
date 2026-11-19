@@ -12,6 +12,7 @@
  */
 import { runFeedSyncForAllRetailers } from '@/lib/feed-sync-runner'
 import { runGscDailySnapshot } from '@/lib/gsc'
+import { requestPriceRevalidation } from '@/lib/request-price-revalidation'
 
 const MAX_RUNTIME_MS = 15 * 60 * 1000 // 15 min hard limit (visící HTTP / DNS)
 
@@ -60,6 +61,9 @@ async function main() {
       pendingDraftsFailed: result.pendingDraftsFailed,
       brandLinksBackfilled: result.brandLinksBackfilled,
     })
+
+    // Obnova /, /slevy, žebříčků a změněných stránek olejů — ať první návštěvník nedostane včerejší ceny.
+    await requestPriceRevalidation(new Date(startedAt), 'cron:feed-sync')
 
     // PASS 7: GSC snapshot (non-fatal). Cron služba nemá GSC klíče → přes web endpoint.
     await runGscSnapshotPass()

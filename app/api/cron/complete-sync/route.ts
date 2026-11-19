@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { syncReckonasbavyComplete } from '@/lib/reckonasbavi-complete-sync'
 import { checkCronAuth } from '@/lib/cron-auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { revalidatePricePages } from '@/lib/price-revalidation'
 
 export const maxDuration = 300
 export const dynamic = 'force-dynamic'
@@ -34,6 +35,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const since = new Date().toISOString()
     const result = await syncReckonasbavyComplete()
     if (!result) {
       return NextResponse.json({ ok: false, skipped: true })
@@ -43,7 +45,8 @@ export async function GET(request: NextRequest) {
       console.warn('[cron/complete-sync] completed with errors:', result.errors)
     }
 
-    return NextResponse.json({ ok: true, ...result })
+    const revalidation = await revalidatePricePages({ since, reason: 'api:complete-sync' }).catch((e: Error) => ({ error: e.message }))
+    return NextResponse.json({ ok: true, ...result, revalidation })
   } catch (err) {
     console.error('[cron/complete-sync]', err)
     return NextResponse.json(

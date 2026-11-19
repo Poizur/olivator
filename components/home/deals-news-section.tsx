@@ -4,6 +4,7 @@
 import Link from 'next/link'
 import { countryFlag } from '@/lib/utils'
 import { getSlevyDeals } from '@/lib/welcome-series'
+import { formatDealDate } from '@/lib/price'
 import { supabaseAdmin } from '@/lib/supabase'
 
 const BADGE: Record<string, { emoji: string; label: string }> = {
@@ -73,9 +74,9 @@ export async function DealsNewsSection() {
               <div>
                 <div className="text-[12px] font-medium tracking-[0.05em] uppercase text-terra mb-[6px]">— Slevy</div>
                 <h2 className="font-[family-name:var(--font-display)] text-[30px] font-medium text-text leading-[1.1]">
-                  Reálné slevy <em className="italic text-olive-light">tento týden</em>
+                  Ověřené <em className="italic text-olive-light">slevy</em>
                 </h2>
-                <p className="text-[14px] text-text2 mt-[6px]">Cena nižší než 30denní maximum</p>
+                <p className="text-[14px] text-text2 mt-[6px]">Aspoň 5 % pod nejnižší cenou za 30 dní před zlevněním · od nejnovější</p>
               </div>
               <Link
                 href="/slevy"
@@ -102,6 +103,7 @@ export async function DealsNewsSection() {
                   <div className="flex-1 min-w-0">
                     <div className="text-[11px] text-text3 leading-tight truncate">{d.brandName}</div>
                     <div className="text-[12px] font-semibold text-text leading-tight line-clamp-2">{d.name}</div>
+                    <div className="text-[11px] text-text3 leading-tight mt-0.5">zlevněno {formatDealDate(d.since)}</div>
                   </div>
                   <div className="text-right shrink-0">
                     <div className="text-[10px] font-bold bg-[#A32D2D] text-white rounded px-1.5 py-0.5 mb-0.5 text-center">

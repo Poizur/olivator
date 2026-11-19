@@ -8,13 +8,14 @@ import { getSlevyDeals, getActionPriceNotices, type SlevyDeal, type ActionPriceN
 import { AffiliateLink } from '@/components/affiliate-link'
 import { getWeeklyPriceDrops, type WeeklyPriceDrop } from '@/lib/price-drops'
 import { countryFlag } from '@/lib/utils'
+import { formatDealDate, DEAL_RULE_TEXT } from '@/lib/price'
 
 export const revalidate = 600
 
 export const metadata: Metadata = {
   title: 'Olivový olej — akce a slevy dnes | Olivátor',
   description:
-    'Přehled skutečných slev na olivový olej od partnerských e-shopů. Slevu ukazujeme jen tehdy, když ji potvrdí naše historie cen: aspoň 5 % pod nejnižší cenou za 30 dní před začátkem současné ceny.',
+    'Přehled skutečných slev na olivový olej od partnerských e-shopů. Slevu ukazujeme, jen když je cena aspoň o 5 % nižší než nejnižší cena za 30 dní před zlevněním a zlevnění není starší než 90 dní.',
   alternates: { canonical: 'https://olivator.cz/slevy' },
   openGraph: {
     title: 'Olivový olej — akce a slevy dnes | Olivátor',
@@ -33,7 +34,7 @@ function formatDate(iso: string): string {
 const FAQ_ITEMS = [
   {
     q: 'Jak Olivátor ověřuje, že jde o skutečnou slevu?',
-    a: 'Sledujeme ceny od partnerských e-shopů každý den. Slevu zobrazujeme pouze tehdy, pokud je aktuální cena alespoň 5 % pod nejnižší cenou, za kterou prodejce olej nabízel v 30 dnech před začátkem současné ceny, a současná cena začala v posledních 30 dnech. Akční ceny, které obchod uvádí, ale naše historie je nepotvrdila, ukazujeme zvlášť bez přeškrtnuté ceny.',
+    a: `Ceny u partnerských e-shopů zaznamenáváme každý den. ${DEAL_RULE_TEXT} Akční ceny, které obchod uvádí, ale toto pravidlo nesplňují, ukazujeme zvlášť bez přeškrtnuté ceny a bez procent. Menší nebo starší poklesy ceny (aspoň 2 % za posledních 7 dní) uvádíme jen jako informaci „cena klesla z … na …“.`,
   },
   {
     q: 'Jak často se přehled aktualizuje?',
@@ -45,7 +46,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Jak jsou slevy seřazeny?',
-    a: 'Slevy řadíme kombinací výše slevy (40 %) a Olivator Score (60 %). Takže olej s vysokým skóre a menší slevou může být výše než levný olej s obří slevou — jde nám o nejlepší poměr celkově.',
+    a: 'Od nejnovějšího zlevnění. U každé slevy je datum, kdy obchod cenu snížil, a nejnižší cena za 30 dní před tím.',
   },
   {
     q: 'Jsou tu oleje ze Španělska, Řecka i Itálie?',
@@ -79,9 +80,11 @@ function WeeklyDropCard({ drop }: { drop: WeeklyPriceDrop }) {
             <p className="text-[10px] text-text3 mt-0.5">{drop.volumeMl} ml</p>
           )}
           <div className="flex items-center gap-2 mt-1.5">
-            <span className="text-[10px] font-bold bg-[#e8f5e9] text-[#2d6a4f] px-2 py-0.5 rounded-full">
-              🆕 -{drop.dropPct}&nbsp;%
-            </span>
+            {drop.dealPct != null && (
+              <span className="text-[10px] font-bold bg-terra text-white px-2 py-0.5 rounded-full">
+                Sleva -{drop.dealPct}&nbsp;%
+              </span>
+            )}
             {drop.olivatorScore != null && (
               <span className="text-[10px] bg-olive4 text-[#1b4332] px-2 py-0.5 rounded-full">
                 Score {drop.olivatorScore}
@@ -90,9 +93,11 @@ function WeeklyDropCard({ drop }: { drop: WeeklyPriceDrop }) {
           </div>
           <div className="flex items-baseline gap-2 mt-1.5">
             <span className="text-[16px] font-bold text-text">{drop.priceNow} Kč</span>
-            <span className="text-[11px] text-text3 line-through">{drop.priceBefore} Kč</span>
             {per100ml && <span className="text-[11px] text-text3">{per100ml}</span>}
           </div>
+          <p className="text-[11px] text-text2 mt-1 leading-snug">
+            Cena klesla z {drop.priceBefore} Kč na {drop.priceNow} Kč ({formatDealDate(drop.changedOn)}).
+          </p>
         </div>
       </Link>
       <div className="px-4 pb-4 flex items-center gap-3">
@@ -129,12 +134,6 @@ function DealCard({ deal, rank }: { deal: SlevyDeal; rank: number }) {
           ) : (
             <span className="text-3xl">🫒</span>
           )}
-          {/* Rank badge */}
-          <span className={`absolute top-1 left-1 text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center ${
-            rank <= 3 ? 'bg-terra text-white' : 'bg-off2 text-text3'
-          }`}>
-            {rank}
-          </span>
         </div>
 
         {/* Info */}
@@ -169,7 +168,9 @@ function DealCard({ deal, rank }: { deal: SlevyDeal; rank: number }) {
               <span className="text-[11px] text-text3">{per100ml}</span>
             )}
           </div>
-          <p className="text-[10px] text-text3 mt-1">Za {deal.currentPrice} Kč od {formatDate(deal.since)} · před tím nejméně {deal.oldPrice} Kč</p>
+          <p className="text-[11px] text-text2 mt-1">
+            <strong className="font-semibold">zlevněno {formatDealDate(deal.since)}</strong> · nejnižší cena za 30 dní před tím {deal.oldPrice} Kč
+          </p>
         </div>
       </Link>
 
@@ -292,8 +293,7 @@ export default async function SlevyPage() {
             Olivový olej — akce a slevy dnes
           </h1>
           <p className="text-[16px] text-text2 leading-relaxed max-w-xl mb-8">
-            Jenom slevy potvrzené naší historií cen: aspoň 5 % pod nejnižší cenou,
-            za kterou prodejce olej nabízel v 30 dnech před začátkem současné ceny. Žádné nafouklé „původní" ceny.
+            {DEAL_RULE_TEXT} Žádné nafouklé „původní" ceny.
           </p>
 
           {/* Stats chips */}
@@ -311,7 +311,7 @@ export default async function SlevyPage() {
               <span className="text-[12px] text-text2 ml-1.5">prodejců</span>
             </div>
             <div className="bg-off rounded-full px-4 py-2 flex items-center">
-              <span className="text-[12px] text-text2">Ověřené historií cen (30 dní)</span>
+              <span className="text-[12px] text-text2">Ověřeno historií cen · zlevnění max. 90 dní</span>
             </div>
           </div>
         </section>
@@ -331,7 +331,8 @@ export default async function SlevyPage() {
               </span>
             </div>
             <p className="text-[13px] text-text3 mb-5">
-              Potvrzené slevy, jejichž současná cena začala v posledních 7 dnech.
+              Každý pokles ceny aspoň o 2 % za posledních 7 dní podle naší denní historie cen. Slevou ho nazýváme,
+              jen když je cena zároveň aspoň o 5 % nižší než nejnižší cena za 30 dní před zlevněním.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {weeklyDrops.map(drop => (
@@ -345,7 +346,7 @@ export default async function SlevyPage() {
         {/* ── Top deals grid ── */}
         <section className="mb-14">
           <h2 className="text-[20px] font-bold text-text mb-5">
-            {deals.length > 0 ? 'Nejlepší slevy teď' : 'Žádné slevy tento týden'}
+            {deals.length > 0 ? 'Ověřené slevy — od nejnovější' : 'Teď žádná ověřená sleva'}
           </h2>
 
           {deals.length > 0 ? (
@@ -416,6 +417,7 @@ export default async function SlevyPage() {
                           {d.oldPrice && (
                             <p className="text-[10px] text-text3 line-through">{d.oldPrice}&nbsp;Kč</p>
                           )}
+                          <p className="text-[10px] text-text3 mt-0.5">zlevněno {formatDealDate(d.since)}</p>
                         </div>
                       </Link>
                     ))}
@@ -431,8 +433,8 @@ export default async function SlevyPage() {
           <section className="mb-14">
             <h2 className="text-[20px] font-bold text-text mb-2">Akční ceny podle obchodu</h2>
             <p className="text-[13px] text-text3 mb-5 max-w-2xl">
-              Obchod tyto ceny označuje jako akční, ale naše historie cen pokles nepotvrdila — za stejnou cenu
-              jsme olej evidovali už dřív. Proto bez přeškrtnuté ceny a bez procent.
+              Obchod tyto ceny označuje jako akční, ale pravidlo slevy nesplňují — za stejnou cenu jsme olej
+              evidovali už dřív, nebo cena platí déle než 90 dní a je to už běžná cena. Proto bez přeškrtnuté ceny a bez procent.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {notices.map((n) => (
@@ -450,16 +452,16 @@ export default async function SlevyPage() {
               <div className="text-[28px] mb-2">📊</div>
               <h3 className="text-[14px] font-semibold text-text mb-1">Nejnižší cena za 30 dní</h3>
               <p className="text-[13px] text-text2 leading-relaxed">
-                Referenční cena je nejnižší cena, za kterou prodejce olej nabízel v 30 dnech
-                před začátkem současné ceny. Sleva musí být aspoň 5 % a současná cena mladší než 30 dní.
+                Referenční cena je nejnižší cena, za kterou obchod olej prodával během 30 dní
+                před zlevněním. Sleva musí být aspoň 5 % a zlevnění nesmí být starší než 90 dní.
               </p>
             </div>
             <div>
-              <div className="text-[28px] mb-2">🏆</div>
-              <h3 className="text-[14px] font-semibold text-text mb-1">Řazení dle hodnoty</h3>
+              <div className="text-[28px] mb-2">📅</div>
+              <h3 className="text-[14px] font-semibold text-text mb-1">Od nejnovější</h3>
               <p className="text-[13px] text-text2 leading-relaxed">
-                Výše slevy × Olivator Score. Nejlepší poměr kvality a
-                ceny vždy nahoře — ne jen největší procento slevy.
+                Slevy řadíme od nejnovějšího zlevnění a u každé je datum, kdy obchod
+                cenu snížil.
               </p>
             </div>
             <div>

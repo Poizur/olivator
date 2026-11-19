@@ -21,7 +21,7 @@ async function main() {
     const score = d.olivatorScore != null ? ` [score ${d.olivatorScore}]` : ''
     const aff = d.hasAffiliateUrl ? '✓' : '✗'
     console.log(
-      `${d.dropPct.toString().padStart(2)}% (-${d.dropCzk} Kč)  ` +
+      `${d.changedOn.slice(0, 10)}  ${d.changePct.toString().padStart(4)}% (-${d.dropCzk} Kč)${d.dealPct != null ? ` sleva ${d.dealPct}%` : ''}  ` +
       `${d.priceBefore} → ${d.priceNow} Kč  ` +
       `${d.retailerName.padEnd(18)}  ` +
       `aff:${aff}${score}  ` +

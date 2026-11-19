@@ -1,7 +1,7 @@
 // lib/price-drops/index.ts
-// „Nové poklesy tento týden“ = potvrzené slevy (SQL view weekly_price_drops), jejichž současná cena začala v posledních 7 dnech.
-// Referenční cena = nejnižší cena za 30 dní před začátkem současné ceny (stejná definice jako /slevy, confirmed_deals).
-// Použití: /slevy, newsletter sekce „co zlevnilo“, executive brief.
+// „Nové poklesy tento týden“ (SQL view weekly_price_drops): každý skutečný pokles ceny za posledních 7 dní aspoň o 2 %,
+// počítaný z jedné ceny za den. Je to informace „cena klesla z X na Y“ — slovo „sleva“ a odznak s procenty jen když
+// nabídka zároveň splňuje pravidlo slevy (dealPct != null, stejná definice jako /slevy, confirmed_deals).
 
 import { supabaseAdmin } from '@/lib/supabase'
 import { warnIfCapped } from '@/lib/price'
@@ -19,10 +19,16 @@ export interface WeeklyPriceDrop {
   volumeMl: number | null
   retailerSlug: string
   retailerName: string
+  /** Cena předchozího dne (poslední záznam dne), ne „původní“ cena obchodu. */
   priceBefore: number
   priceNow: number
   dropCzk: number
-  dropPct: number
+  /** Pokles proti předchozí ceně v % (≥ 2). Nezobrazovat jako slevu. */
+  changePct: number
+  /** Den, kdy cena klesla. */
+  changedOn: string
+  /** Sleva v % proti nejnižší ceně za 30 dní před zlevněním — jen když splňuje pravidlo slevy, jinak null. */
+  dealPct: number | null
   hasAffiliateUrl: boolean
   ctaUrl: string
 }
@@ -39,14 +45,16 @@ interface DropRow {
   current_price: number
   baseline_price: number
   drop_pct: number
+  current_since: string
+  deal_pct: number | null
 }
 
 export async function getWeeklyPriceDrops(limit = 30): Promise<WeeklyPriceDropsResult> {
   const updatedAt = new Date().toISOString()
   const { data: rows, error } = await supabaseAdmin
     .from('weekly_price_drops')
-    .select('product_id, retailer_id, current_price, baseline_price, drop_pct')
-    .order('drop_pct', { ascending: false })
+    .select('product_id, retailer_id, current_price, baseline_price, drop_pct, current_since, deal_pct')
+    .order('current_since', { ascending: false })
   if (error) {
     console.error('[price-drops] weekly_price_drops:', error.message)
     return { drops: [], updatedAt, totalCount: 0 }
@@ -78,8 +86,8 @@ export async function getWeeklyPriceDrops(limit = 30): Promise<WeeklyPriceDropsR
     const retailer = retailerMap.get(d.retailer_id)
     if (!product || !retailer) continue
     if (anomalyKeys.has(`${product.slug}|${retailer.slug}`)) continue
-    const dropPct = Number(d.drop_pct)
-    if (dropPct > 50) continue  // téměř vždy datová anomálie
+    const changePct = Number(d.drop_pct)
+    if (changePct > 50) continue  // téměř vždy datová anomálie
     const priceNow = Number(d.current_price)
     const priceBefore = Number(d.baseline_price)
     out.push({
@@ -95,11 +103,13 @@ export async function getWeeklyPriceDrops(limit = 30): Promise<WeeklyPriceDropsR
       priceBefore: Math.round(priceBefore),
       priceNow: Math.round(priceNow),
       dropCzk: Math.round(priceBefore - priceNow),
-      dropPct,
+      changePct,
+      changedOn: d.current_since,
+      dealPct: d.deal_pct == null ? null : Number(d.deal_pct),
       hasAffiliateUrl: affiliateByKey.get(`${d.product_id}|${d.retailer_id}`) ?? false,
       ctaUrl: `${SITE}/go/${retailer.slug}/${product.slug as string}`,
     })
   }
-  out.sort((a, b) => (b.dropPct !== a.dropPct ? b.dropPct - a.dropPct : (b.olivatorScore ?? 0) - (a.olivatorScore ?? 0)))
+  out.sort((a, b) => b.changedOn.localeCompare(a.changedOn) || b.changePct - a.changePct)
   return { drops: out.slice(0, limit), updatedAt, totalCount: out.length }
 }

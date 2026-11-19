@@ -13,6 +13,9 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Stránky s cenami: prohlížeč/CDN smí podat starou kopii nejvýš hodinu po vypršení (výchozí byl rok).
+  // swr = expireTime − revalidate: / a /olej/* (3600) → bez swr, /slevy (600) → 3000 s, /zebricek (300) → 3300 s.
+  expireTime: 3600,
   // Default 60s nestačí, když ~30 Railway služeb buildí paralelně a dotazují Supabase
   // (feed-sync build 2026-09-23 spadl na /olej/[slug] timeoutu → cron běžel týden se starým kódem).
   staticPageGenerationTimeout: 180,

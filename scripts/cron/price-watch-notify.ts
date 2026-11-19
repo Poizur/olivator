@@ -1,14 +1,14 @@
 #!/usr/bin/env tsx
 // cron:price-watch — denně 6:30 UTC
-// Notifikuje uživatele při poklesu ceny ≥5 % NEBO ≥20 Kč.
-// Anti-spam: max 1× za 7 dní na hlídání.
+// Notifikuje uživatele při poklesu ceny ≥5 % NEBO ≥20 Kč — vše podle ceny, kterou zákazník zaplatí (akční, je-li nižší).
+// Výchozí cena se ověřuje proti price_history (lib/price-watch.ts), takže přechod na akční cenu nevyvolá falešné „klesla“.
+// Anti-spam: max 1× za 7 dní na hlídání. Nanečisto: --dry-run (nic neodešle, nic nezapíše).
 import { supabaseAdmin } from '@/lib/supabase'
 import { getSetting } from '@/lib/settings'
+import { evaluateWatch } from '@/lib/price-watch'
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://olivator.cz'
 const RESEND_FROM = process.env.RESEND_FROM_EMAIL ?? 'Olivator <onboarding@resend.dev>'
-const DROP_PCT_THRESHOLD = 5      // % pokles
-const DROP_CZK_THRESHOLD = 20     // Kč absolutní pokles
 const ANTI_SPAM_DAYS = 7
 const DRY_RUN = process.argv.includes('--dry-run')
 
@@ -19,13 +19,9 @@ interface WatchRow {
   price_at_signup: number | null
   last_notified_at: string | null
   last_notified_price: number | null
+  created_at: string
   unsubscribe_token: string
   products: { id: string; name: string; slug: string; status: string } | null
-}
-
-interface OfferRow {
-  price: number
-  retailers: { name: string; slug: string } | null
 }
 
 async function sendEmail(
@@ -52,7 +48,7 @@ async function sendEmail(
 <tr><td>
   <div style="font-size:22px;font-weight:700;color:#2d6a4f;margin-bottom:20px">olivátor.cz</div>
   <div style="font-size:13px;color:#40916c;font-weight:500;background:#d8f3dc;border-radius:8px;padding:8px 14px;display:inline-block;margin-bottom:20px">
-    📉 Cena klesla o ${dropPct}&nbsp;% (${drop}&nbsp;Kč)
+    📉 Cena klesla o ${dropPct}&nbsp;% (${drop}&nbsp;Kč) od ${refPrice}&nbsp;Kč
   </div>
   <h1 style="font-size:18px;color:#1d1d1f;margin:0 0 16px">${product.name}</h1>
   <div style="margin-bottom:24px">
@@ -92,7 +88,7 @@ async function sendEmail(
       body: JSON.stringify({
         from: RESEND_FROM,
         to: [email],
-        subject: `📉 ${product.name} zlevnil o ${dropPct} % — nyní ${currentPrice} Kč`,
+        subject: `📉 ${product.name}: cena klesla o ${dropPct} % — nyní ${currentPrice} Kč`,
         html,
       }),
     })
@@ -117,7 +113,7 @@ async function run() {
   const { data: watches, error: watchError } = await supabaseAdmin
     .from('price_watches')
     .select(`
-      id, email, product_id, price_at_signup, last_notified_at, last_notified_price, unsubscribe_token,
+      id, email, product_id, price_at_signup, last_notified_at, last_notified_price, created_at, unsubscribe_token,
       products(id, name, slug, status)
     `)
     .eq('active', true)
@@ -142,40 +138,24 @@ async function run() {
       continue
     }
 
-    const { data: offerRows } = await supabaseAdmin
-      .from('product_offers')
-      .select('price, retailers!inner(name, slug, is_active)')
-      .eq('retailers.is_active', true)
-      .eq('product_id', watch.product_id)
-      .eq('in_stock', true)
-      .order('price', { ascending: true })
-      .limit(1)
-
-    const offer = (offerRows?.[0] ?? null) as OfferRow | null
-    if (!offer || !offer.retailers) {
+    const decision = await evaluateWatch(watch)
+    if (DRY_RUN) {
+      console.log(
+        `[price-watch-notify] ${decision.notify ? 'POSLAL BY' : 'neposlal by'} hlídání ${watch.id}: ${watch.products.name} — ${decision.reason}` +
+        (decision.storedRef != null ? ` (uložená výchozí ${decision.storedRef} Kč, podle historie ${decision.historyRef ?? '—'} Kč)` : '')
+      )
+    }
+    if (!decision.notify || !decision.offer || decision.refPrice == null || decision.currentPrice == null) {
       skipped++
       continue
     }
+    const offer = decision.offer
+    const currentPrice = decision.currentPrice
+    const refPrice = decision.refPrice
 
-    const currentPrice = Number(offer.price)
-    const refPrice = Number(watch.last_notified_price ?? watch.price_at_signup)
-    if (!refPrice) {
-      skipped++
-      continue
+    if (!DRY_RUN) {
+      console.log(`[price-watch-notify] notify ${watch.id}: ${watch.products.name} ${decision.reason}`)
     }
-
-    const absDropCzk = refPrice - currentPrice
-    const dropPct = (absDropCzk / refPrice) * 100
-
-    if (absDropCzk < DROP_CZK_THRESHOLD && dropPct < DROP_PCT_THRESHOLD) {
-      skipped++
-      continue
-    }
-
-    console.log(
-      `[price-watch-notify] notify ${watch.email}: ${watch.products.name} ` +
-      `${refPrice} → ${currentPrice} Kč (−${Math.round(dropPct)} %)`
-    )
 
     if (DRY_RUN) {
       notified++
@@ -187,8 +167,8 @@ async function run() {
       watch,
       currentPrice,
       refPrice,
-      offer.retailers.name,
-      offer.retailers.slug
+      offer.retailerName,
+      offer.retailerSlug
     )
 
     if (ok) {

@@ -7,6 +7,15 @@ export function effectivePrice(price: number | string | null | undefined, action
   return a != null && a > 0 && a < p ? a : p
 }
 
+/** Datum zlevnění bez roku, česky a v pražském čase: „30. 9.“ */
+export function formatDealDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric', timeZone: 'Europe/Prague' })
+}
+
+/** Pravidlo slevy slovy — jedno místo pro /slevy, homepage a e-maily. */
+export const DEAL_RULE_TEXT =
+  'Slevu ukazujeme, jen když je dnešní cena aspoň o 5 % nižší než nejnižší cena, za kterou ji obchod prodával během 30 dní před zlevněním, a zlevnění není starší než 90 dní.'
+
 export const POSTGREST_MAX_ROWS = 1000
 
 /** PostgREST tiše ořízne výsledek na 1 000 řádků bez ohledu na .limit(). Přesně 1 000 = pravděpodobně ořezáno. */

@@ -1,5 +1,6 @@
 import { Img, Link, Section, Text } from '@react-email/components'
 import { NewsletterLayout } from './_layout'
+import { formatDealDate } from '@/lib/price'
 
 const SITE = 'https://olivator.cz'
 const UTM = 'utm_source=newsletter&utm_medium=email&utm_campaign=welcome_d0'
@@ -17,6 +18,8 @@ export interface WelcomeDeal {
   retailerName: string
   ctaUrl: string
   isFallback: boolean
+  /** Kdy obchod zlevnil — jen u ověřené slevy. */
+  since: string | null
 }
 
 interface Props {
@@ -61,8 +64,9 @@ export function WelcomeD0DealsEmail({
             </>
           ) : (
             <>
-              Olík tady. Aktuálně nemáme slevy nad 15 % — čekáme na příští sezónu
-              akcí. Mezitím tady jsou tři tipy, které stojí za tvou pozornost.
+              Olík tady. Teď nemáme žádnou slevu ověřenou historií cen — slevu
+              počítáme, jen když je cena aspoň o 5 % nižší než nejnižší cena za 30 dní
+              před zlevněním. Mezitím tady jsou tři tipy, které stojí za tvou pozornost.
             </>
           )}
         </Text>
@@ -71,7 +75,7 @@ export function WelcomeD0DealsEmail({
       {/* Sekce nadpis */}
       <Section className="mb-2">
         <Text className="text-[11px] font-bold tracking-widest uppercase text-olive m-0">
-          {isDealMode ? '🏷 3 nejlepší slevy právě teď' : '🫒 3 tipy z katalogu'}
+          {isDealMode ? '🏷 Nejnovější ověřené slevy' : '🫒 3 tipy z katalogu'}
         </Text>
       </Section>
 
@@ -214,6 +218,11 @@ export function WelcomeD0DealsEmail({
                               </tr>
                             </tbody>
                           </table>
+                          {deal.since && !deal.isFallback && (
+                            <Text style={{ fontSize: '12px', color: '#78716c', margin: '6px 0 0', lineHeight: '1.4' }}>
+                              zlevněno {formatDealDate(deal.since)}
+                            </Text>
+                          )}
                         </td>
 
                         {/* ── Sloupec 3: Cena + retailer ── */}

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { runDiscoveryAgent } from '@/lib/discovery-agent'
+import { revalidatePricePages } from '@/lib/price-revalidation'
 import { sendDiscoverySummary } from '@/lib/email'
 import { checkCronAuth } from '@/lib/cron-auth'
 
@@ -17,7 +18,9 @@ export async function GET(request: NextRequest) {
   if (authError) return authError
 
   try {
+    const since = new Date().toISOString()
     const result = await runDiscoveryAgent()
+    await revalidatePricePages({ since, reason: 'api:discovery' }).catch((e: Error) => console.error('[cron/discovery] revalidation', e.message))
 
     // Send email summary (best-effort, doesn't block)
     try {
